@@ -130,12 +130,17 @@ final class AudioController: ObservableObject {
     @Published var channelReports: [ChannelLoudness] = []
     @Published var dialogueSelection = DialogueSelection()
     @Published var dialogueReport: LoudnessReport?
+    @Published var analysisReport: AnalysisReport?
+    @Published var analysisSourceVerified = false
+    @Published var analysisLayout = "metadata"
+    @Published var speechInputs: [SpeechIntervalDraft] = []
     @Published var output: URL?
     private var task: Task<Void, Never>?
     var tracks: [MediaProbe.Stream] { probe?.streams.filter { $0.codec_type == "audio" } ?? [] }
 
     func load(_ url: URL, tools: FFmpegTools) {
         guard !running else { return }
+        analysisReport = nil; analysisSourceVerified = false; speechInputs = []; analysisLayout = "metadata"
         source = nil; probe = nil; track = -1; report = nil; output = nil; outputReport = nil; channelReports = []; dialogueReport = nil
         perform("Inspecting audio…") {
             let probe = try await MediaProbe.read(url, tools: tools)
@@ -180,6 +185,47 @@ final class AudioController: ObservableObject {
                 Task { @MainActor in self.progress = value }
             }
             self.output = destination; self.progress = 1; self.status = settings.normalize ? "Verified audio export complete · \(settings.targetLUFS) LUFS ±0.5 · LRA ≤ \(settings.targetLRA + 1) LU · true peak ≤ −1 dBTP" : "Verified audio export complete"
+        }
+    }
+    func measuredAnalysis(tools: FFmpegTools) {
+        guard let source, !running, let rate = Int(tracks.first(where: { $0.index == track })?.sample_rate ?? "") else { return }
+        let selected = track, inputs = speechInputs, declaredLayout = analysisLayout == "metadata" ? nil : analysisLayout
+        analysisReport = nil; analysisSourceVerified = false
+        perform("Hashing source, then measuring decoded audio…") {
+            let intervals = try inputs.map { try $0.region(rate: rate) }.sorted { $0.startFrame < $1.startFrame }
+            self.analysisReport = try await MeasuredAnalysis.run(source: source, track: selected, regions: intervals, tools: tools, declaredLayout: declaredLayout) { value in
+                Task { @MainActor in self.progress = value }
+            }
+            self.analysisSourceVerified = true
+            self.status = "Measured report ready · source fingerprint verified · no gain applied"
+        }
+    }
+    func saveAnalysis(to url: URL) {
+        guard let report = analysisReport, !running else { return }
+        perform("Saving measured report…") {
+            let save = Task.detached { try report.save(to: url) }
+            try await withTaskCancellationHandler { try await save.value } onCancel: { save.cancel() }
+            self.status = "Report saved locally without source paths · existing files preserved"
+        }
+    }
+    func openAnalysis(_ url: URL) {
+        guard !running else { return }
+        analysisReport = nil; analysisSourceVerified = false
+        perform("Opening measured report…") {
+            let opening = Task.detached { try AnalysisReport.read(url) }
+            self.analysisReport = try await withTaskCancellationHandler { try await opening.value } onCancel: { opening.cancel() }
+            self.status = "Saved report opened · source not yet verified · report cannot drive processing"
+        }
+    }
+    func verifyAnalysisSource() {
+        guard let source, let report = analysisReport, !running else { return }
+        analysisSourceVerified = false
+        perform("Checking source SHA-256…") {
+            guard try await SourceFingerprint.read(source) == report.source, self.track == report.track else {
+                throw NativeExportError.invalid("Source or selected track differs from this report. Reanalyze before using its measurements.")
+            }
+            self.analysisSourceVerified = true
+            self.status = "Source and selected track match the saved report"
         }
     }
     func cancel() { task?.cancel() }

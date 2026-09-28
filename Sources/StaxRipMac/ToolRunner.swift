@@ -29,7 +29,7 @@ final class ToolRunner: @unchecked Sendable {
         }
     }
 
-    func run(executable: URL, arguments: [String], onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
+    func run(executable: URL, arguments: [String], stdoutLimit: Int = 4 * 1024 * 1024, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
         try Task.checkCancellation()
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -47,7 +47,7 @@ final class ToolRunner: @unchecked Sendable {
                         process = nil; lock.unlock(); continuation.resume(throwing: error); return
                     }
                     lock.unlock()
-                    let stdout = BoundedBytes(limit: 4 * 1024 * 1024)
+                    let stdout = BoundedBytes(limit: max(0, min(stdoutLimit, 4 * 1024 * 1024)))
                     let stderr = BoundedBytes(limit: 64 * 1024)
                     let group = DispatchGroup()
                     for (handle, buffer, callback) in [(output.fileHandleForReading, stdout, onOutput), (errors.fileHandleForReading, stderr, nil)] {
@@ -55,10 +55,16 @@ final class ToolRunner: @unchecked Sendable {
                         DispatchQueue.global().async {
                             defer { try? handle.close(); group.leave() }
                             while true {
-                                let data = handle.availableData
-                                if data.isEmpty { break }
-                                buffer.append(data)
-                                callback?(data)
+                                // FileHandle creates autoreleased Foundation buffers. Drain per
+                                // chunk so long PCM streams do not retain an entire movie.
+                                let hadData = autoreleasepool {
+                                    let data = handle.availableData
+                                    guard !data.isEmpty else { return false }
+                                    buffer.append(data)
+                                    callback?(data)
+                                    return true
+                                }
+                                if !hadData { break }
                             }
                         }
                     }
@@ -79,6 +85,7 @@ private final class BoundedBytes: @unchecked Sendable {
     var truncated = false
     init(limit: Int) { self.limit = limit }
     func append(_ chunk: Data) {
+        guard limit > 0 else { truncated = truncated || !chunk.isEmpty; return }
         data.append(chunk)
         if data.count > limit { data.removeFirst(data.count - limit); truncated = true }
     }

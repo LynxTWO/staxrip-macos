@@ -25,6 +25,7 @@ struct AudioLabView: View {
                     Button("Open audio or video…") { chooseSource() }.disabled(busy || batch.tools == nil)
                 }.padding(20).background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
                 if batch.tools == nil { Text(batch.toolDescription).font(.caption).foregroundStyle(.orange) }
+                MeasuredAnalysisView(busy: busy, tools: batch.tools)
                 if !audio.tracks.isEmpty {
                     AudioPanel("Source track") {
                         Picker("Track", selection: $audio.track) {
@@ -32,7 +33,7 @@ struct AudioLabView: View {
                                 Text("#\(track.index) · \(track.codec_name ?? "unknown") · \(track.channels ?? 0) ch · \(track.sample_rate ?? "?") Hz · \(track.tags?["language"] ?? "und")").tag(track.index)
                             }
                         }.padding(12).disabled(busy)
-                        .onChange(of: audio.track) { _, _ in audio.report = nil; audio.channelReports = []; audio.dialogueReport = nil; audio.output = nil; audio.outputReport = nil }
+                        .onChange(of: audio.track) { _, _ in audio.report = nil; audio.channelReports = []; audio.dialogueReport = nil; audio.output = nil; audio.outputReport = nil; audio.analysisReport = nil; audio.analysisSourceVerified = false; audio.analysisLayout = "metadata" }
                     }
                     HStack(alignment: .top, spacing: 20) {
                         AudioPanel("Output recipe") {

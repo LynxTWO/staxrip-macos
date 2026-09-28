@@ -1,7 +1,7 @@
 # Production completion plan
 Version: 0.1 Draft. Date: 2026-09-28.
 
-Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351afc9a1ef6bcb9b30e. Product code is unchanged. The first slice is Proposed, not approved for implementation.
+Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351afc9a1ef6bcb9b30e. Slice 001 was approved on 2026-09-28 and is in implementation/verification. See MEASURED-ANALYSIS-EVIDENCE.md for results and outstanding owner review.
 
 1. [Product context and sequence](PRODUCT-CONTEXT.md)
 2. [Architecture](ARCHITECTURE.md) and [engineering requirements](ENGINEERING.md)

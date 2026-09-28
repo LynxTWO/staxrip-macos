@@ -32,3 +32,9 @@ Long-form and damaged media, VFR/A-V sync, HDR, multichannel routing, older macO
 ## Recovery follow-up
 
 Native control was retried by full app path and still returned the native-pipe error. Recovery implementation and automated tests proceeded independently; its new restore banner has not been visually verified. The running v0.4 preview was preserved. A separate optimized v0.5 developer artifact can be built without replacing that running bundle.
+
+## v0.6 inspection workaround and follow-through
+
+The helper crash was reproduced in an isolated populated Audio Lab without any file picker. Simple GroupBox/picker probes did not fail, so the evidence identifies the combined populated layout rather than GroupBox universally. Replacing its three GroupBox containers with labeled VStack panels makes the full view inspectable while retaining accessible headers and controls. This works around the helper failure; it does not patch the helper itself.
+
+The real v0.6 app passed native WAV import, loudness analysis (-21.75 LUFS / -18.06 dBTP on the generated tone), and Save-dialog FLAC export. ffprobe independently verified 24-bit FLAC, 48 kHz, mono, five seconds. A real H.264 queue job completed, then normal Quit/relaunch offered the previous batch; explicit restoration retained Completed and did not resume processing. The prior native-inspection blocker is resolved for these workflows. All 27 automated tests still pass; local release packaging passed signature verification.

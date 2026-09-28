@@ -30,7 +30,7 @@ The foundation accepts −36 to −9 LUFS and 1–20 LU LRA. Night / Venue appli
 
 ## Current limits
 
-Export still accepts mono/stereo sources. Channel audits accept up to eight channels and label unknown layouts honestly. Dialogue is manually selected and diagnostic. The SignalForge-derived research meter and saved analysis workflow are implemented in Slice 001, with supported mono/stereo EBU evidence recorded in [the evidence ledger](Planning/MEASURED-ANALYSIS-EVIDENCE.md). Final owner walkthrough approval remains pending. The adaptive planner, automatic speech detector, LFE processing contract, short-term ceiling and listening study are outstanding. Multiple full-file passes cost time. Audio settings are not yet saved in video sessions.
+Export still accepts mono/stereo sources. Channel audits accept up to eight channels and label unknown layouts honestly. Dialogue is manually selected and diagnostic. The SignalForge-derived research meter and saved analysis workflow are implemented in Slice 001, with supported mono/stereo EBU evidence recorded in [the evidence ledger](Planning/MEASURED-ANALYSIS-EVIDENCE.md). The owner confirmed the functional and spoken walkthroughs. Slice 002 proposes manual-speech gain planning, lossless output and preview; see [the brief](Planning/SLICE-002-dialogue-mastering.md). The adaptive planner, automatic speech detector, LFE processing contract, short-term ceiling and listening study are outstanding. Multiple full-file passes cost time. Audio settings are not yet saved in video sessions.
 
 ## Reuse investigation
 

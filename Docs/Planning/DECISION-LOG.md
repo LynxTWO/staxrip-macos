@@ -6,9 +6,9 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | ID | Date | Decision | Status | Superseded by |
 | --- | --- | --- | --- | --- |
 | D-001 | 2026-09-28 | Native offline product | Confirmed | |
-| D-002 | 2026-09-28 | Typed local analysis seams | Proposed | |
-| D-003 | 2026-09-28 | Analysis before gain changes | Proposed | |
-| D-004 | 2026-09-28 | Speech model selection | Open | |
+| D-002 | 2026-09-28 | Typed local analysis seams | Confirmed | |
+| D-003 | 2026-09-28 | Analysis before gain changes | Confirmed | |
+| D-004 | 2026-09-28 | Speech model selection | Superseded | D-013 |
 | D-005 | 2026-09-28 | Later preservation work | Deferred | |
 | D-006 | 2026-09-28 | Public repository | Confirmed | |
 | D-007 | 2026-09-28 | Hosted checks and local hardware tests | Proposed | |
@@ -17,6 +17,10 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-010 | 2026-09-28 | SignalForge reuse first | Superseded | D-011 |
 | D-011 | 2026-09-28 | Swift meter adaptation | Confirmed | |
 | D-012 | 2026-09-28 | Slice 001 owner approval | Confirmed | |
+| D-013 | 2026-09-28 | Manual speech before automatic suggestions | Confirmed | |
+| D-014 | 2026-09-28 | Original mastering and preview boundary | Proposed | |
+| D-015 | 2026-09-28 | Planner and limiter feasibility | Open | |
+| D-016 | 2026-09-28 | Listening material rights | Open | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -34,9 +38,9 @@ Revisit when: A new platform is requested.
 
 ## D-002: Typed local analysis seams
 Date: 2026-09-28
-Status: Proposed
+Status: Confirmed
 
-Decision: Keep Swift request/report interfaces; choose meter implementation after D-010.
+Decision: Keep internal Swift analysis/report interfaces, as implemented under the owner-approved Slice 001 and D-011. Future GainPlan details are proposed under D-014.
 
 Because: Separates UI, measurement and rendering without presuming a rewrite.
 
@@ -48,9 +52,9 @@ Revisit when: The reuse spike finds a lower-cost tested boundary.
 
 ## D-003: Analysis before gain changes
 Date: 2026-09-28
-Status: Proposed
+Status: Confirmed
 
-Decision: Slice 001 delivers a usable measured report; slice 002 adds original gain planning.
+Decision: Analysis precedes original gain planning. Daniel approved and accepted Slice 001, then explicitly accepted planning the manual-speech mastering sequence. The detailed Slice 002 build boundary still needs its own approval.
 
 Because: Gain changes require trustworthy measurements.
 
@@ -62,7 +66,8 @@ Revisit when: Meter evidence or user needs change the sequence.
 
 ## D-004: Speech model selection
 Date: 2026-09-28
-Status: Open
+Status: Superseded
+Superseded by: D-013
 
 Decision: No automatic detector chosen; compare local candidates before slice 002.
 
@@ -185,3 +190,60 @@ Decision: Daniel Boyd explicitly approved SLICE-001-measured-analysis.md on 2026
 Consequences: Implement, verify and provide the native walkthrough inside the approved boundary. Final owner walkthrough approval is still required before marking the slice Done.
 
 Revisit when: New scope is proposed or a required gate cannot be satisfied.
+
+## D-013: Manual speech before automatic suggestions
+Date: 2026-09-28
+Status: Confirmed
+Supersedes: D-004
+
+Decision: Plan manual, user-confirmed speech mastering before integrating automatic suggestions. Model selection is deferred until the manual reference works. Daniel explicitly accepted this sequence after the measured-report walkthrough. This confirms sequence, not approval of the newly written detailed brief.
+
+Because: It separates gain-planning correctness from errors in speech detection. The owner can inspect and correct the anchor.
+
+Options considered: manual first; model first; both together. Manual first was recommended and accepted.
+
+Consequences: Automatic speech no longer blocks Slice 002. Unknown language/model quality remains recorded in U-001 and must close before later model-dependent work.
+
+Revisit when: Manual mastering passes or the owner requests automatic suggestions first.
+
+## D-014: Original mastering and preview boundary
+Date: 2026-09-28
+Status: Proposed
+
+Decision: SLICE-002-dialogue-mastering.md defines mono/stereo original gain planning with explicit programme or manual-speech reference, linked rendering, lossless output, full staged preview and independent verification. Its detailed defaults and bounds await owner approval.
+
+Because: Existing reports are informational and existing mastering uses FFmpeg. The user needs an audible, reviewable result without coupling the first original renderer to models, lossy codecs or video remux.
+
+Options considered: keep only the FFmpeg foundation; original manual mastering with lossless preview; combine automatic speech, new mastering and all output formats. Recommend the bounded middle option.
+
+Consequences: Proposed R-007 authorizes only S2-001 through S2-009 upon brief approval. No report v1 break, video session schema, public API, paid tool, cloud processing, release or merge is introduced. The growth tally is in MASTERING-RESEARCH.md.
+
+Revisit when: The owner amends the brief, M1 is infeasible, or listening exposes a required scope change.
+
+## D-015: Planner and limiter feasibility
+Date: 2026-09-28
+Status: Open
+
+Decision: Slice 002 M1 must choose and preregister smoothing, gain/hold bounds, look-ahead, limiter, latency compensation and a finite render/refinement limit before the dependent renderer is built. One working day maximum for this spike after build approval.
+
+Because: Loudness compliance alone does not establish transparent or comfortable processing. A custom limiter cannot be assumed better than a tested reusable component.
+
+Options considered: a Swift planner with an existing local limiter; Swift planner and narrowly implemented oversampled limiter; continue the legacy FFmpeg path outside the new engine. Evidence and dependency rights choose the first two or stop for revision.
+
+Consequences: No new dependency is installed by this plan. Record rights and numerical/latency evidence before integration. Do not widen registered acceptance tolerances to fit results.
+
+Revisit when: M1 ends, a limiter fails peak tests, or iteration exceeds its fixed bound.
+
+## D-016: Listening material rights
+Date: 2026-09-28
+Status: Open
+
+Decision: Before Slice 002 M2 listening acquisition/use, establish a small local manifest of source permissions, hashes, excerpt times, languages and intended use. Generated numerical fixtures do not prove speech quality.
+
+Because: Local research permission and redistribution rights are different. Public CI must not receive private or restricted media.
+
+Options considered: redistributable licensed examples; user-authorized local excerpts with no redistribution; newly recorded consented speech. Use permitted material that covers S2-008; request an owner decision if coverage cannot be obtained.
+
+Consequences: Owner-only listening is a scoped screen, not a formal listener study. No personal film title, path or audio is committed to the public repository. Corpus failure blocks quality acceptance, not an excuse to invent results.
+
+Revisit when: The manifest is established or required coverage cannot be licensed.

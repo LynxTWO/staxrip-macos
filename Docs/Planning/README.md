@@ -1,7 +1,7 @@
 # Production completion plan
 Version: 0.1 Draft. Date: 2026-09-28.
 
-Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351afc9a1ef6bcb9b30e. Slice 001 was approved on 2026-09-28 and is in implementation/verification. See MEASURED-ANALYSIS-EVIDENCE.md for results and outstanding owner review.
+Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351afc9a1ef6bcb9b30e. Slice 001 is accepted with scoped numerical, native and owner listening evidence. Slice 002 is proposed for owner review; no new mastering implementation is approved yet. See MEASURED-ANALYSIS-EVIDENCE.md for closure and limits.
 
 1. [Product context and sequence](PRODUCT-CONTEXT.md)
 2. [Architecture](ARCHITECTURE.md) and [engineering requirements](ENGINEERING.md)
@@ -12,4 +12,7 @@ Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351af
 7. [Signing and CI owner setup](SIGNING-AND-CI.md)
 8. [Audit and owner readback](AUDIT.md)
 
-Readback: retain the native application, first reuse and validate metering from SignalForge, then add dialogue gain planning, surround preservation and HDR through separate briefs. Keep source public and use standard hosted checks; prepare Developer ID in Xcode independently. Proposed performance targets remain assumptions until measured. License, speech model, corpus rights and platform matrix remain Open.
+9. [Proposed Slice 002: original mastering and preview](SLICE-002-dialogue-mastering.md)
+10. [Mastering research and growth tally](MASTERING-RESEARCH.md)
+
+Readback: measurement and its owner walkthrough are accepted. Review the proposed manual-speech mastering brief next. Signing credentials are ready, while production signing and release qualification remain separate. Project license and additional listening-corpus rights remain Open; automatic speech selection is deferred until manual mastering is evaluated.

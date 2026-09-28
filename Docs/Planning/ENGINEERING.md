@@ -2,14 +2,14 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Draft requirements and verification map.
-Next: Owner readback and slice decision.
+Last completed: Slice 001 evidence and owner acceptance; Slice 002 brief drafted.
+Next: Owner readback and approval of Slice 002.
 Open questions: U-001 through U-007.
 Statuses pending: Proposed and Assumed decisions remain unapproved.
 
 ## 1. One-Page Overview
 
-Protect media first, measure before making claims, preserve explicit user choices. The top goals are correct measurements, recoverable operations and truthful user-visible results. ADD section 15 names one proposed slice. Existing 38-test evidence does not establish the new meter, speech model or HDR path.
+Protect media first, measure before making claims, preserve explicit user choices. The top goals are correct measurements, recoverable operations and truthful user-visible results. ADD section 15 names one proposed slice. Current 47-test regression runs and the separate EBU/full-length gates establish only the scope recorded in MEASURED-ANALYSIS-EVIDENCE.md. New mastering, speech models and HDR remain unverified.
 
 ## 2. Engineering Principles
 
@@ -52,9 +52,11 @@ Protect media first, measure before making claims, preserve explicit user choice
 
 Approved R-006: the first SignalForge-derived meter and local report path, with official-fixture harness and cross-meter comparison explicitly in scope. Consequence: user_data, because wrong gain guidance can damage derived outputs. This is the only new harness requested by slice 001.
 
+Proposed R-007: only the local numerical, resource, native preview and listening gates S2-001 through S2-009 in SLICE-002-dialogue-mastering.md. Consequence: user_data. Approval of the brief activates this verification scope; no broad benchmarking service or listener campaign is included.
+
 ### 4.3 Open questions
 
-Speech model/license, corpus redistribution rights, software license, supported platform matrix and signing eligibility are U-001 through U-007 below. None becomes Confirmed by silence.
+Speech model/license, additional listening-corpus rights, software license and supported platform matrix remain recorded below. Signing setup and the bounded analysis memory result have evidence; neither establishes release readiness.
 
 ### 4.4 Product principles
 
@@ -62,9 +64,11 @@ Truth: report uncertainty and processing mode. Repair: edit manual speech region
 
 ## 5. Data Model
 
-Proposed AnalysisReport v1: schemaVersion, source fingerprint, duration, decoded sample rate, channel labels/order, decoder identity/options, measurement algorithm/version, integrated LUFS or unavailable reason, LRA or unavailable reason, momentary/short-term trajectories, true-peak method/value, per-channel diagnostics, manual speech ranges, measurement confidence and warnings. Source identity must detect replacement; hashing cost is measured in M1. No report may claim dialogue content was machine-verified in slice 001.
+Implemented AnalysisReport v1: schemaVersion, source fingerprint, duration, decoded sample rate, channel labels/order, decoder identity/options, measurement algorithm/version, integrated LUFS or unavailable reason, LRA or unavailable reason, momentary/short-term trajectories, true-peak method/value, per-channel diagnostics, manual speech ranges and warnings. Automatic speech confidence is not implemented. Source identity must detect replacement; hashing cost is measured in M1. No report may claim dialogue content was machine-verified in slice 001.
 
 Manual region: start/end in integer sample positions with an explicit timebase, bounded to source duration; selection method and user confirmation recorded. Nonfinite values use an explicit unavailable state, never JSON NaN. Exported report schema is internal and versioned, not a promised external SDK. Save atomically to a new destination; preserve existing reports. Session schema changes are excluded from slice 001.
+
+Proposed mastering data: fresh AnalysisResult, process-local immutable GainPlan and a new bounded VerificationReport v1. SLICE-002-dialogue-mastering.md section 7 owns their field and validation contract. No imported report drives rendering; no session migration is included.
 
 ## 6. Permissions and Access Model
 
@@ -94,7 +98,8 @@ Existing Sources, Tests, Resources, build.command and package.command stay in pl
 | R-002 / R-003 | Existing AudioTests; future speech/mastering gates | Current evidence is only the FFmpeg foundation |
 | R-004 | ExportTests, FFmpegTests, RecoveryTests | Existing local debug/release logs, scoped in MAP-EVIDENCE.md |
 | R-005 | GitHub visibility and PR inspection | Operational evidence in SIGNING-AND-CI.md |
-| R-006 approved | meter-conformance, meter-crosscheck, analysis-ui, analysis-report, analysis-cancel, analysis-performance | Future recorded runs tied to S-001 through S-006 |
+| R-006 approved | meter-conformance, meter-crosscheck, analysis-ui, analysis-report, analysis-cancel, analysis-performance | Recorded runs tied to S-001 through S-006 in MEASURED-ANALYSIS-EVIDENCE.md |
+| R-007 proposed | mastering-plan, mastering-dsp, mastering-output, mastering-continuity, mastering-preview, mastering-recovery, mastering-performance, mastering-listening, mastering-ui | Future Slice 002 gates S2-001 through S2-009; no results claimed |
 
 Do not rename a skipped gate as passed. Official test data needs a rights manifest, checksum and expected values; fetch locally if redistribution is not allowed. Cross-check a second implementation and investigate discrepancies. Repeated inconclusive attempts stop at the slice's time box; revise the decision instead of inventing wider harnesses. Blind listening belongs to later mastering slices, with corpus coverage and success criteria fixed before results are seen.
 
@@ -118,15 +123,15 @@ Use current tools and free public standard runners. No new paid allocation or se
 
 | ID | Area and concern | Impact / confidence | Next check / owner | Status |
 | --- | --- | --- | --- | --- |
-| U-001 | Speech model accuracy and license | Wrong dialogue gain; unknown | Bounded multilingual candidate spike before slice 002; maintainer | Open |
+| U-001 | Speech model accuracy and license | Wrong dialogue gain; unknown | Reopen for automatic-speech brief after manual mastering; maintainer | Deferred |
 | U-002 | Official fixtures and film corpus rights | Cannot redistribute evidence; unknown | Review licenses and record local acquisition manifest; maintainer | Open |
 | U-003 | OS/CPU/HDR display coverage | Untested compatibility; unknown | Select support matrix and obtain representative hardware; owner | Open |
 | U-004 | Developer Program/team authority | Credential setup verified | Developer ID identity and notary profile verified on 2026-09-28; owner | Confirmed |
 | U-005 | Software license | Public code reuse rights unclear; unknown | Owner selects license after dependency review; owner | Open |
-| U-006 | A-001 memory/cancel targets | Unusable full-film analysis; inferred | M1 profiling and bounded streaming design; maintainer | Open |
+| U-006 | A-001 memory/cancel targets | Unusable full-film analysis; inferred | Slice 001 two-hour test passed at 106.7 MiB; profile new mastering path under S2-007 | Confirmed |
 | U-007 | A-002 comfort and A-003 language needs | Fatigue/access gaps; inferred | Owner readback and later listening panel; owner | Open |
 
-Coverage: source boundaries examined; existing local result records reused; new meter, automatic speech detection, actual HDR displays, Intel/older OS tests and signing operations unexecuted. Cloud billing eligibility is external and judged by actual runs.
+Coverage: source boundaries examined; existing local result records reused; new meter verified within the stated fixture/platform scope; automatic speech, actual HDR displays, Intel/older OS tests and signing remain unexecuted. Cloud billing eligibility is external and judged by actual runs.
 
 ## 17. Definition of Done
 

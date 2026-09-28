@@ -82,3 +82,9 @@ New sessions use version 2 so older builds reject settings they cannot execute; 
 Choose tracks in Workspace or a queue item to keep individual audio and subtitle streams by index, codec and language. All is the legacy default; None removes the category. Codec/handling settings still apply. New source imports reset selection; saved sessions and job copies preserve it. A changed or missing index fails preflight instead of silently substituting another track. Subtitle copying still depends on the target container. One common audio encoding recipe applies to every selected audio track.
 
 Current sessions use version 3 and recovery journals version 2; older files remain readable, while older builds reject these new versions rather than ignoring routing or picture settings.
+
+## Video rate control (v0.9)
+
+Software AV1/x265/x264 support constant quality or single-pass target bitrate (100–200,000 kb/s). H.264/HEVC also offer Apple hardware via VideoToolbox in target-bitrate mode. Hardware requests pass `-allow_sw 0`; unsupported systems fail explicitly. CRF and software presets are absent from hardware plans. The target is not a constant-bitrate or exact-file-size promise. Selecting a built-in preset resets the engine/rate mode to that preset’s software CRF defaults.
+
+Run hardware integration checks explicitly with `STAXRIP_TEST_HARDWARE=1 swift test`. Both codecs passed on the development Apple Silicon Mac; hosted CI skips hardware tests by default. Current session/recovery versions are 4/3 and retain older-version read support.

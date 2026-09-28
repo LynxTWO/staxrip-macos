@@ -152,6 +152,48 @@ struct FFmpegTests {
         #expect(throws: (any Error).self) { try SessionDocument.validate(config) }
     }
 
+    @Test(.enabled(if: FFmpegTools.discover() != nil), arguments: ["H.264", "HEVC", "AV1"])
+    func softwareTargetBitrateEncodes(codec: String) async throws {
+        try await bitrateEncode(codec: codec, hardware: false)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["STAXRIP_TEST_HARDWARE"] == "1"), arguments: ["H.264", "HEVC"])
+    func actualHardwareBitrateEncodes(codec: String) async throws {
+        try await bitrateEncode(codec: codec, hardware: true)
+    }
+
+    private func bitrateEncode(codec: String, hardware: Bool) async throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let tools = try #require(FFmpegTools.discover())
+        let source = dir.appendingPathComponent("bitrate-source.mkv")
+        let fixture = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-f", "lavfi", "-i", "testsrc2=size=640x360:rate=24:duration=2", "-c:v", "libx264", source.path])
+        #expect(fixture.status == 0)
+        var config = EncodeConfiguration()
+        config.codec = codec; config.encoder = codec == "AV1" ? "SVT-AV1" : codec == "HEVC" ? "x265" : "x264"
+        config.rate.backend = hardware ? "Apple hardware" : "Software"
+        config.rate.mode = "Target bitrate"; config.rate.bitrate = 1200; config.speed = "Fast"
+        let destination = dir.appendingPathComponent("bitrate-output.mkv")
+        let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: destination.path, configuration: config, created: Date())
+        let batch = BatchController(); await batch.discover()
+        let sourceProbe = try await MediaProbe.read(source, tools: tools)
+        let plan = try EncodePlan.make(job: job, probe: sourceProbe, encoders: batch.encoders, staged: destination)
+        #expect(!plan.arguments.contains("-crf"))
+        #expect(plan.arguments.contains("1200k"))
+        if hardware {
+            #expect(!plan.arguments.contains("-preset"))
+            #expect(plan.arguments.contains("-allow_sw"))
+        }
+        batch.start([job])
+        while batch.running { try await Task.sleep(for: .milliseconds(20)) }
+        let state = try #require(batch.statuses[job.id])
+        #expect(state.phase == "Completed", Comment(rawValue: state.detail))
+        let result = try await MediaProbe.read(destination, tools: tools)
+        #expect(result.video?.codec_name == (codec == "AV1" ? "av1" : codec == "HEVC" ? "hevc" : "h264"))
+        #expect(result.video?.width == 640)
+        #expect(abs(result.seconds - 2) < 0.1)
+    }
+
     @Test func planRejectsHDR() throws {
         let probe = try JSONDecoder().decode(MediaProbe.self, from: Data("""
         {"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":320,"height":180,"pix_fmt":"yuv420p","color_transfer":"smpte2084"}],"format":{"duration":"1"}}

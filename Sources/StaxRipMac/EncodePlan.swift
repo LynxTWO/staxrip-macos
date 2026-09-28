@@ -25,7 +25,8 @@ struct EncodePlan: Sendable {
             throw NativeExportError.invalid("Precise trimming requires re-encoded audio (or no audio) and removed subtitles. Embedded subtitle and copied-audio timing cannot yet be preserved by this trim workflow.")
         }
         let outputDuration = trimmed ? (picture.end > 0 ? picture.end : probe.seconds) - picture.start : probe.seconds
-        let encoder = c.codec == "AV1" ? "libsvtav1" : c.codec == "HEVC" ? "libx265" : "libx264"
+        let hardware = c.rate.backend == "Apple hardware"
+        let encoder = hardware ? (c.codec == "HEVC" ? "hevc_videotoolbox" : "h264_videotoolbox") : c.codec == "AV1" ? "libsvtav1" : c.codec == "HEVC" ? "libx265" : "libx264"
         guard encoders.contains(encoder) else { throw NativeExportError.invalid("The installed FFmpeg does not provide \(encoder).") }
         guard !["smpte2084", "arib-std-b67"].contains(video.color_transfer ?? ""),
               ["yuv420p", "nv12"].contains(video.pix_fmt ?? "") else {
@@ -51,17 +52,22 @@ struct EncodePlan: Sendable {
             }
         }
         var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe", "-i", job.source,
-                    "-map", "0:\(video.index)", "-c:v", encoder, "-crf", String(Int(c.quality)), "-pix_fmt", "yuv420p", "-threads", "4"]
+                    "-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", "yuv420p", "-threads", "4"]
         if trimmed {
             args += ["-ss", String(picture.start), "-t", String(outputDuration)]
         }
+        if c.rate.mode == "Constant quality" { args += ["-crf", String(Int(c.quality))] }
+        else { args += ["-b:v", "\(c.rate.bitrate)k"] }
         let speed: String
-        if c.codec == "AV1" {
+        if hardware {
+            speed = "hardware default"
+            args += ["-allow_sw", "0"]
+        } else if c.codec == "AV1" {
             speed = c.speed == "Thorough" ? "4" : c.speed == "Fast" ? "8" : "6"
             args += ["-svtav1-params", "lp=4"]
         } else { speed = c.speed == "Thorough" ? "slow" : c.speed == "Fast" ? "fast" : "medium" }
-        args += ["-preset", speed]
-        if c.codec == "HEVC" { args += ["-x265-params", "pools=4:frame-threads=2"] }
+        if !hardware { args += ["-preset", speed] }
+        if c.codec == "HEVC", !hardware { args += ["-x265-params", "pools=4:frame-threads=2"] }
         var filters: [String] = []
         if picture.deinterlace != "Off" {
             filters.append("bwdif=mode=send_frame:parity=auto:deint=\(picture.deinterlace == "Flagged frames" ? "interlaced" : "all")")
@@ -99,7 +105,7 @@ struct EncodePlan: Sendable {
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: keepSubtitles ? subtitles.count : 0,
-                          duration: outputDuration, summary: "\(encoder) · CRF \(Int(c.quality)) · preset \(speed) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · 8-bit SDR")
+                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · 8-bit SDR")
     }
 
     static func selectedStreams(_ probe: MediaProbe, type: String, indices: [Int]?) throws -> [MediaProbe.Stream] {

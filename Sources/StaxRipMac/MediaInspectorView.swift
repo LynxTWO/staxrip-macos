@@ -43,7 +43,7 @@ struct MediaInspectorView: View {
                         }
                     }
                 }.frame(maxHeight: 380)
-                Text("The current advanced plan encodes the first non-cover-art video and all selected audio/subtitle categories. Track-by-track routing is a future extension.")
+                Text("The advanced plan encodes the first non-cover-art video. Use Choose tracks in Workspace or the queue editor to select audio and subtitle streams.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }.padding(26).frame(width: 610).task { await batch.inspect(source) }

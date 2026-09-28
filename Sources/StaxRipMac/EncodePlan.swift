@@ -39,8 +39,8 @@ struct EncodePlan: Sendable {
         guard (video.tags?["rotate"] ?? "0") == "0", !(video.side_data_list ?? []).contains(where: { ($0.rotation ?? 0) != 0 }) else {
             throw NativeExportError.invalid("Rotated sources need an explicit orientation step. Use Quick Export for this source for now.")
         }
-        let audio = probe.streams.filter { $0.codec_type == "audio" }
-        let subtitles = probe.streams.filter { $0.codec_type == "subtitle" }
+        let audio = try selectedStreams(probe, type: "audio", indices: c.audioTracks)
+        let subtitles = try selectedStreams(probe, type: "subtitle", indices: c.subtitleTracks)
         if c.container == "MP4" {
             if c.audio == "Opus" { throw NativeExportError.invalid("Choose MKV for Opus, or AAC for MP4.") }
             if c.audio == "Copy original", audio.contains(where: { !["aac", "mp3", "ac3", "eac3", "alac"].contains($0.codec_name ?? "") }) {
@@ -76,7 +76,7 @@ struct EncodePlan: Sendable {
         if !filters.isEmpty { args += ["-vf", filters.joined(separator: ",")] }
         var expectedAudio: String?
         if c.audio != "No audio", !audio.isEmpty {
-            args += ["-map", "0:a"]
+            for stream in audio { args += ["-map", "0:\(stream.index)"] }
             if c.audio == "Copy original" { args += ["-c:a", "copy"] }
             else {
                 let audioEncoder = c.audio == "Opus" ? "libopus" : "aac"
@@ -86,7 +86,10 @@ struct EncodePlan: Sendable {
             }
         } else { args += ["-an"] }
         let keepSubtitles = c.subtitleMode == "Keep embedded tracks"
-        if keepSubtitles, !subtitles.isEmpty { args += ["-map", "0:s", "-c:s", "copy"] }
+        if keepSubtitles, !subtitles.isEmpty {
+            for stream in subtitles { args += ["-map", "0:\(stream.index)"] }
+            args += ["-c:s", "copy"]
+        }
         else { args += ["-sn"] }
         if c.container == "MKV", keepSubtitles { args += ["-map", "0:t?", "-c:t", "copy"] }
         args += ["-map_metadata", "0", "-map_chapters", trimmed ? "-1" : "0"]
@@ -97,5 +100,16 @@ struct EncodePlan: Sendable {
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: keepSubtitles ? subtitles.count : 0,
                           duration: outputDuration, summary: "\(encoder) · CRF \(Int(c.quality)) · preset \(speed) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · 8-bit SDR")
+    }
+
+    static func selectedStreams(_ probe: MediaProbe, type: String, indices: [Int]?) throws -> [MediaProbe.Stream] {
+        let streams = probe.streams.filter { $0.codec_type == type }
+        guard let indices else { return streams }
+        return try indices.map { index in
+            guard let stream = streams.first(where: { $0.index == index }) else {
+                throw NativeExportError.invalid("Selected \(type) track #\(index) is missing or has changed type. Review the source tracks.")
+            }
+            return stream
+        }
     }
 }

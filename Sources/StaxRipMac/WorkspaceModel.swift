@@ -14,6 +14,8 @@ struct EncodeConfiguration: Codable, Equatable {
     var audio = "AAC"
     var audioBitrate = "192 kb/s"
     var subtitleMode = "Keep embedded tracks"
+    var audioTracks: [Int]?
+    var subtitleTracks: [Int]?
     private var pictureOptions: PictureOptions?
     var picture: PictureOptions {
         get { pictureOptions ?? PictureOptions() }
@@ -198,6 +200,7 @@ final class WorkspaceModel: ObservableObject {
                 guard loadID == id else { return }
                 player?.pause()
                 player = AVPlayer(url: url)
+                if !keepOutputName { config.audioTracks = nil; config.subtitleTracks = nil }
                 sourceURL = url
                 sourceName = url.lastPathComponent
                 if !keepOutputName { outputStem = url.deletingPathExtension().lastPathComponent + "_encoded" }
@@ -210,6 +213,7 @@ final class WorkspaceModel: ObservableObject {
                 if let tools = FFmpegTools.discover(), let probe = try? await MediaProbe.read(url, tools: tools), let video = probe.video {
                     guard loadID == id else { return }
                     player?.pause(); player = nil
+                    if !keepOutputName { config.audioTracks = nil; config.subtitleTracks = nil }
                     sourceURL = url; sourceName = url.lastPathComponent; sourceUnavailable = true
                     loading = false
                     sourceInfo = "\(video.width ?? 0) × \(video.height ?? 0) · \(video.codec_name ?? "unknown") · native preview unavailable"

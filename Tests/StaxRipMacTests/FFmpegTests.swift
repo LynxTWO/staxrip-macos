@@ -119,6 +119,39 @@ struct FFmpegTests {
         #expect(try JSONDecoder().decode(EncodeConfiguration.self, from: JSONEncoder().encode(changed)) == changed)
     }
 
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func selectedAudioAndSubtitleStreamsSurviveEncoding() async throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let tools = try #require(FFmpegTools.discover())
+        let subtitles = dir.appendingPathComponent("captions.srt")
+        try "1\n00:00:00,000 --> 00:00:01,000\nSynthetic caption\n".write(to: subtitles, atomically: true, encoding: .utf8)
+        let source = dir.appendingPathComponent("multitrack.mkv")
+        let fixture = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=24:duration=1", "-f", "lavfi", "-i", "sine=frequency=440:duration=1", "-f", "lavfi", "-i", "sine=frequency=880:duration=1", "-i", subtitles.path, "-map", "0:v", "-map", "1:a", "-map", "2:a", "-map", "3:s", "-c:v", "libx264", "-c:a", "aac", "-c:s", "srt", "-metadata:s:a:0", "language=eng", "-metadata:s:a:1", "language=fra", "-metadata:s:s:0", "language=fra", source.path])
+        #expect(fixture.status == 0)
+        var config = EncodeConfiguration()
+        config.codec = "H.264"; config.encoder = "x264"; config.speed = "Fast"
+        config.audioTracks = [2]; config.subtitleTracks = [3]
+        let destination = dir.appendingPathComponent("selected.mkv")
+        let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: destination.path, configuration: config, created: Date())
+        let batch = BatchController(); await batch.discover(); batch.start([job])
+        while batch.running { try await Task.sleep(for: .milliseconds(20)) }
+        let state = try #require(batch.statuses[job.id])
+        #expect(state.phase == "Completed", Comment(rawValue: state.detail))
+        let result = try await MediaProbe.read(destination, tools: tools)
+        #expect(result.streams.filter { $0.codec_type == "audio" }.count == 1)
+        #expect(result.streams.first { $0.codec_type == "audio" }?.tags?["language"] == "fra")
+        #expect(result.streams.first { $0.codec_type == "subtitle" }?.tags?["language"] == "fra")
+        let input = try await MediaProbe.read(source, tools: tools)
+        #expect(throws: (any Error).self) { try EncodePlan.selectedStreams(input, type: "audio", indices: [3]) }
+        #expect(throws: (any Error).self) { try EncodePlan.selectedStreams(input, type: "audio", indices: [99]) }
+        #expect(try EncodePlan.selectedStreams(input, type: "audio", indices: []).isEmpty)
+        #expect(try EncodePlan.selectedStreams(input, type: "audio", indices: nil).count == 2)
+        #expect(try JSONDecoder().decode(EncodeConfiguration.self, from: JSONEncoder().encode(config)) == config)
+        config.audioTracks = [2, 2]
+        #expect(throws: (any Error).self) { try SessionDocument.validate(config) }
+    }
+
     @Test func planRejectsHDR() throws {
         let probe = try JSONDecoder().decode(MediaProbe.self, from: Data("""
         {"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":320,"height":180,"pix_fmt":"yuv420p","color_transfer":"smpte2084"}],"format":{"duration":"1"}}

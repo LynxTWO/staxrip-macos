@@ -5,6 +5,7 @@ struct QueueEditor: View {
     @EnvironmentObject private var batch: BatchController
     @Environment(\.dismiss) private var dismiss
     @State private var draft: QueueJob
+    @State private var showingTracks = false
     @State private var stem: String
 
     init(job: QueueJob) {
@@ -26,6 +27,7 @@ struct QueueEditor: View {
         ScrollView {
         VStack(alignment: .leading, spacing: 20) {
             sectionTitle("Edit configuration", subtitle: URL(fileURLWithPath: draft.source).lastPathComponent)
+            if !draft.isDemo { Button("Choose source tracks…") { showingTracks = true } }
             Divider()
             HStack(spacing: 16) {
                 settingPicker("Codec", selection: $draft.configuration.codec, values: ["AV1", "HEVC", "H.264"])
@@ -79,5 +81,8 @@ struct QueueEditor: View {
             }
         }.padding(28)
         }.frame(width: 600, height: 720)
+        .sheet(isPresented: $showingTracks) {
+            TrackRoutingView(source: URL(fileURLWithPath: draft.source), configuration: $draft.configuration)
+        }
     }
 }

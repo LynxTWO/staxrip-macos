@@ -87,6 +87,53 @@ struct AudioTests {
         }
     }
 
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func nightMasterControlsMeasuredRange() async throws {
+        let tools = try #require(FFmpegTools.discover())
+        let (dir, _) = try await fixture(tools)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let source = dir.appendingPathComponent("wide-range.wav")
+        let generated = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-f", "lavfi", "-i", "aevalsrc=0.3*sin(2*PI*440*t)*if(lt(mod(t\\,20)\\,10)\\,0.15\\,1):s=48000:d=60", "-c:a", "pcm_s24le", source.path])
+        #expect(generated.status == 0, Comment(rawValue: String(decoding: generated.stderr, as: UTF8.self)))
+        let before = try await AudioEngine.analyze(source: source, track: 0, tools: tools)
+        #expect(try #require(Double(before.input_lra)) > 10)
+        var settings = AudioSettings(); settings.normalize = true; settings.targetLUFS = -18.5; settings.targetLRA = 3; settings.loudnessMode = "Night / Venue"
+        let destination = dir.appendingPathComponent("night.flac")
+        try await AudioEngine.export(source: source, track: 0, destination: destination, settings: settings, tools: tools) { _ in }
+        let after = try await AudioEngine.analyze(source: destination, track: 0, tools: tools)
+        #expect(abs(try #require(Double(after.input_i)) + 18.5) <= 0.5)
+        #expect(try #require(Double(after.input_lra)) <= 4)
+        #expect(try #require(Double(after.input_tp)) <= -1)
+    }
+
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func gatedMeasurementIgnoresQuietBookendsAndAuditsChannels() async throws {
+        let tools = try #require(FFmpegTools.discover())
+        let (dir, _) = try await fixture(tools)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let source = dir.appendingPathComponent("gating.wav")
+        // EBU Tech 3341-style sequence: 10 s at -36 dBFS, 60 s at -23, 10 s at -36.
+        let expression = "sin(2*PI*1000*t)*if(between(t\\,10\\,70)\\,0.070794578\\,0.015848932)"
+        let generated = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-f", "lavfi", "-i", "aevalsrc=\(expression)|\(expression):s=48000:d=80:c=stereo", "-c:a", "pcm_s24le", source.path])
+        #expect(generated.status == 0)
+        let report = try await AudioEngine.analyze(source: source, track: 0, tools: tools)
+        #expect(abs(try #require(Double(report.input_i)) + 23) <= 0.15)
+        let channels = try await AudioAudit.channels(source: source, track: 0, tools: tools)
+        #expect(channels.map(\.label) == ["FL", "FR"])
+        #expect(abs(try #require(Double(channels[0].report.input_i)) + 26.01) < 0.2)
+        #expect(channels[0].report.input_i == channels[1].report.input_i)
+        let passage = try await AudioAudit.dialogue(source: source, track: 0, selection: DialogueSelection(start: 20, end: 50), tools: tools)
+        #expect(abs(try #require(Double(passage.input_i)) + 23) <= 0.15)
+        await #expect(throws: (any Error).self) {
+            try await AudioAudit.dialogue(source: source, track: 0, selection: DialogueSelection(start: 79, end: 90), tools: tools)
+        }
+    }
+
+    @Test func excessiveRangeCannotBePublishedAsVerified() {
+        let report = LoudnessReport(input_i: "-18", input_tp: "-2", input_lra: "8", input_thresh: "-28", target_offset: "0")
+        #expect(throws: (any Error).self) { try AudioEngine.verifyNormalized(report, target: -18, maximumLRA: 3) }
+    }
+
     @Test func malformedLoudnessReportIsRejected() {
         #expect(throws: (any Error).self) { try LoudnessReport.parse(Data("not a report".utf8)) }
     }

@@ -56,3 +56,9 @@ Implementation references: [FFmpeg options](https://ffmpeg.org/ffmpeg.html#Main-
 ## v0.9 hardware and bitrate
 
 35 tests pass with hardware checks enabled: actual H.264 and HEVC VideoToolbox encodes with software fallback disabled, plus software AV1/HEVC/H.264 bitrate outputs. Tests verify codec, dimensions and duration, and absence of CRF/software presets in hardware arguments. Native UI HEVC → Apple hardware showed target bitrate, hid CRF and disabled speed; switching tabs and applying Compact AV1 restored software CRF defaults. Installed FFmpeg `-h encoder=hevc_videotoolbox` confirms `allow_sw` behavior. No throughput, bitrate-accuracy or energy superiority claim is made from short fixtures.
+
+## v0.10 mastering foundation
+
+38 tests passed with hardware checks enabled in debug. The first release run caught an AVFoundation cancellation cleanup race; the completion boundary was changed to the export completion callback, and verification was repeated. A synthetic 60-second level-changing input starts at 16.5 LU LRA. Native Night / Venue export targeting −18.5 LUFS and 3 LU produced **−18.45 LUFS, 3.80 LU LRA, −2.45 dBTP**, within the explicitly displayed 1 LU LRA tolerance. This proves the fixture contract, not subjective comfort or movie-wide dialogue control. An EBU-style 80-second stereo quiet/loud/quiet fixture verifies gated integrated loudness near −23 LUFS, separate channel measurements near −26 LUFS, and a selected-passage measurement. No official full-corpus conformance claim.
+
+The corrected release suite passed all 38 tests, including eight concurrent native cancellation cases. Native UI checks also completed channel audit and passage measurement, and the dark mastering layout was inspected. Passage tests use tones to check time selection and measurement, not a speech detector.

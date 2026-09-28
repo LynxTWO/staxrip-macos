@@ -84,7 +84,7 @@ struct WorkspaceView: View {
                     Text("Light").tag("Light")
                     Text("Dark").tag("Dark")
                 }.pickerStyle(.segmented).labelsHidden().help("App appearance")
-                Text("v0.9  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+                Text("v0.10  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
             }.padding(.bottom, 24)
         }.padding(.horizontal, 18)
             .background(.ultraThinMaterial)

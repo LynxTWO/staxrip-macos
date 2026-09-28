@@ -16,7 +16,7 @@ struct EncodeConfiguration: Codable, Equatable {
     var subtitleMode = "Keep embedded tracks"
 }
 
-struct QueueJob: Identifiable, Codable {
+struct QueueJob: Identifiable, Codable, Equatable {
     let id: UUID
     let source: String
     let isDemo: Bool
@@ -40,6 +40,9 @@ final class WorkspaceModel: ObservableObject {
     @Published var outputStem = "Alpine escape_encoded"
     @Published var notice = ""
     @Published var error: String?
+    @Published var sessionName = "Untitled session"
+    @Published var sourceUnavailable = false
+    private var savedSnapshot: SessionDocument?
     private var loadID = UUID()
     var isDemo: Bool { sourceURL == nil }
     var outputName: String {
@@ -50,7 +53,7 @@ final class WorkspaceModel: ObservableObject {
         Self.filenameIssue(outputStem) ?? destinationIssue(outputFolder.appendingPathComponent(outputName).path, source: sourceURL?.path)
     }
 
-    static func filenameIssue(_ stem: String) -> String? {
+    nonisolated static func filenameIssue(_ stem: String) -> String? {
         let value = stem.trimmingCharacters(in: .whitespacesAndNewlines)
         if value.isEmpty { return "Enter an output file name." }
         if value == "." || value == ".." || value.contains("/") || value.contains(":") || value.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) {
@@ -76,6 +79,7 @@ final class WorkspaceModel: ObservableObject {
         player?.pause()
         player = nil
         sourceURL = nil
+        sourceUnavailable = false
         sourceName = "Alpine escape.mov"
         sourceInfo = "3840 × 2160  ·  24 fps  ·  02:34"
         outputStem = "Alpine escape_encoded"
@@ -108,6 +112,61 @@ final class WorkspaceModel: ObservableObject {
         notice = "Queue configuration updated"
     }
 
+    var sessionSnapshot: SessionDocument {
+        SessionDocument(sourcePath: sourceURL?.path, configuration: config, outputFolder: outputFolder.path, outputStem: outputStem, jobs: jobs)
+    }
+
+    func saveSession() {
+        let panel = NSSavePanel()
+        panel.title = "Save StaxRip Mac session"
+        panel.nameFieldStringValue = "StaxRip session.json"
+        panel.allowedContentTypes = [.json]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try sessionSnapshot.write(to: url)
+            savedSnapshot = sessionSnapshot
+            sessionName = url.deletingPathExtension().lastPathComponent
+            notice = "Session saved"
+        } catch { self.error = error.localizedDescription }
+    }
+
+    func openSession() {
+        let panel = NSOpenPanel()
+        panel.title = "Open StaxRip Mac session"
+        panel.allowedContentTypes = [.json]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let document = try SessionDocument.read(from: url)
+            if savedSnapshot != sessionSnapshot {
+                let alert = NSAlert()
+                alert.messageText = "Replace the current workspace?"
+                alert.informativeText = "Open this saved session in place of the current source, settings and queue. Cancel to save your current session first."
+                alert.addButton(withTitle: "Open session")
+                alert.addButton(withTitle: "Cancel")
+                guard alert.runModal() == .alertFirstButtonReturn else { return }
+            }
+            restoreSession(document)
+            sessionName = url.deletingPathExtension().lastPathComponent
+        } catch { self.error = error.localizedDescription }
+    }
+
+    func restoreSession(_ document: SessionDocument) {
+        showDemo()
+        config = document.configuration
+        outputFolder = URL(fileURLWithPath: document.outputFolder)
+        outputStem = document.outputStem
+        jobs = document.jobs
+        if let path = document.sourcePath {
+            sourceURL = URL(fileURLWithPath: path)
+            sourceName = sourceURL!.lastPathComponent
+            sourceInfo = "Saved source · preview not loaded"
+            sourceUnavailable = true
+            if FileManager.default.fileExists(atPath: path) { load(sourceURL!, keepOutputName: true) }
+        }
+        savedSnapshot = document
+        notice = "Session restored"
+    }
+
     func chooseSource() {
         let panel = NSOpenPanel()
         panel.title = "Open a source video"
@@ -116,7 +175,7 @@ final class WorkspaceModel: ObservableObject {
         if panel.runModal() == .OK, let url = panel.url { load(url) }
     }
 
-    func load(_ url: URL) {
+    func load(_ url: URL, keepOutputName: Bool = false) {
         let id = UUID()
         loadID = id
         loading = true
@@ -136,7 +195,8 @@ final class WorkspaceModel: ObservableObject {
                 player = AVPlayer(url: url)
                 sourceURL = url
                 sourceName = url.lastPathComponent
-                outputStem = url.deletingPathExtension().lastPathComponent + "_encoded"
+                if !keepOutputName { outputStem = url.deletingPathExtension().lastPathComponent + "_encoded" }
+                sourceUnavailable = false
                 let seconds = duration.seconds.isFinite ? max(0, Int(duration.seconds)) : 0
                 sourceInfo = "\(Int(abs(bounds.width))) × \(Int(abs(bounds.height)))  ·  \(String(format: "%.2f", rate)) fps  ·  \(String(format: "%02d:%02d", seconds / 60, seconds % 60))"
                 loading = false

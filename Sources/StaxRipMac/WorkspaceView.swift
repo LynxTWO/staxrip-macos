@@ -102,6 +102,11 @@ struct WorkspaceView: View {
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
+            Menu {
+                Button("Save session…") { model.saveSession() }
+                Button("Open session…") { model.openSession() }
+            } label: { Label("Session", systemImage: "doc.badge.gearshape") }
+            .menuStyle(.borderlessButton).fixedSize().help(model.sessionName)
             Text("PROTOTYPE").font(.system(size: 9, weight: .semibold)).tracking(1)
                 .foregroundStyle(.secondary).padding(.horizontal, 9).padding(.vertical, 5)
                 .overlay(Capsule().strokeBorder(.quaternary))
@@ -136,6 +141,13 @@ struct WorkspaceView: View {
             Group {
                 if let player = model.player {
                     NativeVideoPreview(player: player)
+                } else if !model.isDemo {
+                    VStack(spacing: 12) {
+                        Image(systemName: "video.slash").font(.largeTitle).foregroundStyle(.secondary)
+                        Text("Source preview unavailable").font(.headline)
+                        Text("The saved source may have moved or is not readable by this Mac.").font(.caption).foregroundStyle(.secondary)
+                        Button("Locate source…") { model.chooseSource() }
+                    }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     AlpinePreview()
                 }
@@ -302,7 +314,7 @@ struct WorkspaceView: View {
             Circle().fill(Color.accent).frame(width: 5, height: 5)
             Text(model.loading ? "Reading source…" : model.notice.isEmpty ? "Ready to explore" : model.notice)
             Spacer()
-            Text("Local prototype").foregroundStyle(.tertiary)
+            Text(model.sessionName).lineLimit(1).foregroundStyle(.tertiary)
             Text("·").foregroundStyle(.tertiary)
             Text("\(model.jobs.count) queued").foregroundStyle(.secondary)
         }.font(.system(size: 10)).padding(.horizontal, 24).frame(height: 32)

@@ -3,7 +3,7 @@
 ## Local evidence
 
 - macOS 27, Apple Silicon, Swift 6.4, Homebrew FFmpeg 9.0.2.
-- 20 Swift Testing tests pass in both debug and optimized release builds. Parameterized cases include three AVFoundation presets, three FFmpeg video encoders and four audio output formats.
+- All 27 tests pass in debug and optimized release builds. The recovery update adds seven tests for interrupted state, controller restart after an actual encode, output preservation, untrusted records, write failures and lock ownership. Parameterized cases include three AVFoundation presets, three FFmpeg video encoders and four audio output formats.
 - Real synthetic-media checks cover video/audio codecs, crop dimensions, track count, duration, sample rate, channels, selected-track loudness, literal filename arguments, source preservation, output conflicts, cancellation and cleanup.
 - Native UI checks completed for workspace import/playback, queue editing, session round-trip, appearance, media inspection and an actual AV1 queue encode.
 - Audio Lab initial screen and source picker were observed. Its engine passes tests. The complete audio UI workflow is not yet verified.
@@ -25,6 +25,10 @@ Local signing identity inspection found an Apple Development identity but no Dev
 3. Export each format through the Save dialog; verify the chosen destination and Finder reveal.
 4. Cancel a long audio operation, then retry; check that source controls and Quit protection recover.
 5. Test the full app at minimum window size in light and dark appearance.
-6. Continue queue restart recovery with an atomic journal and explicit interrupted-job review. No silent restart or blanket temporary-directory cleanup.
+6. Exercise the new Restore previous queue control after a normal relaunch and forced interruption. Automated checks cover persisted states and controller recreation; a full app crash/relaunch UI test is still pending. No silent restart or blanket temporary-directory cleanup.
 
 Long-form and damaged media, VFR/A-V sync, HDR, multichannel routing, older macOS, Intel hardware, network filesystems and distribution signing are not fully validated. Synthetic checks do not establish production readiness or superiority to other encoders.
+
+## Recovery follow-up
+
+Native control was retried by full app path and still returned the native-pipe error. Recovery implementation and automated tests proceeded independently; its new restore banner has not been visually verified. The running v0.4 preview was preserved. A separate optimized v0.5 developer artifact can be built without replacing that running bundle.

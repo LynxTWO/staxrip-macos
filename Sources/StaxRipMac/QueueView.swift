@@ -21,6 +21,19 @@ struct QueueView: View {
                     .disabled(model.jobs.isEmpty)
             }
             Text(batch.toolDescription).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).lineLimit(2)
+            if let recovery = batch.recovery {
+                HStack {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Previous batch available · \(recovery.jobs.count) jobs").font(.headline)
+                        Text("Restore into an empty queue to review it. Nothing starts automatically. Starting a new batch replaces this recovery record.").font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Restore previous queue") {
+                        if let jobs = batch.restoreQueue() { model.jobs = jobs }
+                    }.disabled(!model.jobs.isEmpty || batch.running || exporter.running || audio.running)
+                }.padding(16).background(Color.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
+            }
+            if let error = batch.recoveryError { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
             if model.jobs.isEmpty {
                 VStack(spacing: 15) {
                     Image(systemName: "square.stack.3d.up").font(.system(size: 42, weight: .ultraLight)).foregroundStyle(Color.accent)
@@ -75,7 +88,7 @@ struct QueueView: View {
             }
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "info.circle")
-                Text("This is a GUI prototype. Jobs run sequentially; the batch stops on failure. Completed outputs are never replaced. Use Session → Save session to keep and reopen your workspace and queue. Export JSON creates a queue-only reference file. Neither format is a Windows StaxRip project file.")
+                Text("This is a GUI prototype. Jobs run sequentially; the batch stops on failure. Completed outputs are never replaced. The last started batch is saved locally for explicit recovery after a restart. Use Session → Save session to keep and reopen your workspace and queue. Export JSON creates a queue-only reference file. Neither format is a Windows StaxRip project file.")
             }.font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4)
                 .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))

@@ -84,7 +84,7 @@ struct WorkspaceView: View {
                     Text("Light").tag("Light")
                     Text("Dark").tag("Dark")
                 }.pickerStyle(.segmented).labelsHidden().help("App appearance")
-                Text("v0.8  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+                Text("v0.9  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
             }.padding(.bottom, 24)
         }.padding(.horizontal, 18)
             .background(.ultraThinMaterial)
@@ -217,7 +217,7 @@ struct WorkspaceView: View {
             HStack {
                 sectionTitle("Video encoding", subtitle: "Quality first. Every setting within reach.")
                 Spacer()
-                Text("SOFTWARE").font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
+                Text(model.config.rate.backend.uppercased()).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
             }
             HStack(spacing: 12) {
                 settingPicker("Codec", selection: $model.config.codec, values: ["AV1", "HEVC", "H.264"])
@@ -226,10 +226,12 @@ struct WorkspaceView: View {
                     }
                 VStack(alignment: .leading, spacing: 6) {
                     eyebrow("ENCODER")
-                    Text(model.config.encoder).font(.system(size: 12, weight: .medium)).frame(maxWidth: .infinity, alignment: .leading).padding(9)
+                    Text(model.config.activeEncoder).font(.system(size: 12, weight: .medium)).frame(maxWidth: .infinity, alignment: .leading).padding(9)
                         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
                 }
             }
+            VideoRateOptionsView(configuration: $model.config)
+            if model.config.rate.mode == "Constant quality" {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Constant quality").font(.system(size: 12, weight: .medium))
@@ -243,7 +245,8 @@ struct WorkspaceView: View {
                     Text("Smaller file")
                 }.font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(14).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
-            settingPicker("Speed preference", selection: $model.config.speed, values: ["Thorough", "Balanced", "Fast"])
+            }
+            settingPicker("Speed preference", selection: $model.config.speed, values: ["Thorough", "Balanced", "Fast"]).disabled(model.config.rate.backend != "Software")
             Text("FFmpeg applies these settings when you start the queue. First video, chosen audio tracks; SDR 8-bit 4:2:0 sources only.")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }
@@ -313,7 +316,7 @@ struct WorkspaceView: View {
             Divider()
             VStack(alignment: .leading, spacing: 13) {
                 eyebrow("AT A GLANCE")
-                summaryRow("Video", "\(model.config.codec) · CRF \(Int(model.config.quality))")
+                summaryRow("Video", "\(model.config.codec) · \(model.config.rateSummary)")
                 summaryRow("Size", model.config.resolution)
                 summaryRow("Audio", model.config.audio)
                 summaryRow("Container", model.config.container)

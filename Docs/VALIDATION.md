@@ -52,3 +52,7 @@ Implementation references: [FFmpeg options](https://ffmpeg.org/ffmpeg.html#Main-
 ## Track routing
 
 33 local tests pass. A synthetic source with English/French audio and French subtitles verifies selected French-only output and preserved language tags. Tests cover absent/wrong-type IDs, None/All, duplicate IDs and configuration round-trip. Native UI import → uncheck English → Apply → reopen retained only French; the dark sheet was visually inspected. New journals use version 2 to prevent older applications replaying jobs without the new settings.
+
+## v0.9 hardware and bitrate
+
+35 tests pass with hardware checks enabled: actual H.264 and HEVC VideoToolbox encodes with software fallback disabled, plus software AV1/HEVC/H.264 bitrate outputs. Tests verify codec, dimensions and duration, and absence of CRF/software presets in hardware arguments. Native UI HEVC → Apple hardware showed target bitrate, hid CRF and disabled speed; switching tabs and applying Compact AV1 restored software CRF defaults. Installed FFmpeg `-h encoder=hevc_videotoolbox` confirms `allow_sw` behavior. No throughput, bitrate-accuracy or energy superiority claim is made from short fixtures.

@@ -14,6 +14,13 @@ struct EncodeConfiguration: Codable, Equatable {
     var audio = "AAC"
     var audioBitrate = "192 kb/s"
     var subtitleMode = "Keep embedded tracks"
+    private var videoRateOptions: VideoRateOptions?
+    var rate: VideoRateOptions {
+        get { videoRateOptions ?? VideoRateOptions() }
+        set { videoRateOptions = newValue }
+    }
+    var rateSummary: String { rate.mode == "Constant quality" ? "CRF \(Int(quality))" : "\(rate.bitrate) kb/s" }
+    var activeEncoder: String { rate.backend == "Software" ? encoder : "VideoToolbox" }
     var audioTracks: [Int]?
     var subtitleTracks: [Int]?
     private var pictureOptions: PictureOptions?
@@ -238,6 +245,7 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func applyPreset(_ name: String) {
+        config.rate = VideoRateOptions()
         switch name {
         case "Everyday HEVC":
             config.codec = "HEVC"; config.encoder = "x265"; config.quality = 22; config.container = "MP4"

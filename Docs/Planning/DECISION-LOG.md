@@ -14,7 +14,9 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-007 | 2026-09-28 | Hosted checks and local hardware tests | Proposed | |
 | D-008 | 2026-09-28 | Project license | Open | |
 | D-009 | 2026-09-28 | Full-film performance targets | Assumed | |
-| D-010 | 2026-09-28 | SignalForge reuse first | Proposed | |
+| D-010 | 2026-09-28 | SignalForge reuse first | Superseded | D-011 |
+| D-011 | 2026-09-28 | Swift meter adaptation | Confirmed | |
+| D-012 | 2026-09-28 | Slice 001 owner approval | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -144,7 +146,8 @@ Revisit when: M1 profiles the candidate.
 
 ## D-010: SignalForge reuse first
 Date: 2026-09-28
-Status: Proposed
+Status: Superseded
+Superseded by: D-011
 
 Decision: Compare a focused Swift adaptation with a minimal Rust bridge before writing a meter anew.
 
@@ -159,3 +162,26 @@ Revisit when: One-day M1 investigation selects a candidate or requires a revised
 ## Change rule
 
 Add a new entry to supersede an accepted decision; link both directions. Receipts live in MAP-EVIDENCE.md and SIGNING-AND-CI.md. No decision became Confirmed by silence.
+
+## D-011: Swift meter adaptation
+Date: 2026-09-28
+Status: Confirmed
+Supersedes: D-010
+
+Decision: Adapt the small SignalForge numerical core in Swift, with MIT attribution, explicit unavailable states and bounded PCM consumption. EBU LRA and report integration are new local work. The owner approved the bounded selection in slice 001.
+
+Because: The Rust sequence path lacks LRA/traces and a C ABI; importing its analysis crate adds decoding, FFT and resampling dependencies that this app does not need. The same numerical components can be tested in the existing build.
+
+Consequences: Maintain numerical parity through fixtures instead of an ABI. Keep standard fixtures outside Git and carry license notices in development bundles. See MEASURED-ANALYSIS-EVIDENCE.md for current results and limits.
+
+Revisit when: Maintenance divergence, measured performance or shared consumers justify extracting a common Rust core.
+
+## D-012: Slice 001 owner approval
+Date: 2026-09-28
+Status: Confirmed
+
+Decision: Daniel Boyd explicitly approved SLICE-001-measured-analysis.md on 2026-09-28 in the project conversation. The slice is active; other slices remain proposals.
+
+Consequences: Implement, verify and provide the native walkthrough inside the approved boundary. Final owner walkthrough approval is still required before marking the slice Done.
+
+Revisit when: New scope is proposed or a required gate cannot be satisfied.

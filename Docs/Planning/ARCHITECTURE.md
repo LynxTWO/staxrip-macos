@@ -65,7 +65,7 @@ Existing entities: EncodeConfiguration, QueueJob, SessionDocument, BatchJournal,
 ### 8.1 Client
 D-001 retains SwiftUI and AppKit. No UI rewrite.
 ### 8.2 Language
-D-002 keeps Swift interfaces; D-010 evaluates SignalForge reuse through a Swift adaptation or narrow Rust bridge before choosing meter implementation. Accelerate is a candidate optimization only after correctness.
+D-002 keeps Swift interfaces; D-011 selects a focused SignalForge-derived Swift implementation after the D-010 investigation. Accelerate is a candidate optimization only after correctness.
 ### 8.3 Backend
 Confirmed under D-001: none remote. FFmpeg remains a local decoding/rendering adapter.
 ### 8.4 Database
@@ -118,4 +118,4 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
-One proposed slice: SLICE-001-measured-analysis.md. No active approved application build. Touch only AnalysisCore, AudioAudit/AudioController, AudioLabView, report persistence and named tests if the brief is approved. Existing mastering algorithms, HDR, multichannel rendering, release scripts and platform expansion are outside that slice.
+Active approved slice: SLICE-001-measured-analysis.md, approved by Daniel Boyd on 2026-09-28. Touch only AnalysisCore, AudioAudit/AudioController, AudioLabView, report persistence and named tests if the brief is approved. Existing mastering algorithms, HDR, multichannel rendering, release scripts and platform expansion are outside that slice.

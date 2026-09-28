@@ -13,7 +13,7 @@ Proposed follow-up in production qualification: pin workflow actions to reviewed
 
 ## Owner setup in Xcode
 
-The local signing identity check found Apple Development but no Developer ID Application identity. A development certificate alone cannot provide the planned direct-download Developer ID distribution. Membership and team role remain unknown.
+Update on 2026-09-28: the owner created a Developer ID Application certificate, which was imported and verified as a valid local signing identity. The owner configured the staxrip-notary Keychain profile, and notarytool history authenticated successfully. No submission was made. The instructions below are retained for future setup; credentials are no longer a blocker.
 
 1. In Xcode Settings, open Accounts / Apple Accounts, select the Apple Account and the team enrolled in the Apple Developer Program. A free Personal Team is insufficient for this distribution route.
 2. Open Manage Certificates and create a Developer ID Application certificate. Apple's documented required role for this certificate is Account Holder; if the option is missing, check team membership and ask the Account Holder to create it through the supported team process. Do not share the private key in chat or Git.
@@ -27,4 +27,4 @@ Apple references: https://developer.apple.com/help/account/certificates/create-d
 
 For an explicitly approved release commit: build optimized bundle; sign all required nested executable code with hardened runtime, a secure timestamp and reviewed entitlements; verify signature; submit the packaged app with notarytool and wait for acceptance; staple and validate the app ticket; regenerate the downloadable archive from the stapled bundle; verify Gatekeeper behavior on a clean Mac. Record the app hash, tools and acceptance evidence. Keep signing credentials out of untrusted jobs. Existing ad-hoc developer previews are not notarized releases.
 
-No certificate, credential, notarization upload, paid enrollment, merge or release was created in this planning turn. Public source still needs an explicit project license decision.
+The initial planning turn made no credential changes. The subsequent owner-directed setup established the signing identity and Keychain profile as described above. No notarization upload, paid enrollment, merge or release was performed. Public source still needs an explicit project license decision.

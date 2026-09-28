@@ -12,7 +12,7 @@ This ledger defines a finite first production release. It does not call the curr
 | Session and presets | Validated versioned video sessions, built-in presets, explicit queue recovery | Audio session persistence, named custom presets, undo, forced-crash and multi-instance long-run checks |
 | Output safety | Staging, exclusive no-overwrite publication, cancellation, bounded logs, codec/track/duration checks | Network/removable filesystems, disk-full tests, stale staging recovery and long-running process ownership |
 | Evaluation | Generated-media integration tests, debug/release tests, native UI checks | Representative licensed film/audio corpus, objective visual metrics and reproducible quality/speed comparisons |
-| Distribution | Local optimized ad-hoc app/ZIP; FFmpeg installed separately | Developer ID signing/notarization credentials, external-tool license/provenance review, supported OS/hardware coverage |
+| Distribution | Local optimized ad-hoc app/ZIP; FFmpeg installed separately | Signed/notarized candidate and clean-machine validation, external-tool license/provenance review, supported OS/hardware coverage |
 
 ## Research-informed priorities
 
@@ -20,7 +20,7 @@ Modern codec availability is only part of a powerful encoder. Explicit stream se
 
 ## External dependencies
 
-The repository became public on 2026-09-28 and the previously blocked hosted macOS workflow passed on retry: [run 36378725531](https://github.com/LynxTWO/staxrip-macos/actions/runs/36378725531). Local checks also remain usable. This Mac has no Developer ID Application identity or configured notarization credentials; an Apple Development identity does not replace those. These block a verified public release, not further local feature development. No repository merge or public release has been performed.
+The repository became public on 2026-09-28 and the previously blocked hosted macOS workflow passed on retry: [run 36378725531](https://github.com/LynxTWO/staxrip-macos/actions/runs/36378725531). Local checks also remain usable. The owner completed Developer ID Application setup and the staxrip-notary Keychain profile authenticated successfully. Signing credentials are ready; signing, notarization, ticket validation and clean-machine installation of a release candidate are still outstanding. No repository merge or public release has been performed.
 
 ## Completion planning
 

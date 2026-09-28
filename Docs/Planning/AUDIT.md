@@ -18,3 +18,7 @@ Final mechanical output:
 ```json
 {"docs":["ARCHITECTURE.md","AUDIT.md","DECISION-LOG.md","ENGINEERING.md","MAP-EVIDENCE.md","PRODUCT-CONTEXT.md","README.md","SIGNALFORGE-REUSE.md","SIGNING-AND-CI.md","SLICE-001-measured-analysis.md"],"findings":[]}
 ```
+
+## Implementation checkpoint: 2026-09-28
+
+The historical Proposed status above was superseded by Daniel’s explicit approval, recorded in slice 001 and D-012. D-011 records the bounded Swift adaptation of SignalForge. Implementation and local numerical/native checks are complete; see MEASURED-ANALYSIS-EVIDENCE.md for results and limits. The slice remains In progress pending the owner’s final native walkthrough. No merge or release has been performed.

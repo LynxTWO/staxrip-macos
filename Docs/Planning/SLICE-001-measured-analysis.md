@@ -1,9 +1,9 @@
 # StaxRip Mac Slice 001: Measured analysis report
-Version: 0.1 Draft. Date: 2026-09-28. Status: Proposed.
+Version: 0.1 Draft. Date: 2026-09-28. Status: In progress.
 
 SLICE STATE
-Milestone: none; planning only.
-Blocked by: approval of this brief; D-010 reuse decision closes inside M1 before dependent implementation.
+Milestone: M3 native workflow and verification.
+Blocked by: final evidence and owner walkthrough; no credential or fixture download block.
 Evidence so far: MAP-EVIDENCE.md and SIGNALFORGE-REUSE.md.
 Last audit: 2026-09-28; see AUDIT.md.
 
@@ -80,4 +80,17 @@ All S-IDs have evidence; unavailable and error behavior is truthful; no temporar
 
 Dialogue-aware stereo gain planning can consume a trusted report. The next brief can evaluate local speech detection and compare Smart and Night settings through measured output and level-matched listening. A proposed 3 LU Night target is a listening hypothesis, not a universal fatigue threshold.
 
-Approved for build by: not yet approved. This specific brief remains a proposal.
+Approved for build by: Daniel Boyd, 2026-09-28. Explicit approval recorded in the project conversation.
+
+## M1 decision and fixed numerical contract
+
+2026-09-28: choose a focused Swift adaptation of SignalForge's K-weighting, integrated gates and four-phase 12-tap peak filter, preserving its MIT notice. Rust analysis currently pulls core/audio, decoding, FFT and resampling dependencies; its sequence API lacks LRA/traces and a C ABI. A bridge would require extracting the same small core plus new packaging/ABI maintenance. No Rust build-speed claim was measured. The Swift candidate will be profiled before this slice closes.
+
+Input: explicit mono or stereo, source rate 44.1/48/88.2/96/192 kHz, decoded interleaved Float64 PCM; no downmix, normalization or user output settings. Unknown channel layouts are rejected unless the user explicitly declares mono/stereo matching the decoded channel count. That declaration is recorded in the report. Legacy EBU PCM WAV files require this explicit declaration. FFmpeg codec-default metadata/DRC behavior is reported, never claimed disabled globally. Each manual interval resets meter/filter state and is reported separately; gaps are never joined. Source identity is whole-file SHA-256 checked before and after analysis, not a path or metadata tag. Paths are omitted from saved reports.
+
+Integrated windows: 400 ms / 100 ms hop, -70 LUFS absolute and -10 LU relative gates. Trajectories: 400 ms and 3 seconds at 20 ms cadence; LRA uses 3-second windows at 100 ms cadence, -70/-20 gating and nearest-rank 10th/95th percentiles, plus 1.5 seconds terminal silence for file LRA only. No partial window is labeled a complete measurement. Peak: four-phase 12-tap estimate plus original sample maxima and filter tail. Double precision adaptation; no sentinel for silence.
+
+Fixed tolerances: official integrated/momentary/short-term cases 0.1 LU (or the fixture's explicitly published tolerance), LRA 1 LU, true peak -0.4/+0.2 dB around nominal; independent generated-tone FFmpeg comparison integrated 0.15 LU and peak 0.2 dB, LRA 1 LU. Chunk partition differences at most 1e-9. True-peak method limitations and backend identity remain visible. M1 test acquisition uses EBU material only locally for internal research with copyright credit and no redistribution; missing files are an unmet gate. No superiority claim follows.
+
+
+Implementation checkpoint: M1 selected the Swift adaptation and fixed tolerances before code. Official EBU v5 fixtures were acquired locally via the browser after command-line downloads returned HTTP 403. The first supported 64-sequence run passed. Saved timeline v1 uses fixed-width little-endian records in a base64 JSON field (frame, presence bits, two Float64 values), preserving unavailable states and precision without hundreds of thousands of JSON objects. The report file limit is 32 MiB. SignalForge's MIT notice is copied into existing development bundles by build.command/package.command; this is attribution for the approved reuse, not a new release workflow. No signing or notarization submission is performed by this slice.

@@ -4,6 +4,7 @@ import AppKit
 struct QuickExportView: View {
     @EnvironmentObject var model: WorkspaceModel
     @EnvironmentObject var exporter: ExportController
+    @EnvironmentObject var batch: BatchController
 
     var body: some View {
         ScrollView {
@@ -25,7 +26,7 @@ struct QuickExportView: View {
                     }
                     Spacer()
                     Button(model.isDemo ? "Open video…" : "Change source…") { model.chooseSource() }
-                        .disabled(exporter.running || model.loading)
+                        .disabled(exporter.running || model.loading || batch.running)
                 }.padding(20).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
                 HStack(spacing: 12) {
                     ForEach(NativePreset.allCases) { preset in
@@ -75,7 +76,7 @@ struct QuickExportView: View {
                             Button { if let source = model.sourceURL { exporter.chooseDestination(source: source) } } label: {
                                 Label("Export MP4…", systemImage: "arrow.up.forward.video")
                             }.buttonStyle(.borderedProminent).controlSize(.large)
-                                .disabled(model.isDemo || model.loading || model.sourceUnavailable)
+                                .disabled(model.isDemo || model.loading || model.sourceUnavailable || batch.running)
                         }
                     }
                 }.padding(22).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))

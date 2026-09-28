@@ -202,8 +202,18 @@ final class WorkspaceModel: ObservableObject {
                 loading = false
             } catch {
                 guard loadID == id else { return }
+                if let tools = FFmpegTools.discover(), let probe = try? await MediaProbe.read(url, tools: tools), let video = probe.video {
+                    guard loadID == id else { return }
+                    player?.pause(); player = nil
+                    sourceURL = url; sourceName = url.lastPathComponent; sourceUnavailable = true
+                    loading = false
+                    sourceInfo = "\(video.width ?? 0) × \(video.height ?? 0) · \(video.codec_name ?? "unknown") · native preview unavailable"
+                    if !keepOutputName { outputStem = url.deletingPathExtension().lastPathComponent + "_encoded" }
+                    return
+                }
+                guard loadID == id else { return }
                 loading = false
-                self.error = "This prototype uses macOS AVFoundation for preview. It couldn’t read this video. Try a compatible MOV or MP4 file.\n\n\(error.localizedDescription)"
+                self.error = "Neither native preview nor the available media tools could read a video track from this source.\n\n\(error.localizedDescription)"
             }
         }
     }

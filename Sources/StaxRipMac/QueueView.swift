@@ -2,15 +2,24 @@ import SwiftUI
 
 struct QueueView: View {
     @EnvironmentObject var model: WorkspaceModel
+    @EnvironmentObject var batch: BatchController
+    @EnvironmentObject var exporter: ExportController
     @State private var editingJob: QueueJob?
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             HStack {
                 sectionTitle("Ready when you are", subtitle: "Saved configurations for this session.")
                 Spacer()
+                if batch.running {
+                    Button("Cancel batch", role: .cancel) { batch.cancel() }
+                } else {
+                    Button { batch.start(model.jobs) } label: { Label("Start queue", systemImage: "play.fill") }
+                        .buttonStyle(.borderedProminent).disabled(model.jobs.isEmpty || batch.tools == nil || exporter.running)
+                }
                 Button { model.exportQueue() } label: { Label("Export JSON…", systemImage: "square.and.arrow.up") }
                     .disabled(model.jobs.isEmpty)
             }
+            Text(batch.toolDescription).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).lineLimit(2)
             if model.jobs.isEmpty {
                 VStack(spacing: 15) {
                     Image(systemName: "square.stack.3d.up").font(.system(size: 42, weight: .ultraLight)).foregroundStyle(Color.accent)
@@ -34,10 +43,10 @@ struct QueueView: View {
                                             .font(.system(size: 11)).foregroundStyle(.secondary)
                                     }
                                     Spacer()
-                                    Text(job.isDemo ? "DEMO CONFIGURATION" : "CONFIGURATION ONLY")
+                                    Text(job.isDemo ? "DEMO" : (batch.statuses[job.id]?.phase ?? "Ready").uppercased())
                                         .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
-                                    Button { model.jobs.removeAll { $0.id == job.id } } label: { Image(systemName: "trash") }
-                                        .buttonStyle(.borderless).help("Remove configuration").accessibilityLabel("Remove \(URL(fileURLWithPath: job.source).lastPathComponent)")
+                                    Button { batch.reset(job.id); model.jobs.removeAll { $0.id == job.id } } label: { Image(systemName: "trash") }
+                                        .buttonStyle(.borderless).disabled(batch.running).help("Remove configuration").accessibilityLabel("Remove \(URL(fileURLWithPath: job.source).lastPathComponent)")
                                 }
                                 HStack(spacing: 14) {
                                     Button { editingJob = job } label: { Label("Edit", systemImage: "slider.horizontal.3") }
@@ -47,7 +56,14 @@ struct QueueView: View {
                                         .disabled(model.jobs.first?.id == job.id).help("Move up").accessibilityLabel("Move up")
                                     Button { model.moveJob(job.id, by: 1) } label: { Image(systemName: "arrow.down") }
                                         .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move down")
-                                }.buttonStyle(.borderless).font(.system(size: 11))
+                                }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running)
+                                if let state = batch.statuses[job.id] {
+                                    if state.phase == "Encoding" { ProgressView(value: state.progress) }
+                                    Text(state.detail).font(.system(size: 10)).foregroundStyle(state.phase == "Failed" ? .orange : .secondary).textSelection(.enabled)
+                                    if let result = state.destination {
+                                        Button("Reveal output") { NSWorkspace.shared.activateFileViewerSelecting([result]) }.font(.caption)
+                                    }
+                                }
                                 Divider()
                                 Label(job.destination, systemImage: "folder").font(.system(size: 10, design: .monospaced))
                                     .foregroundStyle(.secondary).textSelection(.enabled)
@@ -58,7 +74,7 @@ struct QueueView: View {
             }
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "info.circle")
-                Text("This is a GUI prototype. Advanced queue jobs do not run yet. Use Session → Save session to keep and reopen your workspace and queue. Export JSON creates a queue-only reference file. Neither format is a Windows StaxRip project file.")
+                Text("This is a GUI prototype. Jobs run sequentially; the batch stops on failure. Completed outputs are never replaced. Use Session → Save session to keep and reopen your workspace and queue. Export JSON creates a queue-only reference file. Neither format is a Windows StaxRip project file.")
             }.font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4)
                 .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))

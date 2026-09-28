@@ -1,0 +1,23 @@
+# Release acceptance ledger
+
+This ledger defines a finite first production release. It does not call the current preview complete. A checked local fixture is narrower evidence than compatibility with arbitrary media.
+
+| Area | Implemented evidence | Required before production |
+| --- | --- | --- |
+| Native workspace | SwiftUI/AppKit playback, dark/light appearance, source import, inspector, independent queue editing | Keyboard/accessibility audit across supported OS versions; filtered preview and frame stepping |
+| Video encoding | Software AV1/H.264/HEVC CRF and bitrate; actual hardware H.264/HEVC on development Mac | Capability checks across machines; rotation, 10-bit/HDR and explicit color contracts; remux workflow |
+| Picture and timeline | Four-edge crop, resize, BWDIF, precise output trim; synthetic duration/dimension checks | VFR, anamorphic, unusual timestamps and long-film A/V sync matrix; subtitle retiming |
+| Track routing | Selected audio/subtitle streams; copied subtitle/audio container checks; multilingual fixture | Per-track recipes, external subtitles, chapter editor and attachment verification |
+| Audio mastering | FLAC/WAV/AAC/Opus; custom LUFS/LRA; measured Smart/Night foundation; per-channel audit; manual dialogue passage measurement | Original adaptive planner, automatic dialogue classification, validated multichannel export, independent metering and listening comparisons; see LOUDNESS-DESIGN.md |
+| Session and presets | Validated versioned video sessions, built-in presets, explicit queue recovery | Audio session persistence, named custom presets, undo, forced-crash and multi-instance long-run checks |
+| Output safety | Staging, exclusive no-overwrite publication, cancellation, bounded logs, codec/track/duration checks | Network/removable filesystems, disk-full tests, stale staging recovery and long-running process ownership |
+| Evaluation | Generated-media integration tests, debug/release tests, native UI checks | Representative licensed film/audio corpus, objective visual metrics and reproducible quality/speed comparisons |
+| Distribution | Local optimized ad-hoc app/ZIP; FFmpeg installed separately | Developer ID signing/notarization credentials, external-tool license/provenance review, hosted CI restored, supported OS/hardware coverage |
+
+## Research-informed priorities
+
+Modern codec availability is only part of a powerful encoder. Explicit stream selection, preserved color/timing semantics, observable failures, and measured audio outcomes are equally necessary. FFmpeg's [stream-selection documentation](https://ffmpeg.org/ffmpeg.html#Stream-selection) informs routing. Apple's [VideoToolbox framework](https://developer.apple.com/documentation/videotoolbox) supplies the hardware path. EBU metering and cinematic guidance inform the audio acceptance plan.
+
+## External dependencies
+
+Hosted GitHub Actions currently cannot start because of an account billing/spending-limit restriction. Local checks remain usable. This Mac has no Developer ID Application identity or configured notarization credentials; an Apple Development identity does not replace those. These block a verified public release, not further local feature development. No repository merge or public release has been performed.

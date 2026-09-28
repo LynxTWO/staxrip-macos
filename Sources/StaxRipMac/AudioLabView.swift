@@ -32,7 +32,7 @@ struct AudioLabView: View {
                                 Text("#\(track.index) · \(track.codec_name ?? "unknown") · \(track.channels ?? 0) ch · \(track.sample_rate ?? "?") Hz · \(track.tags?["language"] ?? "und")").tag(track.index)
                             }
                         }.padding(12).disabled(busy)
-                        .onChange(of: audio.track) { _, _ in audio.report = nil }
+                        .onChange(of: audio.track) { _, _ in audio.report = nil; audio.channelReports = []; audio.dialogueReport = nil; audio.output = nil; audio.outputReport = nil }
                     }
                     HStack(alignment: .top, spacing: 20) {
                         AudioPanel("Output recipe") {
@@ -45,10 +45,22 @@ struct AudioLabView: View {
                                 Picker("Channels", selection: $audio.settings.channels) { Text("Keep source").tag(0); Text("Mono").tag(1); Text("Stereo").tag(2) }
                                 Toggle("Normalize loudness", isOn: $audio.settings.normalize)
                                 if audio.settings.normalize {
-                                    Picker("Target loudness", selection: $audio.settings.targetLUFS) {
-                                        ForEach([-23, -16, -14], id: \.self) { Text("\($0) LUFS").tag($0) }
+                                    Picker("Mastering mode", selection: $audio.settings.loudnessMode) {
+                                        Text("Smart master").tag("Smart master")
+                                        Text("Night / Venue · experimental").tag("Night / Venue")
+                                    }.onChange(of: audio.settings.loudnessMode) { _, mode in
+                                        audio.settings.targetLRA = mode == "Night / Venue" ? 3 : 11
+                                        if mode == "Night / Venue" { audio.settings.targetLUFS = -18 }
                                     }
-                                    Text("Two-pass measurement after channel conversion. Output must be within ±0.5 LU and below −1 dBTP. May change dynamics; takes additional full-file passes.").font(.caption).foregroundStyle(.secondary)
+                                    HStack {
+                                        Text("Target LUFS")
+                                        TextField("Target LUFS", value: $audio.settings.targetLUFS, format: .number).accessibilityLabel("Target LUFS")
+                                    }.textFieldStyle(.roundedBorder)
+                                    HStack {
+                                        Text("Maximum LRA (LU)")
+                                        TextField("Maximum LRA", value: $audio.settings.targetLRA, format: .number).accessibilityLabel("Maximum loudness range LU")
+                                    }.textFieldStyle(.roundedBorder)
+                                    Text("LUFS −36 to −9; LRA 1–20 LU. Smart master prefers constant gain when feasible. Night / Venue adds linked compression. Both measure before processing and verify the encoded output: ±0.5 LU, LRA ≤ target +1 LU, true peak ≤ −1 dBTP. Silence stays gated; this is not automatic dialogue detection or a listening-comfort guarantee.").font(.caption).foregroundStyle(.secondary)
                                 }
                                 if ["AAC", "Opus"].contains(audio.settings.format) {
                                     Picker("Bitrate", selection: $audio.settings.bitrate) { ForEach([128, 192, 256, 320], id: \.self) { Text("\($0) kb/s").tag($0) } }
@@ -64,6 +76,25 @@ struct AudioLabView: View {
                                     metric("Loudness range", report.input_lra + " LU")
                                 } else { Text("Measure the complete selected source track. Silent or very short material may have no finite integrated value.").font(.callout).foregroundStyle(.secondary) }
                                 Button("Analyze loudness") { if let tools = batch.tools { audio.analyze(tools: tools) } }.disabled(busy)
+                                Button("Audit every channel") { if let tools = batch.tools { audio.auditChannels(tools: tools) } }.disabled(busy)
+                                ForEach(audio.channelReports) { channel in
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(channel.label).fontWeight(.medium)
+                                        Text("\(channel.report.input_i) LUFS · \(channel.report.input_tp) dBTP · \(channel.report.input_lra) LU").font(.caption).monospacedDigit()
+                                    }
+                                }
+                                Text("Individual channels are measured as mono. LFE is audited separately, but excluded from standard programme LUFS. Centre-channel sound is not necessarily dialogue.").font(.caption).foregroundStyle(.secondary)
+                                Divider()
+                                Text("Dialogue passage · user selected").font(.headline)
+                                Text("Start / end (seconds)").font(.caption).foregroundStyle(.secondary)
+                                HStack {
+                                    TextField("Start seconds", value: $audio.dialogueSelection.start, format: .number).accessibilityLabel("Dialogue start seconds")
+                                    Text("to")
+                                    TextField("End seconds", value: $audio.dialogueSelection.end, format: .number).accessibilityLabel("Dialogue end seconds")
+                                }.textFieldStyle(.roundedBorder).disabled(busy)
+                                Button("Measure dialogue passage") { if let tools = batch.tools { audio.measureDialogue(tools: tools) } }.disabled(busy)
+                                if let measured = audio.dialogueReport { metric("Passage loudness", measured.input_i + " LUFS") }
+                                Text("Choose clean speech without music/effects, preferably around 30 seconds. Measures actual decoded audio from the selected track; metadata is not used as a loudness value. This passage does not yet drive mastering gain.").font(.caption).foregroundStyle(.secondary)
                                 Text("Source measurement; export normalization is controlled separately. Mono is measured as mono.").font(.caption).foregroundStyle(.secondary)
                             }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
                         }.frame(maxWidth: .infinity)
@@ -72,6 +103,10 @@ struct AudioLabView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if audio.running { ProgressView(value: audio.progress) }
                     Text(audio.status).font(.callout).textSelection(.enabled)
+                    if let verified = audio.outputReport {
+                        Text("Last encoded output measured: \(verified.input_i) LUFS · \(verified.input_lra) LU LRA · \(verified.input_tp) dBTP")
+                            .font(.callout).monospacedDigit().textSelection(.enabled)
+                    }
                     HStack {
                         if audio.running { Button("Cancel audio operation", role: .cancel) { audio.cancel() } }
                         if let output = audio.output { Button("Reveal audio output") { NSWorkspace.shared.activateFileViewerSelecting([output]) } }

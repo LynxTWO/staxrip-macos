@@ -7,7 +7,9 @@ struct AudioSettings: Equatable {
     var sampleRate = 48000
     var channels = 0
     var normalize = false
-    var targetLUFS = -16
+    var targetLUFS = -16.0
+    var targetLRA = 11.0
+    var loudnessMode = "Smart master"
     var fileExtension: String { ["AAC": "m4a", "Opus": "opus", "FLAC": "flac", "WAV": "wav"][format] ?? "" }
     var codec: String { ["AAC": "aac", "Opus": "opus", "FLAC": "flac", "WAV": "pcm_s24le"][format] ?? "" }
 }
@@ -36,10 +38,13 @@ struct AudioEngine {
         return try LoudnessReport.parse(result.stderr)
     }
 
-    static func export(source: URL, track: Int, destination: URL, settings: AudioSettings, tools: FFmpegTools, progress: @escaping @Sendable (Double) -> Void) async throws {
+    @discardableResult
+    static func export(source: URL, track: Int, destination: URL, settings: AudioSettings, tools: FFmpegTools, progress: @escaping @Sendable (Double) -> Void) async throws -> LoudnessReport? {
         guard ["AAC", "Opus", "FLAC", "WAV"].contains(settings.format), [128, 192, 256, 320].contains(settings.bitrate),
               [44100, 48000, 96000].contains(settings.sampleRate), [0, 1, 2].contains(settings.channels),
-              [-23, -16, -14].contains(settings.targetLUFS),
+              settings.targetLUFS.isFinite, (-36 ... -9).contains(settings.targetLUFS),
+              settings.targetLRA.isFinite, (1...20).contains(settings.targetLRA),
+              ["Smart master", "Night / Venue"].contains(settings.loudnessMode),
               settings.format != "Opus" || settings.sampleRate == 48000 else { throw NativeExportError.invalid("Unsupported audio configuration. Opus uses 48 kHz output.") }
         guard source.isFileURL, destination.isFileURL, source.resolvingSymlinksInPath() != destination.resolvingSymlinksInPath(), !FileManager.default.fileExists(atPath: destination.path) else { throw NativeExportError.invalid("Choose a new output file; existing files are never replaced.") }
         let probe = try await MediaProbe.read(source, tools: tools)
@@ -51,15 +56,17 @@ struct AudioEngine {
         let conversion = "aresample=\(settings.sampleRate),aformat=channel_layouts=\(outputChannels == 1 ? "mono" : "stereo")"
         var normalization: String?
         if settings.normalize {
-            let target = "I=\(settings.targetLUFS):TP=-1.5:LRA=11"
-            let measured = try await analyze(source: source, track: track, tools: tools, filter: conversion + ",loudnorm=" + target + ":print_format=json")
+            let target = "I=\(settings.targetLUFS):TP=-1.5:LRA=\(settings.targetLRA)"
+            let mastering = settings.loudnessMode == "Night / Venue" ? ",acompressor=threshold=0.0630957:ratio=4:attack=20:release=250:knee=4:makeup=1:link=maximum:detection=rms" : ""
+            let preprocessing = conversion + mastering
+            let measured = try await analyze(source: source, track: track, tools: tools, filter: preprocessing + ",loudnorm=" + target + ":print_format=json")
             let fields = [measured.input_i, measured.input_tp, measured.input_lra, measured.input_thresh, measured.target_offset]
             guard fields.allSatisfy({ Double($0)?.isFinite == true }) else {
                 throw NativeExportError.invalid("This track is silent or too short to measure reliably. Export without normalization or select measurable audio.")
             }
             // Only validated numbers enter the filter string; no metadata or user text is interpreted.
             let values = fields.map { String(Double($0)!) }
-            normalization = conversion + ",loudnorm=" + target + ":measured_I=\(values[0]):measured_TP=\(values[1]):measured_LRA=\(values[2]):measured_thresh=\(values[3]):offset=\(values[4]):linear=true"
+            normalization = preprocessing + ",loudnorm=" + target + ":measured_I=\(values[0]):measured_TP=\(values[1]):measured_LRA=\(values[2]):measured_thresh=\(values[3]):offset=\(values[4]):linear=\(settings.loudnessMode == "Smart master" ? "true" : "false")"
             try Task.checkCancellation()
         }
         let folder = destination.deletingLastPathComponent().appendingPathComponent(".staxrip-audio-" + UUID().uuidString)
@@ -84,19 +91,27 @@ struct AudioEngine {
         guard actual.streams.count == 1, let audio = actual.streams.first, audio.codec_type == "audio", audio.codec_name == settings.codec,
               audio.channels == (settings.channels == 0 ? channelCount : settings.channels), audio.sample_rate == String(settings.sampleRate), actual.seconds > 0,
               probe.seconds <= 0 || abs(actual.seconds - probe.seconds) < max(0.25, probe.seconds * 0.01) else { throw NativeExportError.invalid("The exported audio did not match its codec, channel count, sample rate or duration contract.") }
+        var verifiedReport: LoudnessReport?
         if settings.normalize {
             let measured = try await analyze(source: staged, track: 0, tools: tools)
-            try verifyNormalized(measured, target: settings.targetLUFS)
+            try verifyNormalized(measured, target: settings.targetLUFS, maximumLRA: settings.targetLRA)
+            verifiedReport = measured
         }
         try Task.checkCancellation()
         try ExportPublication.publish(staged: staged, destination: destination)
+        return verifiedReport
     }
 
-    static func verifyNormalized(_ report: LoudnessReport, target: Int) throws {
+    static func verifyNormalized(_ report: LoudnessReport, target: Double, maximumLRA: Double? = nil) throws {
         guard let integrated = Double(report.input_i), integrated.isFinite,
               let peak = Double(report.input_tp), peak.isFinite,
-              abs(integrated - Double(target)) <= 0.5, peak <= -1.0 else {
+              abs(integrated - target) <= 0.5, peak <= -1.0 else {
             throw NativeExportError.invalid("Normalized output did not meet the target within ±0.5 LU or exceeded the −1 dBTP verification ceiling. No output was published. Try a lower target or a lossless format.")
+        }
+        if let maximumLRA {
+            guard let range = Double(report.input_lra), range.isFinite, range <= maximumLRA + 1 else {
+                throw NativeExportError.invalid("The encoded loudness range exceeds the requested maximum by more than 1 LU. No output was published. Try Night / Venue mode or a wider range.")
+            }
         }
     }
 }
@@ -111,13 +126,17 @@ final class AudioController: ObservableObject {
     @Published var status = "Open an audio file or a video containing audio."
     @Published var progress = 0.0
     @Published var report: LoudnessReport?
+    @Published var outputReport: LoudnessReport?
+    @Published var channelReports: [ChannelLoudness] = []
+    @Published var dialogueSelection = DialogueSelection()
+    @Published var dialogueReport: LoudnessReport?
     @Published var output: URL?
     private var task: Task<Void, Never>?
     var tracks: [MediaProbe.Stream] { probe?.streams.filter { $0.codec_type == "audio" } ?? [] }
 
     func load(_ url: URL, tools: FFmpegTools) {
         guard !running else { return }
-        source = nil; probe = nil; track = -1; report = nil; output = nil
+        source = nil; probe = nil; track = -1; report = nil; output = nil; outputReport = nil; channelReports = []; dialogueReport = nil
         perform("Inspecting audio…") {
             let probe = try await MediaProbe.read(url, tools: tools)
             guard let first = probe.streams.first(where: { $0.codec_type == "audio" }) else { throw NativeExportError.invalid("This file has no audio tracks.") }
@@ -134,15 +153,33 @@ final class AudioController: ObservableObject {
             self.status = "Source loudness measured · no media changed"
         }
     }
+    func auditChannels(tools: FFmpegTools) {
+        guard let source, track >= 0, !running else { return }
+        let selected = track
+        channelReports = []
+        perform("Measuring each decoded channel; this requires one pass per channel…") {
+            self.channelReports = try await AudioAudit.channels(source: source, track: selected, tools: tools)
+            self.status = "Channel measurements complete; these are individual mono measurements, not additive programme LUFS."
+        }
+    }
+    func measureDialogue(tools: FFmpegTools) {
+        guard let source, track >= 0, !running else { return }
+        let selected = track, range = dialogueSelection
+        dialogueReport = nil
+        perform("Measuring the selected dialogue passage…") {
+            self.dialogueReport = try await AudioAudit.dialogue(source: source, track: selected, selection: range, tools: tools)
+            self.status = "Selected passage measured. Speech content is user-identified, not automatically detected."
+        }
+    }
     func export(to destination: URL, tools: FFmpegTools) {
         guard let source, track >= 0, !running else { return }
         let selected = track, settings = settings
-        output = nil
+        output = nil; outputReport = nil
         perform(settings.normalize ? "Measuring, normalizing and verifying audio…" : "Encoding audio…") {
-            try await AudioEngine.export(source: source, track: selected, destination: destination, settings: settings, tools: tools) { value in
+            self.outputReport = try await AudioEngine.export(source: source, track: selected, destination: destination, settings: settings, tools: tools) { value in
                 Task { @MainActor in self.progress = value }
             }
-            self.output = destination; self.progress = 1; self.status = settings.normalize ? "Verified audio export complete · \(settings.targetLUFS) LUFS ±0.5 · true peak ≤ −1 dBTP" : "Verified audio export complete"
+            self.output = destination; self.progress = 1; self.status = settings.normalize ? "Verified audio export complete · \(settings.targetLUFS) LUFS ±0.5 · LRA ≤ \(settings.targetLRA + 1) LU · true peak ≤ −1 dBTP" : "Verified audio export complete"
         }
     }
     func cancel() { task?.cancel() }

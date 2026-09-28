@@ -88,3 +88,9 @@ Current sessions use version 3 and recovery journals version 2; older files rema
 Software AV1/x265/x264 support constant quality or single-pass target bitrate (100–200,000 kb/s). H.264/HEVC also offer Apple hardware via VideoToolbox in target-bitrate mode. Hardware requests pass `-allow_sw 0`; unsupported systems fail explicitly. CRF and software presets are absent from hardware plans. The target is not a constant-bitrate or exact-file-size promise. Selecting a built-in preset resets the engine/rate mode to that preset’s software CRF defaults.
 
 Run hardware integration checks explicitly with `STAXRIP_TEST_HARDWARE=1 swift test`. Both codecs passed on the development Apple Silicon Mac; hosted CI skips hardware tests by default. Current session/recovery versions are 4/3 and retain older-version read support.
+
+## Mastering foundation (v0.10)
+
+Audio Lab accepts decimal LUFS targets and a maximum LRA. Smart master prefers constant gain when feasible; experimental Night / Venue applies linked compression and dynamic normalization, starting at −18 LUFS / 3 LU. Final encoded measurements are shown and verified before publication. Per-channel audits and user-selected dialogue-passage measurements use actual decoded audio. Neither tags nor centre-channel presence establish dialogue loudness. Dialogue measurements do not yet control mastering gain.
+
+This foundation uses FFmpeg; it is not the requested finished original or best-in-class normalizer. The [research and acceptance plan](Docs/LOUDNESS-DESIGN.md) identifies the independent meter, adaptive planner, dialogue detector, multichannel contract and listening tests still required. The [release ledger](Docs/RELEASE-SCOPE.md) tracks the broader product gaps.

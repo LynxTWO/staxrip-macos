@@ -75,7 +75,7 @@ struct ExportTests {
         #expect(!service.active)
     }
 
-    @Test func cancellationOfActiveSessionCleansItsStagingDirectory() async throws {
+    @Test(arguments: 0..<8) func cancellationOfActiveSessionCleansItsStagingDirectory(iteration: Int) async throws {
         let dir = try folder()
         defer { try? FileManager.default.removeItem(at: dir) }
         let source = dir.appendingPathComponent("source.mov")

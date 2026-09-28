@@ -6,6 +6,8 @@ Build a native Mac video and audio workstation whose power is measurable and who
 
 Native source preview, independent advanced configurations, editable queue, validated saved sessions, light/dark UI and a real, cancellable H.264/HEVC + AAC MP4 export path. The optional FFmpeg backend now executes sequential AV1/x264/x265 jobs with crop/scale, AAC/Opus/copy, subtitle copying, cancellation and output verification. A probed track inspector and explicit queue restart recovery are available. Audio Lab now offers selected-track AAC/Opus/FLAC/WAV export and source loudness measurement; verified two-pass normalization is available; explicit multichannel routing remains future work. This is an early developer preview, not a competitor-leading encoder suite.
 
+See [the production acceptance ledger](RELEASE-SCOPE.md) and [the original loudness-engine design](LOUDNESS-DESIGN.md) for current evidence and outstanding gates. v0.10 adds trim/four-edge crop/deinterlace, track selection, software bitrate and Apple hardware encoding, and an expanded mastering foundation.
+
 ## Next reviewable milestones
 
 | Priority | Capability | Acceptance evidence |

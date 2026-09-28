@@ -21,7 +21,7 @@ Quick Export uses system AVFoundation presets, without downloading external tool
 
 The advanced queue discovers FFmpeg and ffprobe in the standard Apple Silicon or Intel Homebrew locations. Install the optional tools with `brew install ffmpeg`; they are not bundled or downloaded by the app. The queue applies SVT-AV1/x264/x265, CRF, speed, crop, fit-to-size scaling, AAC/Opus/audio passthrough, subtitle passthrough and container settings. It encodes the first non-cover video and all audio/subtitle tracks in the enabled categories. Incompatible container/codec combinations fail explicitly. The media inspector shows probed track details.
 
-The first advanced pipeline deliberately accepts only 8-bit SDR 4:2:0, unrotated video. HDR, higher bit depth, precise video-queue track routing, normalization and crash recovery are not implemented. Queue execution stops on the first failure; completed jobs are skipped in the current session. Execution status is not saved in session documents. The illustrative alpine demo is synthetic. MKV and other formats may not preview through AVFoundation.
+The first advanced pipeline deliberately accepts only 8-bit SDR 4:2:0, unrotated video. HDR, higher bit depth, precise video-queue track routing, normalization and automatic partial-file cleanup are not implemented. Queue execution stops on the first failure; completed jobs are skipped in the current session. Execution status is not saved in session documents. The last started batch is recorded separately in a local recovery journal. The illustrative alpine demo is synthetic. MKV and other formats may not preview through AVFoundation.
 
 ## File handling
 
@@ -31,7 +31,7 @@ Sessions use a versioned `staxrip-mac-session` JSON envelope. Unsupported versio
 
 ## Verification
 
-Run `swift test`. Twenty Swift Testing tests pass locally, including a parameterized media test covering all three presets. Generated video plus a synthetic audio tone verifies H.264/HEVC video, AAC audio, duration and source preservation. Real FFmpeg tests cover AV1/H.264/HEVC, Opus, crop dimensions, literal path arguments, cancellation of an active encode followed by retry, HDR rejection and stop-on-failure. Audio tests exercise all four output formats, channel/sample-rate/duration checks, source preservation and overwrite refusal. A two-track fixture verifies a measured 6 dB difference and that exported signal levels follow the selected track. Other checks cover active/pre-start cancellation, staging cleanup, existing files and dangling symlinks, malformed sessions, document round-trip and queue isolation/reordering.
+Run `swift test`. Twenty-seven Swift Testing tests pass locally, including a parameterized media test covering all three presets. Generated video plus a synthetic audio tone verifies H.264/HEVC video, AAC audio, duration and source preservation. Real FFmpeg tests cover AV1/H.264/HEVC, Opus, crop dimensions, literal path arguments, cancellation of an active encode followed by retry, HDR rejection and stop-on-failure. Audio tests exercise all four output formats, channel/sample-rate/duration checks, source preservation and overwrite refusal. A two-track fixture verifies a measured 6 dB difference and that exported signal levels follow the selected track. Other checks cover active/pre-start cancellation, staging cleanup, existing files and dangling symlinks, malformed sessions, document round-trip and queue isolation/reordering.
 
 Native UI checks on the development Mac cover import/playback, preset changes, queue edits and JSON export, output conflict feedback, actual export → preview, session save → change settings → restore, light/dark rendering, media inspection and a completed AV1 queue job. The SwiftUI VideoPlayer wrapper crashed on the original runtime; the AppKit AVPlayerView bridge passed the same playback check.
 
@@ -58,3 +58,11 @@ See [development guidance](AGENTS.md), [architecture](Docs/ARCHITECTURE.md), and
 ## Local release-mode archive
 
 Run `./package.command` to build an optimized, ad-hoc signed app and ZIP in a unique `Distribution/DeveloperPreview.*` directory. This is a local developer artifact, not a notarized public release. FFmpeg stays external. A Developer ID Application identity and notarization setup are still required for ordinary distribution outside the development Mac.
+
+## Queue recovery
+
+The app records the last started batch in `~/Library/Application Support/StaxRipMac/last-batch.json`. This local file contains source/output paths and configurations, with owner-only file permissions. It is separate from explicitly saved video sessions and does not autosave subsequent workspace edits. A new batch replaces the previous record.
+
+After relaunch, Queue offers **Restore previous queue** when the current queue is empty. Active states become Interrupted; jobs never resume automatically. Completed jobs whose output still exists remain historical completions and are skipped. Missing outputs become reviewable failures. Existing output content is not revalidated on restore. If the app stopped between publication and recording completion, the job is Interrupted and a retry refuses to replace the existing output. Partial staging files are not automatically deleted.
+
+A journal write failure before processing prevents that batch from starting; later failures stop processing before the next unsafe transition. If recording completion fails after output publication, the output stays Completed in memory and a recovery warning is shown. A process-held lock prevents simultaneous batch writers using the same journal. It is released by the OS when the process ends.

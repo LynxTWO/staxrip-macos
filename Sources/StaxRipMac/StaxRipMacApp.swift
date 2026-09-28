@@ -7,7 +7,7 @@ struct StaxRipMacApp: App {
     @StateObject private var model = WorkspaceModel()
     @StateObject private var exporter = ExportController()
     @StateObject private var audio = AudioController()
-    @StateObject private var batch = BatchController()
+    @StateObject private var batch = BatchController(journalURL: BatchJournal.defaultURL)
     @AppStorage("appearance") private var appearance = "System"
     var body: some Scene {
         Window("StaxRip", id: "main") {

@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-struct BatchStatus {
+struct BatchStatus: Codable {
     var phase = "Pending"
     var progress = 0.0
     var detail = ""
@@ -18,7 +18,39 @@ final class BatchController: ObservableObject {
     @Published var inspecting = false
     @Published var inspection: MediaProbe?
     @Published var inspectionError: String?
+    @Published var recovery: BatchJournal?
+    @Published var recoveryError: String?
+    private let journalURL: URL?
+    private var journalLease: BatchJournalLease?
+    private var journalJobs: [QueueJob] = []
     private var task: Task<Void, Never>?
+
+    init(journalURL: URL? = nil) {
+        self.journalURL = journalURL
+        if let journalURL, FileManager.default.fileExists(atPath: journalURL.path) {
+            do { recovery = try BatchJournal.read(from: journalURL) }
+            catch { recoveryError = "Could not read queue recovery: " + error.localizedDescription }
+        }
+    }
+
+    func restoreQueue() -> [QueueJob]? {
+        guard !running, let recovery else { return nil }
+        journalJobs = recovery.jobs
+        statuses = recovery.restoredStatuses()
+        self.recovery = nil
+        return journalJobs
+    }
+
+    private func checkpoint() throws {
+        guard let journalURL else { return }
+        let ids = Set(journalJobs.map(\.id))
+        try BatchJournal(jobs: journalJobs, statuses: statuses.filter { ids.contains($0.key) }).write(to: journalURL)
+    }
+
+    private func checkpointAfterOutcome() {
+        do { try checkpoint() }
+        catch { recoveryError = "Queue state could not be saved: " + error.localizedDescription }
+    }
 
     func discover() async {
         guard let found = FFmpegTools.discover() else { toolDescription = "FFmpeg not found · install with Homebrew"; return }
@@ -49,20 +81,30 @@ final class BatchController: ObservableObject {
         guard !running, let tools else { return }
         let selected = jobs.filter { statuses[$0.id]?.phase != "Completed" }
         guard !selected.isEmpty else { return }
-        running = true
+        journalJobs = jobs
         for job in selected { statuses[job.id] = BatchStatus() }
+        do {
+            if let journalURL { journalLease = try BatchJournalLease(journalURL: journalURL) }
+            try checkpoint()
+        }
+        catch { journalLease = nil; recoveryError = "Batch did not start because recovery state could not be saved: " + error.localizedDescription; return }
+        recovery = nil; recoveryError = nil
+        running = true
         task = Task {
-            defer { running = false; task = nil }
+            defer { running = false; task = nil; journalLease = nil }
             for job in selected {
                 if Task.isCancelled { break }
                 statuses[job.id] = BatchStatus(phase: "Inspecting")
                 do {
+                    try checkpoint()
                     try await encode(job, tools: tools)
                 } catch is CancellationError {
                     statuses[job.id] = BatchStatus(phase: "Cancelled", detail: "No output published")
+                    checkpointAfterOutcome()
                     break
                 } catch {
                     statuses[job.id] = BatchStatus(phase: "Failed", detail: error.localizedDescription)
+                    checkpointAfterOutcome()
                     // Stop on the first failed job; unstarted jobs remain pending.
                     break
                 }
@@ -89,6 +131,7 @@ final class BatchController: ObservableObject {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: directory) }
         statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
+        try checkpoint()
         let parser = ProgressParser(duration: plan.duration) { [weak self] fraction in
             Task { @MainActor in
                 guard self?.statuses[job.id]?.phase == "Encoding" else { return }
@@ -101,6 +144,7 @@ final class BatchController: ObservableObject {
             throw NativeExportError.invalid("FFmpeg exited \(result.status).\n" + String(decoding: result.stderr, as: UTF8.self))
         }
         statuses[job.id]?.phase = "Verifying"
+        try checkpoint()
         let actual = try await MediaProbe.read(staged, tools: tools)
         guard actual.video?.codec_name == plan.expectedCodec,
               actual.streams.filter({ $0.codec_type == "audio" }).count == plan.audioCount,
@@ -115,6 +159,8 @@ final class BatchController: ObservableObject {
         try Task.checkCancellation()
         try ExportPublication.publish(staged: staged, destination: output)
         statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: plan.summary, destination: output)
+        // Publication already succeeded. A journal failure must not mislabel the media as failed.
+        checkpointAfterOutcome()
     }
 }
 

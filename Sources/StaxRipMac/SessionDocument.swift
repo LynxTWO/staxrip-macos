@@ -2,7 +2,7 @@ import Foundation
 
 struct SessionDocument: Codable, Equatable {
     var format = "staxrip-mac-session"
-    var version = 1
+    var version = 2
     var sourcePath: String?
     var configuration: EncodeConfiguration
     var outputFolder: String
@@ -10,7 +10,7 @@ struct SessionDocument: Codable, Equatable {
     var jobs: [QueueJob]
 
     func validated() throws -> SessionDocument {
-        guard format == "staxrip-mac-session", version == 1 else {
+        guard format == "staxrip-mac-session", [1, 2].contains(version) else {
             throw SessionError.invalid("This session version is not supported.")
         }
         guard jobs.count <= 1000 else { throw SessionError.invalid("This session contains too many queue items.") }
@@ -46,6 +46,14 @@ struct SessionDocument: Codable, Equatable {
     }
 
     static func validate(_ config: EncodeConfiguration) throws {
+        let picture = config.picture
+        guard [picture.cropLeft, picture.cropRight].allSatisfy({ (0...4096).contains($0) && $0 % 2 == 0 }),
+              picture.start.isFinite, (0...604800).contains(picture.start),
+              picture.end.isFinite, (0...604800).contains(picture.end),
+              picture.end == 0 || picture.end > picture.start,
+              ["Off", "Flagged frames", "All frames"].contains(picture.deinterlace) else {
+            throw SessionError.invalid("Invalid crop, trim range or deinterlacing mode.")
+        }
         let encoders = ["AV1": "SVT-AV1", "HEVC": "x265", "H.264": "x264"]
         guard encoders[config.codec] == config.encoder,
               config.quality.isFinite, (0...51).contains(config.quality),

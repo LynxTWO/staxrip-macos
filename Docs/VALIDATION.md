@@ -42,3 +42,9 @@ The real v0.6 app passed native WAV import, loudness analysis (-21.75 LUFS / -18
 ## v0.7 normalization
 
 Thirty automated tests pass in debug and optimized release, including normalized AAC/Opus/FLAC/WAV exports, selected-track and channel-conversion behavior, silence refusal, and peak/level verification rejection. The native UI passed enabling normalization, selecting its default −16 LUFS target and exporting through the Save dialog. A separate full-file measurement of that FLAC returned −15.95 LUFS and −12.24 dBTP. The dark-mode layout was visually inspected with all controls exposed. Exhaustive program-material/true-peak stress tests and long-run operation remain broader validation work.
+
+## v0.8 picture/timeline
+
+Generated 4-second interlaced H.264/AAC input → trim 1–2.5 seconds, four-edge crop, BWDIF → verified 306×174 progressive 24 fps output, duration within 0.15 seconds. Native controls accepted trim values, crop and All frames selection; Add to queue → Edit preserved those exact settings. Queue editor scrolls to fit its enlarged form. Legacy configuration decoding and invalid trim/crop validation covered. No claim of subtitle-retiming support.
+
+Implementation references: [FFmpeg options](https://ffmpeg.org/ffmpeg.html#Main-options) for output-side seeking/duration, [BWDIF](https://ffmpeg.org/ffmpeg-filters.html#bwdif) for frame mode and interlace selection.

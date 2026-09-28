@@ -14,6 +14,11 @@ struct EncodeConfiguration: Codable, Equatable {
     var audio = "AAC"
     var audioBitrate = "192 kb/s"
     var subtitleMode = "Keep embedded tracks"
+    private var pictureOptions: PictureOptions?
+    var picture: PictureOptions {
+        get { pictureOptions ?? PictureOptions() }
+        set { pictureOptions = newValue }
+    }
 }
 
 struct QueueJob: Identifiable, Codable, Equatable {

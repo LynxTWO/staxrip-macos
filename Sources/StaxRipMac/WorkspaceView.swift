@@ -80,7 +80,7 @@ struct WorkspaceView: View {
                     Text("Light").tag("Light")
                     Text("Dark").tag("Dark")
                 }.pickerStyle(.segmented).labelsHidden().help("App appearance")
-                Text("v0.7  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+                Text("v0.8  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
             }.padding(.bottom, 24)
         }.padding(.horizontal, 18)
             .background(.ultraThinMaterial)
@@ -252,6 +252,7 @@ struct WorkspaceView: View {
                 Stepper("Top crop: \(model.config.cropTop) px", value: $model.config.cropTop, in: 0...240, step: 2)
                 Stepper("Bottom: \(model.config.cropBottom) px", value: $model.config.cropBottom, in: 0...240, step: 2)
             }.font(.system(size: 12))
+            PictureOptionsView(options: $model.config.picture)
             Text("Crop and size apply during queue encoding. Size fits within the selected bounds without stretching; the source preview stays unfiltered.")
                 .font(.caption).foregroundStyle(.secondary)
         }

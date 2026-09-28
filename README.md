@@ -70,3 +70,9 @@ A journal write failure before processing prevents that batch from starting; lat
 ## Measured audio normalization
 
 Audio Lab can target −23, −16 or −14 LUFS. It measures after resampling/channel conversion, then supplies those measurements to FFmpeg loudnorm for a second pass with a −1.5 dBTP target and 11 LU range setting. FFmpeg may use dynamic processing when linear gain cannot meet its constraints; this can change dynamics. The encoded output is measured again and published only within ±0.5 LU of the requested integrated loudness and at or below −1 dBTP. Silent/unmeasurable inputs and failed verification produce no published output. Analysis and verification require extra full-file passes. The separate Analyze loudness button always measures the unprocessed source track.
+
+## Picture and timeline (v0.8)
+
+Picture settings now support four-edge cropping, frame-rate-preserving BWDIF deinterlacing (flagged or all frames), and start/end times in seconds. End = 0 uses the source end. Trimmed jobs require AAC/Opus or no audio, and removed subtitles; chapters are omitted. Invalid ranges and crops fail before encoding. Output verification checks original-size cropped dimensions and duration. Resized dimensions, unusual timestamps and long/VFR inputs need broader validation. Native preview remains unfiltered.
+
+New sessions use version 2 so older builds reject settings they cannot execute; this build still reads version 1 with neutral picture defaults.

@@ -149,9 +149,11 @@ final class BatchController: ObservableObject {
         guard actual.video?.codec_name == plan.expectedCodec,
               actual.streams.filter({ $0.codec_type == "audio" }).count == plan.audioCount,
               actual.streams.filter({ $0.codec_type == "subtitle" }).count == plan.subtitleCount,
+              plan.expectedWidth == nil || actual.video?.width == plan.expectedWidth,
+              plan.expectedHeight == nil || actual.video?.height == plan.expectedHeight,
               actual.seconds > 0,
-              plan.duration <= 0 || abs(actual.seconds - plan.duration) < max(1, plan.duration * 0.01) else {
-            throw NativeExportError.invalid("The output did not match the expected codec, tracks or duration.")
+              plan.duration <= 0 || abs(actual.seconds - plan.duration) < max(0.25, plan.duration * 0.01) else {
+            throw NativeExportError.invalid("The output did not match the expected codec, dimensions, tracks or duration.")
         }
         if let expected = plan.expectedAudio, actual.streams.filter({ $0.codec_type == "audio" }).contains(where: { $0.codec_name != expected }) {
             throw NativeExportError.invalid("Output audio did not match the planned codec.")

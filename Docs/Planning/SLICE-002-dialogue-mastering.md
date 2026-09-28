@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In progress.
 
 SLICE STATE
-Milestone: M1 feedback-planner checkpoint; experimental M3 workflow ready for draft review.
-Open gates: D-015 planning-objective review after real-film failures, representative listening acceptance and owner native/VoiceOver walkthrough. Earlier failures remain recorded; they do not prove mathematical infeasibility.
+Milestone: M1 feedback-planner checkpoint; local experimental listening pack ready for owner review at explicitly wider settings.
+Open gates: D-015 planning-objective review after real-film failures, representative listening acceptance and owner native/VoiceOver walkthrough. The six-excerpt pack does not establish 3 LU performance. Earlier failures remain recorded; they do not prove mathematical infeasibility.
 Evidence so far: MASTERING-EVIDENCE.md; MASTERING-M1.md; LISTENING-MANIFEST.md; WAVPACK-STAGING-EVALUATION.md.
 Last audit: 2026-09-28.
 

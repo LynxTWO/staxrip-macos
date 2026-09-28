@@ -230,7 +230,7 @@ Because: Loudness compliance alone does not establish transparent or comfortable
 
 Options considered: a Swift planner with an existing local limiter; Swift planner and narrowly implemented oversampled limiter; continue the legacy FFmpeg path outside the new engine. Evidence and dependency rights choose the first two or stop for revision.
 
-Consequences: No new dependency is installed by this plan. Record rights and numerical/latency evidence before integration. Do not widen registered acceptance tolerances to fit results.
+Consequences: No new app runtime dependency is installed by this plan. The owner-authorized NumPy/SciPy investigation uses an isolated local research environment and has not been integrated into the app. Record rights and numerical/latency evidence before integration. Do not widen registered acceptance tolerances to fit results. A six-excerpt owner pack is now prepared at separately declared wider requests; its existence does not resolve the failed 3 LU request or close this decision.
 
 Revisit when: M1 ends, a limiter fails peak tests, or iteration exceeds its fixed bound.
 

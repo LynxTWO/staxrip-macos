@@ -166,6 +166,25 @@ struct OriginalMasteringTests {
         #expect(!FileManager.default.fileExists(atPath: destination.path))
     }
 
+    @Test(.enabled(if: FFmpegTools.discover() != nil && ProcessInfo.processInfo.environment["STAXRIP_EXPERIMENTAL_SPARSE"] == "1"))
+    func sparseBackgroundDoesNotRetainForegroundBoost() async throws {
+        let expression = "if(lt(t,8),0.03,if(lt(t,16),0.3,if(lt(t,32),0.0008,if(lt(t,40),0.08,0.0008))))*sin(2*PI*997*t)"
+        let (folder,source,tools) = try await fixture(expression+"|-0.5*("+expression+")",seconds: 48)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let fresh = try await MeasuredAnalysis.fresh(source: source,track: 0,regions: [],tools: tools) { _ in }
+        for mode in MasterMode.allCases {
+            var settings = MasterSettings(); settings.mode = mode
+            settings.target = mode == .smart ? -23 : -30
+            settings.maximumLRA = mode == .smart ? 11 : 3
+            let plan = try await GainPlanner.build(fresh,settings: settings)
+            #expect(plan.gainDB(at: 28*48000) <= plan.baseDB+0.1)
+            #expect(plan.gainDB(at: 46*48000) <= plan.baseDB+0.1)
+            let candidate = try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,
+                settings: settings,destination: folder.appendingPathComponent(mode.rawValue+".flac"),tools: tools) { _,_ in }
+            #expect(abs(try #require(candidate.verification.after.integrated.value)-settings.target) <= 0.5)
+            #expect(try #require(candidate.verification.after.range.value) <= settings.maximumLRA+1)
+        }
+    }
     @Test(.enabled(if: FFmpegTools.discover() != nil))
     func excessiveRequiredBoostRefusesWithoutPublishing() async throws {
         let (folder,source,tools) = try await fixture("0.0001*sin(2*PI*1000*t)",seconds: 4)

@@ -92,17 +92,19 @@ final class NativeExportService {
         }
         defer { poll.cancel() }
         do {
-            if #available(macOS 15.0, *) {
-                try await export.export(to: staged, as: .mp4)
-            } else {
-                export.outputURL = staged
-                export.outputFileType = .mp4
+            // The async throwing API can resume cancellation while the writer still
+            // owns staging files. The completion callback is our cleanup boundary.
+            export.outputURL = staged
+            export.outputFileType = .mp4
+            await withTaskCancellationHandler {
                 await withCheckedContinuation { continuation in
                     export.exportAsynchronously { continuation.resume() }
                 }
-                if export.status != .completed {
-                    throw export.error ?? NativeExportError.invalid("The export did not complete.")
-                }
+            } onCancel: {
+                export.cancelExport()
+            }
+            if export.status != .completed {
+                throw export.error ?? NativeExportError.invalid("The export did not complete.")
             }
         } catch {
             if cancelled || Task.isCancelled { throw CancellationError() }

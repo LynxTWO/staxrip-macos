@@ -20,6 +20,8 @@ struct StaxRipMacApp: App {
         .commands {
             CommandGroup(after: .newItem) {
                 Button("Open Source…") { model.chooseSource() }.keyboardShortcut("o")
+                Button("Save Session…") { model.saveSession() }.keyboardShortcut("s", modifiers: [.command, .shift])
+                Button("Open Session…") { model.openSession() }.keyboardShortcut("o", modifiers: [.command, .shift])
                 Button("Add Configuration to Queue") { model.addToQueue() }.keyboardShortcut("j")
             }
         }

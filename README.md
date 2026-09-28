@@ -59,3 +59,11 @@ Queue items support Edit, Duplicate, Move up and Move down. Editing uses an isol
 Verification: four Swift Testing tests passed for destination conflicts, independent copies and edits, queue ordering boundaries, invalid filenames/source collisions, and demo reset preservation. Native UI checks confirmed the disabled Add button on duplicate destination, duplicate naming, the edit sheet's conflict warning and disabled Save button, independent CRF editing, and reordered queue rows. The queue editor and queue were visually reviewed. The final app is left open with two clearly marked demo configurations for exploration.
 
 Run the focused tests with `swift test` from this directory.
+
+## Saved sessions
+
+Use Session → Save session (Command-Shift-S) to save the source reference, workspace settings, output naming and queue. Session → Open session (Command-Shift-O) validates the entire document before replacing the current workspace. A confirmation protects unsaved configurations. Source media is referenced, not copied; missing media retains its source identity and shows a locate-source prompt. Saving is explicit, not automatic.
+
+Sessions use the versioned `staxrip-mac-session` JSON envelope. Queue-only Export JSON remains a reference export and cannot be opened as a session. Unknown versions, unsupported settings, invalid paths, duplicate IDs and output conflicts are rejected. Opening a session never starts processing.
+
+Seven local Swift tests pass after this change. GitHub Actions is configured for macOS 15, but the initial run could not start because GitHub reported an account billing/spending-limit restriction; no hosted test pass is claimed.

@@ -8,6 +8,7 @@ Requires Xcode / Swift 6 and macOS 14 or newer. Run `./build.command`, then open
 
 - **Workspace:** import local video, preview it, explore advanced settings, and create independent queue configurations.
 - **Quick Export:** export a real MP4 using Apple's H.264 1080p, H.264 720p or HEVC 1080p preset. Choose a new destination. Progress, cancellation, result preview and Finder reveal are available.
+- **Audio Lab:** open audio or video separately, select one audio track, measure integrated loudness/true peak/range, and export AAC, Opus, 24-bit FLAC or WAV. Explicit sample rate and mono/stereo conversion; no normalization. Audio Lab state is not included in video sessions.
 - **Queue:** edit, duplicate, reorder and remove configurations. Run sequential FFmpeg encodes with progress, cancellation, verification and Finder reveal.
 - **Session:** explicitly save and reopen source references, workspace settings, output naming and queue. Source media is not copied. Queue-only JSON export is a reference format, not a session.
 - **Appearance:** Auto, Light and Dark modes apply to this app only.
@@ -20,7 +21,7 @@ Quick Export uses system AVFoundation presets, without downloading external tool
 
 The advanced queue discovers FFmpeg and ffprobe in the standard Apple Silicon or Intel Homebrew locations. Install the optional tools with `brew install ffmpeg`; they are not bundled or downloaded by the app. The queue applies SVT-AV1/x264/x265, CRF, speed, crop, fit-to-size scaling, AAC/Opus/audio passthrough, subtitle passthrough and container settings. It encodes the first non-cover video and all audio/subtitle tracks in the enabled categories. Incompatible container/codec combinations fail explicitly. The media inspector shows probed track details.
 
-The first advanced pipeline deliberately accepts only 8-bit SDR 4:2:0, unrotated video. HDR, higher bit depth, precise track routing, audio-only export, normalization and crash recovery are not implemented. Queue execution stops on the first failure; completed jobs are skipped in the current session. Execution status is not saved in session documents. The illustrative alpine demo is synthetic. MKV and other formats may not preview through AVFoundation.
+The first advanced pipeline deliberately accepts only 8-bit SDR 4:2:0, unrotated video. HDR, higher bit depth, precise video-queue track routing, normalization and crash recovery are not implemented. Queue execution stops on the first failure; completed jobs are skipped in the current session. Execution status is not saved in session documents. The illustrative alpine demo is synthetic. MKV and other formats may not preview through AVFoundation.
 
 ## File handling
 
@@ -30,9 +31,11 @@ Sessions use a versioned `staxrip-mac-session` JSON envelope. Unsupported versio
 
 ## Verification
 
-Run `swift test`. Seventeen Swift Testing tests pass locally, including a parameterized media test covering all three presets. Generated video plus a synthetic audio tone verifies H.264/HEVC video, AAC audio, duration and source preservation. Real FFmpeg tests cover AV1/H.264/HEVC, Opus, crop dimensions, literal path arguments, cancellation of an active encode followed by retry, HDR rejection and stop-on-failure. Other checks cover active/pre-start cancellation, staging cleanup, existing files and dangling symlinks, malformed sessions, document round-trip and queue isolation/reordering.
+Run `swift test`. Twenty Swift Testing tests pass locally, including a parameterized media test covering all three presets. Generated video plus a synthetic audio tone verifies H.264/HEVC video, AAC audio, duration and source preservation. Real FFmpeg tests cover AV1/H.264/HEVC, Opus, crop dimensions, literal path arguments, cancellation of an active encode followed by retry, HDR rejection and stop-on-failure. Audio tests exercise all four output formats, channel/sample-rate/duration checks, source preservation and overwrite refusal. A two-track fixture verifies a measured 6 dB difference and that exported signal levels follow the selected track. Other checks cover active/pre-start cancellation, staging cleanup, existing files and dangling symlinks, malformed sessions, document round-trip and queue isolation/reordering.
 
 Native UI checks on the development Mac cover import/playback, preset changes, queue edits and JSON export, output conflict feedback, actual export → preview, session save → change settings → restore, light/dark rendering, media inspection and a completed AV1 queue job. The SwiftUI VideoPlayer wrapper crashed on the original runtime; the AppKit AVPlayerView bridge passed the same playback check.
+
+Audio Lab’s initial screen rendered and its file picker opened, but the native automation service then disconnected (`Sky Computer Use native pipe closed before response`). Reset/reconnect did not recover it. Its import → analysis → export UI flow remains unverified; the underlying engine tests pass. See [validation notes](Docs/VALIDATION.md).
 
 Local verification used Apple Silicon and Swift 6.4. Older macOS versions, Intel hardware, long media, HDR, multitrack audio, network destinations and distribution signing remain unverified. GitHub Actions is configured for macOS 15, but jobs are currently blocked before startup by an account billing/spending-limit restriction. No hosted CI pass is claimed.
 
@@ -43,6 +46,7 @@ Local verification used Apple Silicon and Swift 6.4. Older macOS versions, Intel
 - `WorkspaceView.swift`, `QueueView.swift`, `QueueEditor.swift`: native workspace and configuration UI.
 - `ToolRunner.swift`, `EncodePlan.swift`, `BatchController.swift`: discovered tools, bounded process execution, validated plans and sequential jobs.
 - `MediaInspectorView.swift`: source track details.
+- `AudioEngine.swift`, `AudioLabView.swift`: individual track export and source loudness measurement.
 - `NativeExport.swift`: system preset export, progress, cancellation and exclusive publication.
 - `QuickExportView.swift`: real export workflow.
 - `NativeVideoPreview.swift`: AppKit playback bridge.
@@ -50,3 +54,7 @@ Local verification used Apple Silicon and Swift 6.4. Older macOS versions, Intel
 - `Resources/Info.plist`: local app bundle metadata.
 
 See [development guidance](AGENTS.md), [architecture](Docs/ARCHITECTURE.md), and [roadmap](Docs/ROADMAP.md).
+
+## Local release-mode archive
+
+Run `./package.command` to build an optimized, ad-hoc signed app and ZIP in a unique `Distribution/DeveloperPreview.*` directory. This is a local developer artifact, not a notarized public release. FFmpeg stays external. A Developer ID Application identity and notarization setup are still required for ordinary distribution outside the development Mac.

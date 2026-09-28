@@ -2,6 +2,7 @@ import SwiftUI
 
 struct QueueView: View {
     @EnvironmentObject var model: WorkspaceModel
+    @EnvironmentObject var audio: AudioController
     @EnvironmentObject var batch: BatchController
     @EnvironmentObject var exporter: ExportController
     @State private var editingJob: QueueJob?
@@ -14,7 +15,7 @@ struct QueueView: View {
                     Button("Cancel batch", role: .cancel) { batch.cancel() }
                 } else {
                     Button { batch.start(model.jobs) } label: { Label("Start queue", systemImage: "play.fill") }
-                        .buttonStyle(.borderedProminent).disabled(model.jobs.isEmpty || batch.tools == nil || exporter.running)
+                        .buttonStyle(.borderedProminent).disabled(model.jobs.isEmpty || batch.tools == nil || exporter.running || audio.running)
                 }
                 Button { model.exportQueue() } label: { Label("Export JSON…", systemImage: "square.and.arrow.up") }
                     .disabled(model.jobs.isEmpty)
@@ -46,7 +47,7 @@ struct QueueView: View {
                                     Text(job.isDemo ? "DEMO" : (batch.statuses[job.id]?.phase ?? "Ready").uppercased())
                                         .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
                                     Button { batch.reset(job.id); model.jobs.removeAll { $0.id == job.id } } label: { Image(systemName: "trash") }
-                                        .buttonStyle(.borderless).disabled(batch.running).help("Remove configuration").accessibilityLabel("Remove \(URL(fileURLWithPath: job.source).lastPathComponent)")
+                                        .buttonStyle(.borderless).disabled(batch.running || audio.running).help("Remove configuration").accessibilityLabel("Remove \(URL(fileURLWithPath: job.source).lastPathComponent)")
                                 }
                                 HStack(spacing: 14) {
                                     Button { editingJob = job } label: { Label("Edit", systemImage: "slider.horizontal.3") }
@@ -56,7 +57,7 @@ struct QueueView: View {
                                         .disabled(model.jobs.first?.id == job.id).help("Move up").accessibilityLabel("Move up")
                                     Button { model.moveJob(job.id, by: 1) } label: { Image(systemName: "arrow.down") }
                                         .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move down")
-                                }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running)
+                                }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running || audio.running)
                                 if let state = batch.statuses[job.id] {
                                     if state.phase == "Encoding" { ProgressView(value: state.progress) }
                                     Text(state.detail).font(.system(size: 10)).foregroundStyle(state.phase == "Failed" ? .orange : .secondary).textSelection(.enabled)

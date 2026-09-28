@@ -17,3 +17,7 @@ BatchController owns pending/inspecting/encoding/verifying/completed/failed/canc
 ## Privacy and recovery
 
 No telemetry or media uploads are implemented. Source paths occur in local sessions by design; diagnostic export should redact them by default. Media checks use synthetic fixtures. Existing media is never an encoding destination to replace. More complete crash recovery should record owned temporary paths and verify ownership before any cleanup. Do not clean arbitrary directory prefixes.
+
+## Audio Lab boundary
+
+AudioController owns an independent source, selected stream index, output recipe and operation task. AudioEngine maps exactly that stream and verifies codec, channel count, sample rate and duration before publication. The first export contract is mono/stereo input; multichannel export is rejected until speaker routing is explicitly modeled. Integer FLAC/WAV output is 24-bit with an explicit sample rate, not a bit-perfect preservation claim. Tags/artwork/chapters are excluded. Source loudness uses FFmpeg loudnorm input statistics; no normalization is applied to exported media. The UI prevents concurrent native, batch and audio exports. Audio Lab intent is not serialized in video sessions yet.

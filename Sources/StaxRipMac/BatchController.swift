@@ -118,7 +118,7 @@ final class BatchController: ObservableObject {
     }
 }
 
-private final class ProgressParser: @unchecked Sendable {
+final class ProgressParser: @unchecked Sendable {
     private var buffer = Data()
     private let duration: Double
     private let update: @Sendable (Double) -> Void

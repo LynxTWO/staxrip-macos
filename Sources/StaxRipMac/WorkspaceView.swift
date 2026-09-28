@@ -18,6 +18,8 @@ struct WorkspaceView: View {
                 Divider()
                 if model.section == "Quick Export" {
                     QuickExportView()
+                } else if model.section == "Audio Lab" {
+                    AudioLabView()
                 } else if model.section == "Queue" {
                     QueueView()
                 } else {
@@ -59,6 +61,7 @@ struct WorkspaceView: View {
             eyebrow("LIBRARY").padding(.bottom, 12)
             navItem("Workspace", symbol: "slider.horizontal.3")
             navItem("Quick Export", symbol: "bolt.fill")
+            navItem("Audio Lab", symbol: "waveform")
             navItem("Queue", symbol: "square.stack", count: model.jobs.count)
             eyebrow("ADVANCED PRESETS").padding(.top, 34).padding(.bottom, 12)
             preset("Compact AV1", subtitle: "Smaller files, more detail", symbol: "leaf")
@@ -77,7 +80,7 @@ struct WorkspaceView: View {
                     Text("Light").tag("Light")
                     Text("Dark").tag("Dark")
                 }.pickerStyle(.segmented).labelsHidden().help("App appearance")
-                Text("v0.3  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+                Text("v0.4  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
             }.padding(.bottom, 24)
         }.padding(.horizontal, 18)
             .background(.ultraThinMaterial)
@@ -113,7 +116,7 @@ struct WorkspaceView: View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
                 Text(model.section).font(.system(size: 17, weight: .semibold))
-                Text(model.section == "Workspace" ? "Make every frame count." : model.section == "Quick Export" ? "Real exports. Native engine." : "Your next encodes, all in one place.")
+                Text(model.section == "Workspace" ? "Make every frame count." : model.section == "Quick Export" ? "Real exports. Native engine." : model.section == "Audio Lab" ? "Give sound the attention it deserves." : "Your next encodes, all in one place.")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()

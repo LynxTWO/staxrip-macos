@@ -6,6 +6,7 @@ struct StaxRipMacApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = WorkspaceModel()
     @StateObject private var exporter = ExportController()
+    @StateObject private var audio = AudioController()
     @StateObject private var batch = BatchController()
     @AppStorage("appearance") private var appearance = "System"
     var body: some Scene {
@@ -14,6 +15,7 @@ struct StaxRipMacApp: App {
                 .environmentObject(model)
                 .environmentObject(exporter)
                 .environmentObject(batch)
+                .environmentObject(audio)
                 .task { await batch.discover() }
                 .onChange(of: model.jobs) { before, after in
                     for old in before where !after.contains(old) { batch.reset(old.id) }
@@ -24,6 +26,7 @@ struct StaxRipMacApp: App {
                 .onAppear {
                     delegate.exporter = exporter
                     delegate.batch = batch
+                    delegate.audio = audio
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
                 }
@@ -50,11 +53,12 @@ extension Color {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var exporter: ExportController?
     weak var batch: BatchController?
+    weak var audio: AudioController?
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard exporter?.running == true || batch?.running == true else { return .terminateNow }
+        guard exporter?.running == true || batch?.running == true || audio?.running == true else { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = "An export is still running"
-        alert.informativeText = "Wait for it to finish or use Cancel export before quitting."
+        alert.informativeText = "Wait for it to finish or cancel the active operation before quitting."
         alert.addButton(withTitle: "Keep open")
         alert.runModal()
         return .terminateCancel

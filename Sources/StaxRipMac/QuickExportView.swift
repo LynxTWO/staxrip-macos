@@ -4,6 +4,7 @@ import AppKit
 struct QuickExportView: View {
     @EnvironmentObject var model: WorkspaceModel
     @EnvironmentObject var exporter: ExportController
+    @EnvironmentObject var audio: AudioController
     @EnvironmentObject var batch: BatchController
 
     var body: some View {
@@ -26,7 +27,7 @@ struct QuickExportView: View {
                     }
                     Spacer()
                     Button(model.isDemo ? "Open video…" : "Change source…") { model.chooseSource() }
-                        .disabled(exporter.running || model.loading || batch.running)
+                        .disabled(exporter.running || model.loading || batch.running || audio.running)
                 }.padding(20).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
                 HStack(spacing: 12) {
                     ForEach(NativePreset.allCases) { preset in
@@ -42,7 +43,7 @@ struct QuickExportView: View {
                             }.padding(18).frame(maxWidth: .infinity, minHeight: 142, alignment: .topLeading)
                                 .background(exporter.preset == preset ? Color.accent.opacity(0.09) : Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
                                 .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(exporter.preset == preset ? Color.accent : .clear))
-                        }.buttonStyle(.plain).disabled(exporter.running)
+                        }.buttonStyle(.plain).disabled(exporter.running || audio.running)
                     }
                 }
                 Label("Apple’s preset controls video and supported audio tracks. Workspace CRF, crop, audio, subtitles and queued configurations are not used here.", systemImage: "info.circle")
@@ -76,7 +77,7 @@ struct QuickExportView: View {
                             Button { if let source = model.sourceURL { exporter.chooseDestination(source: source) } } label: {
                                 Label("Export MP4…", systemImage: "arrow.up.forward.video")
                             }.buttonStyle(.borderedProminent).controlSize(.large)
-                                .disabled(model.isDemo || model.loading || model.sourceUnavailable || batch.running)
+                                .disabled(model.isDemo || model.loading || model.sourceUnavailable || batch.running || audio.running)
                         }
                     }
                 }.padding(22).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))

@@ -5,6 +5,8 @@ import UniformTypeIdentifiers
 struct WorkspaceView: View {
     @EnvironmentObject var model: WorkspaceModel
     @EnvironmentObject var exporter: ExportController
+    @EnvironmentObject var batch: BatchController
+    @State private var showingInspector = false
     @AppStorage("appearance") private var appearance = "System"
     @State private var isDropTarget = false
     var body: some View {
@@ -36,6 +38,9 @@ struct WorkspaceView: View {
             }
         }
         .background(Color(nsColor: .windowBackgroundColor))
+        .sheet(isPresented: $showingInspector) {
+            if let source = model.sourceURL { MediaInspectorView(source: source).environmentObject(batch) }
+        }
         .alert("Couldn’t complete that action", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
             Button("OK") { model.error = nil }
         } message: { Text(model.error ?? "") }
@@ -72,7 +77,7 @@ struct WorkspaceView: View {
                     Text("Light").tag("Light")
                     Text("Dark").tag("Dark")
                 }.pickerStyle(.segmented).labelsHidden().help("App appearance")
-                Text("v0.2  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+                Text("v0.3  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
             }.padding(.bottom, 24)
         }.padding(.horizontal, 18)
             .background(.ultraThinMaterial)
@@ -116,13 +121,13 @@ struct WorkspaceView: View {
                 Button("Save session…") { model.saveSession() }
                 Button("Open session…") { model.openSession() }
             } label: { Label("Session", systemImage: "doc.badge.gearshape") }
-            .menuStyle(.borderlessButton).fixedSize().help(model.sessionName).disabled(exporter.running)
+            .menuStyle(.borderlessButton).fixedSize().help(model.sessionName).disabled(exporter.running || batch.running)
             Text("PROTOTYPE").font(.system(size: 9, weight: .semibold)).tracking(1)
                 .foregroundStyle(.secondary).padding(.horizontal, 9).padding(.vertical, 5)
                 .overlay(Capsule().strokeBorder(.quaternary))
             Button { model.chooseSource() } label: { Label("Open source", systemImage: "plus") }
                 .controlSize(.large).padding(.leading, 12)
-                .disabled(model.loading || exporter.running)
+                .disabled(model.loading || exporter.running || batch.running)
         }.padding(.horizontal, 26).frame(height: 83)
     }
 
@@ -139,9 +144,13 @@ struct WorkspaceView: View {
             }
             Spacer(minLength: 0)
             if model.loading { ProgressView().controlSize(.small) }
+            if model.sourceURL != nil {
+                Button { showingInspector = true } label: { Image(systemName: "info.circle") }
+                    .buttonStyle(.borderless).help("Inspect media tracks").accessibilityLabel("Inspect media tracks")
+            }
             if !model.isDemo || model.loading {
                 Button { model.showDemo() } label: { Image(systemName: "arrow.counterclockwise") }
-                    .buttonStyle(.borderless).disabled(exporter.running).help("Return to demo preview").accessibilityLabel("Return to demo preview")
+                    .buttonStyle(.borderless).disabled(exporter.running || batch.running).help("Return to demo preview").accessibilityLabel("Return to demo preview")
             }
         }
     }
@@ -155,7 +164,7 @@ struct WorkspaceView: View {
                     VStack(spacing: 12) {
                         Image(systemName: "video.slash").font(.largeTitle).foregroundStyle(.secondary)
                         Text("Source preview unavailable").font(.headline)
-                        Text("The saved source may have moved or is not readable by this Mac.").font(.caption).foregroundStyle(.secondary)
+                        Text("Native playback is unavailable. The advanced engine may still support this source.").font(.caption).foregroundStyle(.secondary)
                         Button("Locate source…") { model.chooseSource() }
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -173,7 +182,7 @@ struct WorkspaceView: View {
         .clipShape(RoundedRectangle(cornerRadius: 13))
         .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(isDropTarget ? Color.accent : Color.primary.opacity(0.08), lineWidth: isDropTarget ? 2 : 1))
         .onDrop(of: [.fileURL], isTargeted: $isDropTarget) { providers in
-            guard !exporter.running, let provider = providers.first else { return false }
+            guard !exporter.running, !batch.running, let provider = providers.first else { return false }
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
                 if let url { Task { @MainActor in model.load(url) } }
             }
@@ -227,7 +236,7 @@ struct WorkspaceView: View {
                 }.font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(14).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
             settingPicker("Speed preference", selection: $model.config.speed, values: ["Thorough", "Balanced", "Fast"])
-            Text("Advanced settings are saved with the queue. For a real native preset export, open Quick Export.")
+            Text("FFmpeg applies these settings when you start the queue. First video, all audio tracks; SDR 8-bit 4:2:0 sources only.")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }
     }
@@ -240,7 +249,7 @@ struct WorkspaceView: View {
                 Stepper("Top crop: \(model.config.cropTop) px", value: $model.config.cropTop, in: 0...240, step: 2)
                 Stepper("Bottom: \(model.config.cropBottom) px", value: $model.config.cropBottom, in: 0...240, step: 2)
             }.font(.system(size: 12))
-            Text("Picture settings are configuration only in this prototype. The source preview stays unfiltered.")
+            Text("Crop and size apply during queue encoding. Size fits within the selected bounds without stretching; the source preview stays unfiltered.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -252,7 +261,7 @@ struct WorkspaceView: View {
             if model.config.audio == "AAC" || model.config.audio == "Opus" {
                 settingPicker("Bitrate", selection: $model.config.audioBitrate, values: ["128 kb/s", "192 kb/s", "256 kb/s", "320 kb/s"])
             }
-            Text("Track discovery, channel mapping, and audio encoding will be connected in a later build.")
+            Text("Applies to all audio tracks. Copy preserves their codecs; AAC and Opus re-encode at the selected bitrate. Inspect the source to see its tracks.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -261,9 +270,9 @@ struct WorkspaceView: View {
         VStack(alignment: .leading, spacing: 20) {
             sectionTitle("Subtitles", subtitle: "Set a default for embedded subtitle tracks.")
             settingPicker("Track handling", selection: $model.config.subtitleMode, values: ["Keep embedded tracks", "Remove all subtitles"])
-            Label("Track inspection isn’t connected yet", systemImage: "text.bubble")
+            Label("Embedded tracks are copied without re-encoding", systemImage: "text.bubble")
                 .font(.system(size: 12)).foregroundStyle(.secondary)
-            Text("Container compatibility and external subtitle import will be checked when the encoding backend is added.")
+            Text("MKV preserves supported subtitle formats and attachments. MP4 accepts existing mov_text tracks; choose MKV for other subtitle formats.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }
@@ -313,7 +322,7 @@ struct WorkspaceView: View {
                         .font(.system(size: 12, weight: .semibold)).padding(13)
                         .foregroundStyle(Color.ink).background(Color.accent, in: RoundedRectangle(cornerRadius: 9))
                 }.buttonStyle(.plain).disabled(model.loading || model.outputIssue != nil)
-                Text("Advanced queue · configuration only")
+                Text(batch.tools == nil ? "FFmpeg required to run jobs" : "FFmpeg engine ready")
                     .font(.system(size: 9)).foregroundStyle(.secondary)
             }
         }.padding(22).background(Color(nsColor: .controlBackgroundColor).opacity(0.4))

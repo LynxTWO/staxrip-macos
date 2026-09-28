@@ -6,13 +6,13 @@ The SwiftUI application owns three separate concerns. WorkspaceModel describes i
 
 The AppKit player is a view bridge, not an encoding backend. Previewing a source does not apply workspace filters. Temporary export files live beside the requested output so publication stays on one filesystem. A successful hard link is the commit point. Failed publication leaves the old destination alone, and cleanup removes only the operation's temporary directory.
 
-## Next backend boundary
+## Advanced backend boundary
 
-Introduce an immutable EncodePlan produced from a probed source, a user configuration and a capability catalog. Validation must return either a complete plan or actionable unsupported-setting reasons. No silently dropped flags or automatic software/hardware substitution. Each plan includes input identities, selected tracks, filters, rate control, output/container constraints, tool versions and expected verification.
+EncodePlan is immutable and produced from a probed source, a user configuration and a capability catalog. Validation must return either a complete plan or actionable unsupported-setting reasons. No silently dropped flags or automatic software/hardware substitution. Current plans include argument arrays, track counts, rate control, filters and expected codecs/duration. Tool version is displayed by the controller; stronger input identity and provenance records remain future work.
 
-A backend reports capabilities and executes a validated plan. AVFoundation stays one backend; optional trusted external tools become another. A future process runner passes arguments directly through Process, not a shell, drains stdout/stderr concurrently, bounds diagnostics, propagates cancellation and records exit status. Tool discovery and provenance remain separate from job execution.
+A backend reports capabilities and executes a validated plan. AVFoundation stays one backend; optional trusted external tools become another. ToolRunner passes arguments directly through Process, not a shell, drains stdout/stderr concurrently, bounds diagnostics, propagates cancellation and records exit status. Tool discovery and provenance remain separate from job execution.
 
-The queue runner will own explicit pending/running/completed/failed/cancelled/interrupted states. Limit concurrency according to actual CPU/GPU/memory pressure, not a universal fixed job count. Persist transitions transactionally. On restart, interrupted work becomes reviewable and does not silently resume or overwrite outputs.
+BatchController owns pending/inspecting/encoding/verifying/completed/failed/cancelled states and executes one copied configuration at a time. Completed outputs are verified with ffprobe before exclusive publication. State is currently in memory. Recovery remains future work. Limit concurrency according to actual CPU/GPU/memory pressure, not a universal fixed job count. Persist transitions transactionally. On restart, interrupted work becomes reviewable and does not silently resume or overwrite outputs.
 
 ## Privacy and recovery
 

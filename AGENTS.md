@@ -8,7 +8,7 @@ This is an independent native Mac prototype. Keep claims about Windows StaxRip c
 - Preserve local user work. Do not merge or publish releases without explicit authorization.
 - Use SwiftUI for the interface and an AppKit AVPlayerView bridge for preview. SwiftUI VideoPlayer crashed on the original development runtime.
 - Use system frameworks first. Do not silently download or execute third-party encoding tools.
-- Clearly distinguish editable future encoder configurations from real native preset exports. Never silently ignore a setting when executing a queue job.
+- Clearly distinguish advanced FFmpeg queue configurations from native preset exports. Never silently ignore a setting when executing a queue job.
 - Never overwrite source media or existing encoded outputs. Publish completed exports without replacing existing files; clean up only temporary files owned by the current operation.
 - Saved session files are untrusted data. Validate format version, bounds, paths, IDs and configuration values before applying them. Do not execute a session as code or launch processing when a session opens.
 - Keep source paths and media private. Test using generated synthetic fixtures and do not commit local media, personal sessions, binaries, absolute user paths or credentials.

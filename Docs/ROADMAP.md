@@ -4,7 +4,7 @@ Build a native Mac video and audio workstation whose power is measurable and who
 
 ## Milestone reached
 
-Native source preview, independent advanced configurations, editable queue, validated saved sessions, light/dark UI and a real, cancellable H.264/HEVC + AAC MP4 export path. This is an early developer preview, not a competitor-leading encoder suite.
+Native source preview, independent advanced configurations, editable queue, validated saved sessions, light/dark UI and a real, cancellable H.264/HEVC + AAC MP4 export path. The optional FFmpeg backend now executes sequential AV1/x264/x265 jobs with crop/scale, AAC/Opus/copy, subtitle copying, cancellation and output verification. A probed track inspector is available. This is an early developer preview, not a competitor-leading encoder suite.
 
 ## Next reviewable milestones
 
@@ -26,4 +26,4 @@ Publish a reproducible comparison using the same sources, output constraints and
 
 ## Development cadence and stopping points
 
-Ship small PRs with tests and a runnable local preview. Keep an unmerged PR stack when later work depends on earlier review. Stop a milestone when the end-to-end workflow works, boundary failures are covered, documentation matches behavior and the remaining work would introduce a new backend, data contract or distribution decision. Do not disguise CI/account restrictions as test failures in application code.
+Ship small PRs with tests and a runnable local preview. Keep an unmerged PR stack when later work depends on earlier review. Continue autonomously across milestones while implementation and validation are possible. Stop for genuine external dependencies such as unavailable signing credentials, required account actions, or missing representative media/hardware needed to validate a preservation contract. Do not disguise CI/account restrictions as test failures in application code.

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct QueueEditor: View {
     @EnvironmentObject private var model: WorkspaceModel
+    @EnvironmentObject private var batch: BatchController
     @Environment(\.dismiss) private var dismiss
     @State private var draft: QueueJob
     @State private var stem: String
@@ -68,6 +69,7 @@ struct QueueEditor: View {
                 Button("Save changes") {
                     draft.destination = destination
                     model.updateJob(draft)
+                    batch.reset(draft.id)
                     dismiss()
                 }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).disabled(issue != nil)
             }

@@ -6,6 +6,7 @@ struct WorkspaceView: View {
     @EnvironmentObject var model: WorkspaceModel
     @EnvironmentObject var exporter: ExportController
     @EnvironmentObject var batch: BatchController
+    @State private var showingTracks = false
     @State private var showingInspector = false
     @AppStorage("appearance") private var appearance = "System"
     @State private var isDropTarget = false
@@ -42,6 +43,9 @@ struct WorkspaceView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .sheet(isPresented: $showingInspector) {
             if let source = model.sourceURL { MediaInspectorView(source: source).environmentObject(batch) }
+        }
+        .sheet(isPresented: $showingTracks) {
+            if let source = model.sourceURL { TrackRoutingView(source: source, configuration: $model.config) }
         }
         .alert("Couldn’t complete that action", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) {
             Button("OK") { model.error = nil }
@@ -148,6 +152,7 @@ struct WorkspaceView: View {
             Spacer(minLength: 0)
             if model.loading { ProgressView().controlSize(.small) }
             if model.sourceURL != nil {
+                Button("Choose tracks") { showingTracks = true }.disabled(batch.running)
                 Button { showingInspector = true } label: { Image(systemName: "info.circle") }
                     .buttonStyle(.borderless).help("Inspect media tracks").accessibilityLabel("Inspect media tracks")
             }
@@ -239,7 +244,7 @@ struct WorkspaceView: View {
                 }.font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(14).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
             settingPicker("Speed preference", selection: $model.config.speed, values: ["Thorough", "Balanced", "Fast"])
-            Text("FFmpeg applies these settings when you start the queue. First video, all audio tracks; SDR 8-bit 4:2:0 sources only.")
+            Text("FFmpeg applies these settings when you start the queue. First video, chosen audio tracks; SDR 8-bit 4:2:0 sources only.")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }
     }
@@ -265,7 +270,7 @@ struct WorkspaceView: View {
             if model.config.audio == "AAC" || model.config.audio == "Opus" {
                 settingPicker("Bitrate", selection: $model.config.audioBitrate, values: ["128 kb/s", "192 kb/s", "256 kb/s", "320 kb/s"])
             }
-            Text("Applies to all audio tracks. Copy preserves their codecs; AAC and Opus re-encode at the selected bitrate. Inspect the source to see its tracks.")
+            Text("Applies to chosen audio tracks (all by default). Copy preserves their codecs; AAC and Opus re-encode at the selected bitrate. Inspect the source to see its tracks.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

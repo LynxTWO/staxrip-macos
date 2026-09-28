@@ -76,3 +76,9 @@ Audio Lab can target −23, −16 or −14 LUFS. It measures after resampling/ch
 Picture settings now support four-edge cropping, frame-rate-preserving BWDIF deinterlacing (flagged or all frames), and start/end times in seconds. End = 0 uses the source end. Trimmed jobs require AAC/Opus or no audio, and removed subtitles; chapters are omitted. Invalid ranges and crops fail before encoding. Output verification checks original-size cropped dimensions and duration. Resized dimensions, unusual timestamps and long/VFR inputs need broader validation. Native preview remains unfiltered.
 
 New sessions use version 2 so older builds reject settings they cannot execute; this build still reads version 1 with neutral picture defaults.
+
+## Track routing
+
+Choose tracks in Workspace or a queue item to keep individual audio and subtitle streams by index, codec and language. All is the legacy default; None removes the category. Codec/handling settings still apply. New source imports reset selection; saved sessions and job copies preserve it. A changed or missing index fails preflight instead of silently substituting another track. Subtitle copying still depends on the target container. One common audio encoding recipe applies to every selected audio track.
+
+Current sessions use version 3 and recovery journals version 2; older files remain readable, while older builds reject these new versions rather than ignoring routing or picture settings.

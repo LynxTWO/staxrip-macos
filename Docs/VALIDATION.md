@@ -48,3 +48,7 @@ Thirty automated tests pass in debug and optimized release, including normalized
 Generated 4-second interlaced H.264/AAC input → trim 1–2.5 seconds, four-edge crop, BWDIF → verified 306×174 progressive 24 fps output, duration within 0.15 seconds. Native controls accepted trim values, crop and All frames selection; Add to queue → Edit preserved those exact settings. Queue editor scrolls to fit its enlarged form. Legacy configuration decoding and invalid trim/crop validation covered. No claim of subtitle-retiming support.
 
 Implementation references: [FFmpeg options](https://ffmpeg.org/ffmpeg.html#Main-options) for output-side seeking/duration, [BWDIF](https://ffmpeg.org/ffmpeg-filters.html#bwdif) for frame mode and interlace selection.
+
+## Track routing
+
+33 local tests pass. A synthetic source with English/French audio and French subtitles verifies selected French-only output and preserved language tags. Tests cover absent/wrong-type IDs, None/All, duplicate IDs and configuration round-trip. Native UI import → uncheck English → Apply → reopen retained only French; the dark sheet was visually inspected. New journals use version 2 to prevent older applications replaying jobs without the new settings.

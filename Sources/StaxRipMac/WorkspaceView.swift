@@ -4,6 +4,8 @@ import UniformTypeIdentifiers
 
 struct WorkspaceView: View {
     @EnvironmentObject var model: WorkspaceModel
+    @EnvironmentObject var exporter: ExportController
+    @AppStorage("appearance") private var appearance = "System"
     @State private var isDropTarget = false
     var body: some View {
         HStack(spacing: 0) {
@@ -12,7 +14,9 @@ struct WorkspaceView: View {
             VStack(spacing: 0) {
                 header
                 Divider()
-                if model.section == "Queue" {
+                if model.section == "Quick Export" {
+                    QuickExportView()
+                } else if model.section == "Queue" {
                     QueueView()
                 } else {
                     HStack(spacing: 0) {
@@ -49,8 +53,9 @@ struct WorkspaceView: View {
             }.padding(.top, 42).padding(.bottom, 36)
             eyebrow("LIBRARY").padding(.bottom, 12)
             navItem("Workspace", symbol: "slider.horizontal.3")
+            navItem("Quick Export", symbol: "bolt.fill")
             navItem("Queue", symbol: "square.stack", count: model.jobs.count)
-            eyebrow("QUICK PRESETS").padding(.top, 34).padding(.bottom, 12)
+            eyebrow("ADVANCED PRESETS").padding(.top, 34).padding(.bottom, 12)
             preset("Compact AV1", subtitle: "Smaller files, more detail", symbol: "leaf")
             preset("Everyday HEVC", subtitle: "A balanced starting point", symbol: "sparkles")
             preset("H.264 Quality", subtitle: "Broad playback support", symbol: "play.rectangle")
@@ -58,11 +63,16 @@ struct WorkspaceView: View {
             VStack(alignment: .leading, spacing: 9) {
                 HStack(spacing: 6) {
                     Circle().fill(Color.accent).frame(width: 6, height: 6)
-                    Text("Design preview").font(.system(size: 11, weight: .semibold))
+                    Text(exporter.running ? "Export in progress" : "Native media workspace").font(.system(size: 11, weight: .semibold))
                 }
-                Text("A native workspace, taking shape.")
+                Text("Your media. Your Mac. Your rules.")
                     .font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(3)
-                Text("v0.1  /  GUI PROTOTYPE").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
+                Picker("Appearance", selection: $appearance) {
+                    Text("Auto").tag("System")
+                    Text("Light").tag("Light")
+                    Text("Dark").tag("Dark")
+                }.pickerStyle(.segmented).labelsHidden().help("App appearance")
+                Text("v0.2  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
             }.padding(.bottom, 24)
         }.padding(.horizontal, 18)
             .background(.ultraThinMaterial)
@@ -98,7 +108,7 @@ struct WorkspaceView: View {
         HStack {
             VStack(alignment: .leading, spacing: 3) {
                 Text(model.section).font(.system(size: 17, weight: .semibold))
-                Text(model.section == "Workspace" ? "Make every frame count." : "Your next encodes, all in one place.")
+                Text(model.section == "Workspace" ? "Make every frame count." : model.section == "Quick Export" ? "Real exports. Native engine." : "Your next encodes, all in one place.")
                     .font(.system(size: 11)).foregroundStyle(.secondary)
             }
             Spacer()
@@ -106,13 +116,13 @@ struct WorkspaceView: View {
                 Button("Save session…") { model.saveSession() }
                 Button("Open session…") { model.openSession() }
             } label: { Label("Session", systemImage: "doc.badge.gearshape") }
-            .menuStyle(.borderlessButton).fixedSize().help(model.sessionName)
+            .menuStyle(.borderlessButton).fixedSize().help(model.sessionName).disabled(exporter.running)
             Text("PROTOTYPE").font(.system(size: 9, weight: .semibold)).tracking(1)
                 .foregroundStyle(.secondary).padding(.horizontal, 9).padding(.vertical, 5)
                 .overlay(Capsule().strokeBorder(.quaternary))
             Button { model.chooseSource() } label: { Label("Open source", systemImage: "plus") }
                 .controlSize(.large).padding(.leading, 12)
-                .disabled(model.loading)
+                .disabled(model.loading || exporter.running)
         }.padding(.horizontal, 26).frame(height: 83)
     }
 
@@ -131,7 +141,7 @@ struct WorkspaceView: View {
             if model.loading { ProgressView().controlSize(.small) }
             if !model.isDemo || model.loading {
                 Button { model.showDemo() } label: { Image(systemName: "arrow.counterclockwise") }
-                    .buttonStyle(.borderless).help("Return to demo preview").accessibilityLabel("Return to demo preview")
+                    .buttonStyle(.borderless).disabled(exporter.running).help("Return to demo preview").accessibilityLabel("Return to demo preview")
             }
         }
     }
@@ -163,7 +173,7 @@ struct WorkspaceView: View {
         .clipShape(RoundedRectangle(cornerRadius: 13))
         .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(isDropTarget ? Color.accent : Color.primary.opacity(0.08), lineWidth: isDropTarget ? 2 : 1))
         .onDrop(of: [.fileURL], isTargeted: $isDropTarget) { providers in
-            guard let provider = providers.first else { return false }
+            guard !exporter.running, let provider = providers.first else { return false }
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
                 if let url { Task { @MainActor in model.load(url) } }
             }
@@ -217,7 +227,7 @@ struct WorkspaceView: View {
                 }.font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(14).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
             settingPicker("Speed preference", selection: $model.config.speed, values: ["Thorough", "Balanced", "Fast"])
-            Text("Settings are saved with the queue configuration. Encoder execution is coming later.")
+            Text("Advanced settings are saved with the queue. For a real native preset export, open Quick Export.")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }
     }
@@ -303,7 +313,7 @@ struct WorkspaceView: View {
                         .font(.system(size: 12, weight: .semibold)).padding(13)
                         .foregroundStyle(Color.ink).background(Color.accent, in: RoundedRectangle(cornerRadius: 9))
                 }.buttonStyle(.plain).disabled(model.loading || model.outputIssue != nil)
-                Text("Configuration only · no encoding yet")
+                Text("Advanced queue · configuration only")
                     .font(.system(size: 9)).foregroundStyle(.secondary)
             }
         }.padding(22).background(Color(nsColor: .controlBackgroundColor).opacity(0.4))
@@ -312,7 +322,7 @@ struct WorkspaceView: View {
     private var statusBar: some View {
         HStack(spacing: 7) {
             Circle().fill(Color.accent).frame(width: 5, height: 5)
-            Text(model.loading ? "Reading source…" : model.notice.isEmpty ? "Ready to explore" : model.notice)
+            Text(exporter.running ? exporter.status : model.loading ? "Reading source…" : model.notice.isEmpty ? "Ready to explore" : model.notice)
             Spacer()
             Text(model.sessionName).lineLimit(1).foregroundStyle(.tertiary)
             Text("·").foregroundStyle(.tertiary)

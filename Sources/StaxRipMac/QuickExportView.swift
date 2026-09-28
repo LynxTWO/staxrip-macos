@@ -1,0 +1,87 @@
+import SwiftUI
+import AppKit
+
+struct QuickExportView: View {
+    @EnvironmentObject var model: WorkspaceModel
+    @EnvironmentObject var exporter: ExportController
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 24) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 9) {
+                        eyebrow("BUILT INTO YOUR MAC")
+                        Text("From source to screen.").font(.system(size: 30, weight: .semibold, design: .rounded))
+                        Text("A real MP4 export, with a little less ceremony.").foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Image(systemName: "bolt.circle.fill").font(.system(size: 52, weight: .light)).foregroundStyle(Color.accent)
+                }.padding(.bottom, 8)
+                HStack(spacing: 16) {
+                    Image(systemName: "film.stack").font(.title).foregroundStyle(Color.accent)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(model.isDemo ? "Choose a source video" : model.sourceName).font(.headline).lineLimit(2)
+                        Text(model.isDemo ? "MOV and MP4 are a good place to start." : model.sourceInfo).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button(model.isDemo ? "Open video…" : "Change source…") { model.chooseSource() }
+                        .disabled(exporter.running || model.loading)
+                }.padding(20).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
+                HStack(spacing: 12) {
+                    ForEach(NativePreset.allCases) { preset in
+                        Button { exporter.preset = preset } label: {
+                            VStack(alignment: .leading, spacing: 14) {
+                                HStack {
+                                    Image(systemName: preset == .hevcHD ? "leaf" : preset == .h264Small ? "paperplane" : "play.rectangle")
+                                    Spacer()
+                                    Image(systemName: exporter.preset == preset ? "checkmark.circle.fill" : "circle")
+                                }.font(.title3).foregroundStyle(exporter.preset == preset ? Color.accent : .secondary)
+                                Text(preset.rawValue).font(.system(size: 15, weight: .semibold))
+                                Text(preset.detail).font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(3).frame(maxWidth: .infinity, alignment: .leading)
+                            }.padding(18).frame(maxWidth: .infinity, minHeight: 142, alignment: .topLeading)
+                                .background(exporter.preset == preset ? Color.accent.opacity(0.09) : Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
+                                .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(exporter.preset == preset ? Color.accent : .clear))
+                        }.buttonStyle(.plain).disabled(exporter.running)
+                    }
+                }
+                Label("Apple’s preset controls video and supported audio tracks. Workspace CRF, crop, audio, subtitles and queued configurations are not used here.", systemImage: "info.circle")
+                    .font(.system(size: 12)).foregroundStyle(.secondary).lineSpacing(4)
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Image(systemName: exporter.result != nil ? "checkmark.seal.fill" : exporter.failure != nil ? "exclamationmark.triangle" : "waveform.path")
+                            .foregroundStyle(exporter.failure != nil ? .orange : Color.accent)
+                        Text(exporter.status).font(.headline)
+                        Spacer()
+                        if exporter.running { Text("\(Int(exporter.progress * 100))%").monospacedDigit() }
+                    }
+                    if exporter.running {
+                        ProgressView(value: exporter.progress)
+                        Text(exporter.sourceName).font(.caption).foregroundStyle(.secondary)
+                    }
+                    if let error = exporter.failure { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
+                    if let url = exporter.result {
+                        Text(url.lastPathComponent).font(.system(.callout, design: .monospaced)).textSelection(.enabled)
+                        HStack {
+                            Button("Reveal in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
+                            Button("Preview result") { model.load(url); model.section = "Workspace" }
+                        }
+                    }
+                    HStack {
+                        Text("Existing media is never replaced.").font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        if exporter.running {
+                            Button("Cancel export", role: .cancel) { exporter.cancel() }
+                        } else {
+                            Button { if let source = model.sourceURL { exporter.chooseDestination(source: source) } } label: {
+                                Label("Export MP4…", systemImage: "arrow.up.forward.video")
+                            }.buttonStyle(.borderedProminent).controlSize(.large)
+                                .disabled(model.isDemo || model.loading || model.sourceUnavailable)
+                        }
+                    }
+                }.padding(22).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+                Text("Native export uses AVFoundation. Format support, frame dimensions, HDR handling and audio conversion follow the selected Apple preset; this is not a precision archival workflow.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }.padding(30)
+        }
+    }
+}

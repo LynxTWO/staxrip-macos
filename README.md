@@ -1,69 +1,48 @@
-# StaxRip for Mac — GUI prototype
+# StaxRip Mac — working title
 
-A standalone SwiftUI design prototype. Open `Preview/StaxRip.app` on this Mac.
+A native SwiftUI media workspace with real AVFoundation MP4 export. StaxRip is an inspiration, not a compatibility promise or a limit on the product. The long-term direction is a deeply capable Mac video and audio workstation; see [the roadmap](Docs/ROADMAP.md).
 
-## Working interactions
+## Try it locally
 
-- Open a local video with Open source or Command-O, or drop it onto the preview.
-- Preview AVFoundation-compatible video with native playback controls. Source dimensions, frame rate and duration are read from the file.
-- Choose AV1, HEVC or H.264; adjust quality, speed preference, output size, crop, audio, subtitle handling and container.
-- Apply the three quick presets (video codec, encoder, CRF and container).
-- Choose a destination, add configuration snapshots with Command-J, remove queue entries, and export the queue as JSON.
-- The app follows the Mac's light/dark appearance.
+Requires Xcode / Swift 6 and macOS 14 or newer. Run `./build.command`, then open `Preview/StaxRip.app`. Quit the previous app before rebuilding. The development app is ad-hoc signed, not notarized. Binaries and personal media are excluded from Git.
 
-## Prototype boundaries
+- **Workspace:** import local video, preview it, explore advanced settings, and create independent queue configurations.
+- **Quick Export:** export a real MP4 using Apple's H.264 1080p, H.264 720p or HEVC 1080p preset. Choose a new destination. Progress, cancellation, result preview and Finder reveal are available.
+- **Queue:** edit, duplicate, reorder and remove configurations. These advanced jobs do not execute yet.
+- **Session:** explicitly save and reopen source references, workspace settings, output naming and queue. Source media is not copied. Queue-only JSON export is a reference format, not a session.
+- **Appearance:** Auto, Light and Dark modes apply to this app only.
 
-The initial landscape is an illustration, with clearly labeled synthetic source metadata. No encoder, filter, muxer, track discovery, compatibility validation, or tool downloading is connected. Picture settings do not modify playback. Speed is a conceptual preference, not a backend command-line setting. Some files, especially MKV, may not preview through AVFoundation.
+Keyboard shortcuts: Command-O opens media, Command-J adds a configuration, Command-Shift-S saves a session, and Command-Shift-O opens a session.
 
-The queue is held in memory and clears on quit. Export is an explicit save-panel action. Its JSON is a prototype format, not compatible with Windows StaxRip project files. Output names are proposed only; no media is created or overwritten. The app does not alter the existing Windows StaxRip repository.
+## What actually runs
 
-## Build and iterate
+Quick Export uses system AVFoundation presets, without downloading external tools. It does **not** apply the workspace's CRF, speed preference, cropping, audio selection, subtitle selection or advanced queue settings. Native presets control the output according to Apple's capabilities. They are not a precision archival or HDR metadata preservation guarantee. Frame size may remain smaller than the preset maximum.
 
-Requires Xcode / Swift 6 and macOS 14 or newer. This version was built locally using Swift 6.4 on Apple Silicon; older OS versions and Intel Macs are untested.
+AV1/SVT-AV1, x264/x265 command execution, external filters, batch processing, audio-only export, stream selection and subtitle management are not implemented. The illustrative alpine demo is synthetic. MKV and other formats may not preview through AVFoundation.
 
-1. Open `Package.swift` in Xcode, or edit `Sources/StaxRipMac/` in Codex.
-2. Run `./build.command` from Terminal (or double-click it).
-3. Quit and reopen `Preview/StaxRip.app` to see the build. This is rebuild/relaunch iteration, not hot reload.
+## File handling
 
-The local app is ad-hoc signed for development and is not a notarized distribution.
+Real exports are written in an operation-owned temporary directory beside the destination, checked for a readable video track, then published using an exclusive hard link. An existing destination, including a symlink, is never replaced. Cancellation and ordinary failures remove only the current operation's staging directory. Filesystems without hard-link support fail with an explanation; there is no destructive fallback. A forced app termination can leave its staging directory behind. Normal Quit is blocked during an active export until it finishes or is cancelled.
+
+Sessions use a versioned `staxrip-mac-session` JSON envelope. Unsupported versions/settings, invalid local paths, duplicate queue IDs and exact output conflicts are rejected before replacing the workspace. Missing media retains its identity with a locate-source prompt. Opening a session never starts processing. Sessions are explicitly saved, not autosaved; save before quitting. Neither session nor queue JSON is a Windows StaxRip project file.
+
+## Verification
+
+Run `swift test`. Twelve Swift Testing tests pass locally, including a parameterized media test covering all three presets. Generated video plus a synthetic audio tone verifies H.264/HEVC video, AAC audio, duration and source preservation. Other checks cover active/pre-start cancellation, staging cleanup, existing files and dangling symlinks, malformed sessions, document round-trip and queue isolation/reordering.
+
+Native UI checks on the development Mac cover import/playback, preset changes, queue edits and JSON export, output conflict feedback, actual export → preview, session save → change settings → restore, and light/dark rendering. The SwiftUI VideoPlayer wrapper crashed on the original runtime; the AppKit AVPlayerView bridge passed the same playback check.
+
+Local verification used Apple Silicon and Swift 6.4. Older macOS versions, Intel hardware, long media, HDR, multitrack audio, network destinations and distribution signing remain unverified. GitHub Actions is configured for macOS 15, but jobs are currently blocked before startup by an account billing/spending-limit restriction. No hosted CI pass is claimed.
 
 ## Structure
 
-- `WorkspaceModel.swift`: source loading, editable settings and queue snapshots.
-- `WorkspaceView.swift`: workspace, sidebar, settings and output inspector.
-- `QueueView.swift`: session queue and export action.
+- `WorkspaceModel.swift`: source loading, editable settings and queue operations.
+- `SessionDocument.swift`: versioned documents and validation.
+- `WorkspaceView.swift`, `QueueView.swift`, `QueueEditor.swift`: native workspace and configuration UI.
+- `NativeExport.swift`: system preset export, progress, cancellation and exclusive publication.
+- `QuickExportView.swift`: real export workflow.
 - `NativeVideoPreview.swift`: AppKit playback bridge.
-- `AlpinePreview.swift`: synthetic demo artwork drawn in SwiftUI.
-- `StaxRipMacApp.swift`: app entry and keyboard commands.
+- `AlpinePreview.swift`: synthetic artwork drawn in SwiftUI.
+- `Resources/Info.plist`: local app bundle metadata.
 
-Next implementation decision: agree on the GUI and encoding backend boundary before connecting real processing or persistent project files.
-
-## Verified on this Mac
-
-- Swift debug build and local app signing succeeded.
-- The native window was visually reviewed; preview height was reduced to expose the encoding controls.
-- Selecting Everyday HEVC changed codec, encoder, CRF and container together.
-- Adding, viewing, exporting and removing a queue configuration succeeded. The exported JSON was parsed and its HEVC settings and demo flag checked.
-- A generated 640 × 360 H.264 MOV loaded as 30 fps and two seconds; playback reached the end.
-- Picture, audio and subtitle tabs opened with the imported video present.
-- The initial SwiftUI VideoPlayer caused a runtime metadata crash on this machine. The final AppKit AVPlayerView bridge passed the same import and playback check.
-
-Drag-and-drop, every codec/container combination, older macOS versions, and distribution signing remain unverified. Encoding is deliberately unimplemented.
-
-## Second GUI pass
-
-Output names are now editable; the extension follows the selected container. Empty names, path separators, exact source/output collisions and exact duplicate queue destinations are rejected. This is configuration validation, not a filesystem overwrite guarantee; the eventual encoding backend must check existing files, aliases and volume case sensitivity.
-
-Queue items support Edit, Duplicate, Move up and Move down. Editing uses an isolated draft, and Cancel discards it. Duplicate generates a distinct destination name. The workspace and other queue items retain their settings. A return-to-demo button appears beside an imported source and also cancels pending source loading.
-
-Verification: four Swift Testing tests passed for destination conflicts, independent copies and edits, queue ordering boundaries, invalid filenames/source collisions, and demo reset preservation. Native UI checks confirmed the disabled Add button on duplicate destination, duplicate naming, the edit sheet's conflict warning and disabled Save button, independent CRF editing, and reordered queue rows. The queue editor and queue were visually reviewed. The final app is left open with two clearly marked demo configurations for exploration.
-
-Run the focused tests with `swift test` from this directory.
-
-## Saved sessions
-
-Use Session → Save session (Command-Shift-S) to save the source reference, workspace settings, output naming and queue. Session → Open session (Command-Shift-O) validates the entire document before replacing the current workspace. A confirmation protects unsaved configurations. Source media is referenced, not copied; missing media retains its source identity and shows a locate-source prompt. Saving is explicit, not automatic.
-
-Sessions use the versioned `staxrip-mac-session` JSON envelope. Queue-only Export JSON remains a reference export and cannot be opened as a session. Unknown versions, unsupported settings, invalid paths, duplicate IDs and output conflicts are rejected. Opening a session never starts processing.
-
-Seven local Swift tests pass after this change. GitHub Actions is configured for macOS 15, but the initial run could not start because GitHub reported an account billing/spending-limit restriction; no hosted test pass is claimed.
+See [development guidance](AGENTS.md), [architecture](Docs/ARCHITECTURE.md), and [roadmap](Docs/ROADMAP.md).

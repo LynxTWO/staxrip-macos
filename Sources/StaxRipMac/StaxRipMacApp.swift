@@ -54,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var exporter: ExportController?
     weak var batch: BatchController?
     weak var audio: AudioController?
+    func applicationWillTerminate(_ notification: Notification) { audio?.invalidateMaster() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard exporter?.running == true || batch?.running == true || audio?.running == true else { return .terminateNow }
         let alert = NSAlert()

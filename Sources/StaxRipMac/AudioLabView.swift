@@ -25,7 +25,6 @@ struct AudioLabView: View {
                     Button("Open audio or video…") { chooseSource() }.disabled(busy || batch.tools == nil)
                 }.padding(20).background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
                 if batch.tools == nil { Text(batch.toolDescription).font(.caption).foregroundStyle(.orange) }
-                MeasuredAnalysisView(busy: busy, tools: batch.tools)
                 if !audio.tracks.isEmpty {
                     AudioPanel("Source track") {
                         Picker("Track", selection: $audio.track) {
@@ -35,8 +34,12 @@ struct AudioLabView: View {
                         }.padding(12).disabled(busy)
                         .onChange(of: audio.track) { _, _ in audio.report = nil; audio.channelReports = []; audio.dialogueReport = nil; audio.output = nil; audio.outputReport = nil; audio.analysisReport = nil; audio.analysisSourceVerified = false; audio.analysisLayout = "metadata" }
                     }
+                }
+                MeasuredAnalysisView(busy: busy, tools: batch.tools)
+                OriginalMasteringView(busy: busy, tools: batch.tools)
+                if !audio.tracks.isEmpty {
                     HStack(alignment: .top, spacing: 20) {
-                        AudioPanel("Output recipe") {
+                        AudioPanel("Legacy FFmpeg output recipe") {
                             VStack(spacing: 16) {
                                 Picker("Format", selection: $audio.settings.format) { ForEach(["FLAC", "WAV", "AAC", "Opus"], id: \.self) { Text($0) } }
                                 Picker("Sample rate", selection: $audio.settings.sampleRate) {
@@ -90,7 +93,7 @@ struct AudioLabView: View {
                                 }
                                 Text("Individual channels are measured as mono. LFE is audited separately, but excluded from standard programme LUFS. Centre-channel sound is not necessarily dialogue.").font(.caption).foregroundStyle(.secondary)
                                 Divider()
-                                Text("Dialogue passage · user selected").font(.headline)
+                                Text("Legacy dialogue passage · measurement only").font(.headline)
                                 Text("Start / end (seconds)").font(.caption).foregroundStyle(.secondary)
                                 HStack {
                                     TextField("Start seconds", value: $audio.dialogueSelection.start, format: .number).accessibilityLabel("Dialogue start seconds")
@@ -99,7 +102,7 @@ struct AudioLabView: View {
                                 }.textFieldStyle(.roundedBorder).disabled(busy)
                                 Button("Measure dialogue passage") { if let tools = batch.tools { audio.measureDialogue(tools: tools) } }.disabled(busy)
                                 if let measured = audio.dialogueReport { metric("Passage loudness", measured.input_i + " LUFS") }
-                                Text("Choose clean speech without music/effects, preferably around 30 seconds. Measures actual decoded audio from the selected track; metadata is not used as a loudness value. This passage does not yet drive mastering gain.").font(.caption).foregroundStyle(.secondary)
+                                Text("Choose clean speech without music/effects, preferably around 30 seconds. Measures actual decoded audio from the selected track; metadata is not used as a loudness value. This legacy passage check does not drive gain. For original mastering, use the speech intervals above and confirm Selected speech.").font(.caption).foregroundStyle(.secondary)
                                 Text("Source measurement; export normalization is controlled separately. Mono is measured as mono.").font(.caption).foregroundStyle(.secondary)
                             }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
                         }.frame(maxWidth: .infinity)
@@ -116,7 +119,7 @@ struct AudioLabView: View {
                         if audio.running { Button("Cancel audio operation", role: .cancel) { audio.cancel() } }
                         if let output = audio.output { Button("Reveal audio output") { NSWorkspace.shared.activateFileViewerSelecting([output]) } }
                         Spacer()
-                        Button("Export audio…") { chooseDestination() }.buttonStyle(.borderedProminent).disabled(busy || audio.source == nil || batch.tools == nil)
+                        Button("Export legacy audio…") { chooseDestination() }.buttonStyle(.borderedProminent).disabled(busy || audio.source == nil || batch.tools == nil)
                     }
                 }.padding(20).background(Color.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
                 Text("Audio Lab has its own source and settings; these are not saved in video sessions. Exports support mono and stereo sources. Channel conversion uses FFmpeg’s default mix; artwork, chapters and source tags are omitted. FLAC/WAV avoid further lossy coding, but cannot restore detail lost in a source. Existing files are never replaced.")

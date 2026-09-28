@@ -18,9 +18,9 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-011 | 2026-09-28 | Swift meter adaptation | Confirmed | |
 | D-012 | 2026-09-28 | Slice 001 owner approval | Confirmed | |
 | D-013 | 2026-09-28 | Manual speech before automatic suggestions | Confirmed | |
-| D-014 | 2026-09-28 | Original mastering and preview boundary | Proposed | |
+| D-014 | 2026-09-28 | Original mastering and preview boundary | Confirmed | |
 | D-015 | 2026-09-28 | Planner and limiter feasibility | Open | |
-| D-016 | 2026-09-28 | Listening material rights | Open | |
+| D-016 | 2026-09-28 | Listening material rights | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -208,15 +208,15 @@ Revisit when: Manual mastering passes or the owner requests automatic suggestion
 
 ## D-014: Original mastering and preview boundary
 Date: 2026-09-28
-Status: Proposed
+Status: Confirmed
 
-Decision: SLICE-002-dialogue-mastering.md defines mono/stereo original gain planning with explicit programme or manual-speech reference, linked rendering, lossless output, full staged preview and independent verification. Its detailed defaults and bounds await owner approval.
+Decision: SLICE-002-dialogue-mastering.md defines mono/stereo original gain planning with explicit programme or manual-speech reference, linked rendering, lossless output, full staged preview and independent verification. Daniel approved the complete brief on 2026-09-28.
 
 Because: Existing reports are informational and existing mastering uses FFmpeg. The user needs an audible, reviewable result without coupling the first original renderer to models, lossy codecs or video remux.
 
 Options considered: keep only the FFmpeg foundation; original manual mastering with lossless preview; combine automatic speech, new mastering and all output formats. Recommend the bounded middle option.
 
-Consequences: Proposed R-007 authorizes only S2-001 through S2-009 upon brief approval. No report v1 break, video session schema, public API, paid tool, cloud processing, release or merge is introduced. The growth tally is in MASTERING-RESEARCH.md.
+Consequences: R-007 authorizes only S2-001 through S2-009 under the approved brief. No report v1 break, video session schema, public API, paid tool, cloud processing, release or merge is introduced. The growth tally is in MASTERING-RESEARCH.md.
 
 Revisit when: The owner amends the brief, M1 is infeasible, or listening exposes a required scope change.
 
@@ -224,7 +224,7 @@ Revisit when: The owner amends the brief, M1 is infeasible, or listening exposes
 Date: 2026-09-28
 Status: Open
 
-Decision: Slice 002 M1 must choose and preregister smoothing, gain/hold bounds, look-ahead, limiter, latency compensation and a finite render/refinement limit before the dependent renderer is built. One working day maximum for this spike after build approval.
+Decision: Use the preregistered MASTERING-M1.md Swift shared envelope with the existing local FFmpeg alimiter, three candidates maximum. Eight focused tests passed, including five-rate impulse timing/peak tests, constant PCM identity, energy pooling, phase-opposed stereo, noise hold and safe refusal. No numerical tolerance changed. Listening quality remains unproven. The real-film failures reopened planner feasibility; MASTERING-M1.md records the bounded feedback and smoothing experiments. Generated success is not whole-film acceptance.
 
 Because: Loudness compliance alone does not establish transparent or comfortable processing. A custom limiter cannot be assumed better than a tested reusable component.
 
@@ -236,9 +236,9 @@ Revisit when: M1 ends, a limiter fails peak tests, or iteration exceeds its fixe
 
 ## D-016: Listening material rights
 Date: 2026-09-28
-Status: Open
+Status: Confirmed
 
-Decision: Before Slice 002 M2 listening acquisition/use, establish a small local manifest of source permissions, hashes, excerpt times, languages and intended use. Generated numerical fixtures do not prove speech quality.
+Decision: LISTENING-MANIFEST.md records official Sintel CC BY 3.0 permissions before local acquisition. Acquired-source hashes are recorded; comparison excerpt selections remain pending. Generated fixtures do not prove speech quality; English-only material does not establish multilingual quality.
 
 Because: Local research permission and redistribution rights are different. Public CI must not receive private or restricted media.
 

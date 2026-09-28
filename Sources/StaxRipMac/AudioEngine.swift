@@ -1,3 +1,5 @@
+import AVFoundation
+
 import SwiftUI
 import AppKit
 
@@ -118,9 +120,9 @@ struct AudioEngine {
 
 @MainActor
 final class AudioController: ObservableObject {
-    @Published var source: URL?
+    @Published var source: URL? { didSet { if source != oldValue { invalidateMaster(); masterSettings.speechConfirmed = false } } }
     @Published var probe: MediaProbe?
-    @Published var track = -1
+    @Published var track = -1 { didSet { if track != oldValue { invalidateMaster(); masterSettings.speechConfirmed = false } } }
     @Published var settings = AudioSettings()
     @Published var running = false
     @Published var status = "Open an audio file or a video containing audio."
@@ -132,9 +134,28 @@ final class AudioController: ObservableObject {
     @Published var dialogueReport: LoudnessReport?
     @Published var analysisReport: AnalysisReport?
     @Published var analysisSourceVerified = false
-    @Published var analysisLayout = "metadata"
-    @Published var speechInputs: [SpeechIntervalDraft] = []
+    @Published var analysisLayout = "metadata" { didSet { if analysisLayout != oldValue { invalidateMaster(); masterSettings.speechConfirmed = false } } }
+    @Published var speechInputs: [SpeechIntervalDraft] = [] { didSet { if speechInputs != oldValue { invalidateMaster(); masterSettings.speechConfirmed = false } } }
     @Published var output: URL?
+    @Published var masterSettings = MasterSettings() { didSet { if masterSettings != oldValue { invalidateMaster() } } }
+    @Published var masterPlan: GainPlan?
+    @Published var masterCandidate: MasterCandidate?
+    @Published var masterSaved: URL?
+    @Published var previewStart = 0.0
+    @Published var previewLength = 30.0
+    @Published var previewReady = false
+    @Published var previewProcessed = false
+    @Published var previewMatched = false
+    @Published var previewPosition = 0.0
+    @Published var previewPlaying = false
+    @Published var previewMatchDescription = "Build an excerpt before listening."
+    let masterPlayer = AVPlayer()
+    var previewURLs: [URL] = []
+    var previewVolumes: [Float] = []
+    var previewSafeVolume: Float = 1
+    var masterGeneration = UUID()
+    var previewGeneration = UUID()
+    var previewObserver: Any?
     private var task: Task<Void, Never>?
     var tracks: [MediaProbe.Stream] { probe?.streams.filter { $0.codec_type == "audio" } ?? [] }
 
@@ -229,7 +250,7 @@ final class AudioController: ObservableObject {
         }
     }
     func cancel() { task?.cancel() }
-    private func perform(_ message: String, operation: @escaping @MainActor () async throws -> Void) {
+    func perform(_ message: String, operation: @escaping @MainActor () async throws -> Void) {
         running = true; status = message; progress = 0
         task = Task {
             defer { running = false; task = nil }

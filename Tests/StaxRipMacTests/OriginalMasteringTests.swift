@@ -1,0 +1,257 @@
+import Foundation
+import Testing
+@testable import StaxRipMac
+
+@Suite(.serialized)
+struct OriginalMasteringTests {
+    @Test func poolsEnergyWithDurationAndGatesBeforeConvertingToLUFS() throws {
+        // 9 equally sized windows at -20 LUFS and one at -26: duration weighting,
+        // not the -23 LUFS average of two passage readings.
+        func energy(_ lufs: Double) -> Double { pow(10,(lufs+0.691)/10) }
+        let levels = Array(repeating: energy(-20), count: 9)+[energy(-26)]
+        let expected = -0.691+10*log10(levels.reduce(0,+)/10)
+        let value = try #require(StreamingLoudness.pooledIntegrated(levels+[0,energy(-90)]).value)
+        #expect(abs(value-expected) < 1e-10)
+        #expect(abs(value+23) > 2)
+        #expect(StreamingLoudness.pooledIntegrated([0,energy(-90)]).value == nil)
+    }
+    @Test func planningEnergyLanePredictsConstantGainAndDoesNotIncludeTail() throws {
+        let meter = try StreamingLoudness(rate: 48000,channels: 1)
+        // Non-bin-aligned end verifies that finish's LRA padding does not become source.
+        let frames = 48000*7+137
+        for i in 0..<frames {
+            let amplitude = i < 48000*3 ? 0.08 : 0.16
+            try meter.pushFrame([amplitude*sin(2 * .pi * 997 * Double(i)/48000)],offset: 0)
+        }
+        let binsBefore = meter.planningEnergies
+        let measured = meter.finish()
+        #expect(meter.planningEnergies == binsBefore)
+        #expect(binsBefore.count == (frames+959)/960)
+        let prediction = GainPrediction(energies: binsBefore,envelope: Array(repeating: -6,count: binsBefore.count+1))
+        #expect(abs(try #require(prediction.integrated)-(try #require(measured.integrated.value)-6)) < 0.01)
+        #expect(abs((try #require(prediction.high)-#require(prediction.low))-(try #require(measured.range.value))) < 0.03)
+        let silence = GainPrediction(energies: Array(repeating: 0,count: 151),envelope: Array(repeating: 0,count: 152))
+        #expect(silence.integrated == nil && silence.low == nil && silence.high == nil)
+    }
+    private func fixture(_ expression: String, rate: Int = 48000, seconds: Int = 12) async throws -> (URL,URL,FFmpegTools) {
+        let tools = try #require(FFmpegTools.discover())
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("mastering-test-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder,withIntermediateDirectories: false)
+        let source = folder.appendingPathComponent("source.flac")
+        try await MasteringEngine.runTool(tools,["-f","lavfi","-i","aevalsrc='\(expression)':s=\(rate):d=\(seconds)","-c:a","flac",source.path])
+        return (folder,source,tools)
+    }
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func constantCandidateAndPublicationAreVerifiedAndExclusive() async throws {
+        let (folder,source,tools) = try await fixture("0.1*sin(2*PI*1000*t)|-0.05*sin(2*PI*1000*t)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let destination = folder.appendingPathComponent("result.flac")
+        let candidate = try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { _,_ in }
+        #expect(!candidate.plan.dynamic)
+        #expect(abs(try #require(candidate.verification.after.integrated.value)+18) <= 0.01)
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+        try await candidate.publish()
+        #expect(try await SourceFingerprint.read(destination) == candidate.verification.output)
+        await #expect(throws: (any Error).self) { try await candidate.publish() }
+        let receipt = folder.appendingPathComponent("result.json")
+        try candidate.verification.save(to: receipt)
+        #expect(!String(decoding: try Data(contentsOf: receipt),as: UTF8.self).contains(folder.path))
+        #expect(throws: (any Error).self) { try candidate.verification.save(to: receipt) }
+    }
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func nightLevelsLargeTransitionsWithoutPublishingBeforeReview() async throws {
+        let expression = "if(lt(t,10),0.03,if(lt(t,20),0.3,0.08))*sin(2*PI*1000*t)"
+        let (folder,source,tools) = try await fixture(expression+"|"+expression,seconds: 30)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        var settings = MasterSettings(); settings.mode = .night; settings.maximumLRA = 3
+        let destination = folder.appendingPathComponent("night.wav")
+        let candidate = try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: settings,destination: destination,tools: tools) { _,_ in }
+        #expect(candidate.plan.dynamic)
+        #expect(candidate.verification.attempts <= 3)
+        #expect(try #require(candidate.verification.after.range.value) <= 4)
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+    }
+    @Test(.enabled(if: FFmpegTools.discover() != nil), arguments: [44100,48000,88200,96000,192000])
+    func limiterPreservesFrameCountAndImpulsePosition(rate: Int) async throws {
+        let (folder,source,tools) = try await fixture("if(eq(n,\(rate)),1.5,0)",rate: rate,seconds: 4)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        // Float raw fixture avoids FLAC clipping of the deliberately over-full-scale impulse.
+        let raw = folder.appendingPathComponent("impulse.f64")
+        try await MasteringEngine.runTool(tools,["-f","lavfi","-i","aevalsrc=if(eq(n\\,\(rate))\\,1.5\\,0):s=\(rate):d=4","-c:a","pcm_f64le","-f","f64le",raw.path])
+        let output = folder.appendingPathComponent("limited.wav")
+        try await MasteringEngine.encode(raw: raw,output: output,rate: rate,channels: 1,dynamic: true,tools: tools)
+        let decoded = folder.appendingPathComponent("decoded.f64")
+        try await MasteringEngine.runTool(tools,["-i",output.path,"-f","f64le","-c:a","pcm_f64le",decoded.path])
+        let data = try Data(contentsOf: decoded)
+        #expect(data.count == rate*4*8)
+        let samples = data.withUnsafeBytes { bytes in stride(from: 0,to: bytes.count,by: 8).map { Double(bitPattern: UInt64(littleEndian: bytes.loadUnaligned(fromByteOffset: $0,as: UInt64.self))) } }
+        let position = try #require(samples.indices.max(by: { abs(samples[$0]) < abs(samples[$1]) }))
+        #expect(position == rate)
+        let after = try await MeasuredAnalysis.fresh(source: output,track: 0,regions: [],tools: tools,declaredLayout: "mono") { _ in }
+        #expect(try #require(after.report.programme.truePeak.value) <= -1)
+        _ = source
+    }
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func constantPCMMatchesMultiplicationAndPhaseOpposedStereo() async throws {
+        let (folder,source,tools) = try await fixture("0.1*sin(2*PI*1000*t)|-0.05*sin(2*PI*1000*t)",seconds: 4)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let destination = folder.appendingPathComponent("constant.wav")
+        let candidate = try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { _,_ in }
+        let raw = folder.appendingPathComponent("out.f64")
+        try await MasteringEngine.runTool(tools,["-i",candidate.processed.path,"-f","f64le","-c:a","pcm_f64le",raw.path])
+        let originalRaw = folder.appendingPathComponent("in.f64")
+        try await MasteringEngine.runTool(tools,["-i",source.path,"-f","f64le","-c:a","pcm_f64le",originalRaw.path])
+        let output = try Data(contentsOf: raw), input = try Data(contentsOf: originalRaw)
+        #expect(output.count == input.count)
+        let gain = pow(10,candidate.plan.baseDB/20), tolerance = 2.0/pow(2.0,23.0)
+        var maxError = 0.0
+        input.withUnsafeBytes { before in output.withUnsafeBytes { after in
+            for i in stride(from: 0,to: input.count,by: 8) {
+                let a = Double(bitPattern: before.loadUnaligned(fromByteOffset: i,as: UInt64.self))
+                let b = Double(bitPattern: after.loadUnaligned(fromByteOffset: i,as: UInt64.self))
+                maxError = max(maxError,abs(b-a*gain))
+            }
+        } }
+        #expect(maxError <= tolerance)
+    }
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func speechConfirmationAndSilentReferenceRefuseAndCleanup() async throws {
+        let (folder,source,tools) = try await fixture("if(lt(t,4),0,0.1*sin(2*PI*1000*t))",seconds: 8)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let fingerprint = try await SourceFingerprint.read(source)
+        var settings = MasterSettings(); settings.reference = .speech
+        let silent = [SpeechRegion(startFrame: 0,endFrame: 3*48000)]
+        let destination = folder.appendingPathComponent("refused.flac")
+        await #expect(throws: (any Error).self) {
+            try await MasteringEngine.prepare(source: source,track: 0,regions: silent,layout: nil,settings: settings,destination: destination,tools: tools) { _,_ in }
+        }
+        settings.speechConfirmed = true
+        await #expect(throws: (any Error).self) {
+            try await MasteringEngine.prepare(source: source,track: 0,regions: silent,layout: nil,settings: settings,destination: destination,tools: tools) { _,_ in }
+        }
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+        #expect(try await SourceFingerprint.read(source) == fingerprint)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).allSatisfy { !$0.hasPrefix(".staxrip-master-") })
+    }
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func linkedDynamicEnvelopeHoldsQuietTailAndVerifiesRange() async throws {
+        let expression = "if(lt(t,8),0.03,if(lt(t,16),0.3,0.000001))*sin(2*PI*1000*t)"
+        let (folder,source,tools) = try await fixture(expression+"|-0.5*("+expression+")",seconds: 24)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let before = try await MeasuredAnalysis.fresh(source: source,track: 0,regions: [],tools: tools) { _ in }
+        var settings = MasterSettings(); settings.mode = .night; settings.maximumLRA = 3
+        let plan = try GainPlanner.make(before,settings: settings)
+        #expect(plan.dynamic)
+        #expect(plan.minimumDB >= -36 && plan.maximumDB <= 12)
+        // Far from transitions, below-floor noise cannot drive an upward ramp.
+        #expect(plan.gainDB(at: 23*48000) <= plan.gainDB(at: 19*48000)+1e-10)
+        let raw = folder.appendingPathComponent("in.f64"), output = folder.appendingPathComponent("linked.f64")
+        try await MasteringEngine.runTool(tools,["-i",source.path,"-f","f64le","-c:a","pcm_f64le",raw.path])
+        try LinkedRenderer.render(raw: raw,to: output,plan: plan)
+        let data = try Data(contentsOf: output)
+        var maxRatioError = 0.0
+        data.withUnsafeBytes { bytes in
+            for i in stride(from: 0,to: data.count,by: 16) {
+                let left = Double(bitPattern: bytes.loadUnaligned(fromByteOffset: i,as: UInt64.self))
+                let right = Double(bitPattern: bytes.loadUnaligned(fromByteOffset: i+8,as: UInt64.self))
+                // Input is already integer FLAC; allow its amplified quantization.
+                maxRatioError = max(maxRatioError,abs(right+0.5*left))
+            }
+        }
+        #expect(maxRatioError < 0.000001)
+        let destination = folder.appendingPathComponent("safe.flac")
+        let candidate = try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: settings,destination: destination,tools: tools) { _,_ in }
+        #expect(try #require(candidate.verification.after.range.value) <= 4)
+        #expect(abs(try #require(candidate.verification.after.integrated.value)-settings.target) <= 0.5)
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+    }
+
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func excessiveRequiredBoostRefusesWithoutPublishing() async throws {
+        let (folder,source,tools) = try await fixture("0.0001*sin(2*PI*1000*t)",seconds: 4)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let destination = folder.appendingPathComponent("refused.flac")
+        await #expect(throws: (any Error).self) {
+            try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { _,_ in }
+        }
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).allSatisfy { !$0.hasPrefix(".staxrip-master-") })
+    }
+
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func changedSourceCannotPublishVerifiedCandidate() async throws {
+        let (folder,source,tools) = try await fixture("0.1*sin(2*PI*1000*t)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let candidate = try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: folder.appendingPathComponent("safe.flac"),tools: tools) { _,_ in }
+        try Data("changed".utf8).write(to: source)
+        await #expect(throws: (any Error).self) { try await candidate.publish() }
+        #expect(!FileManager.default.fileExists(atPath: candidate.destination.path))
+    }
+
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func selectedSpeechUsesFreshWindowsAndDrivesOutputReference() async throws {
+        let (folder,source,tools) = try await fixture("if(lt(t,3),0.1,0.05)*sin(2*PI*1000*t)",seconds: 15)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let regions = [SpeechRegion(startFrame: 48000,endFrame: 96000),SpeechRegion(startFrame: 4*48000,endFrame: 8*48000)]
+        let fresh = try await MeasuredAnalysis.fresh(source: source,track: 0,regions: regions,tools: tools) { _ in }
+        // Full-window counts are 7 and 37. Independently resetting each passage
+        // prevents windows spanning the unselected two-second gap.
+        let values = try fresh.report.speech.map { try #require($0.result.integrated.value) }
+        let expected = -0.691+10*log10((7*pow(10,(values[0]+0.691)/10)+37*pow(10,(values[1]+0.691)/10))/44)
+        #expect(abs(try #require(fresh.speechReference.value)-expected) < 0.001)
+        #expect(abs(try #require(fresh.speechReference.value)-(values[0]+values[1])/2) > 1)
+        var settings = MasterSettings(); settings.reference = .speech; settings.speechConfirmed = true
+        let candidate = try await MasteringEngine.prepare(source: source,track: 0,regions: regions,layout: nil,settings: settings,destination: folder.appendingPathComponent("speech.flac"),tools: tools) { _,_ in }
+        #expect(abs(try #require(candidate.verification.speechAfter.value)+18) <= 0.5)
+        #expect(candidate.verification.regionResults.count == 2)
+        try candidate.verification.validate()
+    }
+
+}
+
+private final class MasterCancellation: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: Task<MasterCandidate,Error>?
+    private var requested = false
+    func install(_ task: Task<MasterCandidate,Error>) {
+        lock.lock(); self.task = task; let cancel = requested; lock.unlock()
+        if cancel { task.cancel() }
+    }
+    func cancel() {
+        lock.lock(); requested = true; let task = task; lock.unlock(); task?.cancel()
+    }
+}
+
+@Suite(.serialized)
+struct MasteringRecoveryTests {
+    @Test(.enabled(if: FFmpegTools.discover() != nil), arguments: ["Fresh analysis", "Rendering candidate", "Measuring encoded candidate"])
+    func cancelsOwnedWorkWithoutPublishing(phase: String) async throws {
+        let tools = try #require(FFmpegTools.discover())
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("master-cancel-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder,withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let source = folder.appendingPathComponent("source.flac"), destination = folder.appendingPathComponent("output.flac")
+        try await MasteringEngine.runTool(tools,["-f","lavfi","-i","aevalsrc=0.1*sin(2*PI*1000*t):s=48000:d=30","-c:a","flac",source.path])
+        let fingerprint = try await SourceFingerprint.read(source)
+        let cancellation = MasterCancellation()
+        let notified = AsyncStream<Date>.makeStream()
+        let task = Task {
+            defer { notified.continuation.finish() }
+            return try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { status,_ in
+                if status.hasPrefix(phase) {
+                    DispatchQueue.global().asyncAfter(deadline: .now()+0.02) {
+                        notified.continuation.yield(Date()); notified.continuation.finish(); cancellation.cancel()
+                    }
+                }
+            }
+        }
+        cancellation.install(task)
+        var iterator = notified.stream.makeAsyncIterator()
+        let start = try #require(await iterator.next())
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(Date().timeIntervalSince(start) < 5)
+        #expect(try await SourceFingerprint.read(source) == fingerprint)
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).allSatisfy { !$0.hasPrefix(".staxrip-master-") })
+    }
+}

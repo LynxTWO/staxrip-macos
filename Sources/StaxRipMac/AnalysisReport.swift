@@ -118,6 +118,7 @@ private final class PCMAnalysisConsumer: @unchecked Sendable {
     var failure: Error?
     var frames: Int64 = 0
     var lastProgressFrame: Int64 = 0
+    var lastProgressTime = 0.0
     var regionIndex = 0
     init(rate: Int, channels: Int, regions: [SpeechRegion]) throws {
         programme = try StreamingLoudness(rate: rate, channels: channels)
@@ -147,9 +148,19 @@ private final class PCMAnalysisConsumer: @unchecked Sendable {
     }
 }
 
+struct FreshAnalysis: Sendable {
+    let report: AnalysisReport
+    let speechReference: MeterValue
+    let planningEnergies: [Double]
+}
+
 enum MeasuredAnalysis {
     static func run(source: URL, track: Int, regions: [SpeechRegion], tools: FFmpegTools, declaredLayout: String? = nil,
                     progress: @escaping @Sendable (Double) -> Void) async throws -> AnalysisReport {
+        try await fresh(source: source, track: track, regions: regions, tools: tools, declaredLayout: declaredLayout, progress: progress).report
+    }
+    static func fresh(source: URL, track: Int, regions: [SpeechRegion], tools: FFmpegTools, declaredLayout: String? = nil,
+                      progress: @escaping @Sendable (Double) -> Void) async throws -> FreshAnalysis {
         let before = try await SourceFingerprint.read(source)
         let probe = try await MediaProbe.read(source, tools: tools)
         guard let stream = probe.streams.first(where: { $0.index == track && $0.codec_type == "audio" }),
@@ -185,7 +196,9 @@ enum MeasuredAnalysis {
                 guard consumer.failure == nil else { return }
                 do {
                     try consumer.consume(data)
-                    if consumer.frames-consumer.lastProgressFrame >= Int64(rate) {
+                    let now = ProcessInfo.processInfo.systemUptime
+                    if consumer.frames-consumer.lastProgressFrame >= Int64(rate), now-consumer.lastProgressTime >= 0.25 {
+                        consumer.lastProgressTime = now
                         consumer.lastProgressFrame = consumer.frames
                         progress(min(0.95, Double(consumer.frames)/Double(rate)/probe.seconds*0.95))
                     }
@@ -211,6 +224,6 @@ enum MeasuredAnalysis {
                 "Channel LUFS are individual mono diagnostics and cannot be added. LRA alone does not constrain sudden spikes.",
                 "True peak is a 4x, 12-tap estimate. LRA includes 1.5 seconds terminal silence; traces stop at the source end."])
         try report.validate(); progress(1)
-        return report
+        return FreshAnalysis(report: report, speechReference: StreamingLoudness.pooledIntegrated(consumer.passages.flatMap(\.integratedBlockEnergies)), planningEnergies: consumer.programme.planningEnergies)
     }
 }

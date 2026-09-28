@@ -31,3 +31,7 @@ The foundation accepts −36 to −9 LUFS and 1–20 LU LRA. Night / Venue appli
 ## Current limits
 
 Export still accepts mono/stereo sources. Channel audits accept up to eight channels and label unknown layouts honestly. Dialogue is manually selected and diagnostic. The adaptive planner, automatic speech detector, independent meter, LFE processing contract, short-term ceiling and listening study are outstanding. Multiple full-file passes cost time. Audio settings are not yet saved in video sessions.
+
+## Reuse investigation
+
+The [Scaffold v0.4 slice brief](Planning/SLICE-001-measured-analysis.md) begins with a bounded [SignalForge reuse assessment](Planning/SIGNALFORGE-REUSE.md). Independently verified measurement need not reinvent standard DSP. Candidate reuse must preserve attribution, handle unavailable values explicitly, and pass the app-specific streaming and fixture gates.

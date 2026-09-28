@@ -1,0 +1,76 @@
+import SwiftUI
+
+struct QueueEditor: View {
+    @EnvironmentObject private var model: WorkspaceModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft: QueueJob
+    @State private var stem: String
+
+    init(job: QueueJob) {
+        _draft = State(initialValue: job)
+        _stem = State(initialValue: URL(fileURLWithPath: job.destination).deletingPathExtension().lastPathComponent)
+    }
+
+    private var destination: String {
+        URL(fileURLWithPath: draft.destination).deletingLastPathComponent()
+            .appendingPathComponent(stem.trimmingCharacters(in: .whitespacesAndNewlines) + "." + draft.configuration.container.lowercased()).path
+    }
+    private var issue: String? {
+        WorkspaceModel.filenameIssue(stem) ?? model.destinationIssue(destination, source: draft.isDemo ? nil : draft.source, excluding: draft.id)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            sectionTitle("Edit configuration", subtitle: URL(fileURLWithPath: draft.source).lastPathComponent)
+            Divider()
+            HStack(spacing: 16) {
+                settingPicker("Codec", selection: $draft.configuration.codec, values: ["AV1", "HEVC", "H.264"])
+                    .onChange(of: draft.configuration.codec) { _, codec in
+                        draft.configuration.encoder = codec == "AV1" ? "SVT-AV1" : codec == "HEVC" ? "x265" : "x264"
+                    }
+                settingPicker("Container", selection: $draft.configuration.container, values: ["MKV", "MP4"])
+            }
+            HStack {
+                Text("Constant quality")
+                Slider(value: $draft.configuration.quality, in: 0...51, step: 1)
+                    .accessibilityLabel("Queue constant rate factor")
+                Text("CRF \(Int(draft.configuration.quality))").monospacedDigit().frame(width: 60)
+            }.font(.system(size: 12))
+            HStack(spacing: 16) {
+                settingPicker("Speed preference", selection: $draft.configuration.speed, values: ["Thorough", "Balanced", "Fast"])
+                settingPicker("Output size", selection: $draft.configuration.resolution, values: ["Original", "1920 × 1080", "1280 × 720"])
+            }
+            HStack(spacing: 16) {
+                Stepper("Top crop: \(draft.configuration.cropTop) px", value: $draft.configuration.cropTop, in: 0...240, step: 2)
+                Stepper("Bottom: \(draft.configuration.cropBottom) px", value: $draft.configuration.cropBottom, in: 0...240, step: 2)
+            }.font(.system(size: 12))
+            HStack(spacing: 16) {
+                settingPicker("Audio", selection: $draft.configuration.audio, values: ["AAC", "Opus", "Copy original", "No audio"])
+                settingPicker("Bitrate", selection: $draft.configuration.audioBitrate, values: ["128 kb/s", "192 kb/s", "256 kb/s", "320 kb/s"])
+                    .disabled(!["AAC", "Opus"].contains(draft.configuration.audio))
+            }
+            settingPicker("Subtitles", selection: $draft.configuration.subtitleMode, values: ["Keep embedded tracks", "Remove all subtitles"])
+            VStack(alignment: .leading, spacing: 8) {
+                eyebrow("Output name")
+                HStack {
+                    TextField("File name", text: $stem).textFieldStyle(.roundedBorder).accessibilityLabel("Queue output name")
+                    Text("." + draft.configuration.container.lowercased()).foregroundStyle(.secondary)
+                }
+                Text(URL(fileURLWithPath: draft.destination).deletingLastPathComponent().path)
+                    .font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                if let issue { Text(issue).font(.caption).foregroundStyle(.orange) }
+            }
+            Divider()
+            HStack {
+                Text("Changes apply only to this queue item.").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Save changes") {
+                    draft.destination = destination
+                    model.updateJob(draft)
+                    dismiss()
+                }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).disabled(issue != nil)
+            }
+        }.padding(28).frame(width: 550)
+    }
+}

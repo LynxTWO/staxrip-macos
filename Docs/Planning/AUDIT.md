@@ -22,3 +22,7 @@ Final mechanical output:
 ## Implementation checkpoint: 2026-09-28
 
 The historical Proposed status above was superseded by Daniel’s explicit approval, recorded in slice 001 and D-012. D-011 records the bounded Swift adaptation of SignalForge. Implementation and local numerical/native checks are complete; see MEASURED-ANALYSIS-EVIDENCE.md for results and limits. The slice remains In progress pending the owner’s final native walkthrough. No merge or release has been performed.
+
+## VoiceOver refinement checkpoint
+
+Daniel accepted the functional walkthrough and approved layered accessibility guidance on 2026-09-28. The refinement and its observed native checks are recorded in ../VOICEOVER-GUIDANCE.md. The functional approval supersedes the pending owner walkthrough statement above; the remaining accessibility listening check is stated separately. No claim of full VoiceOver verification follows from inspecting the accessibility tree.

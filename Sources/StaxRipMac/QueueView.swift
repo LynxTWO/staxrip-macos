@@ -60,16 +60,17 @@ struct QueueView: View {
                                     Text(job.isDemo ? "DEMO" : (batch.statuses[job.id]?.phase ?? "Ready").uppercased())
                                         .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
                                     Button { batch.reset(job.id); model.jobs.removeAll { $0.id == job.id } } label: { Image(systemName: "trash") }
-                                        .buttonStyle(.borderless).disabled(batch.running || audio.running).help("Remove configuration").accessibilityLabel("Remove \(URL(fileURLWithPath: job.source).lastPathComponent)")
+                                        .buttonStyle(.borderless).disabled(batch.running || audio.running).help("Remove configuration").accessibilityLabel("Remove queued configuration for \(URL(fileURLWithPath: job.source).lastPathComponent)")
+                                        .accessibilityHint("Removes this queue entry. Does not delete the source file.")
                                 }
                                 HStack(spacing: 14) {
                                     Button { editingJob = job } label: { Label("Edit", systemImage: "slider.horizontal.3") }
                                     Button { model.duplicateJob(job) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
                                     Spacer()
                                     Button { model.moveJob(job.id, by: -1) } label: { Image(systemName: "arrow.up") }
-                                        .disabled(model.jobs.first?.id == job.id).help("Move up").accessibilityLabel("Move up")
+                                        .disabled(model.jobs.first?.id == job.id).help("Move up").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) earlier in the queue")
                                     Button { model.moveJob(job.id, by: 1) } label: { Image(systemName: "arrow.down") }
-                                        .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move down")
+                                        .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) later in the queue")
                                 }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running || audio.running)
                                 if let state = batch.statuses[job.id] {
                                     if state.phase == "Encoding" { ProgressView(value: state.progress) }

@@ -164,7 +164,10 @@ enum MeasuredAnalysis {
             throw NativeExportError.invalid("Analysis requires a known duration of at most four hours and at most 16 speech intervals.")
         }
         var end: Int64 = 0
-        for region in regions {
+        for (index, region) in regions.enumerated() {
+            if Double(region.endFrame)/Double(rate) > probe.seconds+0.001 {
+                throw NativeExportError.invalid("Speech interval \(index+1) ends beyond the source. Enter an end time of \(String(format: "%.2f", probe.seconds)) seconds or less.")
+            }
             guard region.startFrame >= end, region.endFrame > region.startFrame, Double(region.endFrame)/Double(rate) <= probe.seconds+0.001 else {
                 throw NativeExportError.invalid("Speech intervals must be ordered, non-overlapping and within the source.")
             }

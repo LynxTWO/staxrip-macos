@@ -22,7 +22,8 @@ struct VideoRateOptionsView: View {
                 HStack {
                     Text("Video bitrate (kb/s)")
                     TextField("Video bitrate", value: $configuration.rate.bitrate, format: .number)
-                        .textFieldStyle(.roundedBorder).accessibilityLabel("Video bitrate kb/s")
+                        .textFieldStyle(.roundedBorder).accessibilityLabel("Video bitrate, in kilobits per second")
+                        .accessibilityHint("Single-pass target bitrate. Does not guarantee a file size or a constant bitrate.")
                 }
                 Text("Single-pass target, not a guaranteed file size or constant bitrate. Actual bitrate depends on the material and encoder.")
                     .font(.caption).foregroundStyle(.secondary)

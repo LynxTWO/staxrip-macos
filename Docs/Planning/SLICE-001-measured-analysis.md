@@ -1,9 +1,9 @@
 # StaxRip Mac Slice 001: Measured analysis report
-Version: 0.1 Draft. Date: 2026-09-28. Status: In progress.
+Version: 0.1 Draft. Date: 2026-09-28. Status: Done with evidence.
 
 SLICE STATE
-Milestone: M3 native workflow and verification.
-Blocked by: VoiceOver listening verification of the approved guidance refinement; no credential or fixture download block.
+Milestone: M3 complete within the documented mono/stereo measurement boundary.
+Blocked by: None for this slice. Broader accessibility/platform qualification remains release work.
 Evidence so far: MAP-EVIDENCE.md and SIGNALFORGE-REUSE.md.
 Last audit: 2026-09-28; see AUDIT.md.
 
@@ -97,4 +97,8 @@ Implementation checkpoint: M1 selected the Swift adaptation and fixed tolerances
 
 ## Functional walkthrough and accessibility refinement
 
-2026-09-28: Daniel confirmed the functional walkthrough passed. He then approved layered VoiceOver guidance: concise labels and values, optional explanatory hints, visible terminology help and useful operation status. This authorizes refinement of the measured-report view and existing preset, encoding and queue controls. No DSP or rendering behavior changes are included. See ../VOICEOVER-GUIDANCE.md. Functional acceptance is recorded; the spoken experience still needs a listening check, so S-003 is not represented as fully verified.
+2026-09-28: Daniel confirmed the functional walkthrough passed. He then approved layered VoiceOver guidance: concise labels and values, optional explanatory hints, visible terminology help and useful operation status. This authorizes refinement of the measured-report view and existing preset, encoding and queue controls. No DSP or rendering behavior changes are included. See ../VOICEOVER-GUIDANCE.md. Daniel then confirmed the spoken experience, identified the H.264 pronunciation issue, and confirmed its correction. This closes the owner core walkthrough, with broader voice/settings coverage still outside the tested evidence.
+
+## Closure receipt
+
+S-001/S-002: 64 supported EBU sequences and independent/chunk/gating checks. S-003: native workflow plus Daniel’s functional and spoken feedback, including the corrected codec pronunciation. S-004/S-005: report round-trip/hostile-input/no-overwrite and cancellation/failure tests. S-006: two-hour profile at 106.7 MiB. Details and coverage limits are in MEASURED-ANALYSIS-EVIDENCE.md and ../VOICEOVER-GUIDANCE.md. Hosted checks for commits 9888fd6 and 96f1d38 passed. PRs 13 and 14 remain unmerged; closure records acceptance of the scoped development work, not production release readiness.

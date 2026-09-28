@@ -40,3 +40,5 @@ The debug build and existing regression suite passed (47 tests in eight suites; 
 ## Owner listening feedback
 
 Daniel reported that everything else sounded good, but H.264 was spoken as “H two hundred sixty four.” Accessibility text now spells this as “H two six four” in the preset, its hint, codec picker and glossary. The same rule applies to H.265. Visible names, picker values used for encoding and original Voice Control input names are unchanged. The revised pronunciation awaits listening confirmation; this feedback does not establish that every optional checklist path was exercised.
+
+Daniel subsequently confirmed the corrected pronunciation: “Just checked it, sounds good!” The focused owner listening feedback is accepted. It does not assert exhaustive coverage of the optional checklist or every VoiceOver configuration.

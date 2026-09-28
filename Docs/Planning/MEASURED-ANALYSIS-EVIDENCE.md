@@ -1,7 +1,7 @@
 # Slice 001 measurement evidence
 Version: 0.1 Draft. Date: 2026-09-28.
 
-Status: In progress. Owner approved implementation on 2026-09-28. Daniel approved the functional walkthrough; VoiceOver listening verification remains open. This is measurement/reporting, not automatic dialogue-aware gain processing.
+Status: Done with evidence. Owner approved implementation and subsequently confirmed the functional and spoken walkthroughs, including the H.264 pronunciation correction, on 2026-09-28. This is measurement/reporting, not automatic dialogue-aware gain processing.
 
 ## Implemented boundary
 
@@ -38,3 +38,7 @@ Automated gates cover report round trip, collision/source overwrite refusal, una
 Local logs are retained outside Git: measured-ebu.log, measured-long-profile.log, measured-all-release.log and measured-all-debug.log. They include no user media. Debug and release full regression runs passed (47 tests in eight suites, with opt-in gates explicitly skipped when not configured). The release run included the 64 official supported EBU sequences; the two-hour gate ran separately. A final focused release run passed after report-read cancellation guards. The missing-fixture script was exercised and returned exit 2 with an explicit unmet status.
 
 Native save, reopen and source verification passed: reopening preserved all displayed metrics, marked the source unverified, then Verify source changed the status to Fingerprint matched. Native cancellation returned without publishing a report and a retry completed. Daniel subsequently confirmed the functional walkthrough passed and approved the layered VoiceOver refinement. Its listening verification remains open; see ../VOICEOVER-GUIDANCE.md. The implementation PR and hosted check will be linked in the PR receipt. No merge, production signature, notarization upload or release is part of this slice.
+
+## Owner closure and hosted receipts
+
+Daniel reported that everything worked, then that the spoken experience sounded good after a codec-pronunciation correction. Scope is the exercised native workflow; this does not claim every VoiceOver voice, option or platform was tested. [Measurement PR 13](https://github.com/LynxTWO/staxrip-macos/pull/13) and [guidance PR 14](https://github.com/LynxTWO/staxrip-macos/pull/14) remain unmerged. [Latest hosted check for 96f1d38](https://github.com/LynxTWO/staxrip-macos/actions/runs/36458466940) passed in 3m27s. The local post-correction regression suite passed in 68.77 seconds. Earlier pending-walkthrough notes above are historical and superseded by this receipt.

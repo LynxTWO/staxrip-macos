@@ -26,3 +26,15 @@ The historical Proposed status above was superseded by Daniel’s explicit appro
 ## VoiceOver refinement checkpoint
 
 Daniel accepted the functional walkthrough and approved layered accessibility guidance on 2026-09-28. The refinement and its observed native checks are recorded in ../VOICEOVER-GUIDANCE.md. The functional approval supersedes the pending owner walkthrough statement above; the remaining accessibility listening check is stated separately. No claim of full VoiceOver verification follows from inspecting the accessibility tree.
+
+## Slice 002 planning readback, 2026-09-28
+
+Slice 001 closes with the scoped acceptance record and latest green hosted check. The owner confirmed functional behavior and the corrected spoken label. Broader release/platform/VoiceOver coverage is still a stated limitation. No production-readiness claim follows.
+
+Current audio source seams were reread at 96f1d38, and current primary EBU/ITU/FFmpeg sources inform MASTERING-RESEARCH.md. D-013 records the accepted manual-first sequence. D-014 is the proposed complete build boundary; D-015 and D-016 are Open with M1/M2 closing work before their dependent implementation. R-007 names the bounded verification effort. No model, audio corpus, package, schema or product code was changed during this planning turn.
+
+Manual audit: decision statuses and the D-004/D-013 supersession agree; architecture section 15 names only the proposed next boundary; all S2 rows have named gates; assumptions are visible in the brief; inherited privacy/no-overwrite/release boundaries remain in force. The scope growth tally explicitly includes preview, output verification, processing receipts and local listening. This is a later-slice expansion, so the existing intake/platform choices were reused rather than re-interviewed. The audit does not approve the brief.
+
+Mechanical audit command: pinned Scaffold Kit v0.4 `kit_audit.py --docs Docs/Planning --all --json`. Result: 13 documents, zero findings. `git diff --check` also passed. No new test run is claimed for these documentation-only changes; the prior code receipts remain scoped to their commits.
+
+Owner readback requested: approve the complete Slice 002 brief, or amend its target-reference, lossless-output or preview boundary. The invoked SKILL.md states: “Nothing is built until the active Slice Brief reads `Approved for build by: <name>, <date>`.” The owner's request here followed an offer to write this brief; it has not been relabelled as approval of a document the owner had not yet seen.

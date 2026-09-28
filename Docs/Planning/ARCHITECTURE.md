@@ -2,14 +2,14 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Existing-code map and draft architecture.
-Next: Owner readback and current slice selection.
+Last completed: Slice 001 accepted; current audio seams reread at 96f1d38.
+Next: Owner readback of proposed Slice 002.
 Open questions: License, speech model, platform support, corpus rights.
 Statuses pending: Proposed decisions in DECISION-LOG.md.
 
 ## 1. One-Page Overview
 
-Native local media processing for people who need inspectable encoding and audio results. Core loop: open media, select streams and intent, inspect a plan, execute, verify and publish a new file. Current components are Workspace, Sessions, Native Export, Batch Encoding, Audio Lab, Tool Runner and Publication. The proposed next slice is SLICE-001-measured-analysis.md. Automatic speech-aware gain, HDR preservation and multichannel export are not implemented.
+Native local media processing for people who need inspectable encoding and audio results. Core loop: open media, select streams and intent, inspect a plan, execute, verify and publish a new file. Current components are Workspace, Sessions, Native Export, Batch Encoding, Audio Lab, Tool Runner and Publication. The measured report is implemented and accepted. The proposed next slice is SLICE-002-dialogue-mastering.md. Automatic speech-aware gain, HDR preservation and multichannel export are not implemented.
 
 ## 2. System Context
 
@@ -39,15 +39,15 @@ Declared macOS floor is 14. Distribution target is a directly downloaded signed 
 | ToolRunner / MediaProbe | Argument-only process execution and bounded output | Homebrew tools, local files |
 | ExportPublication | Exclusive publication | Same-volume hard link, no replacement |
 
-Owner of each module is the project maintainer. Proposed new AnalysisCore owns measurement trajectories, report schemas and detector-independent analysis. Proposed GainPlanner consumes those reports, not UI text or media tags. UI depends on services; services depend on typed plans and adapters.
+Owner of each module is the project maintainer. Implemented AnalysisReport/StreamingLoudness own measurement trajectories, report schemas and manual-region analysis. Proposed GainPlanner consumes those reports, not UI text or media tags. UI depends on services; services depend on typed plans and adapters.
 
 ## 5. Interfaces and Contracts
 
 DECISION: D-002 Typed local analysis seams
-STATUS: Proposed
-CHOICE: Internal Swift types for AnalysisRequest, AnalysisReport, DialogueRegions and GainPlan; no public SDK yet.
+STATUS: Confirmed
+CHOICE: Internal Swift analysis/report types implemented in Slice 001; no public SDK. D-014 proposes the next GainPlan and VerificationReport contracts.
 BECAUSE: Allows an independent meter and speech detector to be tested separately from rendering.
-OPTIONS CONSIDERED: Swift adaptation keeps one build; a narrow Rust bridge can reuse SignalForge directly; Python service adds deployment cost. D-010 selects between the first two after a bounded investigation.
+OPTIONS CONSIDERED: Swift adaptation keeps one build; a narrow Rust bridge can reuse SignalForge directly; Python service adds deployment cost. D-011 records the completed Swift selection.
 REVISIT WHEN: Measured performance or reuse requirements justify another runtime.
 
 Reports carry source identity, decoder settings, layout, timebase, algorithm version and uncertainty. A changed source invalidates a cached plan. Model output is validated structured data, never executable commands. Persisted formats need explicit schema versions and migration tests.
@@ -58,7 +58,7 @@ Existing: explicit user action -> probe -> validate copied configuration -> stag
 
 ## 7. Data Domain Overview
 
-Existing entities: EncodeConfiguration, QueueJob, SessionDocument, BatchJournal, AudioSettings, LoudnessReport. New report details are in EDD section 5. Long media must use bounded memory; volume and throughput targets are assumptions to measure, not current guarantees.
+Existing entities: EncodeConfiguration, QueueJob, SessionDocument, BatchJournal, AudioSettings, LoudnessReport. Implemented AnalysisReport v1 and proposed mastering data are described in EDD section 5. Long media must use bounded memory; volume and throughput targets are assumptions to measure, not current guarantees.
 
 ## 8. Technology Selection
 
@@ -69,11 +69,11 @@ D-002 keeps Swift interfaces; D-011 selects a focused SignalForge-derived Swift 
 ### 8.3 Backend
 Confirmed under D-001: none remote. FFmpeg remains a local decoding/rendering adapter.
 ### 8.4 Database
-D-002 proposes versioned report files before a database. Existing sessions use JSON.
+D-002 uses versioned report files before a database. Existing sessions use JSON.
 ### 8.5 Authentication
 No application login. Build credentials stay in Keychain, outside application data.
 ### 8.6 AI layer
-D-004 is Open: compare local speech activity models before choosing one. Activity detection identifies candidate speech; it does not isolate dialogue from simultaneous music. Manual correction and low-confidence refusal are required before gain decisions depend on it.
+D-013 defers automatic speech-model selection until manual-speech mastering is evaluated. Activity detection identifies candidate speech; it does not isolate dialogue from simultaneous music. Manual correction and low-confidence refusal are required before gain decisions depend on it.
 ### 8.7 Notifications and messaging
 Existing in-app operation status. Email, push and analytics are excluded.
 ### 8.8 Hosting and builds
@@ -95,7 +95,7 @@ AnalysisCore -> GainPlanner for original Smart/Night processing. DialogueRegions
 
 ## 11. Scale and Performance Posture
 
-D-009 is Assumed: a two-hour 48 kHz stereo movie should be analyzable without retaining whole PCM in RAM. A 512 MiB analysis working-set target and cancellation within five seconds are provisional. Benchmark before committing to them. No timing claim from short sine fixtures.
+D-009 is Assumed: a two-hour 48 kHz stereo movie should be analyzable without retaining whole PCM in RAM. A 512 MiB analysis working-set target and cancellation within five seconds are provisional. The Slice 001 two-hour profile passed at 106.7 MiB on Apple M5. This does not establish memory or throughput for the new renderer; S2-007 requires a separate full-pipeline profile.
 
 ## 12. Deployment Topology
 
@@ -118,4 +118,4 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
-Active approved slice: SLICE-001-measured-analysis.md, approved by Daniel Boyd on 2026-09-28. Touch only AnalysisCore, AudioAudit/AudioController, AudioLabView, report persistence and named tests if the brief is approved. Existing mastering algorithms, HDR, multichannel rendering, release scripts and platform expansion are outside that slice.
+Slice 001 is Done with evidence; its owner functional/spoken acceptance and limitations are recorded in MEASURED-ANALYSIS-EVIDENCE.md. The guidance refinement is part of that closure. Proposed next boundary: SLICE-002-dialogue-mastering.md. No implementation slice is active until that complete brief is approved. D-013 confirms manual speech before automatic suggestions. D-014 proposes the detailed mastering/preview boundary; D-015 and D-016 close through its scheduled spikes. HDR, surround, signing and release remain outside this boundary.

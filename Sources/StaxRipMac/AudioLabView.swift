@@ -43,6 +43,13 @@ struct AudioLabView: View {
                                     Text("48 kHz").tag(48000)
                                 }
                                 Picker("Channels", selection: $audio.settings.channels) { Text("Keep source").tag(0); Text("Mono").tag(1); Text("Stereo").tag(2) }
+                                Toggle("Normalize loudness", isOn: $audio.settings.normalize)
+                                if audio.settings.normalize {
+                                    Picker("Target loudness", selection: $audio.settings.targetLUFS) {
+                                        ForEach([-23, -16, -14], id: \.self) { Text("\($0) LUFS").tag($0) }
+                                    }
+                                    Text("Two-pass measurement after channel conversion. Output must be within ±0.5 LU and below −1 dBTP. May change dynamics; takes additional full-file passes.").font(.caption).foregroundStyle(.secondary)
+                                }
                                 if ["AAC", "Opus"].contains(audio.settings.format) {
                                     Picker("Bitrate", selection: $audio.settings.bitrate) { ForEach([128, 192, 256, 320], id: \.self) { Text("\($0) kb/s").tag($0) } }
                                 } else { Text("24-bit integer output · resampled to the chosen rate").font(.caption).foregroundStyle(.secondary) }
@@ -57,7 +64,7 @@ struct AudioLabView: View {
                                     metric("Loudness range", report.input_lra + " LU")
                                 } else { Text("Measure the complete selected source track. Silent or very short material may have no finite integrated value.").font(.callout).foregroundStyle(.secondary) }
                                 Button("Analyze loudness") { if let tools = batch.tools { audio.analyze(tools: tools) } }.disabled(busy)
-                                Text("Measurement only; no normalization applied. Mono is measured as mono.").font(.caption).foregroundStyle(.secondary)
+                                Text("Source measurement; export normalization is controlled separately. Mono is measured as mono.").font(.caption).foregroundStyle(.secondary)
                             }.padding(14).frame(maxWidth: .infinity, alignment: .leading)
                         }.frame(maxWidth: .infinity)
                     }

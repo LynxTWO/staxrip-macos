@@ -51,6 +51,42 @@ struct AudioTests {
         await #expect(throws: (any Error).self) { try await AudioEngine.analyze(source: source, track: 99, tools: tools) }
     }
 
+    @Test(.enabled(if: FFmpegTools.discover() != nil), arguments: ["FLAC", "WAV", "AAC", "Opus"])
+    func normalizedExportMeetsMeasuredTarget(format: String) async throws {
+        let tools = try #require(FFmpegTools.discover())
+        let (dir, source) = try await fixture(tools)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        var settings = AudioSettings(); settings.format = format; settings.channels = 2; settings.normalize = true; settings.targetLUFS = -16
+        let destination = dir.appendingPathComponent("normalized." + settings.fileExtension)
+        let before = try Data(contentsOf: source)
+        try await AudioEngine.export(source: source, track: 1, destination: destination, settings: settings, tools: tools) { _ in }
+        let measured = try await AudioEngine.analyze(source: destination, track: 0, tools: tools)
+        #expect(abs(try #require(Double(measured.input_i)) + 16) <= 0.5)
+        #expect(try #require(Double(measured.input_tp)) <= -1)
+        #expect(try Data(contentsOf: source) == before)
+    }
+
+    @Test(.enabled(if: FFmpegTools.discover() != nil)) func silentNormalizationFailsWithoutOutput() async throws {
+        let tools = try #require(FFmpegTools.discover())
+        let (dir, _) = try await fixture(tools)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let source = dir.appendingPathComponent("silence.wav")
+        let result = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-f", "lavfi", "-i", "anullsrc=r=48000:cl=mono", "-t", "2", source.path])
+        #expect(result.status == 0)
+        var settings = AudioSettings(); settings.normalize = true
+        let destination = dir.appendingPathComponent("result.flac")
+        await #expect(throws: (any Error).self) { try await AudioEngine.export(source: source, track: 0, destination: destination, settings: settings, tools: tools) { _ in } }
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).allSatisfy { !$0.hasPrefix(".staxrip-audio-") })
+    }
+
+    @Test func loudnessVerificationRejectsOvershootAndNonFiniteMeasurements() {
+        for (level, peak) in [("-12", "-2"), ("-16", "0.1"), ("-inf", "-inf"), ("nan", "-2")] {
+            let report = LoudnessReport(input_i: level, input_tp: peak, input_lra: "0", input_thresh: "-26", target_offset: "0")
+            #expect(throws: (any Error).self) { try AudioEngine.verifyNormalized(report, target: -16) }
+        }
+    }
+
     @Test func malformedLoudnessReportIsRejected() {
         #expect(throws: (any Error).self) { try LoudnessReport.parse(Data("not a report".utf8)) }
     }

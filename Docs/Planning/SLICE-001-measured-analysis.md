@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In progress.
 
 SLICE STATE
 Milestone: M3 native workflow and verification.
-Blocked by: final evidence and owner walkthrough; no credential or fixture download block.
+Blocked by: VoiceOver listening verification of the approved guidance refinement; no credential or fixture download block.
 Evidence so far: MAP-EVIDENCE.md and SIGNALFORGE-REUSE.md.
 Last audit: 2026-09-28; see AUDIT.md.
 
@@ -94,3 +94,7 @@ Fixed tolerances: official integrated/momentary/short-term cases 0.1 LU (or the 
 
 
 Implementation checkpoint: M1 selected the Swift adaptation and fixed tolerances before code. Official EBU v5 fixtures were acquired locally via the browser after command-line downloads returned HTTP 403. The first supported 64-sequence run passed. Saved timeline v1 uses fixed-width little-endian records in a base64 JSON field (frame, presence bits, two Float64 values), preserving unavailable states and precision without hundreds of thousands of JSON objects. The report file limit is 32 MiB. SignalForge's MIT notice is copied into existing development bundles by build.command/package.command; this is attribution for the approved reuse, not a new release workflow. No signing or notarization submission is performed by this slice.
+
+## Functional walkthrough and accessibility refinement
+
+2026-09-28: Daniel confirmed the functional walkthrough passed. He then approved layered VoiceOver guidance: concise labels and values, optional explanatory hints, visible terminology help and useful operation status. This authorizes refinement of the measured-report view and existing preset, encoding and queue controls. No DSP or rendering behavior changes are included. See ../VOICEOVER-GUIDANCE.md. Functional acceptance is recorded; the spoken experience still needs a listening check, so S-003 is not represented as fully verified.

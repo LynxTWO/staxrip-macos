@@ -6,6 +6,7 @@ struct WorkspaceView: View {
     @EnvironmentObject var model: WorkspaceModel
     @EnvironmentObject var exporter: ExportController
     @EnvironmentObject var batch: BatchController
+    @State private var showingTerms = false
     @State private var showingTracks = false
     @State private var showingInspector = false
     @AppStorage("appearance") private var appearance = "System"
@@ -71,6 +72,10 @@ struct WorkspaceView: View {
             preset("Compact AV1", subtitle: "Smaller files, more detail", symbol: "leaf")
             preset("Everyday HEVC", subtitle: "A balanced starting point", symbol: "sparkles")
             preset("H.264 Quality", subtitle: "Broad playback support", symbol: "play.rectangle")
+            Button("Encoding terms…") { showingTerms = true }
+                .buttonStyle(.plain).font(.caption).padding(.top, 12)
+                .accessibilityHint("Opens explanations of video formats and loudness measurements.")
+                .sheet(isPresented: $showingTerms) { EncodingTermsView() }
             Spacer()
             VStack(alignment: .leading, spacing: 9) {
                 HStack(spacing: 6) {
@@ -114,6 +119,9 @@ struct WorkspaceView: View {
                 }
             }.padding(.vertical, 10).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
         }.buttonStyle(.plain).help("Apply \(title) configuration")
+            .accessibilityLabel("\(AccessibilityLanguage.spokenCodecs(title)) preset")
+            .accessibilityInputLabels([Text(title)])
+            .accessibilityHint(AccessibilityLanguage.presetHint(title))
     }
 
     private var header: some View {
@@ -239,6 +247,8 @@ struct WorkspaceView: View {
                     Text("CRF \(Int(model.config.quality))").font(.system(size: 12, weight: .semibold, design: .monospaced)).foregroundStyle(Color.accent)
                 }
                 Slider(value: $model.config.quality, in: 0...51, step: 1).accessibilityLabel("Constant rate factor")
+                    .accessibilityValue(Text("\(Int(model.config.quality))"))
+                    .accessibilityHint(AccessibilityLanguage.qualityHint)
                 HStack {
                     Text("Higher quality")
                     Spacer()
@@ -370,7 +380,12 @@ func sectionTitle(_ title: String, subtitle: String) -> some View {
 func settingPicker(_ title: String, selection: Binding<String>, values: [String]) -> some View {
     VStack(alignment: .leading, spacing: 6) {
         eyebrow(title)
-        Picker(title, selection: selection) { ForEach(values, id: \.self) { Text($0) } }
+        Picker(title, selection: selection) {
+            ForEach(values, id: \.self) { value in
+                Text(value).tag(value).accessibilityLabel(AccessibilityLanguage.spokenCodecs(value))
+            }
+        }
+            .accessibilityValue(AccessibilityLanguage.spokenCodecs(selection.wrappedValue))
             .labelsHidden().frame(maxWidth: .infinity).controlSize(.large)
     }.frame(maxWidth: .infinity, alignment: .leading)
 }

@@ -49,17 +49,21 @@ struct AudioLabView: View {
                                     Picker("Mastering mode", selection: $audio.settings.loudnessMode) {
                                         Text("Smart master").tag("Smart master")
                                         Text("Night / Venue · experimental").tag("Night / Venue")
-                                    }.onChange(of: audio.settings.loudnessMode) { _, mode in
+                                            .accessibilityLabel("Night and venue processing. Experimental")
+                                    }.accessibilityHint(audio.settings.loudnessMode == "Night / Venue" ? "Uses compression to reduce volume differences. Listening comfort is not guaranteed." : "Prefers constant gain when feasible, then verifies the encoded output. This does not detect dialogue.")
+                                    .onChange(of: audio.settings.loudnessMode) { _, mode in
                                         audio.settings.targetLRA = mode == "Night / Venue" ? 3 : 11
                                         if mode == "Night / Venue" { audio.settings.targetLUFS = -18 }
                                     }
                                     HStack {
                                         Text("Target LUFS")
-                                        TextField("Target LUFS", value: $audio.settings.targetLUFS, format: .number).accessibilityLabel("Target LUFS")
+                                        TextField("Target LUFS", value: $audio.settings.targetLUFS, format: .number).accessibilityLabel("Target integrated loudness, in LUFS")
+                                            .accessibilityHint("Sets the desired overall loudness of the processed output. LUFS means loudness units relative to full scale.")
                                     }.textFieldStyle(.roundedBorder)
                                     HStack {
                                         Text("Maximum LRA (LU)")
-                                        TextField("Maximum LRA", value: $audio.settings.targetLRA, format: .number).accessibilityLabel("Maximum loudness range LU")
+                                        TextField("Maximum LRA", value: $audio.settings.targetLRA, format: .number).accessibilityLabel("Maximum loudness range, in loudness units")
+                                            .accessibilityHint("Sets the desired limit on loudness variation. This does not directly limit individual peaks.")
                                     }.textFieldStyle(.roundedBorder)
                                     Text("LUFS −36 to −9; LRA 1–20 LU. Smart master prefers constant gain when feasible. Night / Venue adds linked compression. Both measure before processing and verify the encoded output: ±0.5 LU, LRA ≤ target +1 LU, true peak ≤ −1 dBTP. Silence stays gated; this is not automatic dialogue detection or a listening-comfort guarantee.").font(.caption).foregroundStyle(.secondary)
                                 }
@@ -118,6 +122,8 @@ struct AudioLabView: View {
                 Text("Audio Lab has its own source and settings; these are not saved in video sessions. Exports support mono and stereo sources. Channel conversion uses FFmpeg’s default mix; artwork, chapters and source tags are omitted. FLAC/WAV avoid further lossy coding, but cannot restore detail lost in a source. Existing files are never replaced.")
                     .font(.caption).foregroundStyle(.secondary).lineSpacing(4)
             }.padding(30)
+        }.onChange(of: audio.running) { wasRunning, isRunning in
+            if wasRunning && !isRunning { AccessibilityLanguage.announce(audio.status) }
         }
     }
     private func metric(_ name: String, _ value: String) -> some View { HStack { Text(name).foregroundStyle(.secondary); Spacer(); Text(value).monospacedDigit().fontWeight(.semibold) } }

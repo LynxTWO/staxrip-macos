@@ -3,11 +3,16 @@ import AppKit
 
 /// Short names stay stable; explanations live in optional hints and visible help.
 enum AccessibilityLanguage {
+    // Spell codec digits in accessibility text so speech does not read them as a cardinal number.
+    static func spokenCodecs(_ text: String) -> String {
+        text.replacingOccurrences(of: "H.264", with: "H two six four")
+            .replacingOccurrences(of: "H.265", with: "H two six five")
+    }
     static let qualityHint = "Lower values generally improve quality and increase file size. Values are not directly comparable across encoders."
     static func presetHint(_ title: String) -> String {
         switch title {
-        case "H.264 Quality": return "Applies video encoding settings for broad playback compatibility. H.264 is also called AVC, or Advanced Video Coding."
-        case "Everyday HEVC": return "Applies balanced H.265 video encoding settings. HEVC means High Efficiency Video Coding."
+        case "H.264 Quality": return "Applies video encoding settings for broad playback compatibility. H two six four is also called AVC, or Advanced Video Coding."
+        case "Everyday HEVC": return "Applies balanced H two six five video encoding settings. HEVC means High Efficiency Video Coding."
         case "Compact AV1": return "Applies AV1 video encoding settings aimed at smaller files."
         default: return "Applies this encoding configuration."
         }
@@ -55,7 +60,9 @@ struct EncodingTermsView: View {
                     ForEach(terms, id: \.0) { term in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(term.0).font(.headline).accessibilityAddTraits(.isHeader)
+                                .accessibilityLabel(AccessibilityLanguage.spokenCodecs(term.0))
                             Text(term.1).textSelection(.enabled)
+                                .accessibilityLabel(AccessibilityLanguage.spokenCodecs(term.1))
                         }.frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }

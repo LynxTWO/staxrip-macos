@@ -36,3 +36,7 @@ References: [Apple accessible descriptions](https://developer.apple.com/document
 ## Implementation verification, 2026-09-28
 
 The debug build and existing regression suite passed (47 tests in eight suites; optional EBU corpus and long-profile tests skipped in this run). Native inspection confirmed the three preset hints, CRF hint/value, glossary headings and Escape dismissal, numbered interval fields/removal, four separate metric items, and separate front-left/front-right readings with expanded peak units. Inspection caught SwiftUI merging adjacent static readings; explicit accessibility groups preserve their individual labels and values. Actual speech output and announcement delivery were not captured, so the listening checklist above remains open.
+
+## Owner listening feedback
+
+Daniel reported that everything else sounded good, but H.264 was spoken as “H two hundred sixty four.” Accessibility text now spells this as “H two six four” in the preset, its hint, codec picker and glossary. The same rule applies to H.265. Visible names, picker values used for encoding and original Voice Control input names are unchanged. The revised pronunciation awaits listening confirmation; this feedback does not establish that every optional checklist path was exercised.

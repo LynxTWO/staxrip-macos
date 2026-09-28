@@ -119,7 +119,7 @@ struct WorkspaceView: View {
                 }
             }.padding(.vertical, 10).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
         }.buttonStyle(.plain).help("Apply \(title) configuration")
-            .accessibilityLabel("\(title) preset")
+            .accessibilityLabel("\(AccessibilityLanguage.spokenCodecs(title)) preset")
             .accessibilityInputLabels([Text(title)])
             .accessibilityHint(AccessibilityLanguage.presetHint(title))
     }
@@ -380,7 +380,12 @@ func sectionTitle(_ title: String, subtitle: String) -> some View {
 func settingPicker(_ title: String, selection: Binding<String>, values: [String]) -> some View {
     VStack(alignment: .leading, spacing: 6) {
         eyebrow(title)
-        Picker(title, selection: selection) { ForEach(values, id: \.self) { Text($0) } }
+        Picker(title, selection: selection) {
+            ForEach(values, id: \.self) { value in
+                Text(value).tag(value).accessibilityLabel(AccessibilityLanguage.spokenCodecs(value))
+            }
+        }
+            .accessibilityValue(AccessibilityLanguage.spokenCodecs(selection.wrappedValue))
             .labelsHidden().frame(maxWidth: .infinity).controlSize(.large)
     }.frame(maxWidth: .infinity, alignment: .leading)
 }

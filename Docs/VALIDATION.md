@@ -3,14 +3,14 @@
 ## Local evidence
 
 - macOS 27, Apple Silicon, Swift 6.4, Homebrew FFmpeg 9.0.2.
-- All 27 tests pass in debug and optimized release builds. The recovery update adds seven tests for interrupted state, controller restart after an actual encode, output preservation, untrusted records, write failures and lock ownership. Parameterized cases include three AVFoundation presets, three FFmpeg video encoders and four audio output formats.
+- All 30 tests pass in debug and optimized release builds. The recovery update adds seven tests for interrupted state, controller restart after an actual encode, output preservation, untrusted records, write failures and lock ownership. Parameterized cases include three AVFoundation presets, three FFmpeg video encoders and four audio output formats.
 - Real synthetic-media checks cover video/audio codecs, crop dimensions, track count, duration, sample rate, channels, selected-track loudness, literal filename arguments, source preservation, output conflicts, cancellation and cleanup.
 - Native UI checks completed for workspace import/playback, queue editing, session round-trip, appearance, media inspection and an actual AV1 queue encode.
 - Audio Lab initial screen and source picker were observed. Its engine passes tests. The complete audio UI workflow is not yet verified.
 
 - Optimized local app and ZIP packaging passed strict ad-hoc signature verification. Dynamic dependencies resolve to Apple system frameworks/libraries; FFmpeg is external.
 
-## Current external blockers
+## External limitations and earlier inspection failure
 
 The native UI automation service returned `Sky Computer Use native pipe closed before response` while opening the generated audio fixture. The app remained running, with no new app crash report found. Subsequent reads, a tool-session reset and reconnection all failed with the same service error. Do not mark the full Audio Lab UI workflow as passed until the service is restored and the import, analysis, export and cancellation controls are exercised.
 
@@ -38,3 +38,7 @@ Native control was retried by full app path and still returned the native-pipe e
 The helper crash was reproduced in an isolated populated Audio Lab without any file picker. Simple GroupBox/picker probes did not fail, so the evidence identifies the combined populated layout rather than GroupBox universally. Replacing its three GroupBox containers with labeled VStack panels makes the full view inspectable while retaining accessible headers and controls. This works around the helper failure; it does not patch the helper itself.
 
 The real v0.6 app passed native WAV import, loudness analysis (-21.75 LUFS / -18.06 dBTP on the generated tone), and Save-dialog FLAC export. ffprobe independently verified 24-bit FLAC, 48 kHz, mono, five seconds. A real H.264 queue job completed, then normal Quit/relaunch offered the previous batch; explicit restoration retained Completed and did not resume processing. The prior native-inspection blocker is resolved for these workflows. All 27 automated tests still pass; local release packaging passed signature verification.
+
+## v0.7 normalization
+
+Thirty automated tests pass in debug and optimized release, including normalized AAC/Opus/FLAC/WAV exports, selected-track and channel-conversion behavior, silence refusal, and peak/level verification rejection. The native UI passed enabling normalization, selecting its default −16 LUFS target and exporting through the Save dialog. A separate full-file measurement of that FLAC returned −15.95 LUFS and −12.24 dBTP. The dark-mode layout was visually inspected with all controls exposed. Exhaustive program-material/true-peak stress tests and long-run operation remain broader validation work.

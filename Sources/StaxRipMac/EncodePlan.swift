@@ -4,6 +4,8 @@ struct EncodePlan: Sendable {
     let arguments: [String]
     let expectedCodec: String
     let expectedAudio: String?
+    let expectedWidth: Int?
+    let expectedHeight: Int?
     let audioCount: Int
     let subtitleCount: Int
     let duration: Double
@@ -14,6 +16,15 @@ struct EncodePlan: Sendable {
         guard !job.isDemo else { throw NativeExportError.invalid("Demo configurations cannot be encoded. Open a real source first.") }
         guard let video = probe.video else { throw NativeExportError.invalid("This queue currently requires a video source.") }
         let c = job.configuration
+        let picture = c.picture
+        let trimmed = picture.start > 0 || picture.end > 0
+        guard !trimmed || (probe.seconds.isFinite && probe.seconds > picture.start && (picture.end == 0 || picture.end <= probe.seconds)) else {
+            throw NativeExportError.invalid("The trim range must lie within the source duration.")
+        }
+        guard !trimmed || (c.audio != "Copy original" && c.subtitleMode == "Remove all subtitles") else {
+            throw NativeExportError.invalid("Precise trimming requires re-encoded audio (or no audio) and removed subtitles. Embedded subtitle and copied-audio timing cannot yet be preserved by this trim workflow.")
+        }
+        let outputDuration = trimmed ? (picture.end > 0 ? picture.end : probe.seconds) - picture.start : probe.seconds
         let encoder = c.codec == "AV1" ? "libsvtav1" : c.codec == "HEVC" ? "libx265" : "libx264"
         guard encoders.contains(encoder) else { throw NativeExportError.invalid("The installed FFmpeg does not provide \(encoder).") }
         guard !["smpte2084", "arib-std-b67"].contains(video.color_transfer ?? ""),
@@ -21,8 +32,8 @@ struct EncodePlan: Sendable {
             throw NativeExportError.invalid("This first advanced pipeline supports 8-bit SDR 4:2:0 sources. HDR, high bit depth and other pixel formats need an explicit color workflow before encoding.")
         }
         let width = video.width ?? 0, height = video.height ?? 0
-        guard width > 0, height > c.cropTop + c.cropBottom,
-              width % 2 == 0, (height - c.cropTop - c.cropBottom) % 2 == 0 else {
+        guard width > picture.cropLeft + picture.cropRight, height > c.cropTop + c.cropBottom,
+              (width - picture.cropLeft - picture.cropRight) % 2 == 0, (height - c.cropTop - c.cropBottom) % 2 == 0 else {
             throw NativeExportError.invalid("The crop leaves an invalid frame size for 4:2:0 encoding.")
         }
         guard (video.tags?["rotate"] ?? "0") == "0", !(video.side_data_list ?? []).contains(where: { ($0.rotation ?? 0) != 0 }) else {
@@ -41,6 +52,9 @@ struct EncodePlan: Sendable {
         }
         var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe", "-i", job.source,
                     "-map", "0:\(video.index)", "-c:v", encoder, "-crf", String(Int(c.quality)), "-pix_fmt", "yuv420p", "-threads", "4"]
+        if trimmed {
+            args += ["-ss", String(picture.start), "-t", String(outputDuration)]
+        }
         let speed: String
         if c.codec == "AV1" {
             speed = c.speed == "Thorough" ? "4" : c.speed == "Fast" ? "8" : "6"
@@ -49,7 +63,12 @@ struct EncodePlan: Sendable {
         args += ["-preset", speed]
         if c.codec == "HEVC" { args += ["-x265-params", "pools=4:frame-threads=2"] }
         var filters: [String] = []
-        if c.cropTop + c.cropBottom > 0 { filters.append("crop=iw:ih-\(c.cropTop + c.cropBottom):0:\(c.cropTop)") }
+        if picture.deinterlace != "Off" {
+            filters.append("bwdif=mode=send_frame:parity=auto:deint=\(picture.deinterlace == "Flagged frames" ? "interlaced" : "all")")
+        }
+        if c.cropTop + c.cropBottom + picture.cropLeft + picture.cropRight > 0 {
+            filters.append("crop=iw-\(picture.cropLeft + picture.cropRight):ih-\(c.cropTop + c.cropBottom):\(picture.cropLeft):\(c.cropTop)")
+        }
         if c.resolution != "Original" {
             let size = c.resolution == "1920 × 1080" ? "1920:1080" : "1280:720"
             filters.append("scale=\(size):force_original_aspect_ratio=decrease:force_divisible_by=2")
@@ -70,11 +89,13 @@ struct EncodePlan: Sendable {
         if keepSubtitles, !subtitles.isEmpty { args += ["-map", "0:s", "-c:s", "copy"] }
         else { args += ["-sn"] }
         if c.container == "MKV", keepSubtitles { args += ["-map", "0:t?", "-c:t", "copy"] }
-        args += ["-map_metadata", "0", "-map_chapters", "0"]
+        args += ["-map_metadata", "0", "-map_chapters", trimmed ? "-1" : "0"]
         if c.container == "MP4" { args += ["-movflags", "+faststart"] }
         args += [staged.path]
         return EncodePlan(arguments: args, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+                          expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
+                          expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: keepSubtitles ? subtitles.count : 0,
-                          duration: probe.seconds, summary: "\(encoder) · CRF \(Int(c.quality)) · preset \(speed) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · 8-bit SDR")
+                          duration: outputDuration, summary: "\(encoder) · CRF \(Int(c.quality)) · preset \(speed) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · 8-bit SDR")
     }
 }

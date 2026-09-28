@@ -17,10 +17,13 @@ struct QueueEditor: View {
             .appendingPathComponent(stem.trimmingCharacters(in: .whitespacesAndNewlines) + "." + draft.configuration.container.lowercased()).path
     }
     private var issue: String? {
-        WorkspaceModel.filenameIssue(stem) ?? model.destinationIssue(destination, source: draft.isDemo ? nil : draft.source, excluding: draft.id)
+        do { try SessionDocument.validate(draft.configuration) }
+        catch { return error.localizedDescription }
+        return WorkspaceModel.filenameIssue(stem) ?? model.destinationIssue(destination, source: draft.isDemo ? nil : draft.source, excluding: draft.id)
     }
 
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 20) {
             sectionTitle("Edit configuration", subtitle: URL(fileURLWithPath: draft.source).lastPathComponent)
             Divider()
@@ -45,6 +48,7 @@ struct QueueEditor: View {
                 Stepper("Top crop: \(draft.configuration.cropTop) px", value: $draft.configuration.cropTop, in: 0...240, step: 2)
                 Stepper("Bottom: \(draft.configuration.cropBottom) px", value: $draft.configuration.cropBottom, in: 0...240, step: 2)
             }.font(.system(size: 12))
+            PictureOptionsView(options: $draft.configuration.picture)
             HStack(spacing: 16) {
                 settingPicker("Audio", selection: $draft.configuration.audio, values: ["AAC", "Opus", "Copy original", "No audio"])
                 settingPicker("Bitrate", selection: $draft.configuration.audioBitrate, values: ["128 kb/s", "192 kb/s", "256 kb/s", "320 kb/s"])
@@ -73,6 +77,7 @@ struct QueueEditor: View {
                     dismiss()
                 }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).disabled(issue != nil)
             }
-        }.padding(28).frame(width: 550)
+        }.padding(28)
+        }.frame(width: 600, height: 720)
     }
 }

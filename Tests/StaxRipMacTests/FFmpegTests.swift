@@ -71,6 +71,54 @@ struct FFmpegTests {
         #expect(batch.statuses[job.id]?.phase == "Completed")
     }
 
+    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    func trimmedDeinterlacedCropHasExpectedDurationAndDimensions() async throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let tools = try #require(FFmpegTools.discover())
+        let source = dir.appendingPathComponent("interlaced.mkv")
+        let fixture = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-f", "lavfi", "-i", "testsrc2=size=320x180:rate=48:duration=4", "-f", "lavfi", "-i", "sine=frequency=880:duration=4", "-vf", "tinterlace=interleave_top", "-c:v", "libx264", "-flags", "+ilme+ildct", "-c:a", "aac", "-shortest", source.path])
+        #expect(fixture.status == 0)
+        var config = EncodeConfiguration()
+        config.codec = "H.264"; config.encoder = "x264"; config.speed = "Fast"
+        config.cropTop = 2; config.cropBottom = 4
+        config.picture.cropLeft = 6; config.picture.cropRight = 8
+        config.picture.start = 1; config.picture.end = 2.5
+        config.picture.deinterlace = "All frames"
+        config.subtitleMode = "Remove all subtitles"
+        let destination = dir.appendingPathComponent("trimmed.mkv")
+        let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: destination.path, configuration: config, created: Date())
+        let batch = BatchController(); await batch.discover(); batch.start([job])
+        while batch.running { try await Task.sleep(for: .milliseconds(20)) }
+        let state = try #require(batch.statuses[job.id])
+        #expect(state.phase == "Completed", Comment(rawValue: state.detail))
+        let result = try await MediaProbe.read(destination, tools: tools)
+        #expect(result.video?.width == 306)
+        #expect(result.video?.height == 174)
+        #expect(abs(result.seconds - 1.5) < 0.15)
+        #expect(result.streams.filter { $0.codec_type == "audio" }.count == 1)
+        let details = try await ToolRunner().run(executable: tools.ffprobe, arguments: ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=field_order,r_frame_rate", "-of", "json", destination.path])
+        let json = String(decoding: details.stdout, as: UTF8.self)
+        #expect(json.contains("progressive"))
+        #expect(json.contains("24/1"))
+    }
+
+    @Test func pictureSettingsMigrateAndRejectInvalidRanges() throws {
+        let original = EncodeConfiguration()
+        let encoded = try JSONEncoder().encode(original)
+        #expect(!String(decoding: encoded, as: UTF8.self).contains("pictureOptions"))
+        let decoded = try JSONDecoder().decode(EncodeConfiguration.self, from: encoded)
+        #expect(decoded.picture == PictureOptions())
+        var changed = decoded
+        changed.picture.start = 2; changed.picture.end = 1
+        #expect(throws: (any Error).self) { try SessionDocument.validate(changed) }
+        changed.picture.end = 3; changed.picture.cropLeft = 1
+        #expect(throws: (any Error).self) { try SessionDocument.validate(changed) }
+        changed.picture.cropLeft = 2
+        try SessionDocument.validate(changed)
+        #expect(try JSONDecoder().decode(EncodeConfiguration.self, from: JSONEncoder().encode(changed)) == changed)
+    }
+
     @Test func planRejectsHDR() throws {
         let probe = try JSONDecoder().decode(MediaProbe.self, from: Data("""
         {"streams":[{"index":0,"codec_type":"video","codec_name":"h264","width":320,"height":180,"pix_fmt":"yuv420p","color_transfer":"smpte2084"}],"format":{"duration":"1"}}

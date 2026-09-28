@@ -26,7 +26,7 @@ struct AudioLabView: View {
                 }.padding(20).background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
                 if batch.tools == nil { Text(batch.toolDescription).font(.caption).foregroundStyle(.orange) }
                 if !audio.tracks.isEmpty {
-                    GroupBox("Source track") {
+                    AudioPanel("Source track") {
                         Picker("Track", selection: $audio.track) {
                             ForEach(audio.tracks) { track in
                                 Text("#\(track.index) · \(track.codec_name ?? "unknown") · \(track.channels ?? 0) ch · \(track.sample_rate ?? "?") Hz · \(track.tags?["language"] ?? "und")").tag(track.index)
@@ -35,7 +35,7 @@ struct AudioLabView: View {
                         .onChange(of: audio.track) { _, _ in audio.report = nil }
                     }
                     HStack(alignment: .top, spacing: 20) {
-                        GroupBox("Output recipe") {
+                        AudioPanel("Output recipe") {
                             VStack(spacing: 16) {
                                 Picker("Format", selection: $audio.settings.format) { ForEach(["FLAC", "WAV", "AAC", "Opus"], id: \.self) { Text($0) } }
                                 Picker("Sample rate", selection: $audio.settings.sampleRate) {
@@ -49,7 +49,7 @@ struct AudioLabView: View {
                             }.padding(14).disabled(busy)
                             .onChange(of: audio.settings.format) { _, format in if format == "Opus" { audio.settings.sampleRate = 48000 } }
                         }.frame(maxWidth: .infinity)
-                        GroupBox("Listen with numbers") {
+                        AudioPanel("Listen with numbers") {
                             VStack(alignment: .leading, spacing: 15) {
                                 if let report = audio.report {
                                     metric("Integrated", report.input_i + " LUFS")
@@ -90,4 +90,13 @@ struct AudioLabView: View {
         panel.allowedContentTypes = [UTType(filenameExtension: audio.settings.fileExtension) ?? .data]
         if panel.runModal() == .OK, let url = panel.url { audio.export(to: url, tools: tools) }
     }
+}
+
+// Labeled stacks avoid the native inspection helper crash seen with this
+// populated GroupBox layout. Keep headers and every control exposed to accessibility.
+private struct AudioPanel<Content: View>: View {
+ let title: String
+ @ViewBuilder var content: () -> Content
+ init(_ title: String, @ViewBuilder content: @escaping () -> Content) { self.title = title; self.content = content }
+ var body: some View { VStack(alignment: .leading, spacing: 8) { Text(title).font(.headline).accessibilityAddTraits(.isHeader); content() }.padding(12).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12)) }
 }

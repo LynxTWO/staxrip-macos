@@ -35,7 +35,7 @@ Run `swift test`. Twenty-seven Swift Testing tests pass locally, including a par
 
 Native UI checks on the development Mac cover import/playback, preset changes, queue edits and JSON export, output conflict feedback, actual export → preview, session save → change settings → restore, light/dark rendering, media inspection and a completed AV1 queue job. The SwiftUI VideoPlayer wrapper crashed on the original runtime; the AppKit AVPlayerView bridge passed the same playback check.
 
-Audio Lab’s initial screen rendered and its file picker opened, but the native automation service then disconnected (`Sky Computer Use native pipe closed before response`). Reset/reconnect did not recover it. Its import → analysis → export UI flow remains unverified; the underlying engine tests pass. See [validation notes](Docs/VALIDATION.md).
+The v0.6 labeled-panel layout avoids the native inspection helper crash reproduced with the populated GroupBox layout. Native UI checks now cover WAV import → loudness analysis → FLAC export and a completed H.264 batch → Quit → relaunch → explicit restoration. Full forced-crash UI and all audio-control combinations remain pending. See [validation notes](Docs/VALIDATION.md).
 
 Local verification used Apple Silicon and Swift 6.4. Older macOS versions, Intel hardware, long media, HDR, multitrack audio, network destinations and distribution signing remain unverified. GitHub Actions is configured for macOS 15, but jobs are currently blocked before startup by an account billing/spending-limit restriction. No hosted CI pass is claimed.
 

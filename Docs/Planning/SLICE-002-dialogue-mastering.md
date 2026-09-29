@@ -1,11 +1,11 @@
 # StaxRip Mac Slice 002: Reviewed speech and original mastering
-Version: 0.1 Draft. Date: 2026-09-28. Status: Proposed.
+Version: 0.1 Draft. Date: 2026-09-28. Status: In progress.
 
 SLICE STATE
-Milestone: None. Planning and owner readback.
-Blocked by: approval of this brief; M1 feasibility and M2 listening corpus rights before dependent work.
-Evidence so far: MEASURED-ANALYSIS-EVIDENCE.md; ../VOICEOVER-GUIDANCE.md; MASTERING-RESEARCH.md.
-Last audit: 2026-09-28.
+Milestone: Paused by owner on 2026-09-29 while headphones are unavailable. M1 feedback-planner checkpoint and the independently verified local v2 listening pack are preserved; resume at owner listening review using the explicitly wider settings.
+Open gates: D-015 planning-objective review after real-film failures, representative listening acceptance and owner native/VoiceOver walkthrough. The six-excerpt pack does not establish 3 LU performance. Earlier failures remain recorded; they do not prove mathematical infeasibility.
+Evidence so far: MASTERING-EVIDENCE.md; MASTERING-M1.md; LISTENING-MANIFEST.md; WAVPACK-STAGING-EVALUATION.md.
+Last audit: 2026-09-29. The owner requested a pivot to the rest of StaxRip; this slice is not active and is not accepted.
 
 ## 1. What the slice proves
 
@@ -103,4 +103,4 @@ All S2 gates pass with receipts, original-engine behavior is labelled truthfully
 
 A later local speech-model spike can compare editable automatic suggestions against the manual reference, then integrate only with validated confidence/coverage behavior. Subsequent briefs can add lossy encoding/remux, surround mastering and HDR preservation. No speech model is selected or downloaded by this plan.
 
-Approval requested: Daniel Boyd. No build approval is recorded for this brief yet. The owner's “let's do it” authorizes the immediately proposed planning deliverable; this complete brief is the reviewable build boundary.
+Approved for build by: Daniel Boyd, 2026-09-28. The owner explicitly approved this complete brief in the project conversation.

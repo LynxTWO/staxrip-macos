@@ -82,6 +82,9 @@ final class StreamingLoudness {
     private var sum400 = 0.0, sum3 = 0.0, samplePeak = 0.0
     private var blocks: [Double] = [], shortBlocks: [Double] = []
     private var trace: [LoudnessPoint] = []
+    private var planningBins: [Double] = []
+    private var planningSum = 0.0
+    private var planningCount = 0
     private(set) var frames: Int64 = 0
     private let w400: Int, w3: Int, hop: Int, traceHop: Int
     private let captureTrace: Bool
@@ -112,6 +115,13 @@ final class StreamingLoudness {
         addEnergy(energy, record: true)
     }
     private func addEnergy(_ energy: Double, record: Bool) {
+        if record, captureTrace {
+            planningSum += energy; planningCount += 1
+            if planningCount == traceHop {
+                planningBins.append(planningSum/Double(traceHop))
+                planningSum = 0; planningCount = 0
+            }
+        }
         let old400 = ring[(cursor+w3-w400)%w3], old3 = ring[cursor]
         sum400 += energy-old400; sum3 += energy-old3
         ring[cursor] = energy; cursor = (cursor+1)%w3; frames += 1
@@ -139,6 +149,16 @@ final class StreamingLoudness {
                             truePeak: .measured(Self.db(peaks.map(\.maximum).max() ?? 0)), trace: trace)
         completed = result
         return result
+    }
+    // Internal analysis seam. Full windows only; report v1 serialization is unchanged.
+    var integratedBlockEnergies: [Double] { blocks }
+    // Partial terminal bin is zero-padded; synthetic LRA tail never enters this lane.
+    var planningEnergies: [Double] {
+        planningCount == 0 ? planningBins : planningBins + [planningSum/Double(traceHop)]
+    }
+    static func pooledIntegrated(_ energies: [Double]) -> MeterValue {
+        let selected = gate(energies, relativeLU: -10)
+        return .measured(selected.isEmpty ? nil : lufs(selected.reduce(0,+)/Double(selected.count)))
     }
     private static func db(_ x: Double) -> Double? { x > 0 ? 20*log10(x) : nil }
     private static func lufs(_ energy: Double) -> Double? { energy > 0 ? -0.691+10*log10(energy) : nil }

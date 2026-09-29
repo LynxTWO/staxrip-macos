@@ -115,6 +115,7 @@ struct MediaProbe: Decodable, Sendable {
         let height: Int?
         let pix_fmt: String?
         let sample_rate: String?
+        let bits_per_raw_sample: String?
         let channels: Int?
         let channel_layout: String?
         let color_transfer: String?

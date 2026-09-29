@@ -22,4 +22,4 @@ A generated 10-bit PQ-tagged HEVC MP4 opened in Workspace and the actual Inspect
 
 An initial max-height-only scroll area collapsed in the real sheet, hiding rows and truncating the footer. A stable 340-point scroll area and vertically fixed explanatory text corrected that. Screenshots verified both the upper color rows and lower timing/rotation rows, with Done visible. Escape dismissed the sheet. Accessibility inspection verified each row's individual label, value and explanatory hint. Static-text traits that coalesced neighboring rows were removed. Owner spoken VoiceOver validation is still separate; no headphone listening was required or performed.
 
-Hosted macOS validation and owner review are pending. Local evidence is macOS 27 on the development Mac; it is not the full platform matrix.
+Hosted macOS validation passed at 7b51fc8 in run 36600485460 (8m52s). Owner visual review was positive on 2026-09-29. A complete owner keyboard/spoken walkthrough is not claimed. Local evidence is macOS 27 on the development Mac; it is not the full platform matrix.

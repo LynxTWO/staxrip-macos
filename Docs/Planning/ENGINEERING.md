@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Static HDR10 preservation proposal in SLICE-004-static-hdr10.md; inspector owner review is positive and hosted validation is pending.
+Next: Static HDR10 preservation proposal in SLICE-004-static-hdr10.md; inspector owner visual review is positive and hosted validation passed in run 36600485460.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

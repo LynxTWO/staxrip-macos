@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Finish hosted inspector validation; SLICE-004-static-hdr10.md is the next proposed export contract, backed by HDR10-FEASIBILITY.md.
+Next: SLICE-004-static-hdr10.md is the proposed export contract, backed by HDR10-FEASIBILITY.md. Inspector hosted validation passed in run 36600485460.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

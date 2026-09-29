@@ -20,3 +20,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 11. [Slice 003: video color and timing inspection](SLICE-003-video-inspection.md)
 
 12. [Video inspection evidence](VIDEO-INSPECTION-EVIDENCE.md)
+
+13. [HDR10 feasibility](HDR10-FEASIBILITY.md) and [proposed static HDR10 export](SLICE-004-static-hdr10.md)

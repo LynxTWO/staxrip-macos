@@ -36,17 +36,39 @@ struct MediaInspectorView: View {
                                 if let channels = stream.channels {
                                     Text("\(channels) channels · \(stream.channel_layout ?? "layout unspecified") · \(stream.sample_rate ?? "?") Hz")
                                 }
-                                if let transfer = stream.color_transfer { Text("Transfer: \(transfer)") }
+                                if stream.codec_type == "video" {
+                                    details("Picture format", rows: VideoInspection.picture(stream))
+                                    details("Declared color", rows: VideoInspection.color(stream))
+                                    details("Timing and geometry", rows: VideoInspection.timing(stream))
+                                }
                                 if let language = stream.tags?["language"] { Text("Language: \(language)") }
                             }.font(.system(size: 12)).padding(16).frame(maxWidth: .infinity, alignment: .leading)
                                 .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12))
                         }
                     }
-                }.frame(maxHeight: 380)
+                }.frame(height: 340)
+                Text("Source tags do not verify HDR preservation or frame-by-frame timing. Missing color tags do not prove SDR. Advanced encoding supports only 8-bit 4:2:0 video and rejects PQ/HLG; Quick Export follows Apple’s presets.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Text("The advanced plan encodes the first non-cover-art video. Use Choose tracks in Workspace or the queue editor to select audio and subtitle streams.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-        }.padding(26).frame(width: 610).task { await batch.inspect(source) }
+        }.padding(26).frame(width: 690).task { await batch.inspect(source) }
+    }
+    private func details(_ title: String, rows: [VideoInspection.Row]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title).font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+            ForEach(rows) { row in
+                HStack(alignment: .top, spacing: 12) {
+                    Text(row.label).foregroundStyle(.secondary).frame(width: 165, alignment: .leading)
+                    Text(row.value).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(row.label)
+                .accessibilityValue(row.value)
+                .accessibilityHint(row.help)
+                .help(row.help)
+            }
+        }.padding(.top, 6)
     }
     private func stat(_ name: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 5) { eyebrow(name); Text(value).font(.system(size: 12, weight: .medium)) }

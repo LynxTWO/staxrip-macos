@@ -128,9 +128,22 @@ struct MediaProbe: Decodable, Sendable {
         let sample_aspect_ratio: String?
         let display_aspect_ratio: String?
         let field_order: String?
+        let time_base: String?
+        let start_pts: Int64?
+        let chroma_location: String?
+        let nb_frames: String?
         let tags: [String: String]?
         let disposition: [String: Int]?
-        struct SideData: Decodable, Sendable { let rotation: Int? }
+        struct SideData: Codable, Sendable {
+            let rotation: Int?
+            let side_data_type: String?
+            let red_x, red_y, green_x, green_y, blue_x, blue_y, white_point_x, white_point_y: String?
+            let min_luminance, max_luminance: String?
+            let max_content, max_average: Int64?
+            func fields() throws -> [String: Any] {
+                try JSONSerialization.jsonObject(with: JSONEncoder().encode(self)) as! [String: Any]
+            }
+        }
         let side_data_list: [SideData]?
         var id: Int { index }
     }

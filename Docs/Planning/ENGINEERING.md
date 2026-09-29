@@ -3,13 +3,13 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Static HDR10 preservation proposal in SLICE-004-static-hdr10.md; inspector owner visual review is positive and hosted validation passed in run 36600485460.
+Next: Approved static HDR10 implementation and evidence in HDR10-EVIDENCE.md; inspector hosted validation passed in run 36600485460.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
 ## 1. One-Page Overview
 
-Protect media first, measure before making claims, preserve explicit user choices. The top goals are correct measurements, recoverable operations and truthful user-visible results. ADD section 15 records the build boundary; the owner has paused Slice 002 for non-audio work. Measurement acceptance is recorded in MEASURED-ANALYSIS-EVIDENCE.md; later mastering receipts are in MASTERING-EVIDENCE.md. Native export cleanup and start-notification hardening passed hosted macOS validation at a69e95b in run 36599311645; the original unlogged removal failure cause remains unknown. New mastering, speech models and HDR remain unverified.
+Protect media first, measure before making claims, preserve explicit user choices. The top goals are correct measurements, recoverable operations and truthful user-visible results. ADD section 15 records the build boundary; the owner has paused Slice 002 for non-audio work. Measurement acceptance is recorded in MEASURED-ANALYSIS-EVIDENCE.md; later mastering receipts are in MASTERING-EVIDENCE.md. Native export cleanup and start-notification hardening passed hosted macOS validation at a69e95b in run 36599311645; the original unlogged removal failure cause remains unknown. Static HDR10 has scoped synthetic preservation evidence; calibrated HDR pictures, broader formats, original mastering and speech models remain unqualified.
 
 ## 2. Engineering Principles
 

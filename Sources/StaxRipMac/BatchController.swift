@@ -123,11 +123,33 @@ final class BatchController: ObservableObject {
               !FileManager.default.fileExists(atPath: output.path) else {
             throw NativeExportError.invalid("The output exists or points to the source. Choose a new output name.")
         }
+        let preservingHDR = job.configuration.colorMode == "Preserve static HDR10"
+        try SessionDocument.validate(job.configuration)
+        if preservingHDR { try EncodePlan.validateHDRSettings(job.configuration) }
+        var fingerprint: SourceFingerprint?
+        var hdr: HDR10Contract?
+        if preservingHDR {
+            statuses[job.id] = BatchStatus(phase: "Inspecting", detail: "HDR10: checking tool coverage and source identity before full-frame audit")
+            try checkpoint()
+            try await HDR10Audit.checkTools(tools)
+            fingerprint = try await SourceFingerprint.read(source)
+        }
         let probe = try await MediaProbe.read(source, tools: tools)
+        if preservingHDR {
+            statuses[job.id]?.detail = "HDR10: decoding every source frame; checking static metadata and fixed cadence"
+            hdr = try await HDR10Audit.read(source, tools: tools, probe: probe) { [weak self] frames, fraction in
+                Task { @MainActor in
+                    guard self?.statuses[job.id]?.phase == "Inspecting" else { return }
+                    self?.statuses[job.id]?.progress = fraction
+                    self?.statuses[job.id]?.detail = "HDR10: source audit · \(frames) decoded frames · static metadata and cadence"
+                }
+            }
+            guard try await SourceFingerprint.read(source) == fingerprint else { throw HDR10Audit.failure("Source changed during preflight. Nothing published.") }
+        }
         try Task.checkCancellation()
         let directory = output.deletingLastPathComponent().appendingPathComponent(".staxrip-batch-" + UUID().uuidString)
         let staged = directory.appendingPathComponent("encoded." + job.configuration.container.lowercased())
-        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: staged)
+        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: staged, hdr: hdr)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: directory) }
         statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
@@ -144,6 +166,7 @@ final class BatchController: ObservableObject {
             throw NativeExportError.invalid("FFmpeg exited \(result.status).\n" + String(decoding: result.stderr, as: UTF8.self))
         }
         statuses[job.id]?.phase = "Verifying"
+        statuses[job.id]?.progress = 0
         try checkpoint()
         let actual = try await MediaProbe.read(staged, tools: tools)
         guard actual.video?.codec_name == plan.expectedCodec,
@@ -158,9 +181,24 @@ final class BatchController: ObservableObject {
         if let expected = plan.expectedAudio, actual.streams.filter({ $0.codec_type == "audio" }).contains(where: { $0.codec_name != expected }) {
             throw NativeExportError.invalid("Output audio did not match the planned codec.")
         }
+        var verifiedSummary = plan.summary
+        if let hdr {
+            statuses[job.id]?.detail = "HDR10: decoding every staged output frame before publication"
+            let verified = try await HDR10Audit.read(staged, tools: tools, probe: actual, expectedRate: hdr.rate) { [weak self] frames, fraction in
+                Task { @MainActor in
+                    guard self?.statuses[job.id]?.phase == "Verifying" else { return }
+                    self?.statuses[job.id]?.progress = fraction
+                    self?.statuses[job.id]?.detail = "HDR10: output audit · \(frames) decoded frames · checking against source"
+                }
+            }
+            try hdr.verify(verified)
+            statuses[job.id]?.detail = "HDR10: rechecking source identity before publication"
+            guard try await SourceFingerprint.read(source) == fingerprint else { throw HDR10Audit.failure("Source changed during export. Nothing published.") }
+            verifiedSummary = hdr.summary + " · source/output timestamp bound ≤ \(hdr.timeBase.value + verified.timeBase.value) s"
+        }
         try Task.checkCancellation()
         try ExportPublication.publish(staged: staged, destination: output)
-        statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: plan.summary, destination: output)
+        statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: verifiedSummary, destination: output)
         // Publication already succeeded. A journal failure must not mislabel the media as failed.
         checkpointAfterOutcome()
     }

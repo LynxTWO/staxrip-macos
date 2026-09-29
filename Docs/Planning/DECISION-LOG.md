@@ -21,7 +21,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-014 | 2026-09-28 | Original mastering and preview boundary | Confirmed | |
 | D-015 | 2026-09-28 | Planner and limiter feasibility | Open | |
 | D-016 | 2026-09-28 | Listening material rights | Confirmed | |
-| D-017 | 2026-09-29 | Bounded static HDR10 preservation | Proposed | |
+| D-017 | 2026-09-29 | Bounded static HDR10 preservation | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -251,7 +251,8 @@ Revisit when: The manifest is established or required coverage cannot be license
 
 ## D-017: Bounded static HDR10 preservation
 Date: 2026-09-29
-Status: Proposed
+Status: Confirmed
+Owner approval: 2026-09-29, “Yes, I approve.”
 
 Decision: Start with explicit software HEVC/MKV preservation for stable 10-bit limited-range PQ/BT.2020 sources, a complete source frame audit and complete staged-output verification. SLICE-004-static-hdr10.md defines the boundary. Tone mapping, HLG, dynamic metadata and hardware encoding remain separate.
 

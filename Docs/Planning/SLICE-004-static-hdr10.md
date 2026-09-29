@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 004: Verified static HDR10 export
-Version: 0.1 Draft. Date: 2026-09-29. Status: Proposed.
+Version: 0.2. Date: 2026-09-29. Status: Implemented; local verification complete within the stated scope.
 
 SLICE STATE
-Milestone: Feasibility demonstrated on generated 10-bit data; build boundary prepared.
-Blocked by: Approval of this brief and D-017.
-Evidence so far: HDR10-FEASIBILITY.md; existing EncodePlan/BatchController verification inspected.
+Milestone: M1-M3 implemented with local synthetic, regression and native queue evidence; native session/recovery/editor walkthrough complete; owner spoken and calibrated-display qualification remain separate.
+Blocked by: None for the approved implementation.
+Evidence so far: HDR10-EVIDENCE.md and HDR10-FEASIBILITY.md.
 Last audit: 2026-09-29.
 
 ## 1. What the slice proves
@@ -79,4 +79,4 @@ All S4 checks have linked evidence; enabled behavior matches the supported metad
 
 Separately validated static HLG, hardware HDR and MP4; then explicit HDR-to-SDR tone mapping and output preview. Dynamic HDR requires its own representation and verification policy.
 
-Approved for build by: Pending. This is a proposed contract, not implementation authorization.
+Approved for build by: Owner, 2026-09-29: “Yes, I approve.”

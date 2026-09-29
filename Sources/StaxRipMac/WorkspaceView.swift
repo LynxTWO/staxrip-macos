@@ -257,7 +257,7 @@ struct WorkspaceView: View {
             }.padding(14).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
             }
             settingPicker("Speed preference", selection: $model.config.speed, values: ["Thorough", "Balanced", "Fast"]).disabled(model.config.rate.backend != "Software")
-            Text("FFmpeg applies these settings when you start the queue. First video, chosen audio tracks; SDR 8-bit 4:2:0 sources only.")
+            Text("FFmpeg applies these settings when you start the queue. First video and chosen audio tracks. The selected color workflow determines supported sources and verification.")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }
     }

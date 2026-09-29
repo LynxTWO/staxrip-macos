@@ -2,9 +2,9 @@
 Version: 0.1 Draft. Date: 2026-09-29. Status: In progress.
 
 SLICE STATE
-Milestone: Read-only implementation boundary prepared after the owner requested a non-audio pivot.
+Milestone: Implemented with local numerical, regression and native layout/accessibility evidence; hosted validation and owner review pending.
 Blocked by: None.
-Evidence so far: NON-AUDIO-RESUMPTION.md; ToolRunner.swift, MediaInspectorView.swift and EncodePlan.swift source inspection.
+Evidence so far: VIDEO-INSPECTION-EVIDENCE.md; NON-AUDIO-RESUMPTION.md.
 Last audit: 2026-09-29.
 
 ## 1. What the slice proves

@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Native export cleanup PR validation and owner readback of SLICE-003-video-inspection.md.
+Next: Hosted validation and owner review of the implemented video inspector; see VIDEO-INSPECTION-EVIDENCE.md.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -118,6 +118,6 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
-Owner pivot, 2026-09-29: Slice 002 is paused, not accepted. Native export cleanup hardening has local evidence and is awaiting hosted validation. SLICE-003-video-inspection.md is the proposed next build boundary; it is read-only and does not add HDR encoding. This checkpoint supersedes active-slice wording below; retained audio evidence is unchanged.
+Owner pivot, 2026-09-29: Slice 002 is paused, not accepted. Native export cleanup hardening has local evidence and is awaiting hosted validation. SLICE-003-video-inspection.md is the approved active build boundary with local evidence; it is read-only and does not add HDR encoding. This checkpoint supersedes active-slice wording below; retained audio evidence is unchanged.
 
 Slice 001 is Done with evidence; its owner functional/spoken acceptance and limitations are recorded in MEASURED-ANALYSIS-EVIDENCE.md. The guidance refinement is part of that closure. Current boundary: SLICE-002-dialogue-mastering.md. Slice 002 is now the active approved boundary, approved by Daniel Boyd on 2026-09-28. D-013 confirms manual speech before automatic suggestions. D-014 confirms the detailed mastering/preview boundary; D-015 remains open after real-film numerical failures; D-016 records listening-source permission. Native implementation and resource evidence are in MASTERING-EVIDENCE.md. A local six-excerpt comparison pack is prepared for wider research requests; 3 LU performance, listening and owner acceptance remain open. HDR, surround, signing and release remain outside this boundary.

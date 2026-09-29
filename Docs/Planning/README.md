@@ -17,4 +17,6 @@ Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351af
 
 Readback: measurement and its owner walkthrough are accepted. Original mastering remains experimental, with listening, native/VoiceOver acceptance and stricter real-film targets still open. The verified v2 listening pack is retained locally for a later headphone review. Signing credentials are ready; production qualification remains separate. See [the non-audio resumption checkpoint](NON-AUDIO-RESUMPTION.md) for the current priority and evidence.
 
-11. [Proposed Slice 003: video color and timing inspection](SLICE-003-video-inspection.md)
+11. [Slice 003: video color and timing inspection](SLICE-003-video-inspection.md)
+
+12. [Video inspection evidence](VIDEO-INSPECTION-EVIDENCE.md)

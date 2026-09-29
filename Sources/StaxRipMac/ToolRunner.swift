@@ -119,6 +119,15 @@ struct MediaProbe: Decodable, Sendable {
         let channels: Int?
         let channel_layout: String?
         let color_transfer: String?
+        let profile: String?
+        let color_primaries: String?
+        let color_space: String?
+        let color_range: String?
+        let avg_frame_rate: String?
+        let r_frame_rate: String?
+        let sample_aspect_ratio: String?
+        let display_aspect_ratio: String?
+        let field_order: String?
         let tags: [String: String]?
         let disposition: [String: Int]?
         struct SideData: Decodable, Sendable { let rotation: Int? }

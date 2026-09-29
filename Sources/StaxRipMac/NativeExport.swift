@@ -45,8 +45,61 @@ struct ExportPublication {
     }
 }
 
+struct NativeExportCleanupError: LocalizedError {
+    let directory: URL
+    let publishedOutput: URL?
+    let operationError: Error?
+    let cleanupError: Error
+
+    var errorDescription: String? {
+        let outcome = publishedOutput == nil ? "No output was published." : "The export was saved successfully."
+        let operation = operationError.map { " Operation: \($0.localizedDescription)" } ?? ""
+        let error = cleanupError as NSError
+        return "\(outcome) Temporary export files could not be removed at \(directory.path). \(error.localizedDescription) [\(error.domain):\(error.code)]\(operation)"
+    }
+}
+
+// Only call this for a directory created by the current export, after its writer
+// completion callback. Retry transient removal errors without abandoning cleanup
+// when the operation's Task has already been cancelled.
+@MainActor
+struct NativeExportStaging {
+    static func remove(_ directory: URL,
+                       removeItem: (URL) throws -> Void = { try FileManager.default.removeItem(at: $0) },
+                       wait: (Double) async -> Void = { seconds in
+                           await withCheckedContinuation { continuation in
+                               DispatchQueue.global().asyncAfter(deadline: .now() + seconds) { continuation.resume() }
+                           }
+                       }) async throws {
+        let delays = [0.05, 0.1, 0.2, 0.4, 0.8]
+        for attempt in 0...delays.count {
+            do { try removeItem(directory); return }
+            catch {
+                // Foundation can wrap the POSIX cause in an NSCocoaError.
+                var cause = error as NSError
+                for _ in 0..<8 {
+                    guard let underlying = cause.userInfo[NSUnderlyingErrorKey] as? NSError else { break }
+                    cause = underlying
+                }
+                let missing = (cause.domain == NSPOSIXErrorDomain && cause.code == Int(ENOENT)) ||
+                    (cause.domain == NSCocoaErrorDomain && cause.code == NSFileNoSuchFileError)
+                if missing, !FileManager.default.fileExists(atPath: directory.path) { return }
+                let transient = cause.domain == NSPOSIXErrorDomain && [Int(EBUSY), Int(ENOTEMPTY)].contains(cause.code)
+                guard transient, attempt < delays.count else { throw error }
+                await wait(delays[attempt])
+            }
+        }
+    }
+}
+
 @MainActor
 final class NativeExportService {
+    private let removeStaging: (URL) async throws -> Void
+
+    init(removeStaging: @escaping (URL) async throws -> Void = { try await NativeExportStaging.remove($0) }) {
+        self.removeStaging = removeStaging
+    }
+
     private var session: AVAssetExportSession?
     private var cancelled = false
     private(set) var active = false
@@ -81,7 +134,7 @@ final class NativeExportService {
         session = export
         let temporary = destination.deletingLastPathComponent().appendingPathComponent(".staxrip-export-" + UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: temporary) }
+
         let staged = temporary.appendingPathComponent("video.mp4")
         export.shouldOptimizeForNetworkUse = true
         let poll = Task { @MainActor in
@@ -91,6 +144,8 @@ final class NativeExportService {
             }
         }
         defer { poll.cancel() }
+        var operationError: Error?
+        var publishedOutput: URL?
         do {
             // The async throwing API can resume cancellation while the writer still
             // owns staging files. The completion callback is our cleanup boundary.
@@ -99,6 +154,9 @@ final class NativeExportService {
             await withTaskCancellationHandler {
                 await withCheckedContinuation { continuation in
                     export.exportAsynchronously { continuation.resume() }
+                    // Deliver the start notification before yielding to a fast
+                    // completion. A caller may cancel here while the session exists.
+                    progress(0)
                 }
             } onCancel: {
                 export.cancelExport()
@@ -106,18 +164,25 @@ final class NativeExportService {
             if export.status != .completed {
                 throw export.error ?? NativeExportError.invalid("The export did not complete.")
             }
+            try checkCancellation()
+            // Validate the staged media before making it visible at the chosen name.
+            let result = AVURLAsset(url: staged)
+            guard !(try await result.loadTracks(withMediaType: .video)).isEmpty else {
+                throw NativeExportError.invalid("The exported file contains no readable video.")
+            }
+            try checkCancellation()
+            try ExportPublication.publish(staged: staged, destination: destination)
+            publishedOutput = destination
         } catch {
-            if cancelled || Task.isCancelled { throw CancellationError() }
-            throw error
+            operationError = cancelled || Task.isCancelled ? CancellationError() : error
         }
-        try checkCancellation()
-        // Validate the staged media before making it visible at the chosen name.
-        let result = AVURLAsset(url: staged)
-        guard !(try await result.loadTracks(withMediaType: .video)).isEmpty else {
-            throw NativeExportError.invalid("The exported file contains no readable video.")
+        poll.cancel()
+        do { try await removeStaging(temporary) }
+        catch {
+            throw NativeExportCleanupError(directory: temporary, publishedOutput: publishedOutput,
+                                           operationError: operationError, cleanupError: error)
         }
-        try checkCancellation()
-        try ExportPublication.publish(staged: staged, destination: destination)
+        if let operationError { throw operationError }
         progress(1)
     }
 
@@ -168,6 +233,10 @@ final class ExportController: ObservableObject {
                 }
                 result = destination
                 status = "Export complete"
+            } catch let error as NativeExportCleanupError {
+                result = error.publishedOutput
+                failure = error.localizedDescription
+                status = error.publishedOutput == nil ? "Export stopped · temporary files remain" : "Export saved · temporary files remain"
             } catch is CancellationError {
                 status = "Export cancelled · no output published"
             } catch {

@@ -83,15 +83,98 @@ struct ExportTests {
         let target = dir.appendingPathComponent("cancelled.mp4")
         let service = NativeExportService()
         var requested = false
+        var firstProgress: Double?
         do {
-            try await service.export(source: source, destination: target, preset: .h264HD) { _ in
-                if !requested { requested = true; service.cancel() }
+            try await service.export(source: source, destination: target, preset: .h264HD) { value in
+                if !requested { firstProgress = value; requested = true; service.cancel() }
             }
             Issue.record("Active cancellation should prevent publication")
         } catch is CancellationError { }
         #expect(requested)
+        #expect(firstProgress == 0)
         #expect(!FileManager.default.fileExists(atPath: target.path))
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).allSatisfy { !$0.hasPrefix(".staxrip-export-") })
+    }
+
+    @Test func stagingCleanupRetriesWrappedTransientErrorsEvenWhenCancelled() async throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let owned = dir.appendingPathComponent("owned")
+        try FileManager.default.createDirectory(at: owned, withIntermediateDirectories: false)
+        let protected = dir.appendingPathComponent("existing-output")
+        try Data("keep".utf8).write(to: protected)
+        var attempts = 0
+        let task = Task { @MainActor in
+            try await NativeExportStaging.remove(owned, removeItem: { url in
+                #expect(url == owned)
+                attempts += 1
+                if attempts < 3 {
+                    throw NSError(domain: NSCocoaErrorDomain, code: NSFileWriteUnknownError,
+                                  userInfo: [NSUnderlyingErrorKey: NSError(domain: NSPOSIXErrorDomain, code: Int(ENOTEMPTY))])
+                }
+                try FileManager.default.removeItem(at: url)
+            })
+        }
+        task.cancel()
+        try await task.value
+        #expect(attempts == 3)
+        #expect(!FileManager.default.fileExists(atPath: owned.path))
+        #expect(try Data(contentsOf: protected) == Data("keep".utf8))
+    }
+
+    @Test func stagingCleanupBoundsRetriesAndSurfacesPermanentFailure() async throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        for code in [EBUSY, EACCES] {
+            var attempts = 0
+            var delays: [Double] = []
+            do {
+                try await NativeExportStaging.remove(dir, removeItem: { _ in
+                    attempts += 1
+                    throw NSError(domain: NSPOSIXErrorDomain, code: Int(code))
+                }, wait: { delays.append($0) })
+                Issue.record("Persistent removal failure must be reported")
+            } catch {
+                #expect((error as NSError).code == Int(code))
+            }
+            #expect(attempts == (code == EBUSY ? 6 : 1))
+            #expect(delays.count == (code == EBUSY ? 5 : 0))
+            #expect(delays.reduce(0, +) <= 1.551)
+        }
+        try await NativeExportStaging.remove(dir.appendingPathComponent("already-absent"))
+        #expect(FileManager.default.fileExists(atPath: dir.path))
+        do {
+            try await NativeExportStaging.remove(dir, removeItem: { _ in
+                throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENOENT))
+            })
+            Issue.record("A missing child must not hide a remaining staging directory")
+        } catch { #expect((error as NSError).code == Int(ENOENT)) }
+    }
+
+    @Test(arguments: [false, true]) func cleanupFailureReportsWhetherOutputWasPublished(cancel: Bool) async throws {
+        let dir = try folder()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let source = dir.appendingPathComponent("source.mov")
+        try await makeFixture(at: source)
+        let original = try Data(contentsOf: source)
+        let target = dir.appendingPathComponent("result.mp4")
+        let service = NativeExportService(removeStaging: { _ in
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
+        })
+        do {
+            try await service.export(source: source, destination: target, preset: .h264Small) { _ in
+                if cancel { service.cancel() }
+            }
+            Issue.record("Cleanup failure must not be suppressed")
+        } catch let error as NativeExportCleanupError {
+            #expect(error.publishedOutput == (cancel ? nil : target))
+            #expect((error.operationError is CancellationError) == cancel)
+            #expect((error.cleanupError as NSError).code == Int(EACCES))
+            #expect(error.directory.deletingLastPathComponent().standardizedFileURL == dir.standardizedFileURL)
+        }
+        #expect(!service.active)
+        #expect(FileManager.default.fileExists(atPath: target.path) == !cancel)
+        #expect(try Data(contentsOf: source) == original)
     }
 
     @Test func invalidMediaFailsWithoutOutputOrStagingDebris() async throws {

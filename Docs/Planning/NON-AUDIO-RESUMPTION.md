@@ -23,3 +23,11 @@ Keep actual HDR preservation and SDR tone mapping as separate follow-on contract
 Filtered preview and frame stepping; rotation and timestamp/remux handling; per-track recipes and subtitle/chapter handling; session persistence, custom presets and undo; production qualification. RELEASE-SCOPE.md remains the acceptance ledger. This order is a working priority, not a claim of completed implementation or an expansion of the parked audio brief.
 
 No merge, signing submission or public release was performed as part of this pivot.
+
+## Native cleanup hardening, 2026-09-29
+
+NativeExportService no longer discards removal errors. After the AVFoundation completion callback, cleanup retries only EBUSY/ENOTEMPTY (including wrapped POSIX errors), at most six attempts with 1.55 seconds of total delay. The wait remains effective when the export task is cancelled. A missing directory is accepted only if the owned root is absent. A permanent failure reports the directory and error, preserves the operation error, and states whether output was already published. The controller retains the saved result when cleanup alone failed.
+
+The original hosted failure did not record its underlying error, so its cause remains unknown. This change fixes silent cleanup failure and handles specific transient errors; it does not establish that the original race was reproduced or eliminated.
+
+Validation: release regression reported 71 tests in 13 suites passed in 8.897 seconds (12 opt-in tests skipped). Final focused ExportTests passed eight tests in 0.603 seconds, including eight real active-cancellation cases, three native presets, cancelled-task retry, bounded persistent busy failure, immediate permission failure, a missing-child error with a remaining root, and saved-versus-unpublished error outcomes. Native release preview built with the local ad-hoc signature. A generated video completed through Quick Export; a separate longer generated source was cancelled through the native button. The UI restored source/export controls and stated no output was published. Filesystem checks confirmed no cancelled output or staging directories, while the completed output remained. This is local macOS 27 evidence; hosted macOS 15 remains a separate check.

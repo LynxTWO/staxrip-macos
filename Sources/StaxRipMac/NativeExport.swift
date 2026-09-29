@@ -154,6 +154,9 @@ final class NativeExportService {
             await withTaskCancellationHandler {
                 await withCheckedContinuation { continuation in
                     export.exportAsynchronously { continuation.resume() }
+                    // Deliver the start notification before yielding to a fast
+                    // completion. A caller may cancel here while the session exists.
+                    progress(0)
                 }
             } onCancel: {
                 export.cancelExport()

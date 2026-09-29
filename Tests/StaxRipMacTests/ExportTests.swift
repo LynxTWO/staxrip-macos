@@ -83,13 +83,15 @@ struct ExportTests {
         let target = dir.appendingPathComponent("cancelled.mp4")
         let service = NativeExportService()
         var requested = false
+        var firstProgress: Double?
         do {
-            try await service.export(source: source, destination: target, preset: .h264HD) { _ in
-                if !requested { requested = true; service.cancel() }
+            try await service.export(source: source, destination: target, preset: .h264HD) { value in
+                if !requested { firstProgress = value; requested = true; service.cancel() }
             }
             Issue.record("Active cancellation should prevent publication")
         } catch is CancellationError { }
         #expect(requested)
+        #expect(firstProgress == 0)
         #expect(!FileManager.default.fileExists(atPath: target.path))
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).allSatisfy { !$0.hasPrefix(".staxrip-export-") })
     }

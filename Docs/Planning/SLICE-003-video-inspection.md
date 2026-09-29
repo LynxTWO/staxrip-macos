@@ -2,7 +2,7 @@
 Version: 0.1 Draft. Date: 2026-09-29. Status: In progress.
 
 SLICE STATE
-Milestone: Implemented with local numerical, regression and native layout/accessibility evidence; hosted validation and owner review pending.
+Milestone: Implemented with local numerical, regression and native layout/accessibility evidence; owner visual review positive (2026-09-29); hosted macOS validation passed in run 36600485460. Full owner keyboard/spoken review remains separately scoped.
 Blocked by: None.
 Evidence so far: VIDEO-INSPECTION-EVIDENCE.md; NON-AUDIO-RESUMPTION.md.
 Last audit: 2026-09-29.

@@ -21,6 +21,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-014 | 2026-09-28 | Original mastering and preview boundary | Confirmed | |
 | D-015 | 2026-09-28 | Planner and limiter feasibility | Open | |
 | D-016 | 2026-09-28 | Listening material rights | Confirmed | |
+| D-017 | 2026-09-29 | Bounded static HDR10 preservation | Proposed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -247,3 +248,17 @@ Options considered: redistributable licensed examples; user-authorized local exc
 Consequences: Owner-only listening is a scoped screen, not a formal listener study. No personal film title, path or audio is committed to the public repository. Corpus failure blocks quality acceptance, not an excuse to invent results.
 
 Revisit when: The manifest is established or required coverage cannot be licensed.
+
+## D-017: Bounded static HDR10 preservation
+Date: 2026-09-29
+Status: Proposed
+
+Decision: Start with explicit software HEVC/MKV preservation for stable 10-bit limited-range PQ/BT.2020 sources, a complete source frame audit and complete staged-output verification. SLICE-004-static-hdr10.md defines the boundary. Tone mapping, HLG, dynamic metadata and hardware encoding remain separate.
+
+Because: HDR10-FEASIBILITY.md demonstrates numerical lossless round-trip and static metadata retention locally, while the current queue does not verify color. A single-frame probe cannot establish whole-stream stability or coverage.
+
+Options considered: simply relax the SDR guard; implement all HDR modes together; add one explicitly bounded checked workflow. Propose the bounded workflow.
+
+Consequences: New internal color intent and typed audit data, backward-compatible session default, extra source/output scan time, no new dependency. Metadata preservation is narrower than visual correctness or universal HDR compatibility.
+
+Revisit when: The audit cannot reliably identify the declared supported metadata, fixtures fail, or a later HDR workflow is approved.

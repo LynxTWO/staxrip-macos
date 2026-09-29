@@ -2,10 +2,10 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In progress.
 
 SLICE STATE
-Milestone: M1 feedback-planner checkpoint; local experimental listening pack ready for owner review at explicitly wider settings.
+Milestone: Paused by owner on 2026-09-29 while headphones are unavailable. M1 feedback-planner checkpoint and the independently verified local v2 listening pack are preserved; resume at owner listening review using the explicitly wider settings.
 Open gates: D-015 planning-objective review after real-film failures, representative listening acceptance and owner native/VoiceOver walkthrough. The six-excerpt pack does not establish 3 LU performance. Earlier failures remain recorded; they do not prove mathematical infeasibility.
 Evidence so far: MASTERING-EVIDENCE.md; MASTERING-M1.md; LISTENING-MANIFEST.md; WAVPACK-STAGING-EVALUATION.md.
-Last audit: 2026-09-28.
+Last audit: 2026-09-29. The owner requested a pivot to the rest of StaxRip; this slice is not active and is not accepted.
 
 ## 1. What the slice proves
 

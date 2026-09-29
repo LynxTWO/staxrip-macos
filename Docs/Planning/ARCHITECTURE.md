@@ -2,14 +2,14 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 001 accepted; current audio seams reread at 96f1d38.
-Next: Owner readback of proposed Slice 002.
-Open questions: License, speech model, platform support, corpus rights.
-Statuses pending: Proposed decisions in DECISION-LOG.md.
+Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
+Next: Non-audio export reliability investigation, then a bounded color inspection and HDR brief.
+Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
+Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
 ## 1. One-Page Overview
 
-Native local media processing for people who need inspectable encoding and audio results. Core loop: open media, select streams and intent, inspect a plan, execute, verify and publish a new file. Current components are Workspace, Sessions, Native Export, Batch Encoding, Audio Lab, Tool Runner and Publication. The measured report is implemented and accepted. The proposed next slice is SLICE-002-dialogue-mastering.md. Automatic speech-aware gain, HDR preservation and multichannel export are not implemented.
+Native local media processing for people who need inspectable encoding and audio results. Core loop: open media, select streams and intent, inspect a plan, execute, verify and publish a new file. Current components are Workspace, Sessions, Native Export, Batch Encoding, Audio Lab, Tool Runner and Publication. The measured report is implemented and accepted. SLICE-002-dialogue-mastering.md is approved but paused and incomplete. NON-AUDIO-RESUMPTION.md records the current pivot. Automatic speech-aware gain, HDR preservation and multichannel export are not implemented.
 
 ## 2. System Context
 
@@ -117,5 +117,7 @@ Developer preview -> locally verified candidate -> hosted checks -> licensed dep
 No source overwrite. No silent fallback between engines or preservation modes. No centre-channel-equals-dialogue assumption. No LFE contribution to a BS.1770 programme value. No model-derived command text. No media upload to speech services. No public-PR execution on the signing Mac. Existing privacy and ownership rules in AGENTS.md remain in force.
 
 ## 15. Current Build Boundary
+
+Owner pivot, 2026-09-29: Slice 002 is paused, not accepted. Current work is investigation of existing native export cancellation behavior. A new color/HDR capability requires its own bounded brief. This checkpoint supersedes active-slice wording below; retained audio evidence is unchanged.
 
 Slice 001 is Done with evidence; its owner functional/spoken acceptance and limitations are recorded in MEASURED-ANALYSIS-EVIDENCE.md. The guidance refinement is part of that closure. Current boundary: SLICE-002-dialogue-mastering.md. Slice 002 is now the active approved boundary, approved by Daniel Boyd on 2026-09-28. D-013 confirms manual speech before automatic suggestions. D-014 confirms the detailed mastering/preview boundary; D-015 remains open after real-film numerical failures; D-016 records listening-source permission. Native implementation and resource evidence are in MASTERING-EVIDENCE.md. A local six-excerpt comparison pack is prepared for wider research requests; 3 LU performance, listening and owner acceptance remain open. HDR, surround, signing and release remain outside this boundary.

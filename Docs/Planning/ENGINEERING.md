@@ -2,14 +2,14 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 001 evidence and owner acceptance; Slice 002 brief drafted.
-Next: Owner readback and approval of Slice 002.
-Open questions: U-001 through U-007.
-Statuses pending: Proposed and Assumed decisions remain unapproved.
+Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
+Next: Non-audio export reliability investigation, then a bounded color inspection and HDR brief.
+Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
+Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
 ## 1. One-Page Overview
 
-Protect media first, measure before making claims, preserve explicit user choices. The top goals are correct measurements, recoverable operations and truthful user-visible results. ADD section 15 names one proposed slice. Current 47-test regression runs and the separate EBU/full-length gates establish only the scope recorded in MEASURED-ANALYSIS-EVIDENCE.md. New mastering, speech models and HDR remain unverified.
+Protect media first, measure before making claims, preserve explicit user choices. The top goals are correct measurements, recoverable operations and truthful user-visible results. ADD section 15 records the build boundary; the owner has paused Slice 002 for non-audio work. Measurement acceptance is recorded in MEASURED-ANALYSIS-EVIDENCE.md; later mastering receipts are in MASTERING-EVIDENCE.md. The latest hosted run has an unresolved native export cancellation failure recorded in NON-AUDIO-RESUMPTION.md. New mastering, speech models and HDR remain unverified.
 
 ## 2. Engineering Principles
 

@@ -1,7 +1,7 @@
 # Production completion plan
 Version: 0.1 Draft. Date: 2026-09-28.
 
-Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351afc9a1ef6bcb9b30e. Slice 001 is accepted with scoped numerical, native and owner listening evidence. Slice 002 is proposed for owner review; no new mastering implementation is approved yet. See MEASURED-ANALYSIS-EVIDENCE.md for closure and limits.
+Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351afc9a1ef6bcb9b30e. Slice 001 is accepted with scoped numerical, native and owner listening evidence. Slice 002 was approved and experimentally implemented, but remains incomplete. The owner parked it on 2026-09-29 and requested a return to non-audio work. See MEASURED-ANALYSIS-EVIDENCE.md for closure and limits.
 
 1. [Product context and sequence](PRODUCT-CONTEXT.md)
 2. [Architecture](ARCHITECTURE.md) and [engineering requirements](ENGINEERING.md)
@@ -12,7 +12,7 @@ Prepared using the owner's Scaffold Kit v0.4 branch at e0b8df1acee6a9ab62e7351af
 7. [Signing and CI owner setup](SIGNING-AND-CI.md)
 8. [Audit and owner readback](AUDIT.md)
 
-9. [Proposed Slice 002: original mastering and preview](SLICE-002-dialogue-mastering.md)
+9. [Parked Slice 002: original mastering and preview](SLICE-002-dialogue-mastering.md)
 10. [Mastering research and growth tally](MASTERING-RESEARCH.md)
 
-Readback: measurement and its owner walkthrough are accepted. Review the proposed manual-speech mastering brief next. Signing credentials are ready, while production signing and release qualification remain separate. Project license and additional listening-corpus rights remain Open; automatic speech selection is deferred until manual mastering is evaluated.
+Readback: measurement and its owner walkthrough are accepted. Original mastering remains experimental, with listening, native/VoiceOver acceptance and stricter real-film targets still open. The verified v2 listening pack is retained locally for a later headphone review. Signing credentials are ready; production qualification remains separate. See [the non-audio resumption checkpoint](NON-AUDIO-RESUMPTION.md) for the current priority and evidence.

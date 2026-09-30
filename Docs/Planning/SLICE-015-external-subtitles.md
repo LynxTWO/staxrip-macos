@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 015: Verified external SRT subtitles
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Accepted within recorded scope.
 
 SLICE STATE
-Milestone: M1 through M4 local implementation, regression and native acceptance passed; hosted pending.
-Blocked by: None external. Slice 014 accepted at f20998f, hosted run 36778465280.
-Evidence so far: 18 new test functions, 143-test final regression, real native MKV/MP4 verified exports, unchanged input hashes, session round-trip and attached dialog cancellation. See EXTERNAL-SUBTITLE-EVIDENCE.md.
+Milestone: M1 through M4 local, native and hosted acceptance passed at b3027f2.
+Blocked by: None for this scoped slice. Broader formats and qualification remain separate.
+Evidence so far: 18 new test functions, 143-test final regression, real native MKV/MP4 verified exports, unchanged input hashes, session round-trip and attached dialog cancellation. Hosted run 36785205441 passed 143 tests in 9m46s. See EXTERNAL-SUBTITLE-EVIDENCE.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

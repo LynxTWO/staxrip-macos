@@ -82,3 +82,5 @@ Slice 015 is active under D-028/R-018: one source-specific external plain UTF-8 
 Slice 015 local acceptance passed: 142 tests / 28 suites, native independent MKV/MP4 caption exports, session round-trip and attached session dialog recovery. Hosted check pending; see EXTERNAL-SUBTITLE-EVIDENCE.md.
 
 Slice 015 initial hosted run 36783897395 passed at bb9a765 (142 tests, 9m37s). Review then found canonical Unicode title equality could hide byte-distinct intent changes. A negative-control regression reproduced broken change detection/undo; the fix passes the final 143-test local regression. Final hosted follow-up pending.
+
+Slice 015 scoped acceptance closed at b3027f2 with hosted run 36785205441: 143 tests, 9m46s. External plain SRT, exact added cue/metadata checks, session migration and native controls are covered within the evidence limits. Broader subtitles and owner audio listening remain open.

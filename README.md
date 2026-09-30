@@ -27,7 +27,7 @@ The default advanced pipeline accepts 8-bit SDR 4:2:0. Supported right-angle dis
 
 Real exports are written in an operation-owned temporary directory beside the destination, checked for a readable video track, then published using an exclusive hard link. An existing destination, including a symlink, is never replaced. Cancellation and ordinary failures remove only the current operation's staging directory. Filesystems without hard-link support fail with an explanation; there is no destructive fallback. A forced app termination can leave its staging directory behind. Normal Quit is blocked during an active export until it finishes or is cancelled.
 
-Sessions use a versioned `staxrip-mac-session` JSON envelope. Unsupported versions/settings, invalid local paths, duplicate queue IDs and exact output conflicts are rejected before replacing the workspace. Missing media retains its identity with a locate-source prompt. Opening a session never starts processing. Sessions are explicitly saved, not autosaved; save before quitting. Neither session nor queue JSON is a Windows StaxRip project file.
+Sessions use a versioned `staxrip-mac-session` JSON envelope, currently version 6; the separate recovery journal uses version 5. Supported older files remain readable when they do not contain settings introduced by a later version. Unsupported versions/settings, invalid local paths, duplicate queue IDs and exact output conflicts are rejected before replacing the workspace. Missing media retains its identity with a locate-source prompt. Opening a session never starts processing. Sessions are explicitly saved, not autosaved; save before quitting. Neither session nor queue JSON is a Windows StaxRip project file.
 
 ## Verification
 
@@ -75,19 +75,19 @@ Audio Lab can target −23, −16 or −14 LUFS. It measures after resampling/ch
 
 Picture settings now support four-edge cropping, frame-rate-preserving BWDIF deinterlacing (flagged or all frames), and start/end times in seconds. End = 0 uses the source end. Trimmed jobs require AAC/Opus or no audio, and removed subtitles; chapters are omitted. Invalid ranges and crops fail before encoding. Output verification checks original-size cropped dimensions and duration. Resized dimensions, unusual timestamps and long/VFR inputs need broader validation. Native preview remains unfiltered.
 
-New sessions use version 2 so older builds reject settings they cannot execute; this build still reads version 1 with neutral picture defaults.
+Picture settings introduced session version 2; current version details are in File handling above. Older supported sessions use neutral defaults for missing picture settings.
 
 ## Track routing
 
 Choose tracks in Workspace or a queue item to keep individual audio and subtitle streams by index, codec and language. All is the legacy default; None removes the category. Codec/handling settings still apply. New source imports reset selection; saved sessions and job copies preserve it. A changed or missing index fails preflight instead of silently substituting another track. Subtitle copying still depends on the target container. One common audio encoding recipe applies to every selected audio track.
 
-Current sessions use version 3 and recovery journals version 2; older files remain readable, while older builds reject these new versions rather than ignoring routing or picture settings.
+Track routing introduced session version 3 and recovery journal version 2. Older builds reject newer envelopes rather than ignoring settings they cannot execute.
 
 ## Video rate control (v0.9)
 
 Software AV1/x265/x264 support constant quality or single-pass target bitrate (100–200,000 kb/s). H.264/HEVC also offer Apple hardware via VideoToolbox in target-bitrate mode. Hardware requests pass `-allow_sw 0`; unsupported systems fail explicitly. CRF and software presets are absent from hardware plans. The target is not a constant-bitrate or exact-file-size promise. Selecting a built-in preset resets the engine/rate mode to that preset’s software CRF defaults.
 
-Run hardware integration checks explicitly with `STAXRIP_TEST_HARDWARE=1 swift test`. Both codecs passed on the development Apple Silicon Mac; hosted CI skips hardware tests by default. Current session/recovery versions are 4/3 and retain older-version read support.
+Run hardware integration checks explicitly with `STAXRIP_TEST_HARDWARE=1 swift test`. Both codecs passed on the development Apple Silicon Mac; hosted CI skips hardware tests by default. Rate control introduced session/recovery versions 4/3; current versions are listed in File handling above.
 
 ## Mastering foundation (v0.10)
 
@@ -112,3 +112,15 @@ Advanced queue publication now verifies the retained flat chapter titles/times a
 Queue output verification now checks resized raster fit before publication and reports the encoded frame dimensions. Even rounding has a strict less-than-two-pixel allowance; this does not promise square pixels or validate picture content. See [geometry evidence and native access limits](Docs/Planning/PICTURE-GEOMETRY-EVIDENCE.md).
 
 Advanced queue publication runs off the UI thread. During Finishing, Stop after current publication waits for the current result and preserves successful output before stopping later jobs. Per-job Review source/destination access opens native pickers without relinking or starting work. See [scope and evidence](Docs/Planning/PUBLICATION-RESPONSIVENESS-EVIDENCE.md).
+
+## Add an external caption file
+
+1. Open your video in **Workspace** and select **Subtitles**.
+2. Choose **Add SRT file…**, then select one plain UTF-8 `.srt` file. Set its language and optional track title.
+3. Choose whether to keep selected embedded tracks or remove embedded tracks. This setting is separate from the additional SRT file.
+4. Choose MKV or MP4 and a new output name, then **Add to queue**. Each queued job keeps its own caption reference; **Edit** changes only that job.
+5. Use **Check queue** to catch unsupported captions, then **Start queue**. A completed result reports the number of verified caption cues. The app checks decoded text, millisecond timing, codec, language and title before publishing.
+
+The initial support is one plain SRT of at most 1 MiB, with at most 10000 sequential, nonoverlapping cues and 4096 UTF-8 text bytes per cue. Use an untrimmed SDR source with a known zero-start timeline, no longer than 48 hours. Styling, positioning, escape sequences and surrounding line whitespace are refused. MKV retains SubRip; MP4 converts the added track to mov_text. Typography and playback-default/forced flags are not guaranteed. Quick Export does not apply these queue settings.
+
+**Remove reference** omits the additional track without deleting its file. Sessions retain the path and settings, not the caption contents or permanent access permission; select the file again if access needs renewal. Starting a job reads the file again, so edits since a preliminary check are revalidated. Presets exclude the file reference, and loading a new source clears it from the workspace. See [caption validation evidence and limits](Docs/Planning/EXTERNAL-SUBTITLE-EVIDENCE.md).

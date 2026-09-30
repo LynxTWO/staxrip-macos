@@ -10,6 +10,14 @@ final class QueueFileAccess: ObservableObject {
 
     func review(_ job: QueueJob, destination: Bool) {
         guard !reviewing else { return }
+        // Accessibility/menu actions need not leave a key window. Keep the panel
+        // attached to the workspace instead of falling back to a separate window.
+        guard let window = NSApp.mainWindow ?? NSApp.windows.first(where: {
+            $0.isVisible && $0.canBecomeMain && !($0 is NSPanel)
+        }), window.attachedSheet == nil else {
+            result = (job.id, "Bring the queue window forward and close its current dialog, then review access again.")
+            return
+        }
         let expected = destination ? URL(fileURLWithPath: job.destination).deletingLastPathComponent() : URL(fileURLWithPath: job.source)
         let picker = NSOpenPanel()
         picker.title = destination ? "Review destination folder access" : "Review source access"
@@ -21,6 +29,7 @@ final class QueueFileAccess: ObservableObject {
         panel = picker; reviewing = true; result = nil
         let completion: (NSApplication.ModalResponse) -> Void = { [weak self, weak picker] response in
             guard let self else { return }
+            picker?.orderOut(nil)
             defer { self.panel = nil; self.reviewing = false }
             let message: String
             if response != .OK {
@@ -32,7 +41,6 @@ final class QueueFileAccess: ObservableObject {
             }
             self.result = (job.id, message)
         }
-        if let window = NSApp.keyWindow { picker.beginSheetModal(for: window, completionHandler: completion) }
-        else { picker.begin(completionHandler: completion) }
+        picker.beginSheetModal(for: window, completionHandler: completion)
     }
 }

@@ -4,7 +4,7 @@ Version: 0.1. Date: 2026-09-30. Status: In progress.
 SLICE STATE
 Milestone: M1 through M3 local and native checks passed; hosted regression pending.
 Blocked by: None external.
-Evidence so far: PUBLICATION-RESPONSIVENESS-EVIDENCE.md records worker/cancellation/collision tests and native access/encode acceptance, with actual blocked-native-call reproduction not claimed.
+Evidence so far: PUBLICATION-RESPONSIVENESS-EVIDENCE.md records worker/cancellation/collision tests and native access/encode acceptance, including a real background link wait, responsive stop/access controls, preserved diagnostic interruption and explicit recovery/retry.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

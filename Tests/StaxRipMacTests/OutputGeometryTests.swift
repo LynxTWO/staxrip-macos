@@ -41,14 +41,22 @@ struct OutputGeometryTests {
         return source
     }
     private func finish(_ batch: BatchController) async throws {
-        let deadline = Date().addingTimeInterval(20)
-        while batch.running && Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
-        if batch.running { batch.cancel() }
-        try #require(!batch.running)
+        do {
+            while batch.running { try await Task.sleep(for: .milliseconds(10)) }
+        } catch {
+            batch.cancel()
+            throw error
+        }
     }
-    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)))
     func generatedPortraitLandscapeAndCropExportsHaveVerifiedRasterSize() async throws {
-        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let root = try directory()
+        var activeBatch: BatchController?
+        defer {
+            // A timed-out test must not delete staging while its operation is alive.
+            if activeBatch?.running == true { activeBatch?.cancel() }
+            else { try? FileManager.default.removeItem(at: root) }
+        }
         let tools = try #require(FFmpegTools.discover())
         let landscape = try await fixture(root, size: "160x96", tools: tools)
         let portrait = try await fixture(root, size: "98x160", tools: tools)
@@ -59,7 +67,16 @@ struct OutputGeometryTests {
             if tuple.2 { c.picture.cropLeft = 4; c.cropTop = 2 }
             jobs.append(QueueJob(id: UUID(), source: tuple.0.path, isDemo: false, destination: root.appendingPathComponent("result\(index).mkv").path, configuration: c, created: Date()))
         }
-        let batch = BatchController(journalURL: root.appendingPathComponent("journal.json"))
+        // Reproduce the former 20-second helper limit without relying on runner load.
+        var delayedPublication = false
+        let batch = BatchController(journalURL: root.appendingPathComponent("journal.json"), publishOutput: { staged, output in
+            if !delayedPublication {
+                delayedPublication = true
+                try await Task.sleep(for: .seconds(21))
+            }
+            try await ExportPublication.publishAsync(staged: staged, destination: output)
+        })
+        activeBatch = batch
         batch.tools = tools; batch.encoders = ["libx264"]; batch.start(jobs); try await finish(batch)
         for (index, job) in jobs.enumerated() {
             let status = try #require(batch.statuses[job.id]); try #require(status.phase == "Completed", Comment(rawValue: status.detail))
@@ -73,9 +90,15 @@ struct OutputGeometryTests {
         #expect(try Data(contentsOf: landscape) == landscapeBytes); #expect(try Data(contentsOf: portrait) == portraitBytes)
         #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).allSatisfy { !$0.hasPrefix(".staxrip-batch-") })
     }
-    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)))
     func droppedResizeCannotPublishEvenWhenEncoderSucceeds() async throws {
-        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let root = try directory()
+        var activeBatch: BatchController?
+        defer {
+            // A timed-out test must not delete staging while its operation is alive.
+            if activeBatch?.running == true { activeBatch?.cancel() }
+            else { try? FileManager.default.removeItem(at: root) }
+        }
         let tools = try #require(FFmpegTools.discover()), source = try await fixture(root, size: "160x96", tools: tools)
         let original = try Data(contentsOf: source), prior = root.appendingPathComponent("prior.mkv")
         try Data("Keep prior output".utf8).write(to: prior)
@@ -86,6 +109,7 @@ struct OutputGeometryTests {
         try Data(body.utf8).write(to: script); try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
         let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: root.appendingPathComponent("result.mkv").path, configuration: configuration("1280 × 720"), created: Date())
         let batch = BatchController(journalURL: root.appendingPathComponent("journal.json"))
+        activeBatch = batch
         batch.tools = FFmpegTools(ffmpeg: script, ffprobe: tools.ffprobe); batch.encoders = ["libx264"]; batch.start([job]); try await finish(batch)
         #expect(batch.statuses[job.id]?.phase == "Failed")
         #expect(batch.statuses[job.id]?.detail.contains("Frame size verification:") == true)

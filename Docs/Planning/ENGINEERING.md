@@ -154,3 +154,7 @@ Approved R-010 under delegated Slice 007: validated source orientation shared by
 ## Queue preflight extension, 2026-09-30
 
 Approved R-011 under delegated Slice 008: bounded read-only queue preflight with truthful deferred checks. Gates queue-review, queue-review-scope, queue-review-lifecycle and queue-review-ui bind S8-001 through S8-004. Consequence: local_only observations with no staging, encoding, recovery or output writes. Existing execution/publication remains independently validated.
+
+## Batch cleanup extension, 2026-09-30
+
+Approved R-012 under delegated Slice 009: report and persist batch cleanup failures while preserving the media outcome. Gates batch-cleanup-success, batch-cleanup-published, batch-cleanup-failed and batch-cleanup-lifecycle bind S9-001 through S9-004. Consequence: user_data for removal of the current operation's owned temporary directory only; source, final output and unrelated siblings remain protected. No recovery schema change or deletion of historical leftovers.

@@ -145,7 +145,7 @@ final class CustomPresetStore: ObservableObject {
             published = true
         } catch { operationError = error }
         do { try FileManager.default.removeItem(at: staging) }
-        catch { throw NativeExportCleanupError(directory: staging, publishedOutput: published ? file : nil, operationError: operationError, cleanupError: error) }
+        catch { throw ExportCleanupError(directory: staging, publishedOutput: published ? file : nil, operationError: operationError, cleanupError: error) }
         if let operationError { throw operationError }
     }
     private func change(_ next: [CustomPreset]) throws {

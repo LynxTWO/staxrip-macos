@@ -45,7 +45,7 @@ struct ExportPublication {
     }
 }
 
-struct NativeExportCleanupError: LocalizedError {
+struct ExportCleanupError: LocalizedError {
     let directory: URL
     let publishedOutput: URL?
     let operationError: Error?
@@ -53,17 +53,17 @@ struct NativeExportCleanupError: LocalizedError {
 
     var errorDescription: String? {
         let outcome = publishedOutput == nil ? "No output was published." : "The export was saved successfully."
-        let operation = operationError.map { " Operation: \($0.localizedDescription)" } ?? ""
+        let operation = operationError.map { $0 is CancellationError ? " Operation was cancelled." : " Operation: \($0.localizedDescription)" } ?? ""
         let error = cleanupError as NSError
         return "\(outcome) Temporary export files could not be removed at \(directory.path). \(error.localizedDescription) [\(error.domain):\(error.code)]\(operation)"
     }
 }
 
 // Only call this for a directory created by the current export, after its writer
-// completion callback. Retry transient removal errors without abandoning cleanup
+// completion callback or process exit and pipe draining. Retry transient removal errors without abandoning cleanup
 // when the operation's Task has already been cancelled.
 @MainActor
-struct NativeExportStaging {
+struct ExportStaging {
     static func remove(_ directory: URL,
                        removeItem: (URL) throws -> Void = { try FileManager.default.removeItem(at: $0) },
                        wait: (Double) async -> Void = { seconds in
@@ -96,7 +96,7 @@ struct NativeExportStaging {
 final class NativeExportService {
     private let removeStaging: (URL) async throws -> Void
 
-    init(removeStaging: @escaping (URL) async throws -> Void = { try await NativeExportStaging.remove($0) }) {
+    init(removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) }) {
         self.removeStaging = removeStaging
     }
 
@@ -179,7 +179,7 @@ final class NativeExportService {
         poll.cancel()
         do { try await removeStaging(temporary) }
         catch {
-            throw NativeExportCleanupError(directory: temporary, publishedOutput: publishedOutput,
+            throw ExportCleanupError(directory: temporary, publishedOutput: publishedOutput,
                                            operationError: operationError, cleanupError: error)
         }
         if let operationError { throw operationError }
@@ -233,7 +233,7 @@ final class ExportController: ObservableObject {
                 }
                 result = destination
                 status = "Export complete"
-            } catch let error as NativeExportCleanupError {
+            } catch let error as ExportCleanupError {
                 result = error.publishedOutput
                 failure = error.localizedDescription
                 status = error.publishedOutput == nil ? "Export stopped · temporary files remain" : "Export saved · temporary files remain"

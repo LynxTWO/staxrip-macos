@@ -26,6 +26,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-019 | 2026-09-29 | Reusable presets and settings undo | Confirmed | |
 | D-020 | 2026-09-30 | Validated source orientation | Confirmed | |
 | D-021 | 2026-09-30 | Read-only queue preflight | Confirmed | |
+| D-022 | 2026-09-30 | Report batch staging cleanup | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -328,3 +329,17 @@ Options considered: optional read-only review; mandatory full decode/encode dry 
 Consequences: Per-item current observations, cancellation, invalidation on intent changes and no output/recovery writes. Execution remains authoritative. No licensing, release or listening decision.
 
 Revisit when: Scheduling, disk-space estimates or full-media preflight become a separately scoped requirement.
+
+## D-022: Report batch staging cleanup
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build SLICE-009-batch-cleanup.md under autonomous non-audio delegation.
+
+Because: BatchController silently discards removal failures after encoding. An overnight batch can otherwise leave temporary data without explaining what happened, unlike the native exporter.
+
+Options considered: keep best-effort removal; reuse bounded native cleanup with explicit outcome reporting; sweep old staging on launch. Choose reporting and the shared primitive. Sweeping old data needs a separate ownership and recovery design.
+
+Consequences: A published file remains Completed, while a cleanup warning stops the current batch and persists in existing status detail. Cancellation and encoder failures retain their primary outcome. No new stored fields, dependency, release or audio scope.
+
+Revisit when: Explicit stale-staging recovery or filesystem-specific qualification is scoped.

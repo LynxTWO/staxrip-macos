@@ -4,6 +4,7 @@ struct EncodePlan: Sendable {
     let arguments: [String]
     let containerPreservation: ContainerPreservation
     let outputGeometry: OutputGeometry
+    let outputDisplayAspect: OutputDisplayAspect
     let externalSubtitle: ExternalSubtitleExport?
     let expectedCodec: String
     let expectedAudio: String?
@@ -61,6 +62,8 @@ struct EncodePlan: Sendable {
         }
         let outputGeometry = try OutputGeometry(width: width - picture.cropLeft - picture.cropRight,
                                                 height: height - c.cropTop - c.cropBottom, resolution: c.resolution)
+        let outputDisplayAspect = try OutputDisplayAspect(width: outputGeometry.width, height: outputGeometry.height,
+                                                         sampleAspectRatio: video.sample_aspect_ratio)
         let audio = try selectedStreams(probe, type: "audio", indices: c.audioTracks)
         let subtitles = try selectedStreams(probe, type: "subtitle", indices: c.subtitleTracks)
         let keepSubtitles = c.subtitleMode == "Keep embedded tracks"
@@ -128,12 +131,12 @@ struct EncodePlan: Sendable {
         args += ["-map_metadata", "0", "-map_chapters", trimmed ? "-1" : "0"]
         if c.container == "MP4" { args += ["-movflags", "+faststart"] }
         args += [staged.path]
-        return EncodePlan(arguments: args, containerPreservation: containerPreservation, outputGeometry: outputGeometry, externalSubtitle: external, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitle: external, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: (keepSubtitles ? subtitles.count : 0) + (external == nil ? 0 : 1),
-                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")" + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" } ?? ""))
+                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")" + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" } ?? "") + " · " + outputDisplayAspect.summary)
     }
 
     static func validateHDRSettings(_ c: EncodeConfiguration) throws {

@@ -52,3 +52,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 26. [Slice 016: attached workspace file dialogs](SLICE-016-workspace-file-panels.md).
 
 [Workspace file dialog evidence](WORKSPACE-FILE-PANEL-EVIDENCE.md) records Slice 016 scoped local/native/hosted acceptance.
+
+27. [Slice 017: declared display proportions](SLICE-017-display-aspect.md) and [feasibility research](DISPLAY-ASPECT-RESEARCH.md).
+
+[Display proportion evidence](DISPLAY-ASPECT-EVIDENCE.md) records Slice 017 scoped local/native/hosted acceptance.

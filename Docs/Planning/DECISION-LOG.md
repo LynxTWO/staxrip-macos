@@ -34,6 +34,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-027 | 2026-09-30 | Responsive batch publication and access review | Confirmed | |
 | D-028 | 2026-09-30 | Verified external plain SRT subtitles | Confirmed | |
 | D-029 | 2026-09-30 | Attached workspace file dialogs with captured intent | Confirmed | |
+| D-030 | 2026-09-30 | Verify declared display proportions | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -448,3 +449,17 @@ Options considered: keep mixed panel styles; replace every app dialog; scope onl
 Consequences: Attached source/folder/session/reference dialogs; one in-flight workspace request; captured save contents; cancelled, duplicate and stale callbacks cannot change newer intent. Existing document I/O remains bounded synchronous work. Audio, presets, Quick Export, persistent bookmarks and broad I/O migration are excluded.
 
 Revisit when: Other dialogs, durable permission recovery or broader filesystem responsiveness are scoped.
+
+## D-030: Verify declared display proportions
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 017 under autonomous non-audio delegation after Slice 016 hosted closure.
+
+Because: Generated files can share raster dimensions while a changed sample aspect ratio alters their displayed shape. Twelve software crop/fit exports preserve exact rational display proportions, giving an independent validation contract beyond frame width and height.
+
+Options considered: assume square pixels; rewrite every source to square pixels; compare declared source/output display fractions while keeping genuinely unknown source metadata explicit. Choose the last option without changing filters or inventing missing information.
+
+Consequences: Exact reduced-rational stream geometry verification when a valid source ratio exists; explicit unavailable result for unknown source ratio; wrong or missing output ratio fails a known contract. No new persistent fields, picture filters, audio, broader HDR/orientation or release scope.
+
+Revisit when: Pixel-shape overrides, square-pixel conversion, frame-varying metadata or broader anamorphic-film qualification are scoped.

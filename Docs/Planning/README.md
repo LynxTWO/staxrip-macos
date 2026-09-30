@@ -56,3 +56,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 27. [Slice 017: declared display proportions](SLICE-017-display-aspect.md) and [feasibility research](DISPLAY-ASPECT-RESEARCH.md).
 
 [Display proportion evidence](DISPLAY-ASPECT-EVIDENCE.md) records Slice 017 scoped local/native/hosted acceptance.
+
+28. [Slice 018: filtered frame stepping](SLICE-018-filtered-frame-stepping.md) and [feasibility research](FRAME-STEPPING-RESEARCH.md).
+
+[Frame stepping evidence](FRAME-STEPPING-EVIDENCE.md) records Slice 018 scoped local/native/hosted acceptance.

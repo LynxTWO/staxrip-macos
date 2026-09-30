@@ -101,7 +101,7 @@ This foundation uses FFmpeg; it is not the requested finished original or best-i
 
 ### Picture comparisons and saved recipes
 
-**Preview picture** renders original and filtered SDR BT.709 stills with matching source timestamps. It uses the queue's crop, resize and deinterlace plan, offers fit/100 percent views, and marks old results out of date. It does not preview compression quality or HDR display output. See [scope and evidence](Docs/Planning/PICTURE-PREVIEW-EVIDENCE.md).
+**Preview picture** renders original and filtered SDR BT.709 stills with matching source timestamps. It uses the queue's crop, resize and deinterlace plan, offers fit/100 percent views, and marks old results out of date. Previous/Next frame controls scan decoded timestamps and verify both pictures against the selected frame, including supported variable-rate sources. Stepping stops at trim boundaries; source/settings changes require a fresh comparison. Scans start from the beginning and can time out on long sources. It does not preview compression quality or HDR display output. See [scope and evidence](Docs/Planning/PICTURE-PREVIEW-EVIDENCE.md).
 
 **My presets** saves source-independent encoding recipes. Crop, trim, selected source tracks and paths are excluded; applying a recipe retains those values in the current workspace. **Undo settings** and **Redo** affect workspace configuration only, not queue jobs or text editing. Library writes detect conflicts from another app instance; Reload resolves a stale snapshot after review. Preset automated, native and hosted checks passed within [the documented scope](Docs/Planning/CUSTOM-PRESET-EVIDENCE.md).
 

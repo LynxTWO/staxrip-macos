@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 011: Verify retained chapters and attachments
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Complete within recorded limits.
 
 SLICE STATE
-Milestone: M1 and M2 implemented; local tests passed; native walkthrough blocked by locked Mac; hosted check pending.
+Milestone: M1 through M3 complete; local, native and hosted product checks passed at d297f75.
 Blocked by: None external.
 Evidence so far: Generated MKV preserved chapter gaps and attachment SHA-256; MP4 changed chapter gaps and timestamp precision. Explicit limits are recorded in the local feasibility note.
 Last audit: 2026-09-30.

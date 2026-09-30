@@ -1,6 +1,6 @@
 # Container preservation evidence
 
-Date: 2026-09-30. Slice 011 / D-024 / R-014. In progress; native acceptance pending.
+Date: 2026-09-30. Slice 011 / D-024 / R-014. Complete within recorded limits.
 
 ## Implemented boundary
 
@@ -22,8 +22,8 @@ Two controlled encoder wrappers first encoded normally, then remuxed only their 
 
 Final release regression: 118 tests in 22 suites passed in 10.056 seconds, with 14 existing opt-in skips. Optimized executable build passed in 12.50 seconds. Scaffold audit passed with zero findings.
 
-## Pending gates
+## Native and hosted acceptance
 
-Native generated queue encode, Completed detail, and output inspector walkthrough are pending. The computer-control tool reported the Mac locked and automatic unlock unavailable. The previously running Slice 010 preview is left intact; the current executable has only command-line build/test validation. No native acceptance or updated app-bundle claim is made.
+After the owner unlocked the Mac, the optimized ad-hoc app was rebuilt and a generated session loaded without execution. Check queue passed; explicit Start queue produced Completed with two verified chapter titles/times and one attachment payload/name/type. The screenshot and accessibility tree showed the complete scoped result. Opening that output in the inspector showed both chapter titles/ranges and notes.txt, text/plain. An independent SHA-256 of the original attachment matched the output probe. Source bytes remained unchanged and no owned staging directory remained. Computer control briefly reported noWindowsAvailable during encoding; the process remained alive, reconnection worked and Completed was observed. No app crash was established.
 
-Hosted product check is pending. Audio listening remains parked. Broader platform, long-film, metadata-corpus and release qualification remain separate work. No merge or release authorization is inferred.
+Hosted product check passed at d297f75: run 36716287551, job 109889911322, completed 2026-09-30 at 12:48:39 UTC in 8m01s. Audio listening remains parked. Broader platform, long-film, metadata-corpus and release qualification remain separate work. No merge or release authorization is inferred.

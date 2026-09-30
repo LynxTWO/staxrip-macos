@@ -34,3 +34,7 @@ Validation: release regression reported 71 tests in 13 suites passed in 8.897 se
 
 Hosted follow-up: PR 17's first run failed the cancellation test differently: one export published before the cancellation callback ran. The callback was driven by a separately scheduled progress task, which can lose the scheduling race to a short export. NativeExportService now sends its initial progress notification synchronously after submitting exportAsynchronously and before suspension. The active-cancellation test requires that first notification to be zero, then cancels the submitted session. This addresses callback ordering; it does not retrospectively identify the earlier staging-removal error. Hosted confirmation remains required.
 The concrete next proposal is SLICE-003-video-inspection.md. Its numbering supersedes the original proposed ordering: multichannel stays deferred while audio is parked. No video color implementation is included in the native cleanup PR.
+
+## Current checkpoint, 2026-09-29
+
+The earlier pending-hosted notes are historical. Native cleanup PR 17 passed run 36599311645; video inspection PR 18 passed run 36600485460; static HDR10 PR 20 passed run 36607764563 at product commit 16a889c. HDR10-EVIDENCE.md records the local native walkthrough and remaining production qualification. The next proposed capability is filtered picture preview. Audio listening stays paused. No PR has been merged or release published.

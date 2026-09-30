@@ -1,5 +1,5 @@
 # StaxRip Mac Slice 004: Verified static HDR10 export
-Version: 0.2. Date: 2026-09-29. Status: Implemented; local verification complete within the stated scope.
+Version: 0.2. Date: 2026-09-29. Status: Implemented; local and hosted verification complete within the stated scope.
 
 SLICE STATE
 Milestone: M1-M3 implemented with local synthetic, regression and native queue evidence; native session/recovery/editor walkthrough complete; owner spoken and calibrated-display qualification remain separate.

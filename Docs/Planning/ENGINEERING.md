@@ -158,3 +158,7 @@ Approved R-011 under delegated Slice 008: bounded read-only queue preflight with
 ## Batch cleanup extension, 2026-09-30
 
 Approved R-012 under delegated Slice 009: report and persist batch cleanup failures while preserving the media outcome. Gates batch-cleanup-success, batch-cleanup-published, batch-cleanup-failed and batch-cleanup-lifecycle bind S9-001 through S9-004. Consequence: user_data for removal of the current operation's owned temporary directory only; source, final output and unrelated siblings remain protected. No recovery schema change or deletion of historical leftovers.
+
+## Container inspection extension, 2026-09-30
+
+Approved R-013 under delegated Slice 010: inspect reported chapters and embedded attachment metadata, with bounded labels/rows and request identity. Gates container-inspection-data, container-inspection-bounds, container-inspection-ui and container-inspection-identity bind S10-001 through S10-004. Consequence: local_only read-only observations. No filename tag is interpreted as a path and no attachment payload is extracted or loaded.

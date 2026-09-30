@@ -34,3 +34,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 18. [Slice 008: queue preflight](SLICE-008-queue-preflight.md) and [preflight evidence](QUEUE-PREFLIGHT-EVIDENCE.md)
 
 19. [Slice 009: batch cleanup reporting](SLICE-009-batch-cleanup.md) and [cleanup evidence](BATCH-CLEANUP-EVIDENCE.md)
+
+20. [Slice 010: chapters and attachments inspection](SLICE-010-container-inspection.md) and [inspection evidence](CONTAINER-INSPECTION-EVIDENCE.md)

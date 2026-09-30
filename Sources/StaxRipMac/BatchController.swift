@@ -24,6 +24,7 @@ final class BatchController: ObservableObject {
     @Published var inspecting = false
     @Published var inspection: MediaProbe?
     @Published var inspectionError: String?
+    private var inspectionGeneration = UUID()
     @Published var recovery: BatchJournal?
     @Published var recoveryError: String?
     @Published private(set) var reviewing = false
@@ -132,11 +133,20 @@ final class BatchController: ObservableObject {
     }
 
     func inspect(_ source: URL) async {
+        let id = UUID(); inspectionGeneration = id
+        inspection = nil; inspectionError = nil; inspecting = false
         guard let tools else { inspectionError = "FFmpeg tools are unavailable."; return }
-        inspecting = true; inspection = nil; inspectionError = nil
-        defer { inspecting = false }
-        do { inspection = try await MediaProbe.read(source, tools: tools) }
-        catch { inspectionError = error.localizedDescription }
+        inspecting = true
+        defer { if inspectionGeneration == id { inspecting = false } }
+        do {
+            let result = try await MediaProbe.read(source, tools: tools)
+            try Task.checkCancellation()
+            guard inspectionGeneration == id else { return }
+            inspection = result
+        } catch {
+            guard inspectionGeneration == id else { return }
+            inspectionError = error is CancellationError ? "Inspection cancelled." : error.localizedDescription
+        }
     }
 
     func start(_ jobs: [QueueJob]) {

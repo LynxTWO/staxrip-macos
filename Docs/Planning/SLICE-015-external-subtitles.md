@@ -62,3 +62,7 @@ S15-001 through S15-005 have scoped local/native/hosted evidence and known timin
 Later subtitle offset/trim, multiple external tracks and styled formats can extend a verified contract under separate briefs rather than relying only on mux success.
 
 Approved for build by: Owner autonomous non-audio delegation, activated under D-028 after Slice 014 closure.
+
+### Native acceptance adjustment, 2026-09-30
+
+The final-build session reopen walkthrough entered a modal state with no visible chooser (File menu commands disabled; main window remained visible). Saving succeeded, and both caption exports completed. To complete the planned save/reopen acceptance, replace only the session open/save standalone modal panels and replacement confirmation with sheets attached to the main workspace. Preserve replacement confirmation and cancel behavior. This is a bounded prerequisite under the existing autonomous authorization, not activation of the deferred general workspace-panel slice. Verify native save/open/cancel and restore without automatic execution; other source/destination/preset panels remain outside this change.

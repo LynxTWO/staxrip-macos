@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 017 declared display proportions under D-030. Slice 016 closed at 42634d9 with hosted run 36787875488.
+Next: Slice 018 filtered frame stepping under D-031. Slice 017 closed at b177432 with hosted run 36790619197.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -190,3 +190,7 @@ Approved R-019 under delegated Slice 016: attach the five workspace file-command
 ## Slice 017 display proportion checkpoint
 
 Approved R-020 under delegated Slice 017: independently verify known declared stream display proportions using upright crop dimensions and bounded reduced rational arithmetic. Gates display-aspect-preservation, display-aspect-refusal, display-aspect-unknown and display-aspect-ui bind S17-001 through S17-004. Consequence: current-operation staged-output verification only; unknown source ratios remain explicit, filters and saved settings remain unchanged, and existing source/output protection stays in force.
+
+## Slice 018 frame stepping checkpoint
+
+Approved R-021 under delegated Slice 018: discover decoded source-frame neighbors and require original/filtered timestamps to match the chosen rational identity, retaining the existing preview scope. Gates frame-step-neighbor, frame-step-picture, frame-step-lifecycle and frame-step-ui bind S18-001 through S18-004. Consequence: local-only bounded decoding and ephemeral images; no media writes, saved-format changes, audio or release scope.

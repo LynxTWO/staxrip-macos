@@ -96,3 +96,5 @@ Slice 017 is active under D-030/R-020: verify known declared display proportions
 Slice 017 local/native display-proportion verification passed, including 157 regression tests and exact versus unknown native outputs. A real near-square MKV rounding boundary remains a strict refusal; MP4 preserves that fixture. Hosted gate pending. See DISPLAY-ASPECT-EVIDENCE.md.
 
 Slice 017 closed with hosted success at b177432, run 36790619197, 157 tests in 461.121 seconds and an 8m57s job. PR 34 stays draft and unmerged. Audio listening remains parked.
+
+Slice 018 is active under D-031/R-021 after Slice 017 closure. Scope is decoded-timestamp stepping in the existing filtered still comparison, with explicit source identity, trim and lifecycle checks. Audio stays parked.

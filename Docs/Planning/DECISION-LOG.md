@@ -35,6 +35,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-028 | 2026-09-30 | Verified external plain SRT subtitles | Confirmed | |
 | D-029 | 2026-09-30 | Attached workspace file dialogs with captured intent | Confirmed | |
 | D-030 | 2026-09-30 | Verify declared display proportions | Confirmed | |
+| D-031 | 2026-09-30 | Step filtered previews by decoded timestamp | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -463,3 +464,17 @@ Options considered: assume square pixels; rewrite every source to square pixels;
 Consequences: Exact reduced-rational stream geometry verification when a valid source ratio exists; explicit unavailable result for unknown source ratio; wrong or missing output ratio fails a known contract. No new persistent fields, picture filters, audio, broader HDR/orientation or release scope.
 
 Revisit when: Pixel-shape overrides, square-pixel conversion, frame-varying metadata or broader anamorphic-film qualification are scoped.
+
+## D-031: Step filtered previews by decoded timestamp
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 018 under autonomous non-audio delegation after Slice 017 hosted closure.
+
+Because: Current filtered preview requires typed time requests. Generated variable-rate gaps demonstrate that a guessed reciprocal-FPS step can skip or repeat pictures, while decoded rational timestamps identify adjacent frames and match full-history filtered pixels.
+
+Options considered: fixed frame-rate offsets; native player stepping disconnected from filtered images; bounded decoded-timestamp discovery followed by verified full-history rendering. Choose the third, preserving the existing preview scope and temporal context.
+
+Consequences: Previous/next preview controls, bounded streaming neighbor discovery, source identity and rational result checks, explicit trim boundaries and stale/cancel/failure behavior. No motion playback, accelerated seeking, new encoding behavior, audio, saved-schema change or distribution action.
+
+Revisit when: Motion preview, durable indexes, broader picture formats or long-source performance are scoped.

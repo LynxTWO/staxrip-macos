@@ -1,10 +1,11 @@
 # StaxRip Mac Slice 009: Report batch staging cleanup
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Done with evidence.
 
 SLICE STATE
-Milestone: M1 and M2 implemented; M3 automated and native checks passed; hosted check next.
+Milestone: M1 and M2 implemented; M3 automated, native and hosted checks passed.
 Blocked by: None external.
 Evidence so far: BATCH-CLEANUP-EVIDENCE.md records ten focused tests and the 109-test regression.
+Hosted: run 36711323507 passed at 8eef657 in 8 minutes 35 seconds.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

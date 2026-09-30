@@ -56,3 +56,5 @@ Slice 006 hosted follow-up passed in 8m53s at 0b4f96a (run 36703925176). Source 
 Slice 008 hosted run 36709148929 passed at 852306f in 8 minutes 20 seconds. PR 25 remains draft and unmerged. Local and hosted queue preflight criteria are closed within the evidence limits.
 
 Slice 009 local cleanup reporting passed ten focused tests, a 109-test regression and a native two-job generated-video batch. No staging remained and source bytes were preserved. Injected errors preserve published/cancelled/failed outcomes in recovery and stop later jobs. Hosted check pending; see BATCH-CLEANUP-EVIDENCE.md.
+
+Slice 009 hosted run 36711323507 passed at 8eef657 in 8 minutes 35 seconds. PR 26 remains draft and unmerged. Cleanup criteria are closed within the recorded scope.

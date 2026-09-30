@@ -1,5 +1,5 @@
 # Batch cleanup evidence
-Date: 2026-09-30. Scope: Slice 009, D-022. Status: Automated and native checks passed; hosted check pending.
+Date: 2026-09-30. Scope: Slice 009, D-022. Status: Automated, native and hosted checks passed.
 
 ## Behavior
 
@@ -17,7 +17,7 @@ Controlled encoder scripts wrote an owned partial file, then either exited 42 wi
 
 Existing shared-helper tests cover wrapped transient retries after cancellation, maximum retries, immediate permanent failure, already-absent directories and missing-child errors that must not hide a surviving directory. Existing real batch cancellation/success tests exercise default cleanup without injection.
 
-After the cancellation wording refinement, the full release regression passed 109 tests in 20 suites in 10.125 seconds, with 14 existing opt-in skips. Existing audio regression tests do not constitute new audio acceptance. The optimized ad-hoc app built in 11.78 seconds. Hosted validation follows separately.
+After the cancellation wording refinement, the full release regression passed 109 tests in 20 suites in 10.125 seconds, with 14 existing opt-in skips. Existing audio regression tests do not constitute new audio acceptance. The optimized ad-hoc app built in 11.78 seconds. Hosted macOS validation passed in 8 minutes 35 seconds at product commit 8eef657: [run 36711323507](https://github.com/LynxTWO/staxrip-macos/actions/runs/36711323507/job/109873555003).
 
 ## Native receipt
 

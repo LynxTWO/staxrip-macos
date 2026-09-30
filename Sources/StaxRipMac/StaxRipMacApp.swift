@@ -41,10 +41,10 @@ struct StaxRipMacApp: App {
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(after: .newItem) {
-                Button("Open Source…") { model.chooseSource() }.keyboardShortcut("o").disabled(exporter.running || batch.running)
-                Button("Save Session…") { model.saveSession() }.keyboardShortcut("s", modifiers: [.command, .shift])
-                Button("Open Session…") { model.openSession() }.keyboardShortcut("o", modifiers: [.command, .shift]).disabled(exporter.running || batch.running)
-                Button("Add Configuration to Queue") { model.addToQueue() }.keyboardShortcut("j")
+                Button("Open Source…") { model.chooseSource() }.keyboardShortcut("o").disabled(exporter.running || batch.running || model.filePanelActive)
+                Button("Save Session…") { model.saveSession() }.keyboardShortcut("s", modifiers: [.command, .shift]).disabled(model.filePanelActive)
+                Button("Open Session…") { model.openSession() }.keyboardShortcut("o", modifiers: [.command, .shift]).disabled(exporter.running || batch.running || model.filePanelActive)
+                Button("Add Configuration to Queue") { model.addToQueue() }.keyboardShortcut("j").disabled(model.filePanelActive)
             }
         }
     }

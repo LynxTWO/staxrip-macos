@@ -47,4 +47,8 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 25. [Slice 015: verified external SRT subtitles](SLICE-015-external-subtitles.md) and [feasibility research](EXTERNAL-SUBTITLE-RESEARCH.md).
 
-[External subtitle evidence](EXTERNAL-SUBTITLE-EVIDENCE.md) records Slice 015 local checks and remaining acceptance.
+[External subtitle evidence](EXTERNAL-SUBTITLE-EVIDENCE.md) records Slice 015 scoped local/native/hosted acceptance.
+
+26. [Slice 016: attached workspace file dialogs](SLICE-016-workspace-file-panels.md).
+
+[Workspace file dialog evidence](WORKSPACE-FILE-PANEL-EVIDENCE.md) records Slice 016 scoped local/native/hosted acceptance.

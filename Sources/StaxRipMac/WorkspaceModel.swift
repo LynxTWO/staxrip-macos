@@ -1,6 +1,5 @@
 import SwiftUI
 import AVKit
-import UniformTypeIdentifiers
 
 struct EncodeConfiguration: Codable, Equatable {
     var codec = "AV1"
@@ -59,6 +58,14 @@ struct QueueJob: Identifiable, Codable, Equatable {
 
 @MainActor
 final class WorkspaceModel: ObservableObject {
+    private let filePanels: any WorkspacePanelPresenting
+    @Published private var fileRequestID: UUID?
+    private var fileSelectionPending = false
+    var filePanelActive: Bool { fileRequestID != nil }
+    init(filePanels: (any WorkspacePanelPresenting)? = nil) {
+        self.filePanels = filePanels ?? WorkspaceFilePanels()
+    }
+
     @Published var section = "Workspace"
     @Published var tab = "Video"
     @Published var config = EncodeConfiguration() {
@@ -182,61 +189,78 @@ final class WorkspaceModel: ObservableObject {
         SessionDocument(sourcePath: sourceURL?.path, configuration: config, outputFolder: outputFolder.path, outputStem: outputStem, jobs: jobs)
     }
 
-    private func sessionPanelWindow() -> NSWindow? {
-        guard let window = NSApp.mainWindow ?? NSApp.windows.first(where: {
-            $0.isVisible && $0.canBecomeMain && !($0 is NSPanel)
-        }), window.attachedSheet == nil else {
-            notice = "Bring the workspace forward and close its current dialog before opening or saving a session."
-            return nil
+    private struct FileIntent {
+        let id = UUID()
+        let snapshot: SessionDocument
+        let loadID: UUID
+    }
+    private func beginFileRequest() -> FileIntent? {
+        guard fileRequestID == nil else { return nil }
+        let intent = FileIntent(snapshot: sessionSnapshot, loadID: loadID)
+        fileRequestID = intent.id; fileSelectionPending = true
+        return intent
+    }
+    private func consumeSelection(_ intent: FileIntent) -> Bool {
+        guard fileRequestID == intent.id, fileSelectionPending else { return false }
+        fileSelectionPending = false
+        return true
+    }
+    @discardableResult
+    private func finishFileRequest(_ intent: FileIntent) -> Bool {
+        guard fileRequestID == intent.id else { return false }
+        fileRequestID = nil; fileSelectionPending = false
+        return true
+    }
+    private func intentIsCurrent(_ intent: FileIntent) -> Bool {
+        guard fileRequestID == intent.id else { return false }
+        guard sessionSnapshot == intent.snapshot, loadID == intent.loadID else {
+            finishFileRequest(intent)
+            notice = "The workspace changed while the dialog was open. Choose again to use the current settings."
+            return false
         }
-        return window
+        return true
+    }
+    private func selectFile(_ request: WorkspaceFileRequest, intent: FileIntent,
+                            completion: @escaping @MainActor (URL?) -> Void) {
+        if !filePanels.select(request, completion: completion), finishFileRequest(intent) {
+            notice = "Bring the workspace forward and close its current dialog, then try again."
+        }
     }
 
     func saveSession() {
-        guard let window = sessionPanelWindow() else { return }
-        let panel = NSSavePanel()
-        panel.title = "Save StaxRip Mac session"
-        panel.nameFieldStringValue = "StaxRip session.json"
-        panel.allowedContentTypes = [.json]
-        panel.beginSheetModal(for: window) { [weak self] response in
-            panel.orderOut(nil)
-            guard let self, response == .OK, let url = panel.url else { return }
+        guard let intent = beginFileRequest() else { return }
+        selectFile(.saveSession, intent: intent) { [weak self] url in
+            guard let self, self.consumeSelection(intent), self.finishFileRequest(intent), let url else { return }
             do {
-                let snapshot = self.sessionSnapshot
-                try snapshot.write(to: url)
-                self.savedSnapshot = snapshot
+                try intent.snapshot.write(to: url)
+                self.savedSnapshot = intent.snapshot
                 self.sessionName = url.deletingPathExtension().lastPathComponent
-                self.notice = "Session saved"
+                self.notice = self.sessionSnapshot == intent.snapshot ? "Session saved" : "Session snapshot saved. Current workspace has unsaved changes."
             } catch { self.error = error.localizedDescription }
         }
     }
 
     func openSession() {
-        guard let window = sessionPanelWindow() else { return }
-        let panel = NSOpenPanel()
-        panel.title = "Open StaxRip Mac session"
-        panel.allowedContentTypes = [.json]
-        panel.allowsMultipleSelection = false
-        panel.beginSheetModal(for: window) { [weak self] response in
-            panel.orderOut(nil)
-            guard let self, response == .OK, let url = panel.url else { return }
+        guard let intent = beginFileRequest() else { return }
+        selectFile(.openSession, intent: intent) { [weak self] url in
+            guard let self, self.consumeSelection(intent) else { return }
+            guard let url else { self.finishFileRequest(intent); return }
+            guard self.intentIsCurrent(intent) else { return }
             do {
                 let document = try SessionDocument.read(from: url)
-                let restore = { [weak self] in
-                    self?.restoreSession(document)
-                    self?.sessionName = url.deletingPathExtension().lastPathComponent
+                let restore: @MainActor (Bool) -> Void = { [weak self] confirmed in
+                    guard let self, self.fileRequestID == intent.id else { return }
+                    guard confirmed else { self.finishFileRequest(intent); return }
+                    guard self.intentIsCurrent(intent), self.finishFileRequest(intent) else { return }
+                    self.restoreSession(document)
+                    self.sessionName = url.deletingPathExtension().lastPathComponent
                 }
                 if self.savedSnapshot != self.sessionSnapshot {
-                    let alert = NSAlert()
-                    alert.messageText = "Replace the current workspace?"
-                    alert.informativeText = "Open this saved session in place of the current source, settings and queue. Cancel to save your current session first."
-                    alert.addButton(withTitle: "Open session")
-                    alert.addButton(withTitle: "Cancel")
-                    alert.beginSheetModal(for: window) { response in
-                        if response == .alertFirstButtonReturn { restore() }
+                    if !self.filePanels.confirmReplacement(completion: restore), self.finishFileRequest(intent) {
+                        self.notice = "Bring the workspace forward and close its current dialog before opening the session."
                     }
-                } else { restore() }
-            } catch { self.error = error.localizedDescription }
+                } else { restore(true) }
+            } catch { self.finishFileRequest(intent); self.error = error.localizedDescription }
         }
     }
 
@@ -259,11 +283,13 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func chooseSource() {
-        let panel = NSOpenPanel()
-        panel.title = "Open a source video"
-        panel.allowedContentTypes = [.movie, .video, .mpeg4Movie, .quickTimeMovie, UTType(filenameExtension: "mkv") ?? .movie]
-        panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK, let url = panel.url { load(url) }
+        guard let intent = beginFileRequest() else { return }
+        selectFile(.source, intent: intent) { [weak self] url in
+            guard let self, self.consumeSelection(intent) else { return }
+            guard let url else { self.finishFileRequest(intent); return }
+            guard self.intentIsCurrent(intent), self.finishFileRequest(intent) else { return }
+            self.load(url)
+        }
     }
 
     func load(_ url: URL, keepOutputName: Bool = false) {
@@ -313,13 +339,13 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func chooseOutput() {
-        let panel = NSOpenPanel()
-        panel.title = "Choose an output folder"
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.canCreateDirectories = true
-        panel.directoryURL = outputFolder
-        if panel.runModal() == .OK, let url = panel.url { outputFolder = url }
+        guard let intent = beginFileRequest() else { return }
+        selectFile(.destination(outputFolder), intent: intent) { [weak self] url in
+            guard let self, self.consumeSelection(intent) else { return }
+            guard let url else { self.finishFileRequest(intent); return }
+            guard self.intentIsCurrent(intent), self.finishFileRequest(intent) else { return }
+            self.outputFolder = url
+        }
     }
 
     func applyPreset(_ name: String) {
@@ -358,18 +384,17 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func exportQueue() {
-        let panel = NSSavePanel()
-        panel.title = "Export prototype queue"
-        panel.nameFieldStringValue = "staxrip-prototype-queue.json"
-        panel.allowedContentTypes = [.json]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            encoder.dateEncodingStrategy = .iso8601
-            try encoder.encode(jobs).write(to: url, options: .atomic)
-            notice = "Queue exported"
-        } catch { self.error = error.localizedDescription }
+        guard let intent = beginFileRequest() else { return }
+        selectFile(.exportQueue, intent: intent) { [weak self] url in
+            guard let self, self.consumeSelection(intent), self.finishFileRequest(intent), let url else { return }
+            do {
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+                encoder.dateEncodingStrategy = .iso8601
+                try encoder.encode(intent.snapshot.jobs).write(to: url, options: .atomic)
+                self.notice = self.jobs == intent.snapshot.jobs ? "Queue exported" : "Queue snapshot exported. The current queue has changed."
+            } catch { self.error = error.localizedDescription }
+        }
     }
 
     enum ImportError: LocalizedError {

@@ -61,3 +61,7 @@ S17-001 through S17-004 have scoped local/native/hosted evidence and explicit un
 Later explicit aspect overrides, square-pixel conversion and broader VFR/anamorphic qualification can build on a stated, independently checked display contract.
 
 Approved for build by: Owner autonomous non-audio delegation, activated under D-030 / R-020 after Slice 016 closure.
+
+## M3 research finding, 2026-09-30
+
+Full regression exposed near-square SAR loss in the existing MKV crop/fit case. Keep the exact contract; validate the same successful crop through MP4 and add the actual MKV rounding refusal as separate coverage. DISPLAY-ASPECT-RESEARCH.md records the filter, encoder and container evidence. This is an intentional compatibility restriction with an actionable message, not a relaxation of S17-001 or removal of raster coverage.

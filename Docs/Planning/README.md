@@ -36,3 +36,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 19. [Slice 009: batch cleanup reporting](SLICE-009-batch-cleanup.md) and [cleanup evidence](BATCH-CLEANUP-EVIDENCE.md)
 
 20. [Slice 010: chapters and attachments inspection](SLICE-010-container-inspection.md) and [inspection evidence](CONTAINER-INSPECTION-EVIDENCE.md)
+
+21. [Slice 011: retained container verification](SLICE-011-container-preservation.md) and [preservation evidence](CONTAINER-PRESERVATION-EVIDENCE.md)
+
+22. [Slice 012: full destination failure](SLICE-012-destination-capacity.md) and [capacity evidence](DESTINATION-CAPACITY-EVIDENCE.md)

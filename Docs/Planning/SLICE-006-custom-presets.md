@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 006: Reusable presets and settings undo
-Version: 0.1. Date: 2026-09-29. Status: Approved for build by delegated owner authority.
+Version: 0.1. Date: 2026-09-29. Status: Implemented; native verification blocked.
 
 SLICE STATE
-Milestone: M1, validated local preset library and settings history.
-Blocked by: None for this local feature.
-Evidence so far: WorkspaceModel.applyPreset currently mutates built-in settings; SessionDocument.validate supplies configuration validation. No reusable custom library or settings history exists.
+Milestone: M1-M2 implemented; M3 automated checks pass, native walkthrough pending.
+Blocked by: Mac locked during native GUI verification; manual unlock required.
+Evidence so far: CUSTOM-PRESET-EVIDENCE.md.
 Last audit: 2026-09-29.
 
 ## 1. What the slice proves

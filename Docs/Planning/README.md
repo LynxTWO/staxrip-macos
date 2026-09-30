@@ -26,3 +26,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 14. [Static HDR10 implementation and acceptance evidence](HDR10-EVIDENCE.md)
 
 15. [Slice 005: filtered picture comparison](SLICE-005-filtered-picture-preview.md) and [evidence](PICTURE-PREVIEW-EVIDENCE.md)
+
+16. [Slice 006: custom presets and settings history](SLICE-006-custom-presets.md) and [evidence / unlock checklist](CUSTOM-PRESET-EVIDENCE.md)

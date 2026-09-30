@@ -7,6 +7,7 @@ struct StaxRipMacApp: App {
     @StateObject private var model = WorkspaceModel()
     @StateObject private var exporter = ExportController()
     @StateObject private var audio = AudioController()
+    @StateObject private var presets = CustomPresetStore()
     @StateObject private var picturePreview = PicturePreviewController()
     @StateObject private var batch = BatchController(journalURL: BatchJournal.defaultURL)
     @AppStorage("appearance") private var appearance = "System"
@@ -18,6 +19,7 @@ struct StaxRipMacApp: App {
                 .environmentObject(batch)
                 .environmentObject(audio)
                 .environmentObject(picturePreview)
+                .environmentObject(presets)
                 .task { await batch.discover() }
                 .onChange(of: model.jobs) { before, after in
                     for old in before where !after.contains(old) { batch.reset(old.id) }

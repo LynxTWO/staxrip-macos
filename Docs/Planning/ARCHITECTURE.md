@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Approved Slice 006 reusable presets and settings undo; Slice 005 local evidence is complete and hosted validation is pending. Slice 004 has local and hosted evidence in HDR10-EVIDENCE.md; broader production qualification remains open.
+Next: Finish Slice 006 native preset walkthrough after Mac unlock. CUSTOM-PRESET-EVIDENCE.md records automated results and the blocker. Slice 005 native comparison and hosted validation passed; see PICTURE-PREVIEW-EVIDENCE.md. Slice 004 has local and hosted evidence in HDR10-EVIDENCE.md; broader production qualification remains open.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

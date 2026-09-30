@@ -10,6 +10,7 @@ struct WorkspaceView: View {
     @State private var showingTracks = false
     @State private var showingInspector = false
     @State private var showingPicturePreview = false
+    @State private var showingPresets = false
     @AppStorage("appearance") private var appearance = "System"
     @State private var isDropTarget = false
     var body: some View {
@@ -46,6 +47,7 @@ struct WorkspaceView: View {
         .sheet(isPresented: $showingInspector) {
             if let source = model.sourceURL { MediaInspectorView(source: source).environmentObject(batch) }
         }
+        .sheet(isPresented: $showingPresets) { PresetLibraryView().environmentObject(model) }
         .sheet(isPresented: $showingPicturePreview) {
             PicturePreviewView().environmentObject(model)
         }
@@ -76,6 +78,14 @@ struct WorkspaceView: View {
             preset("Compact AV1", subtitle: "Smaller files, more detail", symbol: "leaf")
             preset("Everyday HEVC", subtitle: "A balanced starting point", symbol: "sparkles")
             preset("H.264 Quality", subtitle: "Broad playback support", symbol: "play.rectangle")
+            Button("My presets…") { showingPresets = true }
+                .buttonStyle(.plain).font(.system(size: 12, weight: .medium)).padding(.top, 12)
+                .accessibilityHint("Save, review and reuse your encoding recipes without copying source-specific settings.")
+            HStack(spacing: 10) {
+                Button("Undo settings") { model.undoSettings() }.disabled(!model.canUndoSettings || model.loading)
+                Button("Redo") { model.redoSettings() }.disabled(!model.canRedoSettings || model.loading)
+                    .accessibilityLabel("Redo workspace settings")
+            }.buttonStyle(.borderless).font(.caption).padding(.top, 10)
             Button("Encoding terms…") { showingTerms = true }
                 .buttonStyle(.plain).font(.caption).padding(.top, 12)
                 .accessibilityHint("Opens explanations of video formats and loudness measurements.")

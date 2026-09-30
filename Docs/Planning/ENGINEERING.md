@@ -170,3 +170,7 @@ Approved R-014 under delegated Slice 011: verify retained flat chapter titles/ti
 ## Slice 012 destination capacity checkpoint
 
 Approved R-015 under delegated Slice 012: qualify real destination space exhaustion within a bounded, owned disk image. Gates capacity-failure, capacity-ownership, capacity-retry and capacity-ui bind S12-001 through S12-004. Consequence: generated fixture storage only; no owner-volume filling or file deletion. Production publication and cleanup are expected to remain unchanged.
+
+## Slice 013 output geometry checkpoint
+
+Approved R-016 under delegated Slice 013: enforce original raster dimensions and bounded resized raster fit before publication. Gates geometry-export, geometry-bounds, geometry-refusal and geometry-ui bind S13-001 through S13-004. Consequence: current-operation staged output verification only; no changed filters, stored format, source/prior output mutation or display-aspect guarantee.

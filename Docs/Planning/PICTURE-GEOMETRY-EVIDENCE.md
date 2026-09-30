@@ -1,6 +1,6 @@
 # Resized raster verification evidence
 
-Date: 2026-09-30. Slice 013 / D-026 / R-016. Local and native geometry checks passed; hosted check pending.
+Date: 2026-09-30. Slice 013 / D-026 / R-016. Complete within recorded geometry limits; separate native access findings remain open.
 
 ## Implemented contract
 
@@ -28,4 +28,4 @@ Restored-session file access and synchronous publication on the main thread are 
 
 ## Remaining gates
 
-Hosted regression pending. Broader raster/encoder corpus, display-aspect and anamorphic policies, restored-session access and blocked-publication responsiveness remain separate qualification. No merge or release.
+Hosted regression passed at 30b044b: run 36769620823 / job 110072394505, completed 2026-09-30 at 20:10:08 UTC in 9m19s. Broader raster/encoder corpus, display-aspect and anamorphic policies, restored-session access and blocked-publication responsiveness remain separate qualification. No merge or release.

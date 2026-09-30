@@ -70,3 +70,5 @@ Slice 012 actual capacity exhaustion and native retry passed on a disposable 64 
 Slice 012 closed with hosted success at a995ab3, run 36766809385 (9m31s), after correcting and negatively testing the inherited cancellation startup gate. Capacity evidence remains the separate local opt-in run, not a hosted disk-image claim.
 
 Slice 013 verifies resized raster output before publication. Focused, regression and explicit-picker native checks passed; hosted pending. Native investigation also found file-open waits for a restored source and a main-thread link syscall blocking publication until the destination had been selected through the native picker. These remain explicit reliability findings in PICTURE-GEOMETRY-EVIDENCE.md. Audio remains parked.
+
+Slice 013 geometry acceptance closed with hosted success at 30b044b, run 36769620823 (9m19s). Restored-session access and blocked-publication responsiveness remain the next scoped reliability work.

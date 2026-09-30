@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 013: Verify resized output dimensions
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Complete within recorded limits.
 
 SLICE STATE
-Milestone: M1 through M3 local and native geometry checks passed; hosted regression pending.
+Milestone: M1 through M3 local/native geometry checks and hosted regression passed at 30b044b.
 Blocked by: None external.
 Evidence so far: PICTURE-GEOMETRY-EVIDENCE.md records generated exports, dropped-filter refusal, 122-test regression and native sizes. Restored-session access and main-thread publication blocking were observed and are tracked separately.
 Last audit: 2026-09-30.

@@ -23,10 +23,12 @@ struct BatchCleanupTests {
                                      destination: root.appendingPathComponent("result.mkv").path, configuration: config, created: Date()))
     }
     private func finish(_ controller: BatchController) async throws {
-        let deadline = Date().addingTimeInterval(15)
-        while controller.running && Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
-        if controller.running { controller.cancel() }
-        #expect(!controller.running, "Batch should settle within the fixture deadline")
+        do {
+            while controller.running { try await Task.sleep(for: .milliseconds(10)) }
+        } catch {
+            controller.cancel()
+            throw error
+        }
     }
     private func second(_ job: QueueJob) -> QueueJob {
         QueueJob(id: UUID(), source: job.source, isDemo: job.isDemo,
@@ -38,17 +40,27 @@ struct BatchCleanupTests {
         #expect(try Data(contentsOf: root.appendingPathComponent(".staxrip-batch-unrelated/keep")) == Data("keep sibling".utf8))
     }
 
-    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)))
     func publishedCleanupFailureKeepsOutputAndStopsBeforeNextJob() async throws {
         let (root, tools, job) = try await fixture()
-        defer { try? FileManager.default.removeItem(at: root) }
+        var activeBatch: BatchController?
+        defer {
+            // Never remove a fixture while publication or writer shutdown is still active.
+            if activeBatch?.running == true { activeBatch?.cancel() }
+            else { try? FileManager.default.removeItem(at: root) }
+        }
         let source = try Data(contentsOf: URL(fileURLWithPath: job.source))
         let next = second(job), journal = root.appendingPathComponent("journal.json")
         var attempted: [URL] = []
-        let batch = BatchController(journalURL: journal, removeStaging: { directory in
+        let batch = BatchController(journalURL: journal, publishOutput: { staged, destination in
+            // Reproduce the former helper cutoff without relying on runner scheduling.
+            try await Task.sleep(for: .seconds(16))
+            try await ExportPublication.publishAsync(staged: staged, destination: destination)
+        }, removeStaging: { directory in
             attempted.append(directory)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
         })
+        activeBatch = batch
         batch.tools = tools; batch.encoders = ["libx264"]; batch.start([job, next])
         try await finish(batch)
         let status = try #require(batch.statuses[job.id])
@@ -81,7 +93,12 @@ struct BatchCleanupTests {
     @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)), arguments: [false, true])
     func failedOrCancelledWriterPreservesPrimaryOutcomeWhenCleanupFails(cancel: Bool) async throws {
         let (root, tools, job) = try await fixture()
-        defer { try? FileManager.default.removeItem(at: root) }
+        var activeBatch: BatchController?
+        defer {
+            // Never remove a fixture while publication or writer shutdown is still active.
+            if activeBatch?.running == true { activeBatch?.cancel() }
+            else { try? FileManager.default.removeItem(at: root) }
+        }
         let source = try Data(contentsOf: URL(fileURLWithPath: job.source))
         let script = root.appendingPathComponent("encoder")
         let body = "#!/bin/sh\nfor target do :; done\nprintf partial > \"$target\"\nprintf '%s' \"$$\" > \"${target%/*}/writer.pid\"\nprintf 'deliberate encoder failure' >&2\n" + (cancel ? "exec /bin/sleep 30\n" : "exit 42\n")
@@ -98,6 +115,7 @@ struct BatchCleanupTests {
             #expect(code == ESRCH)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
         })
+        activeBatch = batch
         var probeTool = tools.ffprobe
         if cancel {
             // Reproduce source inspection taking longer than the former five-second

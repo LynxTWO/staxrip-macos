@@ -358,3 +358,17 @@ Options considered: metadata-only inspection using the current probe; immediate 
 Consequences: Read-only bounded native sections with truthful missing/invalid metadata and stale-request protection. No extraction, font loading, chapter seeking, output-preservation guarantee, audio acceptance or release decision.
 
 Revisit when: Chapter edits, remux or safe attachment extraction become an explicit slice.
+
+## D-024: Verify retained container contents
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build SLICE-011-container-preservation.md under autonomous non-audio delegation after Slice 010 hosted closure.
+
+Because: Successful encoding alone does not establish that retained flat chapters and embedded attachments survived. Generated CLI spikes show MP4 changes chapter gaps, while MKV preserves them.
+
+Options considered: trust exit status; compare bounded metadata and attachment SHA-256 before publication; full container conformance. Choose scoped comparison using existing ffprobe without new dependencies.
+
+Consequences: Reject unsupported MP4 chapter gaps before encoding and staged mismatches before publication. Missing/empty chapter titles are equivalent; other title content is exact. Existing trim and attachment mapping rules remain. No audio, release or merge scope.
+
+Revisit when: Chapter editing, editions or remux preservation are scoped.

@@ -11,16 +11,31 @@ struct QueueView: View {
             HStack {
                 sectionTitle("Ready when you are", subtitle: "Saved configurations for this session.")
                 Spacer()
+                if batch.reviewing {
+                    Button("Cancel check", role: .cancel) { batch.cancelReview() }
+                } else {
+                    Button("Check queue") { batch.review(model.jobs) }
+                        .disabled(model.jobs.isEmpty || batch.tools == nil || batch.running || exporter.running || audio.running)
+                        .help("Read source metadata and check settings and destinations without encoding or writing files.")
+                }
                 if batch.running {
                     Button("Cancel batch", role: .cancel) { batch.cancel() }
                 } else {
                     Button { batch.start(model.jobs) } label: { Label("Start queue", systemImage: "play.fill") }
-                        .buttonStyle(.borderedProminent).disabled(model.jobs.isEmpty || batch.tools == nil || exporter.running || audio.running)
+                        .buttonStyle(.borderedProminent).disabled(model.jobs.isEmpty || batch.tools == nil || batch.reviewing || exporter.running || audio.running)
                 }
                 Button { model.exportQueue() } label: { Label("Export JSON…", systemImage: "square.and.arrow.up") }
                     .disabled(model.jobs.isEmpty)
             }
             Text(batch.toolDescription).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).lineLimit(2)
+            if !batch.reviewStatus.isEmpty {
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(batch.reviewStatus).font(.callout).accessibilityLabel("Queue check status").accessibilityValue(batch.reviewStatus)
+                    if let date = batch.reviewDate, batch.reviewMatches(model.jobs) { Text("Checked at " + date.formatted(date: .omitted, time: .standard)).font(.caption) }
+                    Text("Read-only snapshot. Files and available resources can change; Start queue performs independent checks. No disk-space, hardware or full HDR guarantee.")
+                        .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
             if let recovery = batch.recovery {
                 HStack {
                     VStack(alignment: .leading, spacing: 5) {
@@ -72,6 +87,12 @@ struct QueueView: View {
                                     Button { model.moveJob(job.id, by: 1) } label: { Image(systemName: "arrow.down") }
                                         .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) later in the queue")
                                 }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running || audio.running)
+                                if batch.reviewMatches(model.jobs), let check = batch.queueChecks[job.id] {
+                                    Text(check.kind.rawValue + ": " + check.detail)
+                                        .font(.caption).foregroundStyle(check.kind == .issue ? .orange : .secondary)
+                                        .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                                        .accessibilityLabel("Queue check: " + AccessibilityLanguage.spokenCodecs(check.kind.rawValue + ". " + check.detail))
+                                }
                                 if let state = batch.statuses[job.id] {
                                     if state.phase == "Encoding" || (job.configuration.colorMode == "Preserve static HDR10" && ["Inspecting", "Verifying"].contains(state.phase)) {
                                         ProgressView(value: state.progress)
@@ -97,6 +118,7 @@ struct QueueView: View {
                 .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
         }.padding(28)
+        .onAppear { if !batch.reviewMatches(model.jobs) { batch.invalidateReview() } }
         .sheet(item: $editingJob) { job in QueueEditor(job: job).environmentObject(model) }
     }
 }

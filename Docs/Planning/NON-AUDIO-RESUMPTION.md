@@ -50,3 +50,7 @@ Slice 006 native preset save/restart/apply/undo and import/export checks passed.
 ## Slice 007 checkpoint
 
 Slice 006 hosted follow-up passed in 8m53s at 0b4f96a (run 36703925176). Source orientation is implemented under D-020. Right-angle transforms, independent pixels, preview and eight real queue outputs pass; a reflected source is refused without publication. Full release regression: 103 tests/18 suites, 14 opt-in skips, 9.565 seconds. Native upright crop comparison and refusal passed. A minor idle-close status fix passed focused tests; final rebuild/reopen and hosted checks remain. See ORIENTATION-EVIDENCE.md. Audio listening remains parked.
+
+2026-09-30: Slice 008 adds optional read-only queue preflight under D-021. Four focused tests, the 107-test regression and native invalid-trim correction/recheck passed. Source/recovery hashes stayed identical and outputs remained absent. Hosted check pending; audio listening stays parked. See QUEUE-PREFLIGHT-EVIDENCE.md.
+
+Slice 008 hosted run 36709148929 passed at 852306f in 8 minutes 20 seconds. PR 25 remains draft and unmerged. Local and hosted queue preflight criteria are closed within the evidence limits.

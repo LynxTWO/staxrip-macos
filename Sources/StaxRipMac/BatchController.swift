@@ -13,13 +13,73 @@ final class BatchController: ObservableObject {
     @Published var running = false
     @Published var toolDescription = "Checking FFmpeg…"
     @Published var statuses: [UUID: BatchStatus] = [:]
-    @Published var encoders: Set<String> = []
-    @Published var tools: FFmpegTools?
+    @Published var encoders: Set<String> = [] {
+        didSet { if oldValue != encoders { invalidateReview() } }
+    }
+    @Published var tools: FFmpegTools? {
+        didSet {
+            if oldValue?.ffmpeg != tools?.ffmpeg || oldValue?.ffprobe != tools?.ffprobe { invalidateReview() }
+        }
+    }
     @Published var inspecting = false
     @Published var inspection: MediaProbe?
     @Published var inspectionError: String?
     @Published var recovery: BatchJournal?
     @Published var recoveryError: String?
+    @Published private(set) var reviewing = false
+    @Published private(set) var queueChecks: [UUID: QueueCheck] = [:]
+    @Published private(set) var reviewStatus = ""
+    @Published private(set) var reviewDate: Date?
+    private var reviewJobs: [QueueJob]?
+    private var reviewToolPaths: [URL] = []
+    private var reviewEncoders: Set<String> = []
+    private var reviewGeneration = UUID()
+    private var reviewTask: Task<Void, Never>?
+
+    func reviewMatches(_ jobs: [QueueJob]) -> Bool {
+        guard let tools else { return false }
+        return reviewJobs == jobs && reviewToolPaths == [tools.ffmpeg, tools.ffprobe] && reviewEncoders == encoders
+    }
+    func invalidateReview() {
+        reviewGeneration = UUID(); reviewTask?.cancel()
+        queueChecks = [:]; reviewJobs = nil; reviewDate = nil
+        reviewStatus = reviewing ? "Queue changed. Stopping the old check…" : ""
+    }
+    func cancelReview() { reviewTask?.cancel() }
+    func review(_ jobs: [QueueJob]) {
+        guard !running, !reviewing, !jobs.isEmpty, let tools else { return }
+        let id = UUID(); reviewGeneration = id
+        reviewJobs = jobs; reviewToolPaths = [tools.ffmpeg, tools.ffprobe]; reviewEncoders = encoders
+        queueChecks = [:]; reviewDate = nil; reviewing = true
+        reviewStatus = "Checking queue…"
+        let completed = Set(statuses.filter { $0.value.phase == "Completed" }.map(\.key))
+        let knownEncoders = encoders
+        reviewTask = Task { [self] in
+            defer {
+                reviewing = false; reviewTask = nil
+                if reviewGeneration != id { reviewStatus = "Queue changed. Check again." }
+            }
+            do {
+                let results = try await QueuePreflight.review(jobs, completed: completed, tools: tools, encoders: knownEncoders) { [weak self] item in
+                    Task { @MainActor in
+                        guard let self, self.reviewGeneration == id, self.reviewing else { return }
+                        self.queueChecks[item.id] = item
+                        self.reviewStatus = "Checked \(self.queueChecks.count) of \(jobs.count) queue items…"
+                    }
+                }
+                try Task.checkCancellation()
+                guard reviewGeneration == id else { return }
+                queueChecks = Dictionary(uniqueKeysWithValues: results.map { ($0.id, $0) })
+                reviewDate = Date()
+                reviewStatus = "Preliminary check: \(results.filter { $0.kind == .checked }.count) passed, \(results.filter { $0.kind == .issue }.count) need correction, \(results.filter { $0.kind == .deferred }.count) need further checks, \(results.filter { $0.kind == .completed }.count) already completed."
+            } catch {
+                guard reviewGeneration == id else { return }
+                queueChecks = [:]; reviewJobs = nil; reviewDate = nil
+                reviewStatus = error is CancellationError ? "Check cancelled. No files were encoded or written." : String(error.localizedDescription.prefix(2000))
+            }
+        }
+    }
+
     private let journalURL: URL?
     private var journalLease: BatchJournalLease?
     private var journalJobs: [QueueJob] = []
@@ -78,9 +138,10 @@ final class BatchController: ObservableObject {
     }
 
     func start(_ jobs: [QueueJob]) {
-        guard !running, let tools else { return }
+        guard !running, !reviewing, let tools else { return }
         let selected = jobs.filter { statuses[$0.id]?.phase != "Completed" }
         guard !selected.isEmpty else { return }
+        invalidateReview()
         journalJobs = jobs
         for job in selected { statuses[job.id] = BatchStatus() }
         do {

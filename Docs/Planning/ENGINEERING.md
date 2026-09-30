@@ -150,3 +150,7 @@ Approved R-009 under delegated Slice 006: source-independent recipes and bounded
 ## Orientation extension, 2026-09-30
 
 Approved R-010 under delegated Slice 007: validated source orientation shared by queue and still preview. Gates orientation-plan, orientation-export, orientation-preview and orientation-ui bind S7-001 through S7-004. Consequence: user_data for newly encoded output, with R-004 no-overwrite and source preservation retained. No configuration migration or new dependency. Generated fixtures and independent pixel permutation checks are bounded to this feature.
+
+## Queue preflight extension, 2026-09-30
+
+Approved R-011 under delegated Slice 008: bounded read-only queue preflight with truthful deferred checks. Gates queue-review, queue-review-scope, queue-review-lifecycle and queue-review-ui bind S8-001 through S8-004. Consequence: local_only observations with no staging, encoding, recovery or output writes. Existing execution/publication remains independently validated.

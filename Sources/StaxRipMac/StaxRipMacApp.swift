@@ -7,6 +7,7 @@ struct StaxRipMacApp: App {
     @StateObject private var model = WorkspaceModel()
     @StateObject private var exporter = ExportController()
     @StateObject private var audio = AudioController()
+    @StateObject private var picturePreview = PicturePreviewController()
     @StateObject private var batch = BatchController(journalURL: BatchJournal.defaultURL)
     @AppStorage("appearance") private var appearance = "System"
     var body: some Scene {
@@ -16,6 +17,7 @@ struct StaxRipMacApp: App {
                 .environmentObject(exporter)
                 .environmentObject(batch)
                 .environmentObject(audio)
+                .environmentObject(picturePreview)
                 .task { await batch.discover() }
                 .onChange(of: model.jobs) { before, after in
                     for old in before where !after.contains(old) { batch.reset(old.id) }
@@ -27,6 +29,7 @@ struct StaxRipMacApp: App {
                     delegate.exporter = exporter
                     delegate.batch = batch
                     delegate.audio = audio
+                    delegate.picturePreview = picturePreview
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
                 }
@@ -54,11 +57,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var exporter: ExportController?
     weak var batch: BatchController?
     weak var audio: AudioController?
+    weak var picturePreview: PicturePreviewController?
     func applicationWillTerminate(_ notification: Notification) { audio?.invalidateMaster() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard exporter?.running == true || batch?.running == true || audio?.running == true else { return .terminateNow }
+        guard exporter?.running == true || batch?.running == true || audio?.running == true || picturePreview?.running == true else { return .terminateNow }
         let alert = NSAlert()
-        alert.messageText = "An export is still running"
+        alert.messageText = "An operation is still running"
         alert.informativeText = "Wait for it to finish or cancel the active operation before quitting."
         alert.addButton(withTitle: "Keep open")
         alert.runModal()

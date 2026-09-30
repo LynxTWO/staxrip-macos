@@ -103,7 +103,7 @@ Existing Sources, Tests, Resources, build.command and package.command stay in pl
 
 Do not rename a skipped gate as passed. Official test data needs a rights manifest, checksum and expected values; fetch locally if redistribution is not allowed. Cross-check a second implementation and investigate discrepancies. Repeated inconclusive attempts stop at the slice's time box; revise the decision instead of inventing wider harnesses. Blind listening belongs to later mastering slices, with corpus coverage and success criteria fixed before results are seen.
 
-Proposed R-008: the bounded still-preview checks S5-001 through S5-006 in SLICE-005-filtered-picture-preview.md. Consequence: local_only for temporary rendering, with R-004 source/output protection retained. The named gates are picture-plan, picture-frame, picture-display, picture-lifecycle, picture-resource and picture-ui. No implementation or new harness is approved by this entry. M1 must verify temporal identity before M2/M3 depend on it.
+Approved R-008: the bounded still-preview checks S5-001 through S5-006 in SLICE-005-filtered-picture-preview.md. Consequence: local_only for temporary rendering, with R-004 source/output protection retained. The named gates are picture-plan, picture-frame, picture-display, picture-lifecycle, picture-resource and picture-ui. Owner approval of Slice 005 activates this bounded implementation and verification scope. M1 must verify temporal identity before M2/M3 depend on it.
 
 ## 12. Tool and Agent Discipline
 

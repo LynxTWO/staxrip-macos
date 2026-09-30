@@ -4,7 +4,7 @@ This ledger defines a finite first production release. It does not call the curr
 
 | Area | Implemented evidence | Required before production |
 | --- | --- | --- |
-| Native workspace | SwiftUI/AppKit playback, dark/light appearance, source import, inspector, independent queue editing | Keyboard/accessibility audit across supported OS versions; filtered preview and frame stepping |
+| Native workspace | SwiftUI/AppKit playback, dark/light appearance, source import, inspector, independent queue editing, bounded SDR filtered still comparison (Planning/PICTURE-PREVIEW-EVIDENCE.md) | Keyboard/accessibility audit across supported OS versions; motion preview and exact frame stepping |
 | Video encoding | Software AV1/H.264/HEVC CRF and bitrate; actual hardware H.264/HEVC on development Mac; explicit verified static PQ HDR10 to software HEVC/MKV (see Planning/HDR10-EVIDENCE.md) | Capability checks across machines; calibrated HDR and real-film validation, broader HDR/10-bit workflows, rotation and remux |
 | Picture and timeline | Four-edge crop, resize, BWDIF, precise output trim; synthetic duration/dimension checks | VFR, anamorphic, unusual timestamps and long-film A/V sync matrix; subtitle retiming |
 | Track routing | Selected audio/subtitle streams; copied subtitle/audio container checks; multilingual fixture | Per-track recipes, external subtitles, chapter editor and attachment verification |

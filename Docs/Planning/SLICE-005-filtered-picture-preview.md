@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 005: Filtered picture preview
-Version: 0.1 Draft. Date: 2026-09-29. Status: Approved for build.
+Version: 0.1 Draft. Date: 2026-09-29. Status: Implemented with local evidence.
 
 SLICE STATE
-Milestone: M1, shared plan and extraction feasibility.
+Milestone: M1-M3 implemented and locally verified; hosted and owner spoken review tracked separately.
 Blocked by: None.
-Evidence so far: Existing implementation locators in section 6; proposed behavior is not implemented.
+Evidence so far: PICTURE-PREVIEW-EVIDENCE.md.
 Last audit: 2026-09-29.
 
 ## 1. What the slice proves
@@ -52,7 +52,7 @@ No simulated filtered image. If preview cannot render, show the reason and retai
 - WorkspaceModel.swift owns source/configuration replacement; these are invalidation boundaries.
 - NativeVideoPreview.swift wraps AVPlayerView. Keep ordinary playback; use a separate native comparison view for stills.
 - ToolRunner.swift and MediaProbe supply bounded process execution and source properties. Add only narrowly required metadata handling.
-- New PicturePreview service/controller/view and focused tests. No new dependency or public API.
+- New PicturePreview service/controller/view, app-level operation ownership and focused tests. No new dependency or public API.
 
 ## 7. Data subset
 
@@ -98,3 +98,5 @@ FFmpeg's [BWDIF documentation](https://ffmpeg.org/ffmpeg-filters.html#bwdif) des
 ## Planning audit
 
 D-018 is Confirmed and appears in the decision index. The owner approved the new build path. M1 schedules temporal-identity feasibility before dependent work. Existing code locators and companion documents were checked. Scope choices are explicitly proposals; no new unverified requirement is marked Confirmed. Mechanical audit on 2026-09-29 reports zero findings across eight recognized documents. This verifies document consistency only.
+
+Implementation refinement: bounded raw RGB pipes need no temporary media directory or persistent cache. Each side retains at most 24,883,200 bytes; success and failure never write preview media. The existing app quit guard now covers preview operations. These choices preserve the approved lifecycle boundary.

@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 014: Responsive batch publication and file-access review
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Accepted within scope.
 
 SLICE STATE
-Milestone: M1 through M3 local and native checks passed; hosted regression pending.
+Milestone: M1 through M3 local, native and hosted checks passed at f20998f, run 36778465280 (9m05s).
 Blocked by: None external.
 Evidence so far: PUBLICATION-RESPONSIVENESS-EVIDENCE.md records worker/cancellation/collision tests and native access/encode acceptance, including a real background link wait, responsive stop/access controls, preserved diagnostic interruption and explicit recovery/retry.
 Last audit: 2026-09-30.

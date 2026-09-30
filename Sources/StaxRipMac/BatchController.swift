@@ -228,6 +228,7 @@ final class BatchController: ObservableObject {
         }
         let preservingHDR = job.configuration.colorMode == "Preserve static HDR10"
         try SessionDocument.validate(job.configuration)
+        if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         if preservingHDR { try EncodePlan.validateHDRSettings(job.configuration) }
         var fingerprint: SourceFingerprint?
         var hdr: HDR10Contract?
@@ -238,6 +239,12 @@ final class BatchController: ObservableObject {
             fingerprint = try await SourceFingerprint.read(source)
         }
         let probe = try await MediaProbe.read(source, tools: tools)
+        let externalDocument: SubRipDocument?
+        if let reference = job.configuration.externalSubtitle {
+            statuses[job.id]?.detail = "Reading and validating the external caption file"
+            externalDocument = try await reference.read()
+            try externalDocument?.validateTimeline(probe: probe, configuration: job.configuration)
+        } else { externalDocument = nil }
         if preservingHDR {
             statuses[job.id]?.detail = "HDR10: decoding every source frame; checking static metadata and fixed cadence"
             hdr = try await HDR10Audit.read(source, tools: tools, probe: probe) { [weak self] frames, fraction in
@@ -252,11 +259,12 @@ final class BatchController: ObservableObject {
         try Task.checkCancellation()
         let directory = output.deletingLastPathComponent().appendingPathComponent(".staxrip-batch-" + UUID().uuidString)
         let staged = directory.appendingPathComponent("encoded." + job.configuration.container.lowercased())
-        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: staged, hdr: hdr)
+        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: staged, hdr: hdr, externalDocument: externalDocument)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         var operationError: Error?
         var publishedOutput: URL?
         do {
+            if let externalDocument { try await externalDocument.writeSnapshot(to: directory.appendingPathComponent("external.srt")) }
             statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
             try checkpoint()
             let parser = ProgressParser(duration: plan.duration) { [weak self] fraction in
@@ -310,6 +318,11 @@ final class BatchController: ObservableObject {
             try Task.checkCancellation()
             verifiedSummary += " · " + (try plan.outputGeometry.verify(width: actual.video?.width, height: actual.video?.height))
             verifiedSummary += " · " + (try plan.containerPreservation.verify(actual))
+            if let external = plan.externalSubtitle {
+                statuses[job.id]?.detail = "Verifying added caption text and cue timing before publication"
+                verifiedSummary += " · " + (try await external.verify(staged, probe: actual, tools: tools))
+            }
+            try Task.checkCancellation()
             try await publish(staged, to: output, jobID: job.id)
             if Task.isCancelled { verifiedSummary += " · Batch stopped after this output." }
             publishedOutput = output

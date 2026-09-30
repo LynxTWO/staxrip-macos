@@ -32,6 +32,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-025 | 2026-09-30 | Qualify full destination failures | Confirmed | |
 | D-026 | 2026-09-30 | Verify resized raster dimensions | Confirmed | |
 | D-027 | 2026-09-30 | Responsive batch publication and access review | Confirmed | |
+| D-028 | 2026-09-30 | Verified external plain SRT subtitles | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -418,3 +419,17 @@ Options considered: leave synchronous publication; add an early timeout; dispatc
 Consequences: Batch-only wrapper, ephemeral finishing state, preserved cancellation outcome and native access panels that never rewrite intent. Existing persisted Verifying phase and journal schema stay unchanged. Other I/O sites and exporters remain explicit limitations.
 
 Revisit when: Other filesystem waits or durable bookmark persistence are scoped.
+
+## D-028: Verified external plain SRT subtitles
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 015 under autonomous non-audio delegation after Slice 014 hosted closure.
+
+Because: External subtitles are an explicit release-ledger gap. Generated MKV/MP4 spikes preserve plain multilingual cues but silently alter overlapping intervals, markup and line-edge spaces. Successful muxing and stream counts alone are insufficient.
+
+Options considered: unrestricted subtitle import; one bounded plain SRT with exact staged cue verification; defer subtitles until a full styled-subtitle editor. Choose one source-specific external SRT, captured fresh per attempt, with independently decoded text/timing checks before publication.
+
+Consequences: Explicit plain-format/timeline refusals; separate embedded-track and additional-file controls; balanced transient file access; sessions v6 and journals v5; no source references in presets. Keep existing output ownership and verification. No styling, burn-in, retiming, HDR/trim with external captions, audio acceptance, signing, merge or release scope.
+
+Revisit when: Multiple external tracks, subtitle retiming/styling or durable bookmark access become their own scoped work.

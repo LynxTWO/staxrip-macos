@@ -309,8 +309,8 @@ struct WorkspaceView: View {
 
     private var subtitleSettings: some View {
         VStack(alignment: .leading, spacing: 20) {
-            sectionTitle("Subtitles", subtitle: "Set a default for embedded subtitle tracks.")
-            settingPicker("Track handling", selection: $model.config.subtitleMode, values: ["Keep embedded tracks", "Remove all subtitles"])
+            sectionTitle("Subtitles", subtitle: "Choose embedded tracks and an additional caption file.")
+            SubtitleOptionsView(configuration: $model.config, sourceAvailable: !model.isDemo && !model.loading)
             Label("Embedded tracks are copied without re-encoding", systemImage: "text.bubble")
                 .font(.system(size: 12)).foregroundStyle(.secondary)
             Text("MKV preserves supported subtitle formats and attachments. MP4 accepts existing mov_text tracks; choose MKV for other subtitle formats.")

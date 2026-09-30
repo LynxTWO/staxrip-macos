@@ -28,6 +28,7 @@ struct EncodeConfiguration: Codable, Equatable {
     var activeEncoder: String { rate.backend == "Software" ? encoder : "VideoToolbox" }
     var audioTracks: [Int]?
     var subtitleTracks: [Int]?
+    var externalSubtitle: ExternalSubtitle?
     private var pictureOptions: PictureOptions?
     var picture: PictureOptions {
         get { pictureOptions ?? PictureOptions() }
@@ -90,7 +91,7 @@ final class WorkspaceModel: ObservableObject {
     }
     func applyCustomPreset(_ preset: CustomPreset) throws {
         config = try preset.applying(to: config)
-        notice = "\(preset.name) applied. Source-specific crop, trim and tracks retained."
+        notice = "\(preset.name) applied. Source-specific crop, trim, tracks and external captions retained."
     }
     @Published var sourceURL: URL? {
         didSet { if oldValue != sourceURL { clearSettingsHistory() } }
@@ -138,7 +139,7 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func showDemo() {
-        clearSettingsHistory()
+        resetSourceSelections()
         loadID = UUID()
         loading = false
         player?.pause()
@@ -181,38 +182,62 @@ final class WorkspaceModel: ObservableObject {
         SessionDocument(sourcePath: sourceURL?.path, configuration: config, outputFolder: outputFolder.path, outputStem: outputStem, jobs: jobs)
     }
 
+    private func sessionPanelWindow() -> NSWindow? {
+        guard let window = NSApp.mainWindow ?? NSApp.windows.first(where: {
+            $0.isVisible && $0.canBecomeMain && !($0 is NSPanel)
+        }), window.attachedSheet == nil else {
+            notice = "Bring the workspace forward and close its current dialog before opening or saving a session."
+            return nil
+        }
+        return window
+    }
+
     func saveSession() {
+        guard let window = sessionPanelWindow() else { return }
         let panel = NSSavePanel()
         panel.title = "Save StaxRip Mac session"
         panel.nameFieldStringValue = "StaxRip session.json"
         panel.allowedContentTypes = [.json]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            try sessionSnapshot.write(to: url)
-            savedSnapshot = sessionSnapshot
-            sessionName = url.deletingPathExtension().lastPathComponent
-            notice = "Session saved"
-        } catch { self.error = error.localizedDescription }
+        panel.beginSheetModal(for: window) { [weak self] response in
+            panel.orderOut(nil)
+            guard let self, response == .OK, let url = panel.url else { return }
+            do {
+                let snapshot = self.sessionSnapshot
+                try snapshot.write(to: url)
+                self.savedSnapshot = snapshot
+                self.sessionName = url.deletingPathExtension().lastPathComponent
+                self.notice = "Session saved"
+            } catch { self.error = error.localizedDescription }
+        }
     }
 
     func openSession() {
+        guard let window = sessionPanelWindow() else { return }
         let panel = NSOpenPanel()
         panel.title = "Open StaxRip Mac session"
         panel.allowedContentTypes = [.json]
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        do {
-            let document = try SessionDocument.read(from: url)
-            if savedSnapshot != sessionSnapshot {
-                let alert = NSAlert()
-                alert.messageText = "Replace the current workspace?"
-                alert.informativeText = "Open this saved session in place of the current source, settings and queue. Cancel to save your current session first."
-                alert.addButton(withTitle: "Open session")
-                alert.addButton(withTitle: "Cancel")
-                guard alert.runModal() == .alertFirstButtonReturn else { return }
-            }
-            restoreSession(document)
-            sessionName = url.deletingPathExtension().lastPathComponent
-        } catch { self.error = error.localizedDescription }
+        panel.allowsMultipleSelection = false
+        panel.beginSheetModal(for: window) { [weak self] response in
+            panel.orderOut(nil)
+            guard let self, response == .OK, let url = panel.url else { return }
+            do {
+                let document = try SessionDocument.read(from: url)
+                let restore = { [weak self] in
+                    self?.restoreSession(document)
+                    self?.sessionName = url.deletingPathExtension().lastPathComponent
+                }
+                if self.savedSnapshot != self.sessionSnapshot {
+                    let alert = NSAlert()
+                    alert.messageText = "Replace the current workspace?"
+                    alert.informativeText = "Open this saved session in place of the current source, settings and queue. Cancel to save your current session first."
+                    alert.addButton(withTitle: "Open session")
+                    alert.addButton(withTitle: "Cancel")
+                    alert.beginSheetModal(for: window) { response in
+                        if response == .alertFirstButtonReturn { restore() }
+                    }
+                } else { restore() }
+            } catch { self.error = error.localizedDescription }
+        }
     }
 
     func restoreSession(_ document: SessionDocument) {
@@ -260,7 +285,7 @@ final class WorkspaceModel: ObservableObject {
                 guard loadID == id else { return }
                 player?.pause()
                 player = AVPlayer(url: url)
-                if !keepOutputName { config.audioTracks = nil; config.subtitleTracks = nil }
+                if !keepOutputName { resetSourceSelections() }
                 sourceURL = url
                 sourceName = url.lastPathComponent
                 if !keepOutputName { outputStem = url.deletingPathExtension().lastPathComponent + "_encoded" }
@@ -273,7 +298,7 @@ final class WorkspaceModel: ObservableObject {
                 if let tools = FFmpegTools.discover(), let probe = try? await MediaProbe.read(url, tools: tools), let video = probe.video {
                     guard loadID == id else { return }
                     player?.pause(); player = nil
-                    if !keepOutputName { config.audioTracks = nil; config.subtitleTracks = nil }
+                    if !keepOutputName { resetSourceSelections() }
                     sourceURL = url; sourceName = url.lastPathComponent; sourceUnavailable = true
                     loading = false
                     sourceInfo = "\(video.width ?? 0) × \(video.height ?? 0) · \(video.codec_name ?? "unknown") · native preview unavailable"
@@ -315,10 +340,21 @@ final class WorkspaceModel: ObservableObject {
     func addToQueue() {
         guard !loading else { return }
         if let issue = outputIssue { error = issue; return }
+        do { try SessionDocument.validate(config) }
+        catch { self.error = error.localizedDescription; return }
         jobs.append(QueueJob(id: UUID(), source: sourceURL?.path ?? sourceName, isDemo: isDemo,
                              destination: outputFolder.appendingPathComponent(outputName).path,
                              configuration: config, created: Date()))
         notice = "Configuration added to queue"
+    }
+
+    private func resetSourceSelections() {
+        var next = config
+        next.audioTracks = nil; next.subtitleTracks = nil; next.externalSubtitle = nil
+        config = next
+        // Reselecting the same source also clears old source-specific intent;
+        // settings undo must not resurrect its discarded caption reference.
+        clearSettingsHistory()
     }
 
     func exportQueue() {

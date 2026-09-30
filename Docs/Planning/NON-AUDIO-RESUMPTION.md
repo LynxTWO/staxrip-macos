@@ -76,3 +76,11 @@ Slice 013 geometry acceptance closed with hosted success at 30b044b, run 3676962
 Slice 014 moves advanced batch publication off the main thread while awaiting its true result before cleanup. Held-operation cancellation and collision tests, regression and native per-job access/encode checks passed; hosted pending. See PUBLICATION-RESPONSIVENESS-EVIDENCE.md. Audio remains parked.
 
 Slice 014 scoped acceptance closed at f20998f with hosted run 36778465280 (9m05s). Final release/debug suites passed 125 tests; deliberate delayed-publication negative controls and isolated ENOSPC/retry also passed. Synchronous filesystem calls outside advanced batch publication and durable access remain open. Audio remains parked.
+
+Slice 015 is active under D-028/R-018: one source-specific external plain UTF-8 SRT, fresh captured staging, MKV/MP4 cue verification, native controls and saved-data migration. Research shows overlap, styling and line-edge whitespace need explicit refusal. No new audio acceptance is included.
+
+Slice 015 local acceptance passed: 142 tests / 28 suites, native independent MKV/MP4 caption exports, session round-trip and attached session dialog recovery. Hosted check pending; see EXTERNAL-SUBTITLE-EVIDENCE.md.
+
+Slice 015 initial hosted run 36783897395 passed at bb9a765 (142 tests, 9m37s). Review then found canonical Unicode title equality could hide byte-distinct intent changes. A negative-control regression reproduced broken change detection/undo; the fix passes the final 143-test local regression. Final hosted follow-up pending.
+
+Slice 015 scoped acceptance closed at b3027f2 with hosted run 36785205441: 143 tests, 9m46s. External plain SRT, exact added cue/metadata checks, session migration and native controls are covered within the evidence limits. Broader subtitles and owner audio listening remain open.

@@ -60,7 +60,7 @@ struct QueueEditor: View {
                 settingPicker("Bitrate", selection: $draft.configuration.audioBitrate, values: ["128 kb/s", "192 kb/s", "256 kb/s", "320 kb/s"])
                     .disabled(!["AAC", "Opus"].contains(draft.configuration.audio))
             }
-            settingPicker("Subtitles", selection: $draft.configuration.subtitleMode, values: ["Keep embedded tracks", "Remove all subtitles"])
+            SubtitleOptionsView(configuration: $draft.configuration, sourceAvailable: !draft.isDemo)
             VStack(alignment: .leading, spacing: 8) {
                 eyebrow("Output name")
                 HStack {

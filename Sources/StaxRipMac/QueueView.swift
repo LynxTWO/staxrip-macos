@@ -70,6 +70,11 @@ struct QueueView: View {
                                         .foregroundStyle(Color.accent).frame(width: 28)
                                     VStack(alignment: .leading, spacing: 5) {
                                         Text(URL(fileURLWithPath: job.source).lastPathComponent).font(.system(size: 14, weight: .semibold))
+                                        if let captions = job.configuration.externalSubtitle {
+                                            Text("Additional captions: " + URL(fileURLWithPath: captions.path).lastPathComponent)
+                                                .font(.caption).foregroundStyle(.secondary)
+                                                .accessibilityLabel("Additional SubRip subtitle file, " + URL(fileURLWithPath: captions.path).lastPathComponent)
+                                        }
                                         Text("\(job.configuration.codec) · \(job.configuration.rateSummary) · \(job.configuration.container) · \(job.configuration.colorMode) · \(job.configuration.audio)")
                                             .font(.system(size: 11)).foregroundStyle(.secondary)
                                     }

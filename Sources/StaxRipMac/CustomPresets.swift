@@ -11,7 +11,7 @@ struct CustomPreset: Codable, Equatable, Identifiable {
         var c = current
         c.cropTop = 0; c.cropBottom = 0
         c.picture = PictureOptions(deinterlace: current.picture.deinterlace)
-        c.audioTracks = nil; c.subtitleTracks = nil
+        c.audioTracks = nil; c.subtitleTracks = nil; c.externalSubtitle = nil
         return c
     }
     func applying(to current: EncodeConfiguration) throws -> EncodeConfiguration {
@@ -21,6 +21,7 @@ struct CustomPreset: Codable, Equatable, Identifiable {
         var picture = current.picture; picture.deinterlace = configuration.picture.deinterlace
         next.picture = picture
         next.audioTracks = current.audioTracks; next.subtitleTracks = current.subtitleTracks
+        next.externalSubtitle = current.externalSubtitle
         try SessionDocument.validate(next)
         return next
     }
@@ -33,8 +34,9 @@ struct CustomPreset: Codable, Equatable, Identifiable {
         try SessionDocument.validate(configuration)
         let p = configuration.picture
         guard configuration.cropTop == 0, configuration.cropBottom == 0, p.cropLeft == 0, p.cropRight == 0,
-              p.start == 0, p.end == 0, configuration.audioTracks == nil, configuration.subtitleTracks == nil else {
-            throw SessionError.invalid("A reusable preset cannot contain crop, trim or source track selections. Save those in a session instead.")
+              p.start == 0, p.end == 0, configuration.audioTracks == nil, configuration.subtitleTracks == nil,
+              configuration.externalSubtitle == nil else {
+            throw SessionError.invalid("A reusable preset cannot contain crop, trim, source track selections or external caption files. Save those in a session instead.")
         }
     }
     var summary: String {

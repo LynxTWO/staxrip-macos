@@ -64,8 +64,13 @@ struct OutputGeometryTests {
         var jobs: [QueueJob] = []
         for (index, tuple) in [(landscape, "1280 × 720", false), (portrait, "1280 × 720", false), (landscape, "1920 × 1080", true)].enumerated() {
             var c = configuration(tuple.1)
-            if tuple.2 { c.picture.cropLeft = 4; c.cropTop = 2 }
-            jobs.append(QueueJob(id: UUID(), source: tuple.0.path, isDemo: false, destination: root.appendingPathComponent("result\(index).mkv").path, configuration: c, created: Date()))
+            if tuple.2 {
+                c.picture.cropLeft = 4; c.cropTop = 2
+                // This near-square SAR survives exactly in MP4. MKV rounds it;
+                // the separate display-aspect test requires that refusal.
+                c.container = "MP4"
+            }
+            jobs.append(QueueJob(id: UUID(), source: tuple.0.path, isDemo: false, destination: root.appendingPathComponent("result\(index).\(c.container.lowercased())").path, configuration: c, created: Date()))
         }
         // Reproduce the former 20-second helper limit without relying on runner load.
         var delayedPublication = false

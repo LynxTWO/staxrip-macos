@@ -92,3 +92,5 @@ Slice 016 local acceptance passed: six focused functions, 149 tests / 29 suites,
 Slice 016 scoped acceptance closed at 42634d9 with hosted run 36787875488: 149 tests, 8m43s. Other app dialogs, synchronous filesystem I/O and durable access remain separate; audio remains parked.
 
 Slice 017 is active under D-030/R-020: verify known declared display proportions after upright crop and resize, without inferring missing source pixel shape or changing filters. Audio remains parked.
+
+Slice 017 local/native display-proportion verification passed, including 157 regression tests and exact versus unknown native outputs. A real near-square MKV rounding boundary remains a strict refusal; MP4 preserves that fixture. Hosted gate pending. See DISPLAY-ASPECT-EVIDENCE.md.

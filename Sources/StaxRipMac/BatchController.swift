@@ -317,6 +317,8 @@ final class BatchController: ObservableObject {
             }
             try Task.checkCancellation()
             verifiedSummary += " · " + (try plan.outputGeometry.verify(width: actual.video?.width, height: actual.video?.height))
+            verifiedSummary += " · " + (try plan.outputDisplayAspect.verify(width: actual.video?.width, height: actual.video?.height,
+                                                                           sampleAspectRatio: actual.video?.sample_aspect_ratio))
             verifiedSummary += " · " + (try plan.containerPreservation.verify(actual))
             if let external = plan.externalSubtitle {
                 statuses[job.id]?.detail = "Verifying added caption text and cue timing before publication"

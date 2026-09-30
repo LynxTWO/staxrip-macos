@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: M1 active after Slice 016 hosted closure at 42634d9.
-Blocked by: None external; Slice 016 passed hosted run 36787875488.
-Evidence so far: Twelve generated MKV/MP4 software exports preserve rational DAR; an altered SAR changes display shape without changing raster dimensions. See DISPLAY-ASPECT-RESEARCH.md.
+Milestone: M3 local and native acceptance passed; hosted gate pending.
+Blocked by: Hosted regression for this slice remains to run.
+Evidence so far: 157-test regression, generated refusal/ownership checks and native known/unknown exports passed. See DISPLAY-ASPECT-EVIDENCE.md and DISPLAY-ASPECT-RESEARCH.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves
@@ -64,4 +64,4 @@ Approved for build by: Owner autonomous non-audio delegation, activated under D-
 
 ## M3 research finding, 2026-09-30
 
-Full regression exposed near-square SAR loss in the existing MKV crop/fit case. Keep the exact contract; validate the same successful crop through MP4 and add the actual MKV rounding refusal as separate coverage. DISPLAY-ASPECT-RESEARCH.md records the filter, encoder and container evidence. This is an intentional compatibility restriction with an actionable message, not a relaxation of S17-001 or removal of raster coverage.
+Full regression exposed near-square SAR loss in the existing MKV crop/fit case. Keep strict equality; validate the same successful crop through MP4 and add the actual MKV rounding refusal as separate coverage. DISPLAY-ASPECT-RESEARCH.md records the filter, encoder and container evidence. This is an intentional compatibility restriction with an actionable message, not a relaxation of S17-001 or removal of raster coverage.

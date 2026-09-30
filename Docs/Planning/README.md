@@ -50,3 +50,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [External subtitle evidence](EXTERNAL-SUBTITLE-EVIDENCE.md) records Slice 015 scoped local/native/hosted acceptance.
 
 26. [Slice 016: attached workspace file dialogs](SLICE-016-workspace-file-panels.md).
+
+[Workspace file dialog evidence](WORKSPACE-FILE-PANEL-EVIDENCE.md) records Slice 016 local/native checks and remaining hosted acceptance.

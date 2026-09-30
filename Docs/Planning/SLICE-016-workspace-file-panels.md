@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: M1 scoped after Slice 015 hosted acceptance at b3027f2.
+Milestone: M1 through M3 local implementation, regression and native walkthrough passed; hosted pending.
 Blocked by: None external. Slice 015 closed with run 36785205441.
-Evidence so far: Slice 015 reproduced the standalone session chooser visibility issue and passed attached session save/open/cancel/replace. Workspace source, destination and queue-reference export still use standalone modal panels; all five flows need a common bounded callback lifecycle.
+Evidence so far: Six callback/document tests, 149-test optimized regression, all five native sheet flows and cancellation, session replacement cancel/confirm, identical session round-trip and exact queue-array readback. See WORKSPACE-FILE-PANEL-EVIDENCE.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

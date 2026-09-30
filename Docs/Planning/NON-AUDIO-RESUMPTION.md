@@ -86,3 +86,5 @@ Slice 015 initial hosted run 36783897395 passed at bb9a765 (142 tests, 9m37s). R
 Slice 015 scoped acceptance closed at b3027f2 with hosted run 36785205441: 143 tests, 9m46s. External plain SRT, exact added cue/metadata checks, session migration and native controls are covered within the evidence limits. Broader subtitles and owner audio listening remain open.
 
 Slice 016 is active under D-029/R-019: attached workspace source/folder/session/queue-reference dialogs with one request lifecycle, captured saves and stale callback protection. Audio remains parked.
+
+Slice 016 local acceptance passed: six focused functions, 149 tests / 29 suites, native source/folder/session/reference sheets and cancellation, replacement cancel/confirm, unchanged source and structurally identical saved-session readback. Hosted pending; see WORKSPACE-FILE-PANEL-EVIDENCE.md.

@@ -80,12 +80,14 @@ final class BatchController: ObservableObject {
         }
     }
 
+    private let removeStaging: (URL) async throws -> Void
     private let journalURL: URL?
     private var journalLease: BatchJournalLease?
     private var journalJobs: [QueueJob] = []
     private var task: Task<Void, Never>?
 
-    init(journalURL: URL? = nil) {
+    init(journalURL: URL? = nil, removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) }) {
+        self.removeStaging = removeStaging
         self.journalURL = journalURL
         if let journalURL, FileManager.default.fileExists(atPath: journalURL.path) {
             do { recovery = try BatchJournal.read(from: journalURL) }
@@ -159,6 +161,18 @@ final class BatchController: ObservableObject {
                 do {
                     try checkpoint()
                     try await encode(job, tools: tools)
+                } catch let error as ExportCleanupError {
+                    if let output = error.publishedOutput {
+                        let summary = statuses[job.id]?.detail ?? ""
+                        statuses[job.id] = BatchStatus(phase: "Completed", progress: 1,
+                            detail: summary + "\nCleanup warning: " + error.localizedDescription, destination: output)
+                    } else {
+                        let phase = error.operationError is CancellationError ? "Cancelled" : "Failed"
+                        statuses[job.id] = BatchStatus(phase: phase, detail: "Cleanup warning: " + error.localizedDescription)
+                    }
+                    checkpointAfterOutcome()
+                    // Keep the publication outcome, but do not accumulate more leftovers.
+                    break
                 } catch is CancellationError {
                     statuses[job.id] = BatchStatus(phase: "Cancelled", detail: "No output published")
                     checkpointAfterOutcome()
@@ -212,62 +226,74 @@ final class BatchController: ObservableObject {
         let staged = directory.appendingPathComponent("encoded." + job.configuration.container.lowercased())
         let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: staged, hdr: hdr)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: directory) }
-        statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
-        try checkpoint()
-        let parser = ProgressParser(duration: plan.duration) { [weak self] fraction in
-            Task { @MainActor in
-                guard self?.statuses[job.id]?.phase == "Encoding" else { return }
-                self?.statuses[job.id]?.progress = fraction
-            }
-        }
-        let result = try await ToolRunner().run(executable: tools.ffmpeg, arguments: plan.arguments) { data in parser.accept(data) }
-        try Task.checkCancellation()
-        guard result.status == 0 else {
-            throw NativeExportError.invalid("FFmpeg exited \(result.status).\n" + String(decoding: result.stderr, as: UTF8.self))
-        }
-        statuses[job.id]?.phase = "Verifying"
-        statuses[job.id]?.progress = 0
-        try checkpoint()
-        let actual = try await MediaProbe.read(staged, tools: tools)
-        guard actual.video?.codec_name == plan.expectedCodec,
-              actual.streams.filter({ $0.codec_type == "audio" }).count == plan.audioCount,
-              actual.streams.filter({ $0.codec_type == "subtitle" }).count == plan.subtitleCount,
-              plan.expectedWidth == nil || actual.video?.width == plan.expectedWidth,
-              plan.expectedHeight == nil || actual.video?.height == plan.expectedHeight,
-              actual.seconds > 0,
-              plan.duration <= 0 || abs(actual.seconds - plan.duration) < max(0.25, plan.duration * 0.01) else {
-            throw NativeExportError.invalid("The output did not match the expected codec, dimensions, tracks or duration.")
-        }
-        if plan.normalizedOrientation {
-            guard let video = actual.video, try SourceOrientation.read(video) == .identity,
-                  video.sample_aspect_ratio == "1:1" else {
-                throw SourceOrientation.failure("The encoded output retained an unexpected display transform or pixel aspect ratio. Nothing was published.")
-            }
-        }
-        if let expected = plan.expectedAudio, actual.streams.filter({ $0.codec_type == "audio" }).contains(where: { $0.codec_name != expected }) {
-            throw NativeExportError.invalid("Output audio did not match the planned codec.")
-        }
-        var verifiedSummary = plan.summary
-        if let hdr {
-            statuses[job.id]?.detail = "HDR10: decoding every staged output frame before publication"
-            let verified = try await HDR10Audit.read(staged, tools: tools, probe: actual, expectedRate: hdr.rate) { [weak self] frames, fraction in
+        var operationError: Error?
+        var publishedOutput: URL?
+        do {
+            statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
+            try checkpoint()
+            let parser = ProgressParser(duration: plan.duration) { [weak self] fraction in
                 Task { @MainActor in
-                    guard self?.statuses[job.id]?.phase == "Verifying" else { return }
+                    guard self?.statuses[job.id]?.phase == "Encoding" else { return }
                     self?.statuses[job.id]?.progress = fraction
-                    self?.statuses[job.id]?.detail = "HDR10: output audit · \(frames) decoded frames · checking against source"
                 }
             }
-            try hdr.verify(verified)
-            statuses[job.id]?.detail = "HDR10: rechecking source identity before publication"
-            guard try await SourceFingerprint.read(source) == fingerprint else { throw HDR10Audit.failure("Source changed during export. Nothing published.") }
-            verifiedSummary = hdr.summary + " · source/output timestamp bound ≤ \(hdr.timeBase.value + verified.timeBase.value) s"
+            let result = try await ToolRunner().run(executable: tools.ffmpeg, arguments: plan.arguments) { data in parser.accept(data) }
+            try Task.checkCancellation()
+            guard result.status == 0 else {
+                throw NativeExportError.invalid("FFmpeg exited \(result.status).\n" + String(decoding: result.stderr, as: UTF8.self))
+            }
+            statuses[job.id]?.phase = "Verifying"
+            statuses[job.id]?.progress = 0
+            try checkpoint()
+            let actual = try await MediaProbe.read(staged, tools: tools)
+            guard actual.video?.codec_name == plan.expectedCodec,
+                  actual.streams.filter({ $0.codec_type == "audio" }).count == plan.audioCount,
+                  actual.streams.filter({ $0.codec_type == "subtitle" }).count == plan.subtitleCount,
+                  plan.expectedWidth == nil || actual.video?.width == plan.expectedWidth,
+                  plan.expectedHeight == nil || actual.video?.height == plan.expectedHeight,
+                  actual.seconds > 0,
+                  plan.duration <= 0 || abs(actual.seconds - plan.duration) < max(0.25, plan.duration * 0.01) else {
+                throw NativeExportError.invalid("The output did not match the expected codec, dimensions, tracks or duration.")
+            }
+            if plan.normalizedOrientation {
+                guard let video = actual.video, try SourceOrientation.read(video) == .identity,
+                      video.sample_aspect_ratio == "1:1" else {
+                    throw SourceOrientation.failure("The encoded output retained an unexpected display transform or pixel aspect ratio. Nothing was published.")
+                }
+            }
+            if let expected = plan.expectedAudio, actual.streams.filter({ $0.codec_type == "audio" }).contains(where: { $0.codec_name != expected }) {
+                throw NativeExportError.invalid("Output audio did not match the planned codec.")
+            }
+            var verifiedSummary = plan.summary
+            if let hdr {
+                statuses[job.id]?.detail = "HDR10: decoding every staged output frame before publication"
+                let verified = try await HDR10Audit.read(staged, tools: tools, probe: actual, expectedRate: hdr.rate) { [weak self] frames, fraction in
+                    Task { @MainActor in
+                        guard self?.statuses[job.id]?.phase == "Verifying" else { return }
+                        self?.statuses[job.id]?.progress = fraction
+                        self?.statuses[job.id]?.detail = "HDR10: output audit · \(frames) decoded frames · checking against source"
+                    }
+                }
+                try hdr.verify(verified)
+                statuses[job.id]?.detail = "HDR10: rechecking source identity before publication"
+                guard try await SourceFingerprint.read(source) == fingerprint else { throw HDR10Audit.failure("Source changed during export. Nothing published.") }
+                verifiedSummary = hdr.summary + " · source/output timestamp bound ≤ \(hdr.timeBase.value + verified.timeBase.value) s"
+            }
+            try Task.checkCancellation()
+            try ExportPublication.publish(staged: staged, destination: output)
+            publishedOutput = output
+            statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: verifiedSummary, destination: output)
+            // Publication already succeeded. A journal failure must not mislabel the media as failed.
+            checkpointAfterOutcome()
+        } catch { operationError = error }
+        // ToolRunner has settled the process and drained both pipes before this
+        // boundary, even on cancellation. Never remove a directory owned by another job.
+        do { try await removeStaging(directory) }
+        catch {
+            throw ExportCleanupError(directory: directory, publishedOutput: publishedOutput,
+                                     operationError: operationError, cleanupError: error)
         }
-        try Task.checkCancellation()
-        try ExportPublication.publish(staged: staged, destination: output)
-        statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: verifiedSummary, destination: output)
-        // Publication already succeeded. A journal failure must not mislabel the media as failed.
-        checkpointAfterOutcome()
+        if let operationError { throw operationError }
     }
 }
 

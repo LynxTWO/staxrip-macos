@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Implement Slice 009 bounded batch staging cleanup and outcome reporting. Slice 008 local, native and hosted checks passed; see QUEUE-PREFLIGHT-EVIDENCE.md. Slice 007 native and hosted checks passed; see ORIENTATION-EVIDENCE.md. Audio listening remains parked.
+Next: Record Slice 009 hosted result; local batch cleanup and native two-job checks passed. Slice 008 local, native and hosted checks passed; see QUEUE-PREFLIGHT-EVIDENCE.md. Slice 007 native and hosted checks passed; see ORIENTATION-EVIDENCE.md. Audio listening remains parked.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

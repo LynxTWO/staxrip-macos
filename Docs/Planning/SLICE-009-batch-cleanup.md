@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 009: Report batch staging cleanup
-Version: 0.1. Date: 2026-09-30. Status: Approved for build.
+Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: M1 ready; Slice 008 hosted closure recorded.
+Milestone: M1 and M2 implemented; M3 automated and native checks passed; hosted check next.
 Blocked by: None external.
-Evidence so far: BatchController.encode currently uses defer with try? removeItem, suppressing cleanup failures. Native export already has bounded cleanup and outcome reporting.
+Evidence so far: BATCH-CLEANUP-EVIDENCE.md records ten focused tests and the 109-test regression.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves
@@ -34,7 +34,7 @@ No pretend cleanup success. Reuse six-attempt transient retry bound (1.55 second
 
 ## 6. Modules touched
 
-Shared export cleanup in NativeExport.swift, BatchController outcome handling, focused batch tests, and evidence documentation. Existing QueueView status detail renders the warning without a new status schema.
+Shared export cleanup in NativeExport.swift, BatchController outcome handling, focused batch tests, mechanical preset reference rename, and evidence documentation. Existing QueueView status detail renders the warning without a new status schema.
 
 ## 7. Data subset
 

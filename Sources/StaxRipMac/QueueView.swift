@@ -113,7 +113,7 @@ struct QueueView: View {
             }
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "info.circle")
-                Text("This is a GUI prototype. Jobs run sequentially; the batch stops on failure. Completed outputs are never replaced. The last started batch is saved locally for explicit recovery after a restart. Use Session → Save session to keep and reopen your workspace and queue. Export JSON creates a queue-only reference file. Neither format is a Windows StaxRip project file.")
+                Text("This is a GUI prototype. Jobs run sequentially; the batch stops on failure or a temporary-file cleanup warning. Completed outputs are never replaced. The last started batch is saved locally for explicit recovery after a restart. Use Session → Save session to keep and reopen your workspace and queue. Export JSON creates a queue-only reference file. Neither format is a Windows StaxRip project file.")
             }.font(.system(size: 11)).foregroundStyle(.secondary).lineSpacing(4)
                 .padding(16).frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.accent.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))

@@ -105,7 +105,7 @@ struct ExportTests {
         try Data("keep".utf8).write(to: protected)
         var attempts = 0
         let task = Task { @MainActor in
-            try await NativeExportStaging.remove(owned, removeItem: { url in
+            try await ExportStaging.remove(owned, removeItem: { url in
                 #expect(url == owned)
                 attempts += 1
                 if attempts < 3 {
@@ -129,7 +129,7 @@ struct ExportTests {
             var attempts = 0
             var delays: [Double] = []
             do {
-                try await NativeExportStaging.remove(dir, removeItem: { _ in
+                try await ExportStaging.remove(dir, removeItem: { _ in
                     attempts += 1
                     throw NSError(domain: NSPOSIXErrorDomain, code: Int(code))
                 }, wait: { delays.append($0) })
@@ -141,10 +141,10 @@ struct ExportTests {
             #expect(delays.count == (code == EBUSY ? 5 : 0))
             #expect(delays.reduce(0, +) <= 1.551)
         }
-        try await NativeExportStaging.remove(dir.appendingPathComponent("already-absent"))
+        try await ExportStaging.remove(dir.appendingPathComponent("already-absent"))
         #expect(FileManager.default.fileExists(atPath: dir.path))
         do {
-            try await NativeExportStaging.remove(dir, removeItem: { _ in
+            try await ExportStaging.remove(dir, removeItem: { _ in
                 throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENOENT))
             })
             Issue.record("A missing child must not hide a remaining staging directory")
@@ -166,7 +166,7 @@ struct ExportTests {
                 if cancel { service.cancel() }
             }
             Issue.record("Cleanup failure must not be suppressed")
-        } catch let error as NativeExportCleanupError {
+        } catch let error as ExportCleanupError {
             #expect(error.publishedOutput == (cancel ? nil : target))
             #expect((error.operationError is CancellationError) == cancel)
             #expect((error.cleanupError as NSError).code == Int(EACCES))

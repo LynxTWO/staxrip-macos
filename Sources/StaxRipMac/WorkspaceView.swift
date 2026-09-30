@@ -9,6 +9,7 @@ struct WorkspaceView: View {
     @State private var showingTerms = false
     @State private var showingTracks = false
     @State private var showingInspector = false
+    @State private var showingPicturePreview = false
     @AppStorage("appearance") private var appearance = "System"
     @State private var isDropTarget = false
     var body: some View {
@@ -44,6 +45,9 @@ struct WorkspaceView: View {
         .background(Color(nsColor: .windowBackgroundColor))
         .sheet(isPresented: $showingInspector) {
             if let source = model.sourceURL { MediaInspectorView(source: source).environmentObject(batch) }
+        }
+        .sheet(isPresented: $showingPicturePreview) {
+            PicturePreviewView().environmentObject(model)
         }
         .sheet(isPresented: $showingTracks) {
             if let source = model.sourceURL { TrackRoutingView(source: source, configuration: $model.config) }
@@ -191,6 +195,10 @@ struct WorkspaceView: View {
                 Image(systemName: model.isDemo ? "photo" : "play.rectangle")
                 Text(model.isDemo ? "Illustrated demo · open a video for playback" : "Source playback · encoding filters are not applied")
                 Spacer(minLength: 0)
+                if !model.isDemo {
+                    Button("Preview picture…") { showingPicturePreview = true }
+                        .accessibilityHint("Compare an original frame with crop, resize and deinterlace settings applied.")
+                }
                 Image(systemName: "arrow.down.doc").help("Drop a video onto the preview")
             }.font(.system(size: 10)).foregroundStyle(.secondary).padding(12)
                 .background(Color(nsColor: .controlBackgroundColor))
@@ -271,7 +279,7 @@ struct WorkspaceView: View {
                 Stepper("Bottom: \(model.config.cropBottom) px", value: $model.config.cropBottom, in: 0...240, step: 2)
             }.font(.system(size: 12))
             PictureOptionsView(options: $model.config.picture)
-            Text("Crop and size apply during queue encoding. Size fits within the selected bounds without stretching; the source preview stays unfiltered.")
+            Text("Crop and size apply during queue encoding. Size fits within the selected bounds without stretching; source playback stays unfiltered. Choose Preview picture for a filtered still comparison.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

@@ -79,18 +79,8 @@ struct EncodePlan: Sendable {
         if preservingHDR {
             args += ["-profile:v", "main10", "-fps_mode", "passthrough", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-chroma_sample_location", "left"]
         }
-        var filters: [String] = []
-        if picture.deinterlace != "Off" {
-            filters.append("bwdif=mode=send_frame:parity=auto:deint=\(picture.deinterlace == "Flagged frames" ? "interlaced" : "all")")
-        }
-        if c.cropTop + c.cropBottom + picture.cropLeft + picture.cropRight > 0 {
-            filters.append("crop=iw-\(picture.cropLeft + picture.cropRight):ih-\(c.cropTop + c.cropBottom):\(picture.cropLeft):\(c.cropTop)")
-        }
-        if c.resolution != "Original" {
-            let size = c.resolution == "1920 × 1080" ? "1920:1080" : "1280:720"
-            filters.append("scale=\(size):force_original_aspect_ratio=decrease:force_divisible_by=2")
-        }
-        if !filters.isEmpty { args += ["-vf", filters.joined(separator: ",")] }
+        let picturePlan = PicturePlan(c)
+        if !picturePlan.filters.isEmpty { args += ["-vf", picturePlan.expression] }
         var expectedAudio: String?
         if c.audio != "No audio", !audio.isEmpty {
             for stream in audio { args += ["-map", "0:\(stream.index)"] }

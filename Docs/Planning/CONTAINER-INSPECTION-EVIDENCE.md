@@ -29,4 +29,4 @@ A separate MP4 correctly showed one movie track, zero chapters and one Cover art
 
 ## Remaining validation and limits
 
-Hosted check remains pending. Chapter editing, seeking, retiming, attachment extraction, output-preservation checks, owner spoken VoiceOver and broader platforms remain open. Audio listening stays parked.
+Hosted product check passed at 087adcc: run 36713752263, job 109882151161, completed 2026-09-30 at 12:29:37 UTC in 9m37s on macos-15-arm64 / Swift 6.1.2. This is automated coverage, not native qualification on that platform. Chapter editing, seeking, retiming, attachment extraction, output-preservation checks, owner spoken VoiceOver and broader platforms remain open. Audio listening stays parked.

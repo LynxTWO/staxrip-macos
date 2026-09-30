@@ -1,6 +1,6 @@
 # Workspace file dialog evidence
 
-Date: 2026-09-30. Slice 016, D-029 / R-019. Status: local and native acceptance passed; hosted pending.
+Date: 2026-09-30. Slice 016, D-029 / R-019. Status: scoped local, native and hosted acceptance passed.
 
 ## Implemented contract
 
@@ -28,4 +28,4 @@ Command-Shift-S opened the attached save sheet. While it was active, Open Source
 
 ## Remaining gate and limits
 
-Hosted check pending. This is a workspace file-dialog lifecycle change, not a guarantee that every synchronous filesystem operation is responsive. Session reads/writes remain bounded synchronous operations. Audio, preset, Quick Export and termination dialogs are unchanged. Durable permission bookmarks, slow/network/removable filesystems and broader OS/CPU/accessibility qualification remain separate. No listening, merge, signing, notarization or public release acceptance is included.
+Hosted macOS run 36787875488 passed at 42634d9: Swift 6.1.2, 149 tests in 460.171 seconds, job duration 8m43s. Draft PR 33 remains unmerged. This is a workspace file-dialog lifecycle change, not a guarantee that every synchronous filesystem operation is responsive. Session reads/writes remain bounded synchronous operations. Audio, preset, Quick Export and termination dialogs are unchanged. Durable permission bookmarks, slow/network/removable filesystems and broader OS/CPU/accessibility qualification remain separate. No listening, merge, signing, notarization or public release acceptance is included.

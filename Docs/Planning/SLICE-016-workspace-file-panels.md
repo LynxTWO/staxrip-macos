@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 016: Attached workspace file dialogs
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Accepted within recorded scope.
 
 SLICE STATE
-Milestone: M1 through M3 local implementation, regression and native walkthrough passed; hosted pending.
-Blocked by: None external. Slice 015 closed with run 36785205441.
-Evidence so far: Six callback/document tests, 149-test optimized regression, all five native sheet flows and cancellation, session replacement cancel/confirm, identical session round-trip and exact queue-array readback. See WORKSPACE-FILE-PANEL-EVIDENCE.md.
+Milestone: M1 through M3 local, native and hosted acceptance passed at 42634d9.
+Blocked by: None for this scoped slice. Broader dialogs and filesystem qualification remain separate.
+Evidence so far: Six callback/document tests, 149-test optimized regression, all five native sheet flows and cancellation, session replacement cancel/confirm, identical session round-trip and exact queue-array readback. Hosted run 36787875488 passed 149 tests in 8m43s. See WORKSPACE-FILE-PANEL-EVIDENCE.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

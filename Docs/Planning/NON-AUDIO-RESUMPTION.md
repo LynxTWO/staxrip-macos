@@ -88,3 +88,5 @@ Slice 015 scoped acceptance closed at b3027f2 with hosted run 36785205441: 143 t
 Slice 016 is active under D-029/R-019: attached workspace source/folder/session/queue-reference dialogs with one request lifecycle, captured saves and stale callback protection. Audio remains parked.
 
 Slice 016 local acceptance passed: six focused functions, 149 tests / 29 suites, native source/folder/session/reference sheets and cancellation, replacement cancel/confirm, unchanged source and structurally identical saved-session readback. Hosted pending; see WORKSPACE-FILE-PANEL-EVIDENCE.md.
+
+Slice 016 scoped acceptance closed at 42634d9 with hosted run 36787875488: 149 tests, 8m43s. Other app dialogs, synchronous filesystem I/O and durable access remain separate; audio remains parked.

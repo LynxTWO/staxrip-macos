@@ -30,6 +30,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-023 | 2026-09-30 | Inspect chapters and attachments | Confirmed | |
 | D-024 | 2026-09-30 | Verify retained container contents | Confirmed | |
 | D-025 | 2026-09-30 | Qualify full destination failures | Confirmed | |
+| D-026 | 2026-09-30 | Verify resized raster dimensions | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -388,3 +389,17 @@ Options considered: error injection alone; a small isolated filesystem filled wi
 Consequences: Local opt-in integration and native qualification, exact-mount ownership checks, no default hosted image mounting, no audio or release scope.
 
 Revisit when: Removable/network filesystems or capacity estimation are scoped.
+
+## D-026: Verify resized raster dimensions
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 013 under autonomous non-audio delegation after Slice 012 closure.
+
+Because: EncodePlan leaves expected width and height absent for resized presets, so successful encoding can publish the wrong raster size. Generated scale outputs show rounding and pixel aspect need careful separation.
+
+Options considered: trust filter arguments; hard-code one filter version's rounding; independently verify bounded raster fit with an explicit less-than-two-pixel rounding allowance. Choose the invariant check without changing filters or claiming display-aspect preservation.
+
+Consequences: Verify output dimensions before publication and report scoped dimensions. Existing HDR/orientation and container checks remain. No schema, audio, release or merge change.
+
+Revisit when: Explicit anamorphic display geometry or different scale algorithms are scoped.

@@ -22,6 +22,10 @@ A generated two-job session was loaded without starting execution. On the full f
 
 After removing only the generated filler, explicit Start queue completed both jobs. Both results independently probed as readable, protected hashes still matched and staging was absent. The owned disk image was detached successfully after validation; its generated outputs remain inside the bounded image. No source files, owner outputs or historical staging were deleted. The saved test session is local-only and points into that disposable fixture, not a normal user workflow.
 
+## Reproduce locally
+
+Run `./scripts/check-destination-capacity.command` from the checkout on macOS with FFmpeg installed. It creates its own unique temporary 64 MiB image, runs only the opt-in test, then detaches and removes that owned fixture. If detaching fails, it retains the fixture and reports its path instead of deleting mounted contents. Do not point STAXRIP_CAPACITY_TEST_MOUNT at an existing owner volume. The wrapper itself was run successfully locally.
+
 ## Remaining gate
 
 Hosted ordinary regression pending. Hosted execution is not claimed to run the opt-in capacity test. No audio listening, broad filesystem qualification, merge or release acceptance.

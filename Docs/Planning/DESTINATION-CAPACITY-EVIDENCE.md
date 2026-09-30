@@ -1,6 +1,6 @@
 # Destination capacity evidence
 
-Date: 2026-09-30. Slice 012 / D-025 / R-015. Local and native acceptance passed; hosted ordinary regression pending.
+Date: 2026-09-30. Slice 012 / D-025 / R-015. Complete within recorded local/native/hosted limits.
 
 ## Fixture boundary
 
@@ -28,7 +28,7 @@ Run `./scripts/check-destination-capacity.command` from the checkout on macOS wi
 
 ## Remaining gate
 
-Hosted ordinary regression pending. Hosted execution is not claimed to run the opt-in capacity test. No audio listening, broad filesystem qualification, merge or release acceptance.
+Hosted ordinary regression passed at a995ab3, run 36766809385 / job 110062919412, completed 2026-09-30 at 19:45:46 UTC in 9m31s. Hosted execution is not claimed to run the opt-in capacity test. No audio listening, broad filesystem qualification, merge or release acceptance.
 
 ## Hosted gate diagnosis
 
@@ -37,3 +37,5 @@ Run 36724013329 at e893ae6 failed in the pre-existing BatchCleanupTests cancella
 The cancellation test now waits for its writer-owned marker while the batch runs, requires a live Encoding phase before cancellation, and uses a one-minute test-level limit with cancellation-aware polling and deferred cleanup. It no longer proceeds into outcome assertions after a missing prerequisite. Existing process-settlement, retained partial bytes, primary outcome, cleanup warning and protected-file assertions remain. No product behavior changed.
 
 The corrected test includes a deliberate six-second probe wrapper to exceed the old startup deadline and verifies cancellation still targets the started encoder. Both failure/cancellation cases passed locally in 7.542 seconds within the full release regression: 119 tests, 23 suites, 9.491 seconds, 15 opt-in skips. This reproduces the deadline trigger; it does not establish the hosted scheduler's precise cause. A fresh hosted run is required.
+
+Local negative control: restoring only the former five-second loop condition with the six-second probe fixture failed the required writer-start condition in 5.038 seconds. Restoring the committed event-based test passed both cleanup test functions in 6.390 seconds. The negative-control edit was restored and was never committed.

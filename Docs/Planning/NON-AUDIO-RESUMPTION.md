@@ -66,3 +66,5 @@ Slice 010 hosted product acceptance passed at 087adcc (run 36713752263, 9m37s). 
 Slice 011 acceptance closed after native generated export/output inspection and hosted product success at d297f75, run 36716287551. See CONTAINER-PRESERVATION-EVIDENCE.md. Audio remains parked.
 
 Slice 012 actual capacity exhaustion and native retry passed on a disposable 64 MiB HFS+ image, now detached. No product fix was needed; opt-in regression and scoped evidence are recorded in DESTINATION-CAPACITY-EVIDENCE.md. Hosted ordinary regression is next.
+
+Slice 012 closed with hosted success at a995ab3, run 36766809385 (9m31s), after correcting and negatively testing the inherited cancellation startup gate. Capacity evidence remains the separate local opt-in run, not a hosted disk-image claim.

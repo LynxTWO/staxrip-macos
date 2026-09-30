@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 012: Full destination failure qualification
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Complete within recorded limits.
 
 SLICE STATE
-Milestone: M1 through M3 local and native checks passed; ordinary hosted regression pending.
+Milestone: M1 through M3 local/native checks passed; corrected ordinary hosted regression passed at a995ab3.
 Blocked by: None external.
 Evidence so far: DESTINATION-CAPACITY-EVIDENCE.md records real ENOSPC, no publication, cleanup, protected bytes and successful explicit retry on the bounded HFS+ image.
 Last audit: 2026-09-30.

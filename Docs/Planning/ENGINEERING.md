@@ -146,3 +146,7 @@ Version 0.1 is a draft, not an audited product specification. Decision changes u
 ## Preset extension, 2026-09-29
 
 Approved R-009 under delegated Slice 006: source-independent recipes and bounded settings undo. Consequence: user_data for local saved settings. Gates preset-scope, preset-storage, preset-conflict, preset-history and preset-ui bind S6-001 through S6-005. No general test service or schema migration is included.
+
+## Orientation extension, 2026-09-30
+
+Approved R-010 under delegated Slice 007: validated source orientation shared by queue and still preview. Gates orientation-plan, orientation-export, orientation-preview and orientation-ui bind S7-001 through S7-004. Consequence: user_data for newly encoded output, with R-004 no-overwrite and source preservation retained. No configuration migration or new dependency. Generated fixtures and independent pixel permutation checks are bounded to this feature.

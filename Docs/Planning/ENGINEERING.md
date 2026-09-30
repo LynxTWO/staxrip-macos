@@ -142,3 +142,7 @@ Per slice: approved brief, all S-IDs have evidence, core and error walkthroughs 
 ## 18. Change Control
 
 Version 0.1 is a draft, not an audited product specification. Decision changes use new log entries and explicit superseding links. Mechanical audit success does not approve decisions or demonstrate software behavior. Exactly one slice becomes active after its own approval; later slices do not inherit that approval.
+
+## Preset extension, 2026-09-29
+
+Approved R-009 under delegated Slice 006: source-independent recipes and bounded settings undo. Consequence: user_data for local saved settings. Gates preset-scope, preset-storage, preset-conflict, preset-history and preset-ui bind S6-001 through S6-005. No general test service or schema migration is included.

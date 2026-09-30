@@ -1,5 +1,5 @@
 # Source orientation evidence
-Date: 2026-09-30. Scope: Slice 007, D-020. Status: implementation and local automated evidence; native and hosted validation pending.
+Date: 2026-09-30. Scope: Slice 007, D-020. Status: Done with local native, automated and hosted evidence.
 
 ## Research and bounded feasibility checks
 
@@ -34,3 +34,7 @@ The optimized ad-hoc app built in 12.13 seconds and was restarted. A generated 9
 A generated mirrored MP4 imported for source playback but its comparison request displayed the explicit unsupported-transform explanation and no images. Escape closed the sheet. Reopening a previously completed idle preview revealed an unrelated status defect: it said Cancelling even though no work was running. Cancel/close now distinguish idle state and clear stale state. Ten focused preview tests passed in 1.444 seconds (one opt-in skip), including the idle-close assertion. Final rebuilt native idle-reopen receipt follows.
 
 Native agent inspection is not owner VoiceOver listening, calibrated display assessment or real-camera compatibility. Hosted check pending.
+
+Final optimized ad-hoc build completed in 11.83 seconds. After restart, the portrait source rendered at 96 by 160 on both sides. Closing that completed comparison and reopening it showed Choose a source time, then render a comparison, with no stale image or false cancellation status. Native final follow-up passed. Draft PR 24 holds this slice; hosted result pending.
+
+Hosted validation at a751166 passed in 9m22s: [run 36706425995](https://github.com/LynxTWO/staxrip-macos/actions/runs/36706425995). This includes the final idle-close repair. All local S7 gates have evidence within the documented source/platform scope.

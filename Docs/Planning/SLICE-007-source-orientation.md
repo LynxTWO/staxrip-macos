@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 007: Source orientation
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Done with evidence.
 
 SLICE STATE
-Milestone: M1 and M2 complete; M3 automated checks pass, native and hosted checks next.
+Milestone: M1 and M2 complete; M3 automated checks pass, native walkthrough and hosted check passed.
 Blocked by: None. Slice 006 closed with native and hosted evidence.
 Evidence so far: Generated four-angle raw-frame comparison against FFmpeg autorotation; normalized MP4 has swapped dimensions and no rotation side data. ORIENTATION-EVIDENCE.md will hold implementation receipts.
 Last audit: 2026-09-30.

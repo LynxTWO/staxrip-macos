@@ -1,5 +1,5 @@
 # Reusable presets and settings history evidence
-Date: 2026-09-30. Scope: Slice 006, D-019. Status: Implemented; local native walkthrough passed, follow-up hosted validation pending.
+Date: 2026-09-30. Scope: Slice 006, D-019. Status: Implemented; local native walkthrough and hosted follow-up passed.
 
 ## Implementation
 
@@ -40,3 +40,5 @@ A final file-identity review found that a dangling symbolic link could be mistak
 ## Native-discovered fix receipt
 
 Eight focused release tests passed in 0.016 seconds. The release regression reported 101 tests in 17 suites passed in 9.656 seconds, with 14 opt-in skips. A final queue binding update reused the tested codec transition helper; the optimized app rebuilt successfully in 11.88 seconds and its native transition check passed as described above. No audio listening or new DSP acceptance is claimed.
+
+Hosted follow-up at 0b4f96a passed in 8m53s: [run 36703925176](https://github.com/LynxTWO/staxrip-macos/actions/runs/36703925176). This includes the native-discovered atomic-control repair. Slice 006 local acceptance is complete within the stated platform and owner-review limits.

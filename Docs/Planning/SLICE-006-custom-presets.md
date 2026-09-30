@@ -1,9 +1,9 @@
 # StaxRip Mac Slice 006: Reusable presets and settings undo
-Version: 0.1. Date: 2026-09-29. Status: Implemented; local native verification passed; follow-up hosted check pending.
+Version: 0.1. Date: 2026-09-29. Status: Done with evidence.
 
 SLICE STATE
-Milestone: M1-M2 implemented; M3 automated checks and native walkthrough pass; hosted follow-up pending.
-Blocked by: None locally. Hosted validation of the native-discovered fix is pending.
+Milestone: M1-M2 implemented; M3 automated checks, native walkthrough and hosted follow-up pass.
+Blocked by: None in slice scope. Owner spoken and broader platform validation remain separate.
 Evidence so far: CUSTOM-PRESET-EVIDENCE.md.
 Last audit: 2026-09-30.
 

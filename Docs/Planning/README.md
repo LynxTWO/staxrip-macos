@@ -55,4 +55,4 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 27. [Slice 017: declared display proportions](SLICE-017-display-aspect.md) and [feasibility research](DISPLAY-ASPECT-RESEARCH.md).
 
-[Display proportion evidence](DISPLAY-ASPECT-EVIDENCE.md) records Slice 017 local/native acceptance and its pending hosted gate.
+[Display proportion evidence](DISPLAY-ASPECT-EVIDENCE.md) records Slice 017 scoped local/native/hosted acceptance.

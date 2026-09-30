@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 017: Verify declared display proportions
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Scoped acceptance passed.
 
 SLICE STATE
-Milestone: M3 local and native acceptance passed; hosted gate pending.
-Blocked by: Hosted regression for this slice remains to run.
-Evidence so far: 157-test regression, generated refusal/ownership checks and native known/unknown exports passed. See DISPLAY-ASPECT-EVIDENCE.md and DISPLAY-ASPECT-RESEARCH.md.
+Milestone: M3 local, native and hosted acceptance passed.
+Blocked by: None within the slice; broader qualification remains separate.
+Evidence so far: 157-test local regression, generated refusal/ownership checks, native known/unknown exports and hosted run 36790619197 passed. See DISPLAY-ASPECT-EVIDENCE.md and DISPLAY-ASPECT-RESEARCH.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

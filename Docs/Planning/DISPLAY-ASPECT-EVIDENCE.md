@@ -1,6 +1,6 @@
 # Declared display proportion evidence
 
-Date: 2026-09-30. Slice 017, D-030 / R-020. Status: local and native acceptance passed; hosted pending.
+Date: 2026-09-30. Slice 017, D-030 / R-020. Status: scoped local, native and hosted acceptance passed.
 
 ## Contract
 
@@ -28,4 +28,4 @@ Generated fixtures and logs remain in ignored local work/display-aspect. No user
 
 ## Limits and remaining gate
 
-Hosted macOS regression remains required. Strict equality can refuse small encoder/container approximations; the failure message explains possible rounding and suggests trying another container or Original size. Hardware, other tool versions, frame-varying metadata, codec/container disagreement, long films and broad player compatibility remain separate qualification. Audio listening stays parked. No merge, signing, notarization or public release is included.
+Hosted macOS run 36790619197 passed at b177432: Swift 6.1.2, 157 tests in 461.121 seconds, job duration 8m57s. Draft PR 34 remains unmerged. Strict equality can refuse small encoder/container approximations; the failure message explains possible rounding and suggests trying another container or Original size. Hardware, other tool versions, frame-varying metadata, codec/container disagreement, long films and broad player compatibility remain separate qualification. Audio listening stays parked. No merge, signing, notarization or public release is included.

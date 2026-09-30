@@ -162,3 +162,7 @@ Approved R-012 under delegated Slice 009: report and persist batch cleanup failu
 ## Container inspection extension, 2026-09-30
 
 Approved R-013 under delegated Slice 010: inspect reported chapters and embedded attachment metadata, with bounded labels/rows and request identity. Gates container-inspection-data, container-inspection-bounds, container-inspection-ui and container-inspection-identity bind S10-001 through S10-004. Consequence: local_only read-only observations. No filename tag is interpreted as a path and no attachment payload is extracted or loaded.
+
+## Slice 011 container preservation checkpoint
+
+Approved R-014 under delegated Slice 011: verify retained flat chapter titles/times and attachment payload SHA-256, sizes, names and MIME types before publication. Gates container-preservation-mkv, container-preservation-mp4, container-preservation-routing, container-preservation-refusal and container-preservation-ui bind S11-001 through S11-005. Consequence: current-operation owned output staging only; source and previous outputs remain protected. No extraction, cover-art/edition guarantee, saved-schema change, release or audio acceptance.

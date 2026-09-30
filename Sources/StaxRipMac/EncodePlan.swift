@@ -2,6 +2,7 @@ import Foundation
 
 struct EncodePlan: Sendable {
     let arguments: [String]
+    let containerPreservation: ContainerPreservation
     let expectedCodec: String
     let expectedAudio: String?
     let expectedWidth: Int?
@@ -60,6 +61,7 @@ struct EncodePlan: Sendable {
                 throw NativeExportError.invalid("Use MKV to preserve these subtitle formats, or remove subtitles for MP4.")
             }
         }
+        let containerPreservation = try ContainerPreservation.make(probe: probe, configuration: c)
         var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe"] + orientation.inputArguments(stream: video.index) + ["-i", job.source,
                     "-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
         if trimmed {
@@ -104,7 +106,7 @@ struct EncodePlan: Sendable {
         args += ["-map_metadata", "0", "-map_chapters", trimmed ? "-1" : "0"]
         if c.container == "MP4" { args += ["-movflags", "+faststart"] }
         args += [staged.path]
-        return EncodePlan(arguments: args, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,

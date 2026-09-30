@@ -22,6 +22,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-015 | 2026-09-28 | Planner and limiter feasibility | Open | |
 | D-016 | 2026-09-28 | Listening material rights | Confirmed | |
 | D-017 | 2026-09-29 | Bounded static HDR10 preservation | Confirmed | |
+| D-018 | 2026-09-29 | On-demand filtered picture comparison | Proposed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -263,3 +264,17 @@ Options considered: simply relax the SDR guard; implement all HDR modes together
 Consequences: New internal color intent and typed audit data, backward-compatible session default, extra source/output scan time, no new dependency. Metadata preservation is narrower than visual correctness or universal HDR compatibility.
 
 Revisit when: The audit cannot reliably identify the declared supported metadata, fixtures fail, or a later HDR workflow is approved.
+
+## D-018: On-demand filtered picture comparison
+Date: 2026-09-29
+Status: Proposed
+
+Decision: SLICE-005-filtered-picture-preview.md proposes a source/filtered still comparison using shared queue picture operations and actual timestamps. Initial coverage is explicit SDR BT.709 with bounded local rendering.
+
+Because: WorkspaceView currently displays unfiltered source playback, so users cannot inspect crop, resize or deinterlace effects before encoding.
+
+Options considered: matched still comparison; encoded motion sample; source-only frame stepping. Recommend still comparison first, with temporal-filter identity checked before UI implementation.
+
+Consequences: Shared typed picture plan, temporary image ownership and stale-result handling. No persistence migration or dependency. Motion playback, exact frame navigation, compression comparison, HDR and audio stay outside this brief.
+
+Revisit when: Owner approves or changes the brief, or M1 cannot establish frame identity within its bounded investigation.

@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Approved Slice 004 is implemented within HDR10-EVIDENCE.md limits; native/hosted qualification is tracked separately. Inspector hosted validation passed in run 36600485460.
+Next: Review proposed SLICE-005-filtered-picture-preview.md. Slice 004 has local and hosted evidence in HDR10-EVIDENCE.md; broader production qualification remains open.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -91,7 +91,7 @@ D-007 proposes free public hosted macOS checks plus local hardware verification.
 
 ## 10. Extension Points
 
-AnalysisCore -> GainPlanner for original Smart/Night processing. DialogueRegions -> GainPlanner for confidence-aware anchoring. ChannelLayout -> renderer for 5.1/7.1 and LFE contracts. ColorPlan -> EncodePlan for PQ/HLG preservation or explicit tone mapping. VerificationReport -> UI for A/B and export diagnostics. These are proposed interfaces, not current features.
+AnalysisCore -> GainPlanner for original Smart/Night processing. DialogueRegions -> GainPlanner for confidence-aware anchoring. ChannelLayout -> renderer for 5.1/7.1 and LFE contracts. ColorPlan -> EncodePlan for PQ/HLG preservation or explicit tone mapping. VerificationReport -> UI for A/B and export diagnostics. PicturePlan -> EncodePlan and PicturePreview is the proposed shared picture-processing extension under D-018. The other proposed interfaces remain subject to their briefs; implemented contracts are recorded in the current checkpoint.
 
 ## 11. Scale and Performance Posture
 
@@ -118,9 +118,9 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
-Owner pivot, 2026-09-29: Slice 002 is paused, not accepted. Native export cleanup hardening has local evidence and is awaiting hosted validation. SLICE-003-video-inspection.md is the approved active build boundary with local evidence; it is read-only and does not add HDR encoding. This checkpoint supersedes active-slice wording below; retained audio evidence is unchanged.
+Current approved implementation: Slice 004, implemented within HDR10-EVIDENCE.md limits; hosted run 36607764563 passed at 16a889c. Native cleanup and Slice 003 hosted checks also passed. No merge or release is authorized. Proposed next boundary: SLICE-005-filtered-picture-preview.md under D-018. It is not approved for product implementation yet.
 
-Slice 001 is Done with evidence; its owner functional/spoken acceptance and limitations are recorded in MEASURED-ANALYSIS-EVIDENCE.md. The guidance refinement is part of that closure. Current boundary: SLICE-002-dialogue-mastering.md. Slice 002 is now the active approved boundary, approved by Daniel Boyd on 2026-09-28. D-013 confirms manual speech before automatic suggestions. D-014 confirms the detailed mastering/preview boundary; D-015 remains open after real-film numerical failures; D-016 records listening-source permission. Native implementation and resource evidence are in MASTERING-EVIDENCE.md. A local six-excerpt comparison pack is prepared for wider research requests; 3 LU performance, listening and owner acceptance remain open. HDR, surround, signing and release remain outside this boundary.
+Slice 001 remains accepted with evidence in MEASURED-ANALYSIS-EVIDENCE.md. Slice 002 remains paused by owner request, not accepted. Preserve MASTERING-EVIDENCE.md, the verified v2 listening pack and unresolved D-015 findings. Audio resumes when the owner can review it with headphones.
 
 ## Slice 004 implementation checkpoint, 2026-09-29
 

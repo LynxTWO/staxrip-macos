@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: Activated after Slice 012 hosted success at a995ab3.
+Milestone: M1 through M3 local and native geometry checks passed; hosted regression pending.
 Blocked by: None external.
-Evidence so far: EncodePlan leaves expected width/height absent for resized presets; generated FFmpeg 9.0.2 fixtures demonstrate even-size rounding and retained non-square pixels.
+Evidence so far: PICTURE-GEOMETRY-EVIDENCE.md records generated exports, dropped-filter refusal, 122-test regression and native sizes. Restored-session access and main-thread publication blocking were observed and are tracked separately.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves
@@ -25,7 +25,7 @@ New resize algorithms or presets, changed FFmpeg filters, square-pixel conversio
 
 ## 5. Stubs and debts
 
-Scale filter versions round to even sizes differently. Resized dimensions must be positive/even, remain within the configured raster box, touch one box edge, and differ from the ideal proportional raster fit by less than two pixels per axis (plus arithmetic slack). This explicit rounding allowance does not certify sample aspect ratio or picture content. Existing orientation/SAR restrictions remain; unusual rotated resized SAR remains a separate policy limitation. No silent filter change.
+Scale filter versions round to even sizes differently. Resized dimensions must be positive/even, remain within the configured raster box, touch one box edge, and differ from the ideal proportional raster fit by less than two pixels per axis (checked with exact bounded integer cross-products). This explicit rounding allowance does not certify sample aspect ratio or picture content. Existing orientation/SAR restrictions remain; unusual rotated resized SAR remains a separate policy limitation. No silent filter change.
 
 ## 6. Modules touched
 

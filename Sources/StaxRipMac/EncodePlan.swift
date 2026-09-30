@@ -3,6 +3,7 @@ import Foundation
 struct EncodePlan: Sendable {
     let arguments: [String]
     let containerPreservation: ContainerPreservation
+    let outputGeometry: OutputGeometry
     let expectedCodec: String
     let expectedAudio: String?
     let expectedWidth: Int?
@@ -50,6 +51,8 @@ struct EncodePlan: Sendable {
               (width - picture.cropLeft - picture.cropRight) % 2 == 0, (height - c.cropTop - c.cropBottom) % 2 == 0 else {
             throw NativeExportError.invalid("The crop leaves an invalid frame size for 4:2:0 encoding.")
         }
+        let outputGeometry = try OutputGeometry(width: width - picture.cropLeft - picture.cropRight,
+                                                height: height - c.cropTop - c.cropBottom, resolution: c.resolution)
         let audio = try selectedStreams(probe, type: "audio", indices: c.audioTracks)
         let subtitles = try selectedStreams(probe, type: "subtitle", indices: c.subtitleTracks)
         if c.container == "MP4" {
@@ -106,7 +109,7 @@ struct EncodePlan: Sendable {
         args += ["-map_metadata", "0", "-map_chapters", trimmed ? "-1" : "0"]
         if c.container == "MP4" { args += ["-movflags", "+faststart"] }
         args += [staged.path]
-        return EncodePlan(arguments: args, containerPreservation: containerPreservation, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, outputGeometry: outputGeometry, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,

@@ -111,6 +111,8 @@ struct MediaProbe: Decodable, Sendable {
         let index: Int
         let codec_type: String?
         let codec_name: String?
+        let extradata_size: Int?
+        let extradata_hash: String?
         let width: Int?
         let height: Int?
         let pix_fmt: String?
@@ -172,7 +174,7 @@ struct MediaProbe: Decodable, Sendable {
     var video: Stream? { streams.first { $0.codec_type == "video" && $0.disposition?["attached_pic"] != 1 } }
 
     static func read(_ source: URL, tools: FFmpegTools) async throws -> MediaProbe {
-        let result = try await ToolRunner().run(executable: tools.ffprobe, arguments: ["-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-show_chapters", "-of", "json", source.path])
+        let result = try await ToolRunner().run(executable: tools.ffprobe, arguments: ["-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-show_chapters", "-show_data_hash", "sha256", "-of", "json", source.path])
         guard result.status == 0, !result.truncated else {
             throw NativeExportError.invalid("Media inspection failed. " + String(decoding: result.stderr, as: UTF8.self))
         }

@@ -28,6 +28,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-021 | 2026-09-30 | Read-only queue preflight | Confirmed | |
 | D-022 | 2026-09-30 | Report batch staging cleanup | Confirmed | |
 | D-023 | 2026-09-30 | Inspect chapters and attachments | Confirmed | |
+| D-024 | 2026-09-30 | Verify retained container contents | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28

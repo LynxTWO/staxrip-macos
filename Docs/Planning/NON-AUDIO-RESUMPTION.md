@@ -60,3 +60,5 @@ Slice 009 local cleanup reporting passed ten focused tests, a 109-test regressio
 Slice 009 hosted run 36711323507 passed at 8eef657 in 8 minutes 35 seconds. PR 26 remains draft and unmerged. Cleanup criteria are closed within the recorded scope.
 
 Slice 010 adds read-only chapter/attachment inspector sections and stale-request protection. Four focused tests, the 113-test regression and native populated/cover-art/empty source walkthroughs passed. A native section-identity reuse issue was fixed and retested. Source/recovery bytes stayed unchanged. Hosted check pending; see CONTAINER-INSPECTION-EVIDENCE.md.
+
+Slice 010 hosted product acceptance passed at 087adcc (run 36713752263, 9m37s). Slice 011 is active under D-024/R-014; scoped pre-publication chapter/attachment verification and local tests are implemented. Native acceptance is blocked by the locked Mac; see CONTAINER-PRESERVATION-EVIDENCE.md. Audio remains parked.

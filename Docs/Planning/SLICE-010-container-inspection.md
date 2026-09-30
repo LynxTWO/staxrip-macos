@@ -2,7 +2,7 @@
 Version: 0.1. Date: 2026-09-30. Status: Complete within recorded limits.
 
 SLICE STATE
-Milestone: M1–M3 complete; focused, regression, native and hosted product checks passed at 087adcc.
+Milestone: M1 through M3 complete; focused, regression, native and hosted product checks passed at 087adcc.
 Blocked by: None external.
 Evidence so far: CONTAINER-INSPECTION-EVIDENCE.md records four focused tests and the existing four video-inspection checks.
 Last audit: 2026-09-30.

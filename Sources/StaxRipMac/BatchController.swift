@@ -290,6 +290,7 @@ final class BatchController: ObservableObject {
                 verifiedSummary = hdr.summary + " · source/output timestamp bound ≤ \(hdr.timeBase.value + verified.timeBase.value) s"
             }
             try Task.checkCancellation()
+            verifiedSummary += " · " + (try plan.containerPreservation.verify(actual))
             try ExportPublication.publish(staged: staged, destination: output)
             publishedOutput = output
             statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: verifiedSummary, destination: output)

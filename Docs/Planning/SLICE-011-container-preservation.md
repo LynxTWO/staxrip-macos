@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 011: Verify retained chapters and attachments
-Version: 0.1. Date: 2026-09-30. Status: Planned.
+Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: Activated after Slice 010 hosted success at 087adcc.
+Milestone: M1 and M2 implemented; local tests passed; native walkthrough blocked by locked Mac; hosted check pending.
 Blocked by: None external.
 Evidence so far: Generated MKV preserved chapter gaps and attachment SHA-256; MP4 changed chapter gaps and timestamp precision. Explicit limits are recorded in the local feasibility note.
 Last audit: 2026-09-30.
@@ -67,4 +67,4 @@ S11-001 through S11-005 have bounded local evidence and hosted status; remaining
 
 Future explicit chapter editing and attachment policies can supply the same verifier with a transformed expected contract. A remux workflow still needs separate packet/timing guarantees.
 
-Approved for build by: Owner autonomous non-audio delegation on 2026-09-29, reaffirmed 2026-09-30; activate under D-024 after Slice 010 closure.
+Approved for build by: Owner autonomous non-audio delegation on 2026-09-29, reaffirmed 2026-09-30; activated under D-024 after Slice 010 closure.

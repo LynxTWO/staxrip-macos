@@ -166,3 +166,7 @@ Approved R-013 under delegated Slice 010: inspect reported chapters and embedded
 ## Slice 011 container preservation checkpoint
 
 Approved R-014 under delegated Slice 011: verify retained flat chapter titles/times and attachment payload SHA-256, sizes, names and MIME types before publication. Gates container-preservation-mkv, container-preservation-mp4, container-preservation-routing, container-preservation-refusal and container-preservation-ui bind S11-001 through S11-005. Consequence: current-operation owned output staging only; source and previous outputs remain protected. No extraction, cover-art/edition guarantee, saved-schema change, release or audio acceptance.
+
+## Slice 012 destination capacity checkpoint
+
+Approved R-015 under delegated Slice 012: qualify real destination space exhaustion within a bounded, owned disk image. Gates capacity-failure, capacity-ownership, capacity-retry and capacity-ui bind S12-001 through S12-004. Consequence: generated fixture storage only; no owner-volume filling or file deletion. Production publication and cleanup are expected to remain unchanged.

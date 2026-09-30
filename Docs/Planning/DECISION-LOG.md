@@ -29,6 +29,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-022 | 2026-09-30 | Report batch staging cleanup | Confirmed | |
 | D-023 | 2026-09-30 | Inspect chapters and attachments | Confirmed | |
 | D-024 | 2026-09-30 | Verify retained container contents | Confirmed | |
+| D-025 | 2026-09-30 | Qualify full destination failures | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -373,3 +374,17 @@ Options considered: trust exit status; compare bounded metadata and attachment S
 Consequences: Reject unsupported MP4 chapter gaps before encoding and staged mismatches before publication. Missing/empty chapter titles are equivalent; other title content is exact. Existing trim and attachment mapping rules remain. No audio, release or merge scope.
 
 Revisit when: Chapter editing, editions or remux preservation are scoped.
+
+## D-025: Qualify full destination failures
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Execute Slice 012 using a bounded disposable disk image under autonomous non-audio delegation.
+
+Because: Actual capacity exhaustion remains an explicit output-safety gap after publication and cleanup verification.
+
+Options considered: error injection alone; a small isolated filesystem filled with generated data; filling a physical disk. Choose the isolated fixture and real production queue path. Never fill owner storage directly.
+
+Consequences: Local opt-in integration and native qualification, exact-mount ownership checks, no default hosted image mounting, no audio or release scope.
+
+Revisit when: Removable/network filesystems or capacity estimation are scoped.

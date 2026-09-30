@@ -174,3 +174,7 @@ Approved R-015 under delegated Slice 012: qualify real destination space exhaust
 ## Slice 013 output geometry checkpoint
 
 Approved R-016 under delegated Slice 013: enforce original raster dimensions and bounded resized raster fit before publication. Gates geometry-export, geometry-bounds, geometry-refusal and geometry-ui bind S13-001 through S13-004. Consequence: current-operation staged output verification only; no changed filters, stored format, source/prior output mutation or display-aspect guarantee.
+
+## Slice 014 batch publication checkpoint
+
+Approved R-017 under delegated Slice 014: move advanced batch publication off the UI thread, preserve in-flight ownership/cancellation outcomes and expose per-job native access review without changing paths. Gates publication-responsive, publication-cancel-success, publication-failure and publication-access-ui bind S14-001 through S14-004. Consequence: current-operation publication/cleanup only; no replacement, early abandonment, stored phase change, broad permission settings or historical deletion.

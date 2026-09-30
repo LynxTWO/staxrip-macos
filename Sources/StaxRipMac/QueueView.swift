@@ -53,7 +53,7 @@ struct QueueView: View {
                                         .foregroundStyle(Color.accent).frame(width: 28)
                                     VStack(alignment: .leading, spacing: 5) {
                                         Text(URL(fileURLWithPath: job.source).lastPathComponent).font(.system(size: 14, weight: .semibold))
-                                        Text("\(job.configuration.codec) · \(job.configuration.rateSummary) · \(job.configuration.container) · \(job.configuration.audio)")
+                                        Text("\(job.configuration.codec) · \(job.configuration.rateSummary) · \(job.configuration.container) · \(job.configuration.colorMode) · \(job.configuration.audio)")
                                             .font(.system(size: 11)).foregroundStyle(.secondary)
                                     }
                                     Spacer()
@@ -73,8 +73,11 @@ struct QueueView: View {
                                         .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) later in the queue")
                                 }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running || audio.running)
                                 if let state = batch.statuses[job.id] {
-                                    if state.phase == "Encoding" { ProgressView(value: state.progress) }
-                                    Text(state.detail).font(.system(size: 10)).foregroundStyle(state.phase == "Failed" ? .orange : .secondary).textSelection(.enabled)
+                                    if state.phase == "Encoding" || (job.configuration.colorMode == "Preserve static HDR10" && ["Inspecting", "Verifying"].contains(state.phase)) {
+                                        ProgressView(value: state.progress)
+                                            .accessibilityLabel(state.phase == "Encoding" ? "Encoding progress" : "H D R ten full frame audit progress")
+                                    }
+                                    Text(state.detail).accessibilityLabel(AccessibilityLanguage.spokenCodecs(state.detail)).font(.system(size: 10)).foregroundStyle(state.phase == "Failed" ? .orange : .secondary).textSelection(.enabled)
                                     if let result = state.destination {
                                         Button("Reveal output") { NSWorkspace.shared.activateFileViewerSelecting([result]) }.font(.caption)
                                     }

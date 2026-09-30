@@ -7,6 +7,7 @@ enum AccessibilityLanguage {
     static func spokenCodecs(_ text: String) -> String {
         text.replacingOccurrences(of: "H.264", with: "H two six four")
             .replacingOccurrences(of: "H.265", with: "H two six five")
+            .replacingOccurrences(of: "HDR10", with: "H D R ten")
     }
     static let qualityHint = "Lower values generally improve quality and increase file size. Values are not directly comparable across encoders."
     static func presetHint(_ title: String) -> String {
@@ -42,6 +43,7 @@ struct EncodingTermsView: View {
         ("H.264 / AVC", "Advanced Video Coding. A video compression format used by the H.264 Quality preset for broad playback compatibility."),
         ("H.265 / HEVC", "High Efficiency Video Coding. The video format used by the Everyday HEVC preset."),
         ("AV1", "A video compression format used by the Compact AV1 preset. Playback support depends on the device and software."),
+        ("HDR10", "High dynamic range using Perceptual Quantizer brightness encoding and static mastering metadata. Preserve static HDR10 checks every decoded source and output frame. It does not certify proprietary dynamic metadata or calibrated display appearance."),
         ("CRF", "Constant rate factor. Lower values generally improve quality and increase file size. Numbers are not directly comparable across encoders."),
         ("LUFS", "Loudness units relative to full scale. Integrated loudness describes the overall measured programme. More negative values indicate quieter audio."),
         ("LRA / LU", "Loudness range, expressed in loudness units. Describes variation in loudness; it is not a limit on individual peaks or a guarantee of comfortable listening."),

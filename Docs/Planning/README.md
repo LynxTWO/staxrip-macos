@@ -21,4 +21,6 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 12. [Video inspection evidence](VIDEO-INSPECTION-EVIDENCE.md)
 
-13. [HDR10 feasibility](HDR10-FEASIBILITY.md) and [proposed static HDR10 export](SLICE-004-static-hdr10.md)
+13. [HDR10 feasibility](HDR10-FEASIBILITY.md) and [approved static HDR10 export](SLICE-004-static-hdr10.md)
+
+14. [Static HDR10 implementation and acceptance evidence](HDR10-EVIDENCE.md)

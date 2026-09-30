@@ -14,6 +14,11 @@ struct EncodeConfiguration: Codable, Equatable {
     var audio = "AAC"
     var audioBitrate = "192 kb/s"
     var subtitleMode = "Keep embedded tracks"
+    private var colorIntent: String?
+    var colorMode: String {
+        get { colorIntent ?? "SDR" }
+        set { colorIntent = newValue }
+    }
     private var videoRateOptions: VideoRateOptions?
     var rate: VideoRateOptions {
         get { videoRateOptions ?? VideoRateOptions() }

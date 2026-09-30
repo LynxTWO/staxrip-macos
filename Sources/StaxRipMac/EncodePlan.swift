@@ -11,12 +11,20 @@ struct EncodePlan: Sendable {
     let duration: Double
     let summary: String
 
-    static func make(job: QueueJob, probe: MediaProbe, encoders: Set<String>, staged: URL) throws -> EncodePlan {
+    static func make(job: QueueJob, probe: MediaProbe, encoders: Set<String>, staged: URL, hdr: HDR10Contract? = nil) throws -> EncodePlan {
         try SessionDocument.validate(job.configuration)
         guard !job.isDemo else { throw NativeExportError.invalid("Demo configurations cannot be encoded. Open a real source first.") }
         guard let video = probe.video else { throw NativeExportError.invalid("This queue currently requires a video source.") }
         let c = job.configuration
         let picture = c.picture
+        let preservingHDR = c.colorMode == "Preserve static HDR10"
+        if preservingHDR {
+            try validateHDRSettings(c)
+            guard let hdr, hdr.width == video.width, hdr.height == video.height else {
+                throw HDR10Audit.failure("A complete source audit is required before planning this export.")
+            }
+            try HDR10Audit.validate(video)
+        }
         let trimmed = picture.start > 0 || picture.end > 0
         guard !trimmed || (probe.seconds.isFinite && probe.seconds > picture.start && (picture.end == 0 || picture.end <= probe.seconds)) else {
             throw NativeExportError.invalid("The trim range must lie within the source duration.")
@@ -28,8 +36,8 @@ struct EncodePlan: Sendable {
         let hardware = c.rate.backend == "Apple hardware"
         let encoder = hardware ? (c.codec == "HEVC" ? "hevc_videotoolbox" : "h264_videotoolbox") : c.codec == "AV1" ? "libsvtav1" : c.codec == "HEVC" ? "libx265" : "libx264"
         guard encoders.contains(encoder) else { throw NativeExportError.invalid("The installed FFmpeg does not provide \(encoder).") }
-        guard !["smpte2084", "arib-std-b67"].contains(video.color_transfer ?? ""),
-              ["yuv420p", "nv12"].contains(video.pix_fmt ?? "") else {
+        guard preservingHDR || (!["smpte2084", "arib-std-b67"].contains(video.color_transfer ?? "") &&
+              ["yuv420p", "nv12"].contains(video.pix_fmt ?? "")) else {
             throw NativeExportError.invalid("This first advanced pipeline supports 8-bit SDR 4:2:0 sources. HDR, high bit depth and other pixel formats need an explicit color workflow before encoding.")
         }
         let width = video.width ?? 0, height = video.height ?? 0
@@ -52,7 +60,7 @@ struct EncodePlan: Sendable {
             }
         }
         var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe", "-i", job.source,
-                    "-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", "yuv420p", "-threads", "4"]
+                    "-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
         if trimmed {
             args += ["-ss", String(picture.start), "-t", String(outputDuration)]
         }
@@ -67,7 +75,10 @@ struct EncodePlan: Sendable {
             args += ["-svtav1-params", "lp=4"]
         } else { speed = c.speed == "Thorough" ? "slow" : c.speed == "Fast" ? "fast" : "medium" }
         if !hardware { args += ["-preset", speed] }
-        if c.codec == "HEVC", !hardware { args += ["-x265-params", "pools=4:frame-threads=2"] }
+        if c.codec == "HEVC", !hardware { args += ["-x265-params", preservingHDR ? hdr!.x265Parameters : "pools=4:frame-threads=2"] }
+        if preservingHDR {
+            args += ["-profile:v", "main10", "-fps_mode", "passthrough", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-chroma_sample_location", "left"]
+        }
         var filters: [String] = []
         if picture.deinterlace != "Off" {
             filters.append("bwdif=mode=send_frame:parity=auto:deint=\(picture.deinterlace == "Flagged frames" ? "interlaced" : "all")")
@@ -105,7 +116,16 @@ struct EncodePlan: Sendable {
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: keepSubtitles ? subtitles.count : 0,
-                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · 8-bit SDR")
+                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")")
+    }
+
+    static func validateHDRSettings(_ c: EncodeConfiguration) throws {
+        let p = c.picture
+        guard c.codec == "HEVC", c.encoder == "x265", c.rate.backend == "Software", c.container == "MKV",
+              c.resolution == "Original", c.cropTop == 0, c.cropBottom == 0, p.cropLeft == 0, p.cropRight == 0,
+              p.start == 0, p.end == 0, p.deinterlace == "Off" else {
+            throw HDR10Audit.failure("Choose software HEVC (x265), MKV, original dimensions, zero crop, no trim and deinterlacing Off. Settings are never changed automatically.")
+        }
     }
 
     static func selectedStreams(_ probe: MediaProbe, type: String, indices: [Int]?) throws -> [MediaProbe.Stream] {

@@ -47,7 +47,7 @@ struct MediaInspectorView: View {
                         }
                     }
                 }.frame(height: 340)
-                Text("Source tags do not verify HDR preservation or frame-by-frame timing. Missing color tags do not prove SDR. Advanced encoding supports only 8-bit 4:2:0 video and rejects PQ/HLG; Quick Export follows Apple’s presets.")
+                Text("Source tags do not verify HDR preservation or frame-by-frame timing. Missing color tags do not prove SDR. Advanced encoding defaults to 8-bit SDR. Preserve static HDR10 requires its separate full-frame source and output audits; HLG remains unsupported. Quick Export follows Apple’s presets.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Text("The advanced plan encodes the first non-cover-art video. Use Choose tracks in Workspace or the queue editor to select audio and subtitle streams.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

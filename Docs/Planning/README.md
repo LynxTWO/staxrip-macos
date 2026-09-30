@@ -46,3 +46,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Responsive publication evidence](PUBLICATION-RESPONSIVENESS-EVIDENCE.md): background exclusive publication, preserved in-flight outcomes, native access review; local/native/hosted acceptance passed at f20998f.
 
 25. [Slice 015: verified external SRT subtitles](SLICE-015-external-subtitles.md) and [feasibility research](EXTERNAL-SUBTITLE-RESEARCH.md).
+
+[External subtitle evidence](EXTERNAL-SUBTITLE-EVIDENCE.md) records Slice 015 local checks and remaining acceptance.

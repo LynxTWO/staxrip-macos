@@ -43,6 +43,7 @@ enum QueuePreflight {
     static func inspect(_ job: QueueJob, tools: FFmpegTools, encoders: Set<String>, timeout: Double = 15) async throws -> QueueCheck {
         guard !job.isDemo else { throw NativeExportError.invalid("Demo source: open a real video and add its configuration.") }
         try SessionDocument.validate(job.configuration)
+        if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         guard job.source.hasPrefix("/"), job.destination.hasPrefix("/"), ![job.source, job.destination].contains(where: { $0.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) }) else {
             throw NativeExportError.invalid("Source and destination must be valid absolute local paths.")
         }
@@ -76,7 +77,11 @@ enum QueuePreflight {
         }
         // Planning creates arguments only. This path never runs an encoder,
         // creates staging, or writes a recovery journal or destination.
-        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: output)
+        let externalDocument: SubRipDocument?
+        if let reference = c.externalSubtitle { externalDocument = try await reference.read() }
+        else { externalDocument = nil }
+        try Task.checkCancellation()
+        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: output, externalDocument: externalDocument)
         if c.rate.backend == "Apple hardware" {
             return QueueCheck(id: job.id, kind: .deferred, detail: "Paths and encoding plan checked. The encoder is advertised by FFmpeg, but actual hardware availability is checked during encoding. " + plan.summary)
         }

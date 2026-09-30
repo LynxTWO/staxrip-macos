@@ -2,7 +2,7 @@ import Foundation
 
 struct SessionDocument: Codable, Equatable {
     var format = "staxrip-mac-session"
-    var version = 5
+    var version = 6
     var sourcePath: String?
     var configuration: EncodeConfiguration
     var outputFolder: String
@@ -10,10 +10,13 @@ struct SessionDocument: Codable, Equatable {
     var jobs: [QueueJob]
 
     func validated() throws -> SessionDocument {
-        guard format == "staxrip-mac-session", [1, 2, 3, 4, 5].contains(version) else {
+        guard format == "staxrip-mac-session", [1, 2, 3, 4, 5, 6].contains(version) else {
             throw SessionError.invalid("This session version is not supported.")
         }
         guard jobs.count <= 1000 else { throw SessionError.invalid("This session contains too many queue items.") }
+        guard version >= 6 || (configuration.externalSubtitle == nil && jobs.allSatisfy { $0.configuration.externalSubtitle == nil }) else {
+            throw SessionError.invalid("External subtitle references require session version 6.")
+        }
         try Self.validate(configuration)
         try Self.validatePath(outputFolder)
         if let path = sourcePath { try Self.validatePath(path) }
@@ -46,6 +49,7 @@ struct SessionDocument: Codable, Equatable {
     }
 
     static func validate(_ config: EncodeConfiguration) throws {
+        try config.externalSubtitle?.validate()
         guard ["SDR", "Preserve static HDR10"].contains(config.colorMode) else {
             throw SessionError.invalid("Unknown video color intent.")
         }

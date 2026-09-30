@@ -4,6 +4,7 @@ struct EncodePlan: Sendable {
     let arguments: [String]
     let containerPreservation: ContainerPreservation
     let outputGeometry: OutputGeometry
+    let externalSubtitle: ExternalSubtitleExport?
     let expectedCodec: String
     let expectedAudio: String?
     let expectedWidth: Int?
@@ -14,11 +15,18 @@ struct EncodePlan: Sendable {
     let duration: Double
     let summary: String
 
-    static func make(job: QueueJob, probe: MediaProbe, encoders: Set<String>, staged: URL, hdr: HDR10Contract? = nil) throws -> EncodePlan {
+    static func make(job: QueueJob, probe: MediaProbe, encoders: Set<String>, staged: URL, hdr: HDR10Contract? = nil,
+                     externalDocument: SubRipDocument? = nil) throws -> EncodePlan {
         try SessionDocument.validate(job.configuration)
         guard !job.isDemo else { throw NativeExportError.invalid("Demo configurations cannot be encoded. Open a real source first.") }
         guard let video = probe.video else { throw NativeExportError.invalid("This queue currently requires a video source.") }
         let c = job.configuration
+        if c.externalSubtitle != nil {
+            guard let externalDocument else { throw SubRipDocument.failure("A fresh validated caption snapshot is required before planning this job.") }
+            try externalDocument.validateTimeline(probe: probe, configuration: c)
+        } else if externalDocument != nil {
+            throw SubRipDocument.failure("A caption snapshot was supplied without an external track selection.")
+        }
         let picture = c.picture
         let preservingHDR = c.colorMode == "Preserve static HDR10"
         if preservingHDR {
@@ -55,6 +63,11 @@ struct EncodePlan: Sendable {
                                                 height: height - c.cropTop - c.cropBottom, resolution: c.resolution)
         let audio = try selectedStreams(probe, type: "audio", indices: c.audioTracks)
         let subtitles = try selectedStreams(probe, type: "subtitle", indices: c.subtitleTracks)
+        let keepSubtitles = c.subtitleMode == "Keep embedded tracks"
+        let external = c.externalSubtitle.map {
+            ExternalSubtitleExport(reference: $0, document: externalDocument!, ordinal: keepSubtitles ? subtitles.count : 0,
+                                   codec: c.container == "MP4" ? "mov_text" : "subrip")
+        }
         if c.container == "MP4" {
             if c.audio == "Opus" { throw NativeExportError.invalid("Choose MKV for Opus, or AAC for MP4.") }
             if c.audio == "Copy original", audio.contains(where: { !["aac", "mp3", "ac3", "eac3", "alac"].contains($0.codec_name ?? "") }) {
@@ -65,8 +78,11 @@ struct EncodePlan: Sendable {
             }
         }
         let containerPreservation = try ContainerPreservation.make(probe: probe, configuration: c)
-        var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe"] + orientation.inputArguments(stream: video.index) + ["-i", job.source,
-                    "-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
+        var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe"] + orientation.inputArguments(stream: video.index) + ["-i", job.source]
+        if external != nil {
+            args += ["-f", "srt", "-protocol_whitelist", "file,pipe", "-i", staged.deletingLastPathComponent().appendingPathComponent("external.srt").path]
+        }
+        args += ["-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
         if trimmed {
             args += ["-ss", String(picture.start), "-t", String(outputDuration)]
         }
@@ -99,22 +115,25 @@ struct EncodePlan: Sendable {
                 expectedAudio = c.audio == "Opus" ? "opus" : "aac"
             }
         } else { args += ["-an"] }
-        let keepSubtitles = c.subtitleMode == "Keep embedded tracks"
         if keepSubtitles, !subtitles.isEmpty {
             for stream in subtitles { args += ["-map", "0:\(stream.index)"] }
             args += ["-c:s", "copy"]
         }
-        else { args += ["-sn"] }
+        if let external {
+            args += ["-map", "1:0", "-c:s:\(external.ordinal)", external.codec == "mov_text" ? "mov_text" : "copy",
+                     "-metadata:s:s:\(external.ordinal)", "language=\(external.reference.language)",
+                     "-metadata:s:s:\(external.ordinal)", "title=\(external.reference.title)"]
+        } else if !keepSubtitles || subtitles.isEmpty { args += ["-sn"] }
         if c.container == "MKV", keepSubtitles { args += ["-map", "0:t?", "-c:t", "copy"] }
         args += ["-map_metadata", "0", "-map_chapters", trimmed ? "-1" : "0"]
         if c.container == "MP4" { args += ["-movflags", "+faststart"] }
         args += [staged.path]
-        return EncodePlan(arguments: args, containerPreservation: containerPreservation, outputGeometry: outputGeometry, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, outputGeometry: outputGeometry, externalSubtitle: external, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,
-                          audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: keepSubtitles ? subtitles.count : 0,
-                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")")
+                          audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: (keepSubtitles ? subtitles.count : 0) + (external == nil ? 0 : 1),
+                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")" + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" } ?? ""))
     }
 
     static func validateHDRSettings(_ c: EncodeConfiguration) throws {

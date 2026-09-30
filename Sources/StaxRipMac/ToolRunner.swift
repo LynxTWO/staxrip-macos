@@ -152,6 +152,7 @@ struct MediaProbe: Decodable, Sendable {
     }
     struct Format: Decodable, Sendable {
         let duration: String?
+        let start_time: String?
         let format_name: String?
         let size: String?
     }

@@ -90,3 +90,5 @@ Slice 016 is active under D-029/R-019: attached workspace source/folder/session/
 Slice 016 local acceptance passed: six focused functions, 149 tests / 29 suites, native source/folder/session/reference sheets and cancellation, replacement cancel/confirm, unchanged source and structurally identical saved-session readback. Hosted pending; see WORKSPACE-FILE-PANEL-EVIDENCE.md.
 
 Slice 016 scoped acceptance closed at 42634d9 with hosted run 36787875488: 149 tests, 8m43s. Other app dialogs, synchronous filesystem I/O and durable access remain separate; audio remains parked.
+
+Slice 017 is active under D-030/R-020: verify known declared display proportions after upright crop and resize, without inferring missing source pixel shape or changing filters. Audio remains parked.

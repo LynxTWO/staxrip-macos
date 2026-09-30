@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 008: Queue preflight
-Version: 0.1. Date: 2026-09-30. Status: Approved for build under owner delegation.
+Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: M1 implementation next.
+Milestone: M1 and M2 implemented; M3 automated and native checks passed, hosted check next.
 Blocked by: None. Slice 007 native and hosted checks passed.
-Evidence so far: Existing BatchController validates each item only when execution reaches it; QueueView has no whole-queue review action.
+Evidence so far: QUEUE-PREFLIGHT-EVIDENCE.md records four focused checks, a 107-test release regression and the native correction/recheck with unchanged source/recovery bytes.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

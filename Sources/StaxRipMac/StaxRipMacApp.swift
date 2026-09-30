@@ -22,6 +22,7 @@ struct StaxRipMacApp: App {
                 .environmentObject(presets)
                 .task { await batch.discover() }
                 .onChange(of: model.jobs) { before, after in
+                    batch.invalidateReview()
                     for old in before where !after.contains(old) { batch.reset(old.id) }
                 }
                 .preferredColorScheme(appearance == "Dark" ? .dark : appearance == "Light" ? .light : nil)
@@ -62,7 +63,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var picturePreview: PicturePreviewController?
     func applicationWillTerminate(_ notification: Notification) { audio?.invalidateMaster() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard exporter?.running == true || batch?.running == true || audio?.running == true || picturePreview?.running == true else { return .terminateNow }
+        guard exporter?.running == true || batch?.running == true || batch?.reviewing == true || audio?.running == true || picturePreview?.running == true else { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = "An operation is still running"
         alert.informativeText = "Wait for it to finish or cancel the active operation before quitting."

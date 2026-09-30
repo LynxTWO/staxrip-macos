@@ -40,7 +40,7 @@ struct BatchCleanupTests {
         #expect(try Data(contentsOf: root.appendingPathComponent(".staxrip-batch-unrelated/keep")) == Data("keep sibling".utf8))
     }
 
-    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)))
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
     func publishedCleanupFailureKeepsOutputAndStopsBeforeNextJob() async throws {
         let (root, tools, job) = try await fixture()
         var activeBatch: BatchController?

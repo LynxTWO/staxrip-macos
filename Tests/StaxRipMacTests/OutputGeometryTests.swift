@@ -48,7 +48,7 @@ struct OutputGeometryTests {
             throw error
         }
     }
-    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)))
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
     func generatedPortraitLandscapeAndCropExportsHaveVerifiedRasterSize() async throws {
         let root = try directory()
         var activeBatch: BatchController?

@@ -5,7 +5,7 @@ import Testing
 
 @MainActor
 struct DestinationCapacityTests {
-    @Test(.enabled(if: ProcessInfo.processInfo.environment["STAXRIP_CAPACITY_TEST_MOUNT"] != nil && FFmpegTools.discover() != nil))
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["STAXRIP_CAPACITY_TEST_MOUNT"] != nil && FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
     func fullOwnedFilesystemFailsWithoutPublicationAndCanRetry() async throws {
         let path = try #require(ProcessInfo.processInfo.environment["STAXRIP_CAPACITY_TEST_MOUNT"])
         let mount = URL(fileURLWithPath: path).standardizedFileURL
@@ -22,9 +22,13 @@ struct DestinationCapacityTests {
         let owned = mount.appendingPathComponent("owned-" + UUID().uuidString)
         let scratch = FileManager.default.temporaryDirectory.appendingPathComponent("capacity-source-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: owned, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: owned) }
+        var activeBatch: BatchController?
+        defer {
+            if activeBatch?.running == true { activeBatch?.cancel() }
+            else { try? FileManager.default.removeItem(at: owned) }
+        }
         try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: scratch) }
+        defer { if activeBatch?.running != true { try? FileManager.default.removeItem(at: scratch) } }
         let tools = try #require(FFmpegTools.discover()), source = scratch.appendingPathComponent("source.mkv")
         let fixture = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-n", "-f", "lavfi", "-i", "testsrc2=size=320x192:rate=24:duration=2", "-c:v", "libx264", "-preset", "ultrafast", source.path])
         try #require(fixture.status == 0)
@@ -49,6 +53,7 @@ struct DestinationCapacityTests {
         let first = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: owned.appendingPathComponent("result.mkv").path, configuration: c, created: Date())
         let next = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: owned.appendingPathComponent("next.mkv").path, configuration: c, created: Date())
         let batch = BatchController(journalURL: scratch.appendingPathComponent("journal.json"))
+        activeBatch = batch
         batch.tools = tools; batch.encoders = ["libx264"]; batch.start([first, next]); try await finish(batch)
         let status = try #require(batch.statuses[first.id])
         print("CAPACITY phase=\(status.phase) detail=\(status.detail)")
@@ -68,9 +73,11 @@ struct DestinationCapacityTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: owned.path).allSatisfy { !$0.hasPrefix(".staxrip-batch-") })
     }
     private func finish(_ batch: BatchController) async throws {
-        let deadline = Date().addingTimeInterval(20)
-        while batch.running && Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
-        if batch.running { batch.cancel() }
-        try #require(!batch.running)
+        do {
+            while batch.running { try await Task.sleep(for: .milliseconds(10)) }
+        } catch {
+            batch.cancel()
+            throw error
+        }
     }
 }

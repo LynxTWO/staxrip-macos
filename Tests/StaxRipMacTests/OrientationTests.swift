@@ -86,11 +86,15 @@ struct OrientationTests {
         }
         return output
     }
-    @Test func rightAnglesMatchIndependentPixelsPreviewAndPublishedOutputs() async throws {
+    @Test(.timeLimit(.minutes(3))) func rightAnglesMatchIndependentPixelsPreviewAndPublishedOutputs() async throws {
         let tools = try #require(FFmpegTools.discover())
         let dir = FileManager.default.temporaryDirectory.appendingPathComponent("orientation-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: false)
-        defer { try? FileManager.default.removeItem(at: dir) }
+        var activeBatch: BatchController?
+        defer {
+            if activeBatch?.running == true { activeBatch?.cancel() }
+            else { try? FileManager.default.removeItem(at: dir) }
+        }
         let base = dir.appendingPathComponent("base.mp4")
         _ = try await run(["-f", "lavfi", "-i", "testsrc2=size=160x96:rate=24:duration=1", "-c:v", "libx264", "-crf", "0", "-pix_fmt", "yuv420p", "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv", "-bsf:v", "h264_metadata=colour_primaries=1:transfer_characteristics=1:matrix_coefficients=1", base.path], tools: tools)
         let rawArgs = ["-frames:v", "1", "-pix_fmt", "yuv420p", "-f", "rawvideo", "pipe:1"]
@@ -119,10 +123,15 @@ struct OrientationTests {
                 c.container = container
                 let output = dir.appendingPathComponent("output-\(angle).\(container.lowercased())")
                 let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: output.path, configuration: c, created: Date())
-                let batch = BatchController(); await batch.discover(); batch.start([job])
-                let deadline = Date().addingTimeInterval(30)
-                while batch.running && Date() < deadline { try await Task.sleep(for: .milliseconds(20)) }
-                if batch.running { batch.cancel() }
+                let batch = BatchController(publishOutput: { staged, destination in
+                    // Exercise the previous 30-second helper cutoff once, before
+                    // the real publication and all eight pixel-verified exports.
+                    if angle == 0 && container == "MP4" { try await Task.sleep(for: .seconds(31)) }
+                    try await ExportPublication.publishAsync(staged: staged, destination: destination)
+                })
+                activeBatch = batch
+                await batch.discover(); batch.start([job])
+                try await finish(batch)
                 try #require(batch.statuses[job.id]?.phase == "Completed", Comment(rawValue: batch.statuses[job.id]?.detail ?? "Missing result"))
                 let actual = try await MediaProbe.read(output, tools: tools), av = try #require(actual.video)
                 #expect(av.width == width-8 && av.height == height-4)
@@ -140,14 +149,23 @@ struct OrientationTests {
         await #expect(throws: (any Error).self) { try await PicturePreview.render(source: mirror, configuration: configuration(), time: 0, tools: tools) }
         let refused = dir.appendingPathComponent("refused.mkv")
         let job = QueueJob(id: UUID(), source: mirror.path, isDemo: false, destination: refused.path, configuration: configuration(), created: Date())
-        let batch = BatchController(); await batch.discover(); batch.start([job])
-        let deadline = Date().addingTimeInterval(15)
-        while batch.running && Date() < deadline { try await Task.sleep(for: .milliseconds(20)) }
-        if batch.running { batch.cancel() }
+        let batch = BatchController()
+        activeBatch = batch
+        await batch.discover(); batch.start([job])
+        try await finish(batch)
         #expect(batch.statuses[job.id]?.phase == "Failed")
         #expect(batch.statuses[job.id]?.detail.contains("orientation") == true)
         #expect(!FileManager.default.fileExists(atPath: refused.path))
         #expect(try await SourceFingerprint.read(mirror) == mirrorHash)
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).allSatisfy { !$0.hasPrefix(".staxrip-batch-") })
     }
+    private func finish(_ batch: BatchController) async throws {
+        do {
+            while batch.running { try await Task.sleep(for: .milliseconds(20)) }
+        } catch {
+            batch.cancel()
+            throw error
+        }
+    }
+
 }

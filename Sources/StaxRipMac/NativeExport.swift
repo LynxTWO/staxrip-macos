@@ -33,6 +33,21 @@ enum NativeExportError: LocalizedError {
 // Publication uses a same-volume hard link: the completed result becomes visible
 // atomically, and an existing destination (including a symlink) is never replaced.
 struct ExportPublication {
+    // Once dispatched, await the actual filesystem result even if the caller is
+    // cancelled. Returning early could race staging cleanup against publication.
+    static func publishAsync(staged: URL, destination: URL,
+                             operation: @escaping @Sendable (URL, URL) throws -> Void = {
+                                 try publish(staged: $0, destination: $1)
+                             }) async throws {
+        try Task.checkCancellation()
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            DispatchQueue.global(qos: .utility).async {
+                do { try operation(staged, destination); continuation.resume() }
+                catch { continuation.resume(throwing: error) }
+            }
+        }
+    }
+
     static func publish(staged: URL, destination: URL) throws {
         let result = staged.withUnsafeFileSystemRepresentation { from in
             destination.withUnsafeFileSystemRepresentation { to in Darwin.link(from!, to!) }

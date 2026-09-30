@@ -87,14 +87,22 @@ struct ContainerPreservationTests {
         return root
     }
     private func finish(_ batch: BatchController) async throws {
-        let deadline = Date().addingTimeInterval(20)
-        while batch.running && Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
-        if batch.running { batch.cancel() }
-        try #require(!batch.running)
+        do {
+            while batch.running { try await Task.sleep(for: .milliseconds(10)) }
+        } catch {
+            batch.cancel()
+            throw error
+        }
     }
-    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
     func actualExportsVerifyPayloadAndExistingMappingPolicies() async throws {
-        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let root = try directory()
+        var activeBatch: BatchController?
+        defer {
+            // A timed-out test must not delete staging while its operation is alive.
+            if activeBatch?.running == true { activeBatch?.cancel() }
+            else { try? FileManager.default.removeItem(at: root) }
+        }
         let tools = try #require(FFmpegTools.discover()), source = try await fixture(root, tools: tools)
         let before = try Data(contentsOf: source)
         let original = try await MediaProbe.read(source, tools: tools)
@@ -107,7 +115,16 @@ struct ContainerPreservationTests {
             if mode == "trim" || mode == "remove" { c.subtitleMode = "Remove all subtitles" }
             jobs.append(QueueJob(id: UUID(), source: source.path, isDemo: false, destination: root.appendingPathComponent(mode + (mode == "mp4" ? ".mp4" : ".mkv")).path, configuration: c, created: Date()))
         }
-        let batch = BatchController(journalURL: root.appendingPathComponent("journal.json"))
+        // Reproduce the former 20-second helper limit without relying on runner load.
+        var delayedPublication = false
+        let batch = BatchController(journalURL: root.appendingPathComponent("journal.json"), publishOutput: { staged, output in
+            if !delayedPublication {
+                delayedPublication = true
+                try await Task.sleep(for: .seconds(21))
+            }
+            try await ExportPublication.publishAsync(staged: staged, destination: output)
+        })
+        activeBatch = batch
         batch.tools = tools; batch.encoders = ["libx264"]; batch.start(jobs); try await finish(batch)
         for (index, job) in jobs.enumerated() {
             let status = try #require(batch.statuses[job.id]); #expect(status.phase == "Completed", Comment(rawValue: status.detail))
@@ -121,9 +138,15 @@ struct ContainerPreservationTests {
         #expect(try Data(contentsOf: source) == before)
         #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).allSatisfy { !$0.hasPrefix(".staxrip-batch-") })
     }
-    @Test(.enabled(if: FFmpegTools.discover() != nil), arguments: ["chapters", "attachments"])
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)), arguments: ["chapters", "attachments"])
     func alteredStagedResultCannotPublish(category: String) async throws {
-        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let root = try directory()
+        var activeBatch: BatchController?
+        defer {
+            // A timed-out test must not delete staging while its operation is alive.
+            if activeBatch?.running == true { activeBatch?.cancel() }
+            else { try? FileManager.default.removeItem(at: root) }
+        }
         let tools = try #require(FFmpegTools.discover()), source = try await fixture(root, tools: tools)
         let before = try Data(contentsOf: source), prior = root.appendingPathComponent("prior.mkv")
         try Data("Existing output must survive".utf8).write(to: prior)
@@ -141,6 +164,7 @@ struct ContainerPreservationTests {
         try Data(body.utf8).write(to: script); try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
         let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: root.appendingPathComponent("result.mkv").path, configuration: configuration(), created: Date())
         let batch = BatchController(journalURL: root.appendingPathComponent("journal.json"))
+        activeBatch = batch
         batch.tools = FFmpegTools(ffmpeg: script, ffprobe: tools.ffprobe); batch.encoders = ["libx264"]; batch.start([job]); try await finish(batch)
         let status = try #require(batch.statuses[job.id])
         #expect(status.phase == "Failed"); #expect(status.detail.contains("Container preservation:"))

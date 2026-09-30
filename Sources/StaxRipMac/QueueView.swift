@@ -5,6 +5,7 @@ struct QueueView: View {
     @EnvironmentObject var audio: AudioController
     @EnvironmentObject var batch: BatchController
     @EnvironmentObject var exporter: ExportController
+    @StateObject private var fileAccess = QueueFileAccess()
     @State private var editingJob: QueueJob?
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -19,7 +20,8 @@ struct QueueView: View {
                         .help("Read source metadata and check settings and destinations without encoding or writing files.")
                 }
                 if batch.running {
-                    Button("Cancel batch", role: .cancel) { batch.cancel() }
+                    Button(batch.publicationJobID == nil ? "Cancel batch" : "Stop after current publication", role: .cancel) { batch.cancel() }
+                        .help(batch.publicationJobID == nil ? "Cancel the current job and stop the batch." : "Wait for this publication to finish, preserve any successful output, and stop before the next job.")
                 } else {
                     Button { batch.start(model.jobs) } label: { Label("Start queue", systemImage: "play.fill") }
                         .buttonStyle(.borderedProminent).disabled(model.jobs.isEmpty || batch.tools == nil || batch.reviewing || exporter.running || audio.running)
@@ -72,7 +74,7 @@ struct QueueView: View {
                                             .font(.system(size: 11)).foregroundStyle(.secondary)
                                     }
                                     Spacer()
-                                    Text(job.isDemo ? "DEMO" : (batch.statuses[job.id]?.phase ?? "Ready").uppercased())
+                                    Text(job.isDemo ? "DEMO" : (batch.publicationJobID == job.id ? "Finishing" : (batch.statuses[job.id]?.phase ?? "Ready")).uppercased())
                                         .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
                                     Button { batch.reset(job.id); model.jobs.removeAll { $0.id == job.id } } label: { Image(systemName: "trash") }
                                         .buttonStyle(.borderless).disabled(batch.running || audio.running).help("Remove configuration").accessibilityLabel("Remove queued configuration for \(URL(fileURLWithPath: job.source).lastPathComponent)")
@@ -87,6 +89,15 @@ struct QueueView: View {
                                     Button { model.moveJob(job.id, by: 1) } label: { Image(systemName: "arrow.down") }
                                         .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) later in the queue")
                                 }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running || audio.running)
+                                HStack {
+                                    Button("Review source access…") { fileAccess.review(job, destination: false) }
+                                    Button("Review destination access…") { fileAccess.review(job, destination: true) }
+                                }.font(.caption).disabled(fileAccess.reviewing || job.isDemo)
+                                    .help("Select the configured location using the native file picker. Queue paths stay unchanged and no encode starts.")
+                                if let result = fileAccess.result, result.jobID == job.id {
+                                    Text(result.message).font(.caption).foregroundStyle(.secondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                                 if batch.reviewMatches(model.jobs), let check = batch.queueChecks[job.id] {
                                     Text(check.kind.rawValue + ": " + check.detail)
                                         .font(.caption).foregroundStyle(check.kind == .issue ? .orange : .secondary)
@@ -94,7 +105,7 @@ struct QueueView: View {
                                         .accessibilityLabel("Queue check: " + AccessibilityLanguage.spokenCodecs(check.kind.rawValue + ". " + check.detail))
                                 }
                                 if let state = batch.statuses[job.id] {
-                                    if state.phase == "Encoding" || (job.configuration.colorMode == "Preserve static HDR10" && ["Inspecting", "Verifying"].contains(state.phase)) {
+                                    if batch.publicationJobID != job.id && (state.phase == "Encoding" || (job.configuration.colorMode == "Preserve static HDR10" && ["Inspecting", "Verifying"].contains(state.phase))) {
                                         ProgressView(value: state.progress)
                                             .accessibilityLabel(state.phase == "Encoding" ? "Encoding progress" : "H D R ten full frame audit progress")
                                     }

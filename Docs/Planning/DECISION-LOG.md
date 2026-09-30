@@ -31,6 +31,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-024 | 2026-09-30 | Verify retained container contents | Confirmed | |
 | D-025 | 2026-09-30 | Qualify full destination failures | Confirmed | |
 | D-026 | 2026-09-30 | Verify resized raster dimensions | Confirmed | |
+| D-027 | 2026-09-30 | Responsive batch publication and access review | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -403,3 +404,17 @@ Options considered: trust filter arguments; hard-code one filter version's round
 Consequences: Verify output dimensions before publication and report scoped dimensions. Existing HDR/orientation and container checks remain. No schema, audio, release or merge change.
 
 Revisit when: Explicit anamorphic display geometry or different scale algorithms are scoped.
+
+## D-027: Responsive batch publication and access review
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 014 under autonomous non-audio delegation after Slice 013 closure.
+
+Because: A native process sample found the app main thread blocked in the exclusive publication link syscall. Selecting the generated destination with the native folder picker resolved the next run, exposing a need for responsive controls and explicit per-job access review.
+
+Options considered: leave synchronous publication; add an early timeout; dispatch the same primitive and await its true outcome. Choose background execution without abandoning the in-flight operation, so cleanup and cancellation cannot hide a successfully published result.
+
+Consequences: Batch-only wrapper, ephemeral finishing state, preserved cancellation outcome and native access panels that never rewrite intent. Existing persisted Verifying phase and journal schema stay unchanged. Other I/O sites and exporters remain explicit limitations.
+
+Revisit when: Other filesystem waits or durable bookmark persistence are scoped.

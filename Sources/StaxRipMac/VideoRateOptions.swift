@@ -23,13 +23,11 @@ struct VideoRateOptionsView: View {
                 Text("Static PQ / BT.2020 metadata only. Recognized dynamic or unknown side data is refused. Proprietary data hidden in unregistered SEI cannot be certified; calibrated HDR playback is not verified.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            settingPicker("Encoding engine", selection: $configuration.rate.backend, values: configuration.codec == "AV1" ? ["Software"] : ["Software", "Apple hardware"])
-                .onChange(of: configuration.rate.backend) { _, backend in
-                    if backend == "Apple hardware" { configuration.rate.mode = "Target bitrate" }
-                }
-                .onChange(of: configuration.codec) { _, codec in
-                    if codec == "AV1" { configuration.rate.backend = "Software" }
-                }
+            settingPicker("Encoding engine", selection: Binding(get: { configuration.rate.backend }, set: { value in
+                var next = configuration
+                next.selectBackend(value)
+                configuration = next
+            }), values: configuration.codec == "AV1" ? ["Software"] : ["Software", "Apple hardware"])
             settingPicker("Rate control", selection: $configuration.rate.mode, values: configuration.rate.backend == "Apple hardware" ? ["Target bitrate"] : ["Constant quality", "Target bitrate"])
             if configuration.rate.mode == "Target bitrate" {
                 HStack {

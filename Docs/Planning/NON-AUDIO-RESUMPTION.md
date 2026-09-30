@@ -38,3 +38,11 @@ The concrete next proposal is SLICE-003-video-inspection.md. Its numbering super
 ## Current checkpoint, 2026-09-29
 
 The earlier pending-hosted notes are historical. Native cleanup PR 17 passed run 36599311645; video inspection PR 18 passed run 36600485460; static HDR10 PR 20 passed run 36607764563 at product commit 16a889c. HDR10-EVIDENCE.md records the local native walkthrough and remaining production qualification. The next proposed capability is filtered picture preview. Audio listening stays paused. No PR has been merged or release published.
+
+## Autonomous continuation checkpoint, 2026-09-29 evening
+
+Owner approved the presented preview brief and delegated subsequent reasonable non-audio work. Slice 005 is implemented with local native comparison and hosted evidence (PR 22, run 36660799747, passed 8m44s). Slice 006 reusable presets and settings history is implemented with six focused checks and a 99-test release regression; its native walkthrough is blocked because the Mac locked and the UI tool requires manual unlock. CUSTOM-PRESET-EVIDENCE.md contains the resume checklist. Do not bypass the lock or declare program completion. Audio listening remains parked. All work stays in draft PRs; no merge or release.
+
+## 2026-09-30 unlocked continuation
+
+Slice 006 native preset save/restart/apply/undo and import/export checks passed. The walkthrough found an extra observer-generated settings history entry, repaired with atomic codec/engine control bindings. Eight focused tests and a 101-test release regression passed (14 opt-in skips); final queue-binding build and native transition check passed. Earlier hosted run 36661841249 passed at 1d17698; follow-up hosted check pending. Continue autonomous non-audio work under existing delegation. Audio listening remains parked; no merge or release.

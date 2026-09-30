@@ -34,3 +34,7 @@ Final regression, final native label/quit-guard build and hosted validation are 
 Debug regression reported 93 tests in 16 suites passed in 203.542 seconds. Release regression reported 93 tests in 16 suites passed in 9.628 seconds. Both reported 14 opt-in skips; the separate resource run above enabled the 4K check. These are automated regressions, not new audio listening or mastering acceptance. The release run includes duplicate-metadata rejection, final image roles, plain-language operations and app-level preview ownership.
 
 The final optimized ad-hoc app was rebuilt and restarted. A native session save/open restored the generated source and crop/deinterlace configuration. Rendering again reported matching 0.417-second frames, separate Original/Filtered image roles in accessibility, and the readable crop/deinterlace summary. The preview stores no files, so there is no staging cleanup debt from success or failure. The app-level quit guard is covered by source review and build; no claim is made of a forced-termination process test. Hosted validation remains pending at PR creation. Mechanical planning audit: zero findings across eight recognized documents.
+
+## Hosted confirmation
+
+PR 22 passed the hosted `test` check in 8 minutes 44 seconds at product commit 6be533e. [Run 36660799747](https://github.com/LynxTWO/staxrip-macos/actions/runs/36660799747/job/109714889825) records successful build and regression. Owner spoken/display qualification remains separate.

@@ -23,6 +23,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-016 | 2026-09-28 | Listening material rights | Confirmed | |
 | D-017 | 2026-09-29 | Bounded static HDR10 preservation | Confirmed | |
 | D-018 | 2026-09-29 | On-demand filtered picture comparison | Confirmed | |
+| D-019 | 2026-09-29 | Reusable presets and settings undo | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -283,3 +284,17 @@ Revisit when: Owner approves or changes the brief, or M1 cannot establish frame 
 ## Autonomous continuation, 2026-09-29
 
 Owner explicitly requested autonomous reasonable decisions until program completion, excluding audio tests, or interruption in the morning. This supersedes repeated approval requests for reversible non-audio slice selection. Continue to write concrete briefs and decision/evidence records before implementation; record subsequent scope choices as delegated. No merger, release, credential changes, license selection or owner visual/listening acceptance is inferred. Stop for a genuine external blocker, preserve audio work, and report remaining production gaps honestly.
+
+## D-019: Reusable presets and settings undo
+Date: 2026-09-29
+Status: Confirmed
+
+Decision: Build SLICE-006-custom-presets.md under owner delegation for autonomous reasonable non-audio work.
+
+Because: Reusing validated encoding settings and recovering accidental edits improves the existing native workflow without requiring audio listening or another display/hardware platform.
+
+Options considered: source-independent recipes with explicit exclusions; full-session clones carrying paths and stream indices; defer presets for another codec. Choose recipes and bounded settings undo.
+
+Consequences: Local validated library with conflict protection, explicit import/export and no queue/media execution. No license or release choice.
+
+Revisit when: A recipe needs source-aware mappings, Audio Lab values or cloud sync.

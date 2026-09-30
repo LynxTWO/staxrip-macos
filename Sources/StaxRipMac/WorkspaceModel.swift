@@ -35,6 +35,18 @@ struct EncodeConfiguration: Codable, Equatable {
     }
 }
 
+extension EncodeConfiguration {
+    mutating func selectCodec(_ value: String) {
+        codec = value
+        encoder = value == "AV1" ? "SVT-AV1" : value == "HEVC" ? "x265" : "x264"
+        if value == "AV1", rate.backend != "Software" { rate.backend = "Software" }
+    }
+    mutating func selectBackend(_ value: String) {
+        rate.backend = value
+        if value == "Apple hardware" { rate.mode = "Target bitrate" }
+    }
+}
+
 struct QueueJob: Identifiable, Codable, Equatable {
     let id: UUID
     let source: String
@@ -48,8 +60,41 @@ struct QueueJob: Identifiable, Codable, Equatable {
 final class WorkspaceModel: ObservableObject {
     @Published var section = "Workspace"
     @Published var tab = "Video"
-    @Published var config = EncodeConfiguration()
-    @Published var sourceURL: URL?
+    @Published var config = EncodeConfiguration() {
+        didSet {
+            guard !restoringSettings, oldValue != config else { return }
+            // Coupled controls can briefly pass through an invalid configuration.
+            // Keep only restorable snapshots, not those intermediate states.
+            if (try? SessionDocument.validate(oldValue)) != nil, undoSettingsStack.last != oldValue {
+                undoSettingsStack.append(oldValue)
+            }
+            if undoSettingsStack.count > 100 { undoSettingsStack.removeFirst(undoSettingsStack.count - 100) }
+            redoSettingsStack = []
+        }
+    }
+    @Published private var undoSettingsStack: [EncodeConfiguration] = []
+    @Published private var redoSettingsStack: [EncodeConfiguration] = []
+    private var restoringSettings = false
+    var canUndoSettings: Bool { !undoSettingsStack.isEmpty }
+    var canRedoSettings: Bool { !redoSettingsStack.isEmpty }
+    func clearSettingsHistory() { undoSettingsStack = []; redoSettingsStack = [] }
+    func undoSettings() {
+        guard let previous = undoSettingsStack.popLast() else { return }
+        if (try? SessionDocument.validate(config)) != nil { redoSettingsStack.append(config) }; restoringSettings = true
+        config = previous; restoringSettings = false; notice = "Workspace settings undone"
+    }
+    func redoSettings() {
+        guard let next = redoSettingsStack.popLast() else { return }
+        undoSettingsStack.append(config); restoringSettings = true
+        config = next; restoringSettings = false; notice = "Workspace settings redone"
+    }
+    func applyCustomPreset(_ preset: CustomPreset) throws {
+        config = try preset.applying(to: config)
+        notice = "\(preset.name) applied. Source-specific crop, trim and tracks retained."
+    }
+    @Published var sourceURL: URL? {
+        didSet { if oldValue != sourceURL { clearSettingsHistory() } }
+    }
     @Published var player: AVPlayer?
     @Published var sourceName = "Alpine escape.mov"
     @Published var sourceInfo = "3840 × 2160  ·  24 fps  ·  02:34"
@@ -93,6 +138,7 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func showDemo() {
+        clearSettingsHistory()
         loadID = UUID()
         loading = false
         player?.pause()
@@ -182,6 +228,7 @@ final class WorkspaceModel: ObservableObject {
             sourceUnavailable = true
             if FileManager.default.fileExists(atPath: path) { load(sourceURL!, keepOutputName: true) }
         }
+        clearSettingsHistory()
         savedSnapshot = document
         notice = "Session restored"
     }
@@ -195,6 +242,7 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func load(_ url: URL, keepOutputName: Bool = false) {
+        clearSettingsHistory()
         let id = UUID()
         loadID = id
         loading = true
@@ -250,15 +298,17 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func applyPreset(_ name: String) {
-        config.rate = VideoRateOptions()
+        var next = config
+        next.rate = VideoRateOptions()
         switch name {
         case "Everyday HEVC":
-            config.codec = "HEVC"; config.encoder = "x265"; config.quality = 22; config.container = "MP4"
+            next.codec = "HEVC"; next.encoder = "x265"; next.quality = 22; next.container = "MP4"
         case "Compact AV1":
-            config.codec = "AV1"; config.encoder = "SVT-AV1"; config.quality = 28; config.container = "MKV"
+            next.codec = "AV1"; next.encoder = "SVT-AV1"; next.quality = 28; next.container = "MKV"
         default:
-            config.codec = "H.264"; config.encoder = "x264"; config.quality = 18; config.container = "MP4"
+            next.codec = "H.264"; next.encoder = "x264"; next.quality = 18; next.container = "MP4"
         }
+        config = next
         notice = "\(name) settings applied"
     }
 

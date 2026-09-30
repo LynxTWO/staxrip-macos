@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Approved Slice 005 implementation and verification. Slice 004 has local and hosted evidence in HDR10-EVIDENCE.md; broader production qualification remains open.
+Next: Record Slice 006 hosted follow-up after native validation passed. CUSTOM-PRESET-EVIDENCE.md records the native-discovered atomic-control fix and its checks. Slice 005 native comparison and hosted validation passed; see PICTURE-PREVIEW-EVIDENCE.md. Slice 004 has local and hosted evidence in HDR10-EVIDENCE.md; broader production qualification remains open.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -118,7 +118,7 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
-Current approved implementation: Slice 004, implemented within HDR10-EVIDENCE.md limits; hosted run 36607764563 passed at 16a889c. Native cleanup and Slice 003 hosted checks also passed. No merge or release is authorized. Current approved build boundary: SLICE-005-filtered-picture-preview.md under D-018. Owner approved it and delegated subsequent reversible non-audio slice decisions on 2026-09-29.
+Current approved implementation: Slice 004, implemented within HDR10-EVIDENCE.md limits; hosted run 36607764563 passed at 16a889c. Native cleanup and Slice 003 hosted checks also passed. No merge or release is authorized. Current approved build boundary: SLICE-006-custom-presets.md under D-019. Slice 005 has local evidence in PICTURE-PREVIEW-EVIDENCE.md. Owner approved it and delegated subsequent reversible non-audio slice decisions on 2026-09-29.
 
 Slice 001 remains accepted with evidence in MEASURED-ANALYSIS-EVIDENCE.md. Slice 002 remains paused by owner request, not accepted. Preserve MASTERING-EVIDENCE.md, the verified v2 listening pack and unresolved D-015 findings. Audio resumes when the owner can review it with headphones.
 

@@ -35,4 +35,4 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 19. [Slice 009: batch cleanup reporting](SLICE-009-batch-cleanup.md) and [cleanup evidence](BATCH-CLEANUP-EVIDENCE.md)
 
-20. [Slice 010: chapters and attachments inspection](SLICE-010-container-inspection.md)
+20. [Slice 010: chapters and attachments inspection](SLICE-010-container-inspection.md) and [inspection evidence](CONTAINER-INSPECTION-EVIDENCE.md)

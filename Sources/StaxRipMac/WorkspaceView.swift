@@ -176,7 +176,7 @@ struct WorkspaceView: View {
             if model.sourceURL != nil {
                 Button("Choose tracks") { showingTracks = true }.disabled(batch.running)
                 Button { showingInspector = true } label: { Image(systemName: "info.circle") }
-                    .buttonStyle(.borderless).help("Inspect media tracks").accessibilityLabel("Inspect media tracks")
+                    .buttonStyle(.borderless).help("Inspect media contents").accessibilityLabel("Inspect media contents")
             }
             if !model.isDemo || model.loading {
                 Button { model.showDemo() } label: { Image(systemName: "arrow.counterclockwise") }

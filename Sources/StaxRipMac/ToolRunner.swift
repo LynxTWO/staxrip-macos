@@ -153,13 +153,26 @@ struct MediaProbe: Decodable, Sendable {
         let format_name: String?
         let size: String?
     }
+    struct Chapter: Decodable, Sendable {
+        let id: Int64?
+        let time_base: String?
+        let start: Int64?
+        let start_time: String?
+        let end: Int64?
+        let end_time: String?
+        let tags: [String: String]?
+    }
     let streams: [Stream]
     let format: Format?
+    let chapters: [Chapter]?
+    init(streams: [Stream], format: Format?, chapters: [Chapter]? = nil) {
+        self.streams = streams; self.format = format; self.chapters = chapters
+    }
     var seconds: Double { Double(format?.duration ?? "") ?? 0 }
     var video: Stream? { streams.first { $0.codec_type == "video" && $0.disposition?["attached_pic"] != 1 } }
 
     static func read(_ source: URL, tools: FFmpegTools) async throws -> MediaProbe {
-        let result = try await ToolRunner().run(executable: tools.ffprobe, arguments: ["-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-of", "json", source.path])
+        let result = try await ToolRunner().run(executable: tools.ffprobe, arguments: ["-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-show_chapters", "-of", "json", source.path])
         guard result.status == 0, !result.truncated else {
             throw NativeExportError.invalid("Media inspection failed. " + String(decoding: result.stderr, as: UTF8.self))
         }

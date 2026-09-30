@@ -100,3 +100,5 @@ Slice 017 closed with hosted success at b177432, run 36790619197, 157 tests in 4
 Slice 018 is active under D-031/R-021 after Slice 017 closure. Scope is decoded-timestamp stepping in the existing filtered still comparison, with explicit source identity, trim and lifecycle checks. Audio stays parked.
 
 Slice 018 local/native frame stepping passed: 166 release tests, separate 4K resource check, exact VFR transitions and trim boundaries in the native comparison. Hosted regression pending. See FRAME-STEPPING-EVIDENCE.md.
+
+Slice 018 closed with hosted success at fc1aa88, run 36792778159: 166 tests in 507.195 seconds, 9m53s job. Draft PR 35 remains unmerged; audio listening stays parked.

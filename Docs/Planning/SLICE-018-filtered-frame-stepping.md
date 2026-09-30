@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 018: Exact filtered frame stepping
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Scoped acceptance passed.
 
 SLICE STATE
-Milestone: M3 local and native acceptance passed; hosted gate pending.
-Blocked by: Hosted regression for this slice remains to run.
-Evidence so far: 166-test release regression, 4K resource measurement and native VFR/trim/stale-state walkthrough passed. See FRAME-STEPPING-EVIDENCE.md.
+Milestone: M3 local, native and hosted acceptance passed.
+Blocked by: None within the slice; broader qualification remains separate.
+Evidence so far: 166-test release regression, 4K resource measurement and native VFR/trim/stale-state walkthrough and hosted run 36792778159 passed. See FRAME-STEPPING-EVIDENCE.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

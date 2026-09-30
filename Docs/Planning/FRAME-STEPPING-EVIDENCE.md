@@ -1,6 +1,6 @@
 # Filtered frame stepping evidence
 
-Date: 2026-09-30. Slice 018, D-031 / R-021. Status: local and native acceptance passed; hosted gate pending.
+Date: 2026-09-30. Slice 018, D-031 / R-021. Status: scoped local, native and hosted acceptance passed.
 
 ## Contract
 
@@ -26,7 +26,7 @@ Before rendering, both frame buttons were disabled. Rendering produced original 
 
 Accessibility exposed direction-specific button hints, original/filtered image roles, actual times and current/out-of-date state. Screenshot inspection confirmed both images, controls, dimensions, timing and scope text without clipping. The jump field stays separate from stepped actual time and describes that distinction in its hint. Source SHA-256 stayed unchanged; no encoded output or staging directory appeared. Owner spoken and broader platform qualification remain separate.
 
-Hosted macOS regression remains required. Generated research, logs and fixtures remain in ignored local work/frame-stepping. No user media, absolute local paths or binaries are committed.
+Hosted macOS run 36792778159 passed at fc1aa88: Swift 6.1.2, 166 tests in 507.195 seconds, job duration 9m53s. Draft PR 35 stays unmerged. Generated research, logs and fixtures remain in ignored local work/frame-stepping. No user media, absolute local paths or binaries are committed.
 
 ## Limits
 

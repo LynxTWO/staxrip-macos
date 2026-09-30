@@ -59,4 +59,4 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 28. [Slice 018: filtered frame stepping](SLICE-018-filtered-frame-stepping.md) and [feasibility research](FRAME-STEPPING-RESEARCH.md).
 
-[Frame stepping evidence](FRAME-STEPPING-EVIDENCE.md) records Slice 018 local/native acceptance and the pending hosted gate.
+[Frame stepping evidence](FRAME-STEPPING-EVIDENCE.md) records Slice 018 scoped local/native/hosted acceptance.

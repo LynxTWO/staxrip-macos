@@ -27,4 +27,4 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 15. [Slice 005: filtered picture comparison](SLICE-005-filtered-picture-preview.md) and [evidence](PICTURE-PREVIEW-EVIDENCE.md)
 
-16. [Slice 006: custom presets and settings history](SLICE-006-custom-presets.md) and [evidence / unlock checklist](CUSTOM-PRESET-EVIDENCE.md)
+16. [Slice 006: custom presets and settings history](SLICE-006-custom-presets.md) and [native and automated evidence](CUSTOM-PRESET-EVIDENCE.md)

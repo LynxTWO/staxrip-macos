@@ -37,7 +37,7 @@ Native UI checks on the development Mac cover import/playback, preset changes, q
 
 The v0.6 labeled-panel layout avoids the native inspection helper crash reproduced with the populated GroupBox layout. Native UI checks now cover WAV import → loudness analysis → FLAC export and a completed H.264 batch → Quit → relaunch → explicit restoration. Full forced-crash UI and all audio-control combinations remain pending. See [validation notes](Docs/VALIDATION.md).
 
-Local verification used Apple Silicon and Swift 6.4. Older macOS versions, Intel hardware, long media, HDR, multitrack audio, network destinations and distribution signing remain unverified. GitHub Actions is configured for macOS 15, but jobs are currently blocked before startup by an account billing/spending-limit restriction. No hosted CI pass is claimed.
+Local verification used Apple Silicon and Swift 6.4. Older macOS versions, Intel hardware, long media, HDR, multitrack audio, network destinations and distribution signing remain unverified. GitHub Actions runs on macOS 15; the earlier billing block was resolved after the repository became public. Hosted passes and their exact scope are recorded in Docs/Planning evidence documents.
 
 ## Structure
 

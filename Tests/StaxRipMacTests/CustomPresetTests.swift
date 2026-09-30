@@ -123,6 +123,24 @@ struct CustomPresetTests {
         model.config.quality = 11; model.sourceURL = URL(fileURLWithPath: "/generated/new-source.mov")
         #expect(!model.canUndoSettings)
     }
+    @Test func codecAndBackendSelectionsAreAtomicAndRestorable() throws {
+        let model = WorkspaceModel(), initial = model.config
+        var next = model.config; next.selectCodec("HEVC"); model.config = next
+        let hevc = model.config
+        try SessionDocument.validate(hevc)
+        model.undoSettings(); #expect(model.config == initial && !model.canUndoSettings)
+        model.redoSettings(); #expect(model.config == hevc)
+        next = model.config; next.selectBackend("Apple hardware"); model.config = next
+        let hardware = model.config
+        #expect(hardware.rate.mode == "Target bitrate")
+        model.undoSettings(); #expect(model.config == hevc)
+        model.redoSettings(); #expect(model.config == hardware)
+        next = model.config; next.selectCodec("AV1"); model.config = next
+        #expect(model.config.encoder == "SVT-AV1" && model.config.rate.backend == "Software")
+        try SessionDocument.validate(model.config)
+        model.undoSettings(); #expect(model.config == hardware)
+        model.redoSettings(); #expect(model.config.codec == "AV1")
+    }
     @Test func coupledControlIntermediateStatesCannotBeRestored() throws {
         let model = WorkspaceModel(), initial = model.config
         model.config.codec = "HEVC" // Invalid until encoder follows.

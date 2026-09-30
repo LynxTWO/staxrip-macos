@@ -30,10 +30,11 @@ struct QueueEditor: View {
             if !draft.isDemo { Button("Choose source tracks…") { showingTracks = true } }
             Divider()
             HStack(spacing: 16) {
-                settingPicker("Codec", selection: $draft.configuration.codec, values: ["AV1", "HEVC", "H.264"])
-                    .onChange(of: draft.configuration.codec) { _, codec in
-                        draft.configuration.encoder = codec == "AV1" ? "SVT-AV1" : codec == "HEVC" ? "x265" : "x264"
-                    }
+                settingPicker("Codec", selection: Binding(get: { draft.configuration.codec }, set: { value in
+                    var next = draft.configuration
+                    next.selectCodec(value)
+                    draft.configuration = next
+                }), values: ["AV1", "HEVC", "H.264"])
                 settingPicker("Container", selection: $draft.configuration.container, values: ["MKV", "MP4"])
             }
             VideoRateOptionsView(configuration: $draft.configuration)

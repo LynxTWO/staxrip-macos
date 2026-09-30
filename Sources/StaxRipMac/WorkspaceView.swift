@@ -246,10 +246,11 @@ struct WorkspaceView: View {
                 Text(model.config.rate.backend.uppercased()).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
             }
             HStack(spacing: 12) {
-                settingPicker("Codec", selection: $model.config.codec, values: ["AV1", "HEVC", "H.264"])
-                    .onChange(of: model.config.codec) { _, value in
-                        model.config.encoder = value == "AV1" ? "SVT-AV1" : value == "HEVC" ? "x265" : "x264"
-                    }
+                settingPicker("Codec", selection: Binding(get: { model.config.codec }, set: { value in
+                    var next = model.config
+                    next.selectCodec(value)
+                    model.config = next
+                }), values: ["AV1", "HEVC", "H.264"])
                 VStack(alignment: .leading, spacing: 6) {
                     eyebrow("ENCODER")
                     Text(model.config.activeEncoder).font(.system(size: 12, weight: .medium)).frame(maxWidth: .infinity, alignment: .leading).padding(9)

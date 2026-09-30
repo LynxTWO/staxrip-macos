@@ -35,6 +35,18 @@ struct EncodeConfiguration: Codable, Equatable {
     }
 }
 
+extension EncodeConfiguration {
+    mutating func selectCodec(_ value: String) {
+        codec = value
+        encoder = value == "AV1" ? "SVT-AV1" : value == "HEVC" ? "x265" : "x264"
+        if value == "AV1", rate.backend != "Software" { rate.backend = "Software" }
+    }
+    mutating func selectBackend(_ value: String) {
+        rate.backend = value
+        if value == "Apple hardware" { rate.mode = "Target bitrate" }
+    }
+}
+
 struct QueueJob: Identifiable, Codable, Equatable {
     let id: UUID
     let source: String

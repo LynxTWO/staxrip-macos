@@ -1,10 +1,11 @@
 # StaxRip Mac Slice 008: Queue preflight
-Version: 0.1. Date: 2026-09-30. Status: In progress.
+Version: 0.1. Date: 2026-09-30. Status: Done with evidence.
 
 SLICE STATE
-Milestone: M1 and M2 implemented; M3 automated and native checks passed, hosted check next.
+Milestone: M1 and M2 implemented; M3 automated, native and hosted checks passed.
 Blocked by: None. Slice 007 native and hosted checks passed.
 Evidence so far: QUEUE-PREFLIGHT-EVIDENCE.md records four focused checks, a 107-test release regression and the native correction/recheck with unchanged source/recovery bytes.
+Hosted: run 36709148929 passed at 852306f in 8 minutes 20 seconds.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

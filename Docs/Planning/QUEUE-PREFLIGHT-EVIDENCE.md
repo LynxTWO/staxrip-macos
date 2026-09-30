@@ -1,5 +1,5 @@
 # Queue preflight evidence
-Date: 2026-09-30. Scope: Slice 008, D-021. Status: Local automated and native checks passed; hosted check pending.
+Date: 2026-09-30. Scope: Slice 008, D-021. Status: Local automated, native and hosted checks passed.
 
 ## Behavior and boundary
 
@@ -27,4 +27,4 @@ Before/after SHA-256 checks confirmed source and existing recovery journal bytes
 
 ## Remaining validation
 
-Hosted validation remains pending. Owner VoiceOver listening, other OS/CPU platforms, network drives and capacity/resource planning remain outside this local evidence.
+Hosted macOS validation passed in 8 minutes 20 seconds at product commit 852306f: [run 36709148929](https://github.com/LynxTWO/staxrip-macos/actions/runs/36709148929/job/109866487620). Owner VoiceOver listening, other OS/CPU platforms, network drives and capacity/resource planning remain outside this local evidence.

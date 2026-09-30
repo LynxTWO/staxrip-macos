@@ -136,6 +136,7 @@ struct MediaProbe: Decodable, Sendable {
         let disposition: [String: Int]?
         struct SideData: Codable, Sendable {
             let rotation: Int?
+            let displaymatrix: String?
             let side_data_type: String?
             let red_x, red_y, green_x, green_y, blue_x, blue_y, white_point_x, white_point_y: String?
             let min_luminance, max_luminance: String?

@@ -18,9 +18,9 @@ final class PicturePreviewController: ObservableObject {
     func cancel() {
         generation = UUID()
         task?.cancel()
-        status = "Cancelling preview…"
+        status = running ? "Cancelling preview…" : "Choose a source time, then render a comparison."
     }
-    func close() { cancel(); result = nil }
+    func close() { cancel(); result = nil; stale = false }
 
     func render(source: URL, configuration: EncodeConfiguration, time: Double, tools: FFmpegTools?) {
         guard !running else { return }

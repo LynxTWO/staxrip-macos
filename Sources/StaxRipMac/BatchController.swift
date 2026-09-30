@@ -178,6 +178,12 @@ final class BatchController: ObservableObject {
               plan.duration <= 0 || abs(actual.seconds - plan.duration) < max(0.25, plan.duration * 0.01) else {
             throw NativeExportError.invalid("The output did not match the expected codec, dimensions, tracks or duration.")
         }
+        if plan.normalizedOrientation {
+            guard let video = actual.video, try SourceOrientation.read(video) == .identity,
+                  video.sample_aspect_ratio == "1:1" else {
+                throw SourceOrientation.failure("The encoded output retained an unexpected display transform or pixel aspect ratio. Nothing was published.")
+            }
+        }
         if let expected = plan.expectedAudio, actual.streams.filter({ $0.codec_type == "audio" }).contains(where: { $0.codec_name != expected }) {
             throw NativeExportError.invalid("Output audio did not match the planned codec.")
         }

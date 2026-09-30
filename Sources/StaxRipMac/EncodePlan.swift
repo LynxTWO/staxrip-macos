@@ -6,6 +6,7 @@ struct EncodePlan: Sendable {
     let expectedAudio: String?
     let expectedWidth: Int?
     let expectedHeight: Int?
+    let normalizedOrientation: Bool
     let audioCount: Int
     let subtitleCount: Int
     let duration: Double
@@ -40,13 +41,13 @@ struct EncodePlan: Sendable {
               ["yuv420p", "nv12"].contains(video.pix_fmt ?? "")) else {
             throw NativeExportError.invalid("This first advanced pipeline supports 8-bit SDR 4:2:0 sources. HDR, high bit depth and other pixel formats need an explicit color workflow before encoding.")
         }
-        let width = video.width ?? 0, height = video.height ?? 0
+        let orientation = try SourceOrientation.read(video)
+        try orientation.validateTranscode(video, configuration: c)
+        let width = (orientation.swapsAxes ? video.height : video.width) ?? 0
+        let height = (orientation.swapsAxes ? video.width : video.height) ?? 0
         guard width > picture.cropLeft + picture.cropRight, height > c.cropTop + c.cropBottom,
               (width - picture.cropLeft - picture.cropRight) % 2 == 0, (height - c.cropTop - c.cropBottom) % 2 == 0 else {
             throw NativeExportError.invalid("The crop leaves an invalid frame size for 4:2:0 encoding.")
-        }
-        guard (video.tags?["rotate"] ?? "0") == "0", !(video.side_data_list ?? []).contains(where: { ($0.rotation ?? 0) != 0 }) else {
-            throw NativeExportError.invalid("Rotated sources need an explicit orientation step. Use Quick Export for this source for now.")
         }
         let audio = try selectedStreams(probe, type: "audio", indices: c.audioTracks)
         let subtitles = try selectedStreams(probe, type: "subtitle", indices: c.subtitleTracks)
@@ -59,7 +60,7 @@ struct EncodePlan: Sendable {
                 throw NativeExportError.invalid("Use MKV to preserve these subtitle formats, or remove subtitles for MP4.")
             }
         }
-        var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe", "-i", job.source,
+        var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe"] + orientation.inputArguments(stream: video.index) + ["-i", job.source,
                     "-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
         if trimmed {
             args += ["-ss", String(picture.start), "-t", String(outputDuration)]
@@ -80,7 +81,8 @@ struct EncodePlan: Sendable {
             args += ["-profile:v", "main10", "-fps_mode", "passthrough", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-chroma_sample_location", "left"]
         }
         let picturePlan = PicturePlan(c)
-        if !picturePlan.filters.isEmpty { args += ["-vf", picturePlan.expression] }
+        let filters = orientation.filters + picturePlan.filters
+        if !filters.isEmpty { args += ["-vf", filters.joined(separator: ",")] }
         var expectedAudio: String?
         if c.audio != "No audio", !audio.isEmpty {
             for stream in audio { args += ["-map", "0:\(stream.index)"] }
@@ -105,8 +107,9 @@ struct EncodePlan: Sendable {
         return EncodePlan(arguments: args, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
+                          normalizedOrientation: orientation.degrees != 0,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: keepSubtitles ? subtitles.count : 0,
-                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")")
+                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")")
     }
 
     static func validateHDRSettings(_ c: EncodeConfiguration) throws {

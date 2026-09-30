@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Implement Slice 007 validated source orientation. Slice 006 native and hosted follow-up passed; see CUSTOM-PRESET-EVIDENCE.md. Audio listening remains parked.
+Next: Finish Slice 007 final native idle-status check and hosted validation. Slice 006 native and hosted follow-up passed; see CUSTOM-PRESET-EVIDENCE.md. Audio listening remains parked.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

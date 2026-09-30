@@ -46,3 +46,7 @@ Owner approved the presented preview brief and delegated subsequent reasonable n
 ## 2026-09-30 unlocked continuation
 
 Slice 006 native preset save/restart/apply/undo and import/export checks passed. The walkthrough found an extra observer-generated settings history entry, repaired with atomic codec/engine control bindings. Eight focused tests and a 101-test release regression passed (14 opt-in skips); final queue-binding build and native transition check passed. Earlier hosted run 36661841249 passed at 1d17698; follow-up hosted check pending. Continue autonomous non-audio work under existing delegation. Audio listening remains parked; no merge or release.
+
+## Slice 007 checkpoint
+
+Slice 006 hosted follow-up passed in 8m53s at 0b4f96a (run 36703925176). Source orientation is implemented under D-020. Right-angle transforms, independent pixels, preview and eight real queue outputs pass; a reflected source is refused without publication. Full release regression: 103 tests/18 suites, 14 opt-in skips, 9.565 seconds. Native upright crop comparison and refusal passed. A minor idle-close status fix passed focused tests; final rebuild/reopen and hosted checks remain. See ORIENTATION-EVIDENCE.md. Audio listening remains parked.

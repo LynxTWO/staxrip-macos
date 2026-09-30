@@ -13,6 +13,8 @@ struct PictureOptionsView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+            Text("Crop edges follow the upright picture. Supported right-angle source rotation is applied before crop; rotated sources require progressive square-pixel SDR and deinterlacing Off.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             HStack {
                 Stepper("Left crop: \(options.cropLeft) px", value: $options.cropLeft, in: 0...4096, step: 2)
                 Stepper("Right: \(options.cropRight) px", value: $options.cropRight, in: 0...4096, step: 2)

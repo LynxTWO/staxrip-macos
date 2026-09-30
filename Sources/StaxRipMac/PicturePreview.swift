@@ -52,14 +52,17 @@ enum PicturePreview {
               ["yuv420p", "nv12"].contains(v.pix_fmt ?? ""), v.color_primaries == "bt709",
               v.color_transfer == "bt709", v.color_space == "bt709", ["tv", "pc"].contains(v.color_range ?? ""),
               v.sample_aspect_ratio == "1:1", v.start_pts == 0,
-              (v.tags?["rotate"] ?? "0") == "0", !(v.side_data_list ?? []).contains(where: { ($0.rotation ?? 0) != 0 }),
-              let width = v.width, let height = v.height, (2...3840).contains(width), (2...2160).contains(height) else {
-            throw failure("Use a square-pixel, unrotated, zero-start 8-bit SDR BT.709 source up to 3840 × 2160 with explicit color range. HDR and missing color metadata are not supported by this preview. Queue support is separate.")
+              let width = v.width, let height = v.height, (2...3840).contains(width), (2...3840).contains(height), width * height <= 3840 * 2160 else {
+            throw failure("Use a square-pixel, zero-start 8-bit SDR BT.709 source up to 3840 × 2160 (either orientation) with explicit color range. HDR and missing color metadata are not supported by this preview. Queue support is separate.")
         }
         guard let base = try? HDRFraction(v.time_base), base.numerator > 0 else { throw failure("The source has no valid time base.") }
+        let orientation = try SourceOrientation.read(v)
+        try orientation.validateTranscode(v, configuration: c)
+        let uprightWidth = orientation.swapsAxes ? height : width
+        let uprightHeight = orientation.swapsAxes ? width : height
         let p = c.picture
-        guard width > p.cropLeft + p.cropRight, height > c.cropTop + c.cropBottom,
-              (width - p.cropLeft - p.cropRight) % 2 == 0, (height - c.cropTop - c.cropBottom) % 2 == 0 else {
+        guard uprightWidth > p.cropLeft + p.cropRight, uprightHeight > c.cropTop + c.cropBottom,
+              (uprightWidth - p.cropLeft - p.cropRight) % 2 == 0, (uprightHeight - c.cropTop - c.cropBottom) % 2 == 0 else {
             throw failure("The crop must leave positive, even picture dimensions. Adjust the picture settings.")
         }
         let end = p.end > 0 ? p.end : probe.seconds
@@ -78,18 +81,19 @@ enum PicturePreview {
                 let identity = try await SourceFingerprint.read(source)
                 let probe = try await MediaProbe.read(source, tools: tools)
                 let video = try validate(configuration, probe: probe, time: time)
+                let orientation = try SourceOrientation.read(video)
                 let end = configuration.picture.end > 0 ? configuration.picture.end : probe.seconds
                 progress("Reading the original frame from the beginning…")
-                let original = try await frame(source: source, stream: video, filters: [], time: time, end: end, tools: tools)
+                let original = try await frame(source: source, stream: video, filters: orientation.filters, time: time, end: end, tools: tools)
                 progress("Applying picture filters from the beginning…")
                 let plan = PicturePlan(configuration)
-                let filtered = try await frame(source: source, stream: video, filters: plan.filters, time: time, end: end, tools: tools)
+                let filtered = try await frame(source: source, stream: video, filters: orientation.filters + plan.filters, time: time, end: end, tools: tools)
                 guard original.stamp.matches(filtered.stamp) else { throw failure("The original and filtered timestamps do not match. No comparison is shown.") }
                 progress("Rechecking source identity…")
                 guard try await SourceFingerprint.read(source) == identity else { throw failure("The source changed during rendering. Refresh after the source is stable.") }
                 try Task.checkCancellation()
                 return PictureComparison(original: original, filtered: filtered, requested: time,
-                                         operations: plan.summary)
+                                         operations: (orientation.degrees == 0 ? "" : orientation.summary + " · ") + plan.summary)
             }
             group.addTask {
                 try await Task.sleep(nanoseconds: UInt64(max(0.001, min(120, timeout)) * 1_000_000_000))
@@ -106,10 +110,11 @@ enum PicturePreview {
         let display = "colorspace=all=bt709:trc=iec61966-2-1:range=pc:format=yuv444p,format=rgb24"
         let expression = (filters + [select, "showinfo@identity=checksum=0", display, "showinfo@display=checksum=0"]).joined(separator: ",")
         let runner = ToolRunner(), bytes = PreviewBytes()
+        let orientation = try SourceOrientation.read(stream)
         let result: ToolResult
         do {
             result = try await runner.run(executable: tools.ffmpeg, arguments: [
-                "-hide_banner", "-nostdin", "-xerror", "-loglevel", "info", "-noautorotate", "-threads", "2", "-protocol_whitelist", "file,pipe", "-i", source.path,
+                "-hide_banner", "-nostdin", "-xerror", "-loglevel", "info", "-threads", "2", "-protocol_whitelist", "file,pipe"] + orientation.inputArguments(stream: stream.index) + ["-i", source.path,
                 "-map", "0:\(stream.index)", "-an", "-sn", "-dn", "-vf", expression, "-frames:v", "1", "-fps_mode", "passthrough",
                 "-threads", "1", "-f", "rawvideo", "pipe:1"
             ], stdoutLimit: 0) { bytes.append($0, runner: runner) }
@@ -139,10 +144,15 @@ enum PicturePreview {
             let base = try HDRFraction(baseText)
             let values = try match(#"\bn:\s+0\s+pts:\s*([0-9]+)\s.*?fmt:(\w+) .*?sar:([0-9]+/[0-9]+) s:([0-9]+)x([0-9]+) "#, lines[index])
             guard let pts = Int64(values[0]), (0...1_000_000_000_000).contains(pts), base.numerator > 0,
-                  let w = Int(values[3]), let h = Int(values[4]), (2...3840).contains(w), (2...2160).contains(h) else { throw failure("Invalid frame dimensions or timestamp.") }
+                  let w = Int(values[3]), let h = Int(values[4]), (2...3840).contains(w), (2...3840).contains(h), w * h <= 3840 * 2160 else { throw failure("Invalid frame dimensions or timestamp.") }
             let aspect = try HDRFraction(values[2])
             guard aspect.value > 0, aspect.value < 10 else { throw failure("Invalid pixel aspect ratio.") }
-            let color = lines[index + 1]
+            // A decoded frame may log SEI/display side data between its header
+            // and color record. Bind one color record to this frame, stopping
+            // before the next frame header; never consume another frame's color.
+            let frameLines = lines.dropFirst(index + 1).prefix { $0.range(of: #"\bn:\s+[0-9]+\s+pts:"#, options: .regularExpression) == nil }
+            let colors = frameLines.filter { $0.range(of: "^\\[showinfo@\(name) @ [^\\]]+\\] color_range:", options: .regularExpression) != nil }
+            guard colors.count == 1, let color = colors.first else { throw failure("Missing or ambiguous frame color metadata.") }
             if name == "identity" {
                 guard ["yuv420p", "nv12"].contains(values[1]), color.contains("color_range:\(expectedRange) color_space:bt709 color_primaries:bt709 color_trc:bt709") else {
                     throw failure("Decoded frame color differs from the supported source declaration.")

@@ -178,3 +178,7 @@ Approved R-016 under delegated Slice 013: enforce original raster dimensions and
 ## Slice 014 batch publication checkpoint
 
 Approved R-017 under delegated Slice 014: move advanced batch publication off the UI thread, preserve in-flight ownership/cancellation outcomes and expose per-job native access review without changing paths. Gates publication-responsive, publication-cancel-success, publication-failure and publication-access-ui bind S14-001 through S14-004. Consequence: current-operation publication/cleanup only; no replacement, early abandonment, stored phase change, broad permission settings or historical deletion.
+
+## Slice 015 external subtitle checkpoint
+
+Approved R-018 under delegated Slice 015: add one bounded plain UTF-8 SRT to supported zero-start SDR exports, stage captured bytes, and verify decoded added cue text/times plus codec/language/title before publication. Gates external-srt-roundtrip, external-srt-refusal, external-srt-ownership, external-srt-persistence and external-srt-ui bind S15-001 through S15-005. Consequence: current-operation owned staging only, with source/caption/prior-output protection, saved-schema migration and balanced transient read access. No subtitle-content persistence, silent styling flattening or audio/release scope.

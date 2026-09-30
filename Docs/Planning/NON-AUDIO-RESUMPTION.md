@@ -76,3 +76,5 @@ Slice 013 geometry acceptance closed with hosted success at 30b044b, run 3676962
 Slice 014 moves advanced batch publication off the main thread while awaiting its true result before cleanup. Held-operation cancellation and collision tests, regression and native per-job access/encode checks passed; hosted pending. See PUBLICATION-RESPONSIVENESS-EVIDENCE.md. Audio remains parked.
 
 Slice 014 scoped acceptance closed at f20998f with hosted run 36778465280 (9m05s). Final release/debug suites passed 125 tests; deliberate delayed-publication negative controls and isolated ENOSPC/retry also passed. Synchronous filesystem calls outside advanced batch publication and durable access remain open. Audio remains parked.
+
+Slice 015 is active under D-028/R-018: one source-specific external plain UTF-8 SRT, fresh captured staging, MKV/MP4 cue verification, native controls and saved-data migration. Research shows overlap, styling and line-edge whitespace need explicit refusal. No new audio acceptance is included.

@@ -44,3 +44,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 23. [Slice 013: resized raster verification](SLICE-013-picture-geometry.md) and [geometry/access evidence](PICTURE-GEOMETRY-EVIDENCE.md)
 
 [Responsive publication evidence](PUBLICATION-RESPONSIVENESS-EVIDENCE.md): background exclusive publication, preserved in-flight outcomes, native access review; local/native/hosted acceptance passed at f20998f.
+
+25. [Slice 015: verified external SRT subtitles](SLICE-015-external-subtitles.md) and [feasibility research](EXTERNAL-SUBTITLE-RESEARCH.md).

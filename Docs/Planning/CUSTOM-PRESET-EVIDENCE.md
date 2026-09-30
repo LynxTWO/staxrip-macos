@@ -30,3 +30,5 @@ S6-001 through S6-004 have local automated evidence. S6-005 native acceptance re
 ## Final local receipt
 
 After adding staged exclusive recipe export and the UTF-8 name bound, all six focused release tests passed in 0.013 seconds. Successful and refused export left no owned staging directory. The final optimized ad-hoc app built successfully in 12.27 seconds. It has not been restarted or visually inspected because the Mac is locked. Planning audit reports zero findings across nine recognized documents.
+
+A final file-identity review found that a dangling symbolic link could be mistaken for an absent library. Storage inspection now uses lstat and refuses nonregular files without replacement. The added dangling-link preservation regression passed; all seven focused release tests passed in 0.011 seconds. This is a follow-up to the 99-test full regression, not a claim that the new test ran in that earlier result.

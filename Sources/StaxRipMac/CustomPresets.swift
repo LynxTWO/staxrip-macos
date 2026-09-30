@@ -70,9 +70,12 @@ struct PresetDocument: Codable {
         return try JSONDecoder().decode(Self.self, from: data).validated()
     }
     static func readBytes(_ url: URL) throws -> Data? {
-        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
-        guard try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey]).isRegularFile == true,
-              try url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else { throw SessionError.invalid("Preset storage must be a regular local file.") }
+        var info = stat()
+        guard lstat(url.path, &info) == 0 else {
+            if errno == ENOENT { return nil }
+            throw SessionError.invalid("Cannot inspect preset storage. Check file permissions and retry.")
+        }
+        guard info.st_mode & S_IFMT == S_IFREG else { throw SessionError.invalid("Preset storage must be a regular local file; symbolic links are not replaced.") }
         let handle = try FileHandle(forReadingFrom: url); defer { try? handle.close() }
         let data = try handle.read(upToCount: 1_048_577) ?? Data()
         guard data.count <= 1_048_576 else { throw SessionError.invalid("Preset file exceeds 1 MiB.") }

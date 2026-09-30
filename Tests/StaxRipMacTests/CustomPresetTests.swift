@@ -69,6 +69,18 @@ struct CustomPresetTests {
         let many = (0...100).map { CustomPreset(name: "Recipe \($0)", configuration: EncodeConfiguration()) }
         #expect(throws: (any Error).self) { try PresetDocument(presets: many).validated() }
     }
+    @Test func danglingLibraryLinkIsPreservedInsteadOfReset() throws {
+        let dir = try folder(); defer { try? FileManager.default.removeItem(at: dir) }
+        let url = dir.appendingPathComponent("library.json")
+        let target = dir.appendingPathComponent("missing.json")
+        try FileManager.default.createSymbolicLink(at: url, withDestinationURL: target)
+        let store = CustomPresetStore(url: url)
+        #expect(store.problem != nil)
+        #expect(throws: (any Error).self) { try store.save(name: "New", configuration: EncodeConfiguration()) }
+        #expect(try FileManager.default.destinationOfSymbolicLink(atPath: url.path) == target.path)
+        #expect(!FileManager.default.fileExists(atPath: target.path))
+    }
+
     @Test func conflictsLockAndFailedWritesPreserveState() throws {
         let dir = try folder(); defer { try? FileManager.default.removeItem(at: dir) }
         let url = dir.appendingPathComponent("library.json")

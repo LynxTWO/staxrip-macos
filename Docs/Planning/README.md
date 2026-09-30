@@ -30,3 +30,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 16. [Slice 006: custom presets and settings history](SLICE-006-custom-presets.md) and [native and automated evidence](CUSTOM-PRESET-EVIDENCE.md)
 
 17. [Slice 007: source orientation](SLICE-007-source-orientation.md) and [orientation evidence](ORIENTATION-EVIDENCE.md)
+
+18. [Slice 008: queue preflight](SLICE-008-queue-preflight.md)

@@ -25,6 +25,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-018 | 2026-09-29 | On-demand filtered picture comparison | Confirmed | |
 | D-019 | 2026-09-29 | Reusable presets and settings undo | Confirmed | |
 | D-020 | 2026-09-30 | Validated source orientation | Confirmed | |
+| D-021 | 2026-09-30 | Read-only queue preflight | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -313,3 +314,17 @@ Options considered: implicit FFmpeg autorotation; explicit validated source tran
 Consequences: Initial scope is progressive, square-pixel 8-bit SDR with deinterlacing Off for rotated sources. Both preview sides are upright; crop follows upright coordinates. Unsupported transformations fail explicitly. HDR remains unrotated only.
 
 Revisit when: Real-camera fixtures require mirrored, anamorphic, translated or per-frame transforms, or owner requests manual orientation controls.
+
+## D-021: Read-only queue preflight
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build SLICE-008-queue-preflight.md under autonomous non-audio delegation.
+
+Because: An overnight queue can currently complete earlier jobs before discovering a preventable source, output or configuration issue in a later item. Users need a review action before spending encoding time.
+
+Options considered: optional read-only review; mandatory full decode/encode dry run; continue discovering problems only during execution. Choose a bounded preliminary review with explicit deferred HDR and hardware checks. This adds no saved format, dependency or automatic execution. A full dry run would be expensive and still could not promise future filesystem state.
+
+Consequences: Per-item current observations, cancellation, invalidation on intent changes and no output/recovery writes. Execution remains authoritative. No licensing, release or listening decision.
+
+Revisit when: Scheduling, disk-space estimates or full-media preflight become a separately scoped requirement.

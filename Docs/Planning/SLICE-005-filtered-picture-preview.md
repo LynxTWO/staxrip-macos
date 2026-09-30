@@ -1,9 +1,9 @@
 # StaxRip Mac Slice 005: Filtered picture preview
-Version: 0.1 Draft. Date: 2026-09-29. Status: Proposed.
+Version: 0.1 Draft. Date: 2026-09-29. Status: Approved for build.
 
 SLICE STATE
-Milestone: None; repository mapping and proposal complete.
-Blocked by: Approval of this brief, D-018.
+Milestone: M1, shared plan and extraction feasibility.
+Blocked by: None.
 Evidence so far: Existing implementation locators in section 6; proposed behavior is not implemented.
 Last audit: 2026-09-29.
 
@@ -11,7 +11,7 @@ Last audit: 2026-09-29.
 
 A user can compare an original frame with the effect of the queue's crop, size and deinterlace settings before committing a full encode. Current playback is explicitly unfiltered. This adds visual feedback at Architecture section 10's picture-processing extension point.
 
-Recommended scope is an on-demand still comparison. Alternatives are a short encoded motion preview, which also exposes compression but adds playback and sample-boundary qualification, or source-only frame stepping, which does not show the configured picture. Neither alternative is included here. Owner delegation informed the recommendation; this new brief remains Proposed until approved.
+Recommended scope is an on-demand still comparison. Alternatives are a short encoded motion preview, which also exposes compression but adds playback and sample-boundary qualification, or source-only frame stepping, which does not show the configured picture. Neither alternative is included here. Owner delegation informed the recommendation; the owner approved this brief on 2026-09-29.
 
 Growth tally: shared picture plan, timestamp-matched frame pairs, bounded cancellable rendering, native comparison and stale-result handling. Continuous playback, timeline indexing and codec-quality comparison are deferred.
 
@@ -89,7 +89,7 @@ S5 checks have linked evidence; native core/error walkthroughs are complete; doc
 
 A later motion/compression sample preview and accurate frame navigation; shared validation for stronger output-dimension checks. Rotation/remux remains an independent candidate next slice.
 
-Approved for build by: Pending owner approval of this brief.
+Approved for build by: Owner, 2026-09-29. Approval followed presentation of PR 21 and delegated autonomous non-audio development.
 
 ## Reference
 
@@ -97,4 +97,4 @@ FFmpeg's [BWDIF documentation](https://ffmpeg.org/ffmpeg-filters.html#bwdif) des
 
 ## Planning audit
 
-D-018 is Proposed and appears in the decision index. There is no approved new build path. M1 schedules temporal-identity feasibility before dependent work. Existing code locators and companion documents were checked. Scope choices are explicitly proposals; no new unverified requirement is marked Confirmed. Mechanical audit on 2026-09-29 reports zero findings across eight recognized documents. This verifies document consistency only.
+D-018 is Confirmed and appears in the decision index. The owner approved the new build path. M1 schedules temporal-identity feasibility before dependent work. Existing code locators and companion documents were checked. Scope choices are explicitly proposals; no new unverified requirement is marked Confirmed. Mechanical audit on 2026-09-29 reports zero findings across eight recognized documents. This verifies document consistency only.

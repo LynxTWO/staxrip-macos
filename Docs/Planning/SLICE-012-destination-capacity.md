@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: Planned under owner autonomous non-audio delegation after Slice 011 closure.
-Blocked by: None known; disk image attachment availability must be checked.
-Evidence so far: Existing no-overwrite and cleanup tests pass; actual capacity exhaustion is unqualified.
+Milestone: M1 through M3 local and native checks passed; ordinary hosted regression pending.
+Blocked by: None external.
+Evidence so far: DESTINATION-CAPACITY-EVIDENCE.md records real ENOSPC, no publication, cleanup, protected bytes and successful explicit retry on the bounded HFS+ image.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves
@@ -13,7 +13,7 @@ A generated queue encode into a deliberately full disposable filesystem fails wi
 
 ## 2. The walkthrough
 
-Create and attach a uniquely named small disk image, populate only that image with generated files to exhaust space, and queue generated video to it. Observe failure, unchanged source/prior output, absent final file and owned staging cleanup. Free only the generated filler and retry explicitly to prove recovery. Detach the exact test mount afterward.
+Create and attach a uniquely named small disk image, populate only that image with generated files to exhaust space, and queue generated video to it. Observe failure, unchanged source/prior output, absent final file and owned staging cleanup. Free only the generated filler and retry explicitly to prove recovery. Detach the owned test mount afterward.
 
 ## 3. In scope, with build order
 

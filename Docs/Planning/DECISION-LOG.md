@@ -27,6 +27,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-020 | 2026-09-30 | Validated source orientation | Confirmed | |
 | D-021 | 2026-09-30 | Read-only queue preflight | Confirmed | |
 | D-022 | 2026-09-30 | Report batch staging cleanup | Confirmed | |
+| D-023 | 2026-09-30 | Inspect chapters and attachments | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -343,3 +344,17 @@ Options considered: keep best-effort removal; reuse bounded native cleanup with 
 Consequences: A published file remains Completed, while a cleanup warning stops the current batch and persists in existing status detail. Cancellation and encoder failures retain their primary outcome. No new stored fields, dependency, release or audio scope.
 
 Revisit when: Explicit stale-staging recovery or filesystem-specific qualification is scoped.
+
+## D-023: Inspect chapters and attachments
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build SLICE-010-container-inspection.md under autonomous non-audio delegation.
+
+Because: The native inspector does not expose chapters or useful embedded-file metadata. Making container contents visible is a bounded prerequisite for later chapter editing and preservation verification. Existing inspection tasks can also race across source changes.
+
+Options considered: metadata-only inspection using the current probe; immediate chapter editing and attachment extraction; defer container features. Choose inspection and request identity protection. Generated MKV and MP4 spikes confirmed chapters, attachments and cover-art disposition are available without dependencies or schema changes.
+
+Consequences: Read-only bounded native sections with truthful missing/invalid metadata and stale-request protection. No extraction, font loading, chapter seeking, output-preservation guarantee, audio acceptance or release decision.
+
+Revisit when: Chapter edits, remux or safe attachment extraction become an explicit slice.

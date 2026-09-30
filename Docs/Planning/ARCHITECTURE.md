@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select the next non-audio slice. Slice 009 local, native and hosted checks passed; see BATCH-CLEANUP-EVIDENCE.md. Slice 008 local, native and hosted checks passed; see QUEUE-PREFLIGHT-EVIDENCE.md. Slice 007 native and hosted checks passed; see ORIENTATION-EVIDENCE.md. Audio listening remains parked.
+Next: Implement Slice 010 chapters and attachments inspection. Slice 009 local, native and hosted checks passed; see BATCH-CLEANUP-EVIDENCE.md. Slice 008 local, native and hosted checks passed; see QUEUE-PREFLIGHT-EVIDENCE.md. Slice 007 native and hosted checks passed; see ORIENTATION-EVIDENCE.md. Audio listening remains parked.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -118,7 +118,7 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
-Current approved implementation: Slice 004, implemented within HDR10-EVIDENCE.md limits; hosted run 36607764563 passed at 16a889c. Native cleanup and Slice 003 hosted checks also passed. No merge or release is authorized. Current approved build boundary: SLICE-009-batch-cleanup.md under D-022. Slice 005 has local evidence in PICTURE-PREVIEW-EVIDENCE.md. Owner approved it and delegated subsequent reversible non-audio slice decisions on 2026-09-29.
+Current approved implementation: Slice 004, implemented within HDR10-EVIDENCE.md limits; hosted run 36607764563 passed at 16a889c. Native cleanup and Slice 003 hosted checks also passed. No merge or release is authorized. Current approved build boundary: SLICE-010-container-inspection.md under D-023. Slice 005 has local evidence in PICTURE-PREVIEW-EVIDENCE.md. Owner approved it and delegated subsequent reversible non-audio slice decisions on 2026-09-29.
 
 Slice 001 remains accepted with evidence in MEASURED-ANALYSIS-EVIDENCE.md. Slice 002 remains paused by owner request, not accepted. Preserve MASTERING-EVIDENCE.md, the verified v2 listening pack and unresolved D-015 findings. Audio resumes when the owner can review it with headphones.
 

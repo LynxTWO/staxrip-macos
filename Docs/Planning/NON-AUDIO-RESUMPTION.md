@@ -84,3 +84,5 @@ Slice 015 local acceptance passed: 142 tests / 28 suites, native independent MKV
 Slice 015 initial hosted run 36783897395 passed at bb9a765 (142 tests, 9m37s). Review then found canonical Unicode title equality could hide byte-distinct intent changes. A negative-control regression reproduced broken change detection/undo; the fix passes the final 143-test local regression. Final hosted follow-up pending.
 
 Slice 015 scoped acceptance closed at b3027f2 with hosted run 36785205441: 143 tests, 9m46s. External plain SRT, exact added cue/metadata checks, session migration and native controls are covered within the evidence limits. Broader subtitles and owner audio listening remain open.
+
+Slice 016 is active under D-029/R-019: attached workspace source/folder/session/queue-reference dialogs with one request lifecycle, captured saves and stale callback protection. Audio remains parked.

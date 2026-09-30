@@ -33,6 +33,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-026 | 2026-09-30 | Verify resized raster dimensions | Confirmed | |
 | D-027 | 2026-09-30 | Responsive batch publication and access review | Confirmed | |
 | D-028 | 2026-09-30 | Verified external plain SRT subtitles | Confirmed | |
+| D-029 | 2026-09-30 | Attached workspace file dialogs with captured intent | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -433,3 +434,17 @@ Options considered: unrestricted subtitle import; one bounded plain SRT with exa
 Consequences: Explicit plain-format/timeline refusals; separate embedded-track and additional-file controls; balanced transient file access; sessions v6 and journals v5; no source references in presets. Keep existing output ownership and verification. No styling, burn-in, retiming, HDR/trim with external captions, audio acceptance, signing, merge or release scope.
 
 Revisit when: Multiple external tracks, subtitle retiming/styling or durable bookmark access become their own scoped work.
+
+## D-029: Attached workspace file dialogs with captured intent
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 016 under autonomous non-audio delegation after Slice 015 hosted closure.
+
+Because: Slice 015 reproduced an invisible standalone session chooser and fixed it with an attached sheet. Source, destination and queue-reference dialogs still use standalone modal loops. A common callback lifecycle should also protect workspace intent when asynchronous source loading or other changes occur while a chooser is open.
+
+Options considered: keep mixed panel styles; replace every app dialog; scope only five workspace file commands with a small injectable presenter and request identity. Choose the bounded workspace scope, retaining the replacement confirmation and existing data validation.
+
+Consequences: Attached source/folder/session/reference dialogs; one in-flight workspace request; captured save contents; cancelled, duplicate and stale callbacks cannot change newer intent. Existing document I/O remains bounded synchronous work. Audio, presets, Quick Export, persistent bookmarks and broad I/O migration are excluded.
+
+Revisit when: Other dialogs, durable permission recovery or broader filesystem responsiveness are scoped.

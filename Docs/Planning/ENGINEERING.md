@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Approved static HDR10 implementation and evidence in HDR10-EVIDENCE.md; inspector hosted validation passed in run 36600485460.
+Next: Slice 016 attached workspace file dialogs under D-029. Slice 015 closed at b3027f2 with hosted run 36785205441.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -182,3 +182,7 @@ Approved R-017 under delegated Slice 014: move advanced batch publication off th
 ## Slice 015 external subtitle checkpoint
 
 Approved R-018 under delegated Slice 015: add one bounded plain UTF-8 SRT to supported zero-start SDR exports, stage captured bytes, and verify decoded added cue text/times plus codec/language/title before publication. Gates external-srt-roundtrip, external-srt-refusal, external-srt-ownership, external-srt-persistence and external-srt-ui bind S15-001 through S15-005. Consequence: current-operation owned staging only, with source/caption/prior-output protection, saved-schema migration and balanced transient read access. No subtitle-content persistence, silent styling flattening or audio/release scope.
+
+## Slice 016 workspace dialog checkpoint
+
+Approved R-019 under delegated Slice 016: attach the five workspace file-command dialogs, preserve replacement confirmation, capture saved intent and refuse stale or duplicate callbacks. Gates workspace-panels-ui, workspace-panels-lifecycle, workspace-session-replacement and workspace-panel-save bind S16-001 through S16-004. Consequence: user_data for explicitly chosen session/reference writes; source and encoded-output bytes remain protected. No queue execution, saved-format migration, audio or release scope.

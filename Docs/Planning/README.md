@@ -32,3 +32,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 17. [Slice 007: source orientation](SLICE-007-source-orientation.md) and [orientation evidence](ORIENTATION-EVIDENCE.md)
 
 18. [Slice 008: queue preflight](SLICE-008-queue-preflight.md) and [preflight evidence](QUEUE-PREFLIGHT-EVIDENCE.md)
+
+19. [Slice 009: batch cleanup reporting](SLICE-009-batch-cleanup.md)

@@ -21,7 +21,7 @@ struct ExternalSubtitle: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey { case path, language, title }
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.path == rhs.path && lhs.language == rhs.language && lhs.title == rhs.title
+        lhs.path == rhs.path && lhs.language == rhs.language && lhs.title.utf8.elementsEqual(rhs.title.utf8)
     }
     static let languages = [
         ("und", "Unspecified"), ("eng", "English"), ("fra", "French"),

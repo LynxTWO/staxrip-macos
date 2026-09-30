@@ -80,3 +80,5 @@ Slice 014 scoped acceptance closed at f20998f with hosted run 36778465280 (9m05s
 Slice 015 is active under D-028/R-018: one source-specific external plain UTF-8 SRT, fresh captured staging, MKV/MP4 cue verification, native controls and saved-data migration. Research shows overlap, styling and line-edge whitespace need explicit refusal. No new audio acceptance is included.
 
 Slice 015 local acceptance passed: 142 tests / 28 suites, native independent MKV/MP4 caption exports, session round-trip and attached session dialog recovery. Hosted check pending; see EXTERNAL-SUBTITLE-EVIDENCE.md.
+
+Slice 015 initial hosted run 36783897395 passed at bb9a765 (142 tests, 9m37s). Review then found canonical Unicode title equality could hide byte-distinct intent changes. A negative-control regression reproduced broken change detection/undo; the fix passes the final 143-test local regression. Final hosted follow-up pending.

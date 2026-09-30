@@ -4,7 +4,7 @@ Version: 0.1. Date: 2026-09-30. Status: In progress.
 SLICE STATE
 Milestone: M1 through M4 local implementation, regression and native acceptance passed; hosted pending.
 Blocked by: None external. Slice 014 accepted at f20998f, hosted run 36778465280.
-Evidence so far: 17 new test functions, 142-test final regression, real native MKV/MP4 verified exports, unchanged input hashes, session round-trip and attached dialog cancellation. See EXTERNAL-SUBTITLE-EVIDENCE.md.
+Evidence so far: 18 new test functions, 143-test final regression, real native MKV/MP4 verified exports, unchanged input hashes, session round-trip and attached dialog cancellation. See EXTERNAL-SUBTITLE-EVIDENCE.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

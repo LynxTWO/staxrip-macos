@@ -24,15 +24,12 @@ struct SubtitleOptionsView: View {
             Divider()
             Text("Additional caption file").font(.system(size: 12, weight: .semibold))
             if let reference = configuration.externalSubtitle {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(URL(fileURLWithPath: reference.path).lastPathComponent)
-                        .font(.system(size: 12, weight: .medium))
-                    Text(reference.path).font(.caption).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled)
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("External SubRip subtitle file")
-                .accessibilityValue(URL(fileURLWithPath: reference.path).lastPathComponent)
-                .accessibilityHint("File location: " + URL(fileURLWithPath: reference.path).deletingLastPathComponent().path)
+                Text(URL(fileURLWithPath: reference.path).lastPathComponent)
+                    .font(.system(size: 12, weight: .medium))
+                    .accessibilityLabel("External SubRip subtitle file, " + URL(fileURLWithPath: reference.path).lastPathComponent)
+                    .help("File location: " + URL(fileURLWithPath: reference.path).deletingLastPathComponent().path)
+                Text(reference.path).font(.caption).foregroundStyle(.secondary).lineLimit(2).textSelection(.enabled)
+                    .accessibilityHidden(true)
                 HStack(alignment: .top, spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
                         eyebrow("Language")

@@ -8,6 +8,25 @@ struct ExternalSubtitlePersistenceTests {
     private func job(_ config: EncodeConfiguration) -> QueueJob {
         QueueJob(id: UUID(), source: "/generated/source.mp4", isDemo: false, destination: "/generated/output.mkv", configuration: config, created: Date())
     }
+    @Test func byteDistinctTitlesInvalidateIntentAndRemainUndoable() {
+        let composed = "Caf\u{00E9}", decomposed = "Cafe\u{0301}"
+        #expect(composed == decomposed) // Swift's ordinary equality is canonically equivalent.
+        let model = WorkspaceModel()
+        model.config.externalSubtitle = ExternalSubtitle(path: "/generated/captions.srt", title: composed)
+        model.clearSettingsHistory()
+        let previous = model.sessionSnapshot
+        let originalJob = job(model.config)
+        model.config.externalSubtitle?.title = decomposed
+        #expect(model.sessionSnapshot != previous)
+        var editedJob = originalJob; editedJob.configuration = model.config
+        #expect(editedJob != originalJob) // Queue result invalidation observes this equality.
+        #expect(model.canUndoSettings)
+        model.undoSettings()
+        #expect(model.config.externalSubtitle?.title.utf8.elementsEqual(composed.utf8) == true)
+        model.redoSettings()
+        #expect(model.config.externalSubtitle?.title.utf8.elementsEqual(decomposed.utf8) == true)
+    }
+
     @Test func versionedDocumentsRetainIntentAndRefuseMislabelledLegacyData() throws {
         var config = EncodeConfiguration(); config.externalSubtitle = reference
         let item = job(config)

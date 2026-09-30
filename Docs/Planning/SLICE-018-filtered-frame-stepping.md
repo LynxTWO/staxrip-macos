@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: M1 active after Slice 017 hosted closure at b177432.
-Blocked by: None external; Slice 017 passed hosted run 36790619197.
-Evidence so far: Twelve VFR boundary/gap selections match independent full-render pixels with and without BWDIF; FRAME-STEPPING-RESEARCH.md.
+Milestone: M3 local and native acceptance passed; hosted gate pending.
+Blocked by: Hosted regression for this slice remains to run.
+Evidence so far: 166-test release regression, 4K resource measurement and native VFR/trim/stale-state walkthrough passed. See FRAME-STEPPING-EVIDENCE.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

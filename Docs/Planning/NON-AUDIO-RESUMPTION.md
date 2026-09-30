@@ -98,3 +98,5 @@ Slice 017 local/native display-proportion verification passed, including 157 reg
 Slice 017 closed with hosted success at b177432, run 36790619197, 157 tests in 461.121 seconds and an 8m57s job. PR 34 stays draft and unmerged. Audio listening remains parked.
 
 Slice 018 is active under D-031/R-021 after Slice 017 closure. Scope is decoded-timestamp stepping in the existing filtered still comparison, with explicit source identity, trim and lifecycle checks. Audio stays parked.
+
+Slice 018 local/native frame stepping passed: 166 release tests, separate 4K resource check, exact VFR transitions and trim boundaries in the native comparison. Hosted regression pending. See FRAME-STEPPING-EVIDENCE.md.

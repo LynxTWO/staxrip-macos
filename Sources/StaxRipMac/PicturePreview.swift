@@ -27,6 +27,7 @@ struct PictureFrame: Sendable {
 struct PictureComparison: Sendable {
     let original, filtered: PictureFrame
     let requested: Double
+    let sourceIdentity: SourceFingerprint
     let operations: String
 }
 
@@ -73,12 +74,59 @@ enum PicturePreview {
         return v
     }
 
+    enum StepResult: Sendable {
+        case comparison(PictureComparison)
+        case boundary
+    }
+
+    static func step(source: URL, configuration: EncodeConfiguration, anchor: PreviewStamp,
+                     expectedSource: SourceFingerprint, direction: PreviewStepDirection, tools: FFmpegTools,
+                     timeout: Double = 120, progress: @escaping @Sendable (String) -> Void = { _ in }) async throws -> StepResult {
+        try await withThrowingTaskGroup(of: StepResult.self) { group in
+            group.addTask {
+                progress("Checking the current comparison's source identity…")
+                guard try await SourceFingerprint.read(source) == expectedSource else {
+                    throw failure("The source changed since this comparison. Render again before stepping.")
+                }
+                let probe = try await MediaProbe.read(source, tools: tools)
+                let video = try validate(configuration, probe: probe, time: anchor.seconds)
+                let end = configuration.picture.end > 0 ? configuration.picture.end : probe.seconds
+                progress("Reading decoded frame timestamps from the beginning…")
+                let neighbor = try await PreviewFrameNeighbor.read(source: source, stream: video, anchor: anchor,
+                    direction: direction, start: configuration.picture.start, end: end, tools: tools)
+                guard let neighbor else {
+                    guard try await SourceFingerprint.read(source) == expectedSource else {
+                        throw failure("The source changed during frame discovery. Render again before stepping.")
+                    }
+                    try Task.checkCancellation()
+                    return .boundary
+                }
+                // Request just before the selected timestamp to avoid decimal text
+                // rounding up. Exact rational checks below decide acceptance.
+                let time = max(configuration.picture.start, neighbor.seconds.nextDown)
+                let comparison = try await render(source: source, configuration: configuration, time: time, tools: tools,
+                    expectedSource: expectedSource, requiredStamp: neighbor, progress: progress)
+                return .comparison(comparison)
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(max(0.001, min(120, timeout)) * 1_000_000_000))
+                throw failure("Frame stepping reached its time limit. Render a new comparison at an earlier source time.")
+            }
+            defer { group.cancelAll() }
+            return try await group.next()!
+        }
+    }
+
     static func render(source: URL, configuration: EncodeConfiguration, time: Double, tools: FFmpegTools,
-                       timeout: Double = 120, progress: @escaping @Sendable (String) -> Void = { _ in }) async throws -> PictureComparison {
+                       timeout: Double = 120, expectedSource: SourceFingerprint? = nil, requiredStamp: PreviewStamp? = nil,
+                       progress: @escaping @Sendable (String) -> Void = { _ in }) async throws -> PictureComparison {
         try await withThrowingTaskGroup(of: PictureComparison.self) { group in
             group.addTask {
                 progress("Checking source identity…")
                 let identity = try await SourceFingerprint.read(source)
+                if let expectedSource, identity != expectedSource {
+                    throw failure("The source changed during frame discovery. Render again before stepping.")
+                }
                 let probe = try await MediaProbe.read(source, tools: tools)
                 let video = try validate(configuration, probe: probe, time: time)
                 let orientation = try SourceOrientation.read(video)
@@ -89,10 +137,15 @@ enum PicturePreview {
                 let plan = PicturePlan(configuration)
                 let filtered = try await frame(source: source, stream: video, filters: orientation.filters + plan.filters, time: time, end: end, tools: tools)
                 guard original.stamp.matches(filtered.stamp) else { throw failure("The original and filtered timestamps do not match. No comparison is shown.") }
+                if let requiredStamp {
+                    guard original.stamp.matches(requiredStamp), filtered.stamp.matches(requiredStamp) else {
+                        throw failure("The rendered pictures did not match the selected decoded frame. No frame step was accepted.")
+                    }
+                }
                 progress("Rechecking source identity…")
                 guard try await SourceFingerprint.read(source) == identity else { throw failure("The source changed during rendering. Refresh after the source is stable.") }
                 try Task.checkCancellation()
-                return PictureComparison(original: original, filtered: filtered, requested: time,
+                return PictureComparison(original: original, filtered: filtered, requested: requiredStamp?.seconds ?? time, sourceIdentity: identity,
                                          operations: (orientation.degrees == 0 ? "" : orientation.summary + " · ") + plan.summary)
             }
             group.addTask {

@@ -78,7 +78,7 @@ struct BatchCleanupTests {
         try protectedFiles(root, job: job, source: source)
     }
 
-    @Test(.enabled(if: FFmpegTools.discover() != nil), arguments: [false, true])
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)), arguments: [false, true])
     func failedOrCancelledWriterPreservesPrimaryOutcomeWhenCleanupFails(cancel: Bool) async throws {
         let (root, tools, job) = try await fixture()
         defer { try? FileManager.default.removeItem(at: root) }
@@ -98,18 +98,32 @@ struct BatchCleanupTests {
             #expect(code == ESRCH)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
         })
-        batch.tools = FFmpegTools(ffmpeg: script, ffprobe: tools.ffprobe); batch.encoders = ["libx264"]
-        batch.start([job, next])
+        var probeTool = tools.ffprobe
         if cancel {
-            let deadline = Date().addingTimeInterval(5)
+            // Reproduce source inspection taking longer than the former five-second
+            // startup budget. Cancellation must still target the encoder, not this probe.
+            probeTool = root.appendingPathComponent("delayed-probe")
+            let executable = "'" + tools.ffprobe.path.replacingOccurrences(of: "'", with: "'\\''") + "'"
+            try Data(("#!/bin/sh\n/bin/sleep 6\nexec " + executable + " \"$@\"\n").utf8).write(to: probeTool)
+            try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: probeTool.path)
+        }
+        batch.tools = FFmpegTools(ffmpeg: script, ffprobe: probeTool); batch.encoders = ["libx264"]
+        batch.start([job, next])
+        defer { if batch.running { batch.cancel() } }
+        if cancel {
+            // Wait for the writer-owned event, not a wall-clock budget that also
+            // includes source probing and scheduling of unrelated test suites.
+            // The test-level time limit bounds a writer that never starts.
             var started = false
-            while batch.running && Date() < deadline {
+            while batch.running {
+                try Task.checkCancellation()
                 let directories = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
                 started = directories.contains { FileManager.default.fileExists(atPath: $0.appendingPathComponent("writer.pid").path) }
                 if started { break }
                 try await Task.sleep(for: .milliseconds(10))
             }
-            #expect(started, "Cancel an actually started writer")
+            try #require(started && batch.running && batch.statuses[job.id]?.phase == "Encoding",
+                         "Cancellation requires a live started writer; preflight failure is not cleanup evidence")
             batch.cancel()
         }
         try await finish(batch)

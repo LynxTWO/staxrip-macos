@@ -29,3 +29,11 @@ Run `./scripts/check-destination-capacity.command` from the checkout on macOS wi
 ## Remaining gate
 
 Hosted ordinary regression pending. Hosted execution is not claimed to run the opt-in capacity test. No audio listening, broad filesystem qualification, merge or release acceptance.
+
+## Hosted gate diagnosis
+
+Run 36724013329 at e893ae6 failed in the pre-existing BatchCleanupTests cancellation case. Verified observations: the five-second startup poll expired without a writer marker, cancellation then reported No output published with no cleanup attempt. This did not exercise the intended writer-cleanup boundary. Hosted scheduling/probe contention is a plausible cause, not a reproduced local diagnosis. Capacity execution was skipped on the host as designed.
+
+The cancellation test now waits for its writer-owned marker while the batch runs, requires a live Encoding phase before cancellation, and uses a one-minute test-level limit with cancellation-aware polling and deferred cleanup. It no longer proceeds into outcome assertions after a missing prerequisite. Existing process-settlement, retained partial bytes, primary outcome, cleanup warning and protected-file assertions remain. No product behavior changed.
+
+The corrected test includes a deliberate six-second probe wrapper to exceed the old startup deadline and verifies cancellation still targets the started encoder. Both failure/cancellation cases passed locally in 7.542 seconds within the full release regression: 119 tests, 23 suites, 9.491 seconds, 15 opt-in skips. This reproduces the deadline trigger; it does not establish the hosted scheduler's precise cause. A fresh hosted run is required.

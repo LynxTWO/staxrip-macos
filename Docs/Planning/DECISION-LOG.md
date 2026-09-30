@@ -24,6 +24,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-017 | 2026-09-29 | Bounded static HDR10 preservation | Confirmed | |
 | D-018 | 2026-09-29 | On-demand filtered picture comparison | Confirmed | |
 | D-019 | 2026-09-29 | Reusable presets and settings undo | Confirmed | |
+| D-020 | 2026-09-30 | Validated source orientation | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -298,3 +299,17 @@ Options considered: source-independent recipes with explicit exclusions; full-se
 Consequences: Local validated library with conflict protection, explicit import/export and no queue/media execution. No license or release choice.
 
 Revisit when: A recipe needs source-aware mappings, Audio Lab values or cloud sync.
+
+## D-020: Validated source orientation
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build SLICE-007-source-orientation.md under the owner's autonomous non-audio delegation.
+
+Because: Advanced queue export refuses rotated sources, including ordinary portrait clips. The shared picture plan makes consistent crop/preview geometry possible without saving source orientation in recipes.
+
+Options considered: implicit FFmpeg autorotation; explicit validated source transforms; manual arbitrary rotation. Choose explicit right-angle transforms with full matrix validation. The extra parser and output check prevent a mirrored or perspective matrix from being mistaken for a pure angle. No data migration or dependency is needed. Existing source/output protection remains.
+
+Consequences: Initial scope is progressive, square-pixel 8-bit SDR with deinterlacing Off for rotated sources. Both preview sides are upright; crop follows upright coordinates. Unsupported transformations fail explicitly. HDR remains unrotated only.
+
+Revisit when: Real-camera fixtures require mirrored, anamorphic, translated or per-frame transforms, or owner requests manual orientation controls.

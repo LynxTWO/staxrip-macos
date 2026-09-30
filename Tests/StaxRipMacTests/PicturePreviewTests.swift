@@ -125,6 +125,14 @@ struct PicturePreviewTests {
         """
         let frame = try PicturePreview.parse(data: Data(repeating: 0, count: 12), log: log, expectedRange: "tv", time: 0, end: 1)
         #expect(frame.width == 2)
+        let colorLine = "[showinfo@identity @ 0x1] color_range:tv color_space:bt709 color_primaries:bt709 color_trc:bt709"
+        let sideData = log.replacingOccurrences(of: colorLine, with: "[showinfo@identity @ 0x1] side data - synthetic SEI\n" + colorLine)
+        _ = try PicturePreview.parse(data: Data(repeating: 0, count: 12), log: sideData, expectedRange: "tv", time: 0, end: 1)
+        let nextFrame = "[showinfo@identity @ 0x1] n: 1 pts: 1 pts_time:0.001 fmt:yuv420p sar:1/1 s:2x2 "
+        for invalid in [log.replacingOccurrences(of: colorLine, with: colorLine + "\n" + colorLine),
+                        log.replacingOccurrences(of: colorLine, with: nextFrame + "\n" + colorLine)] {
+            #expect(throws: (any Error).self) { try PicturePreview.parse(data: Data(repeating: 0, count: 12), log: invalid, expectedRange: "tv", time: 0, end: 1) }
+        }
         #expect(throws: (any Error).self) { try PicturePreview.parse(data: Data(repeating: 0, count: 11), log: log, expectedRange: "tv", time: 0, end: 1) }
         for broken in [log + "\n" + log, log.replacingOccurrences(of: "2x2", with: "999999x999999"), log.replacingOccurrences(of: "color_trc:bt709", with: "color_trc:unknown"), log.replacingOccurrences(of: "1/1000", with: "0/0")] {
             #expect(throws: (any Error).self) { try PicturePreview.parse(data: Data(repeating: 0, count: 12), log: broken, expectedRange: "tv", time: 0, end: 1) }
@@ -144,7 +152,7 @@ struct PicturePreviewTests {
         for _ in 0..<500 where controller.running { try await Task.sleep(nanoseconds: 10_000_000) }
         try #require(controller.result != nil)
         controller.invalidate(); #expect(controller.stale)
-        controller.close(); #expect(controller.result == nil)
+        controller.close(); #expect(controller.result == nil && !controller.stale && !controller.status.contains("Cancelling"))
         controller.render(source: src, configuration: config(), time: 0, tools: nil)
         #expect(controller.status.contains("required"))
     }

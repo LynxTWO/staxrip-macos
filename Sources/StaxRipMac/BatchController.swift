@@ -11,6 +11,7 @@ struct BatchStatus: Codable {
 @MainActor
 final class BatchController: ObservableObject {
     @Published var running = false
+    @Published private(set) var publicationJobID: UUID?
     @Published var toolDescription = "Checking FFmpeg…"
     @Published var statuses: [UUID: BatchStatus] = [:]
     @Published var encoders: Set<String> = [] {
@@ -81,13 +82,17 @@ final class BatchController: ObservableObject {
         }
     }
 
+    private let publishOutput: (URL, URL) async throws -> Void
     private let removeStaging: (URL) async throws -> Void
     private let journalURL: URL?
     private var journalLease: BatchJournalLease?
     private var journalJobs: [QueueJob] = []
     private var task: Task<Void, Never>?
 
-    init(journalURL: URL? = nil, removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) }) {
+    init(journalURL: URL? = nil,
+         publishOutput: @escaping (URL, URL) async throws -> Void = { try await ExportPublication.publishAsync(staged: $0, destination: $1) },
+         removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) }) {
+        self.publishOutput = publishOutput
         self.removeStaging = removeStaging
         self.journalURL = journalURL
         if let journalURL, FileManager.default.fileExists(atPath: journalURL.path) {
@@ -197,7 +202,20 @@ final class BatchController: ObservableObject {
         }
     }
 
-    func cancel() { task?.cancel() }
+    func cancel() {
+        if let id = publicationJobID {
+            statuses[id]?.detail = "Stop requested. Waiting for the current output to finish publishing; later jobs will not start."
+        }
+        task?.cancel()
+    }
+
+    private func publish(_ staged: URL, to output: URL, jobID: UUID) async throws {
+        publicationJobID = jobID
+        defer { publicationJobID = nil }
+        statuses[jobID]?.detail = "Finishing output. Waiting for the destination filesystem to publish the verified file."
+        try checkpoint()
+        try await publishOutput(staged, output)
+    }
     func reset(_ id: UUID) { guard !running else { return }; statuses[id] = nil }
 
     private func encode(_ job: QueueJob, tools: FFmpegTools) async throws {
@@ -279,7 +297,7 @@ final class BatchController: ObservableObject {
                 statuses[job.id]?.detail = "HDR10: decoding every staged output frame before publication"
                 let verified = try await HDR10Audit.read(staged, tools: tools, probe: actual, expectedRate: hdr.rate) { [weak self] frames, fraction in
                     Task { @MainActor in
-                        guard self?.statuses[job.id]?.phase == "Verifying" else { return }
+                        guard self?.statuses[job.id]?.phase == "Verifying", self?.publicationJobID != job.id else { return }
                         self?.statuses[job.id]?.progress = fraction
                         self?.statuses[job.id]?.detail = "HDR10: output audit · \(frames) decoded frames · checking against source"
                     }
@@ -292,7 +310,8 @@ final class BatchController: ObservableObject {
             try Task.checkCancellation()
             verifiedSummary += " · " + (try plan.outputGeometry.verify(width: actual.video?.width, height: actual.video?.height))
             verifiedSummary += " · " + (try plan.containerPreservation.verify(actual))
-            try ExportPublication.publish(staged: staged, destination: output)
+            try await publish(staged, to: output, jobID: job.id)
+            if Task.isCancelled { verifiedSummary += " · Batch stopped after this output." }
             publishedOutput = output
             statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: verifiedSummary, destination: output)
             // Publication already succeeded. A journal failure must not mislabel the media as failed.

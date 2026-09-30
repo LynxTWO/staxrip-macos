@@ -72,3 +72,5 @@ Slice 012 closed with hosted success at a995ab3, run 36766809385 (9m31s), after 
 Slice 013 verifies resized raster output before publication. Focused, regression and explicit-picker native checks passed; hosted pending. Native investigation also found file-open waits for a restored source and a main-thread link syscall blocking publication until the destination had been selected through the native picker. These remain explicit reliability findings in PICTURE-GEOMETRY-EVIDENCE.md. Audio remains parked.
 
 Slice 013 geometry acceptance closed with hosted success at 30b044b, run 36769620823 (9m19s). Restored-session access and blocked-publication responsiveness remain the next scoped reliability work.
+
+Slice 014 moves advanced batch publication off the main thread while awaiting its true result before cleanup. Held-operation cancellation and collision tests, regression and native per-job access/encode checks passed; hosted pending. See PUBLICATION-RESPONSIVENESS-EVIDENCE.md. Audio remains parked.

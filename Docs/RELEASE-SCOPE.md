@@ -25,3 +25,5 @@ The repository became public on 2026-09-28 and the previously blocked hosted mac
 ## Completion planning
 
 [Scaffold Kit v0.4 planning index](Planning/README.md) records the proposed slices, SignalForge reuse assessment, acceptance gates and owner signing setup. These documents are proposals, not evidence that outstanding features are implemented.
+
+Advanced batch publication responsiveness and per-job native access review have scoped local evidence in [PUBLICATION-RESPONSIVENESS-EVIDENCE.md](Planning/PUBLICATION-RESPONSIVENESS-EVIDENCE.md). Other synchronous I/O, persistent access and broader filesystem qualification remain open.

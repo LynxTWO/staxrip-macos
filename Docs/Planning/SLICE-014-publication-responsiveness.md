@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-09-30. Status: In progress.
 
 SLICE STATE
-Milestone: Activated after Slice 013 hosted success at 30b044b.
+Milestone: M1 through M3 local and native checks passed; hosted regression pending.
 Blocked by: None external.
-Evidence so far: Slice 013 native samples show ffprobe blocked in open and the app main thread blocked in ExportPublication.publish's link. Native source/folder picker selection resolved both.
+Evidence so far: PUBLICATION-RESPONSIVENESS-EVIDENCE.md records worker/cancellation/collision tests and native access/encode acceptance, with actual blocked-native-call reproduction not claimed.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

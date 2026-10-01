@@ -1,9 +1,9 @@
 # StaxRip Mac Slice 033: Queue outcomes and compact review
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-059 / D-060 / R-041 / R-042.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within scoped evidence under D-059 / D-060 / R-041 / R-042.
 
 SLICE STATE
-Milestone: Queue presentation and native outcome checks passed; final hosted regression failed two existing file/cancellation limits. D-060 qualification is active.
-Blocked by: None. Slice 032 accepted at 5e9effa, hosted run 36845548454.
+Milestone: All five gates accepted at 3d14456; hosted run 36851151827 passed. See QUEUE-OUTCOMES-EVIDENCE.md for prior failures and retained filesystem limits.
+Blocked by: None for this slice. Broader production and listening gates remain separate.
 Evidence so far: QueueView, BatchController, BatchJournal and prior native multi-job observations.
 Last audit: 2026-10-01.
 

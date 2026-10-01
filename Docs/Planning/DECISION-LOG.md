@@ -78,6 +78,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-066 | 2026-10-01 | Keep value-storage stress off the UI actor | Confirmed | |
 | D-067 | 2026-10-01 | Verify original-video copy before publication | Confirmed | |
 | D-068 | 2026-10-01 | Independently verify ordered external caption tracks | Confirmed | |
+| D-069 | 2026-10-01 | Preserve caption title bytes outside command arguments | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1060,3 +1061,18 @@ Options considered: leave one track; append paths without a new saved-format bou
 Consequences: At most eight existing plain UTF-8 SRT inputs, each with its own label/language and unchanged one-MiB/parser limits. Retain the legacy first-reference field and add a bounded optional tail, with canonical accessors and session/recovery version increments. Old valid single-track documents remain readable; old readers reject new documents rather than silently losing tracks. Presets exclude references and preserve current references when applied. Capture snapshots before encoding, map every input/output/chapter ordinal explicitly and verify every added stream before exclusive publication. Native operations identify filename/position and must not let stale selection target a different row. Keep all original one-track tests, deadlines and default scheduling. No audio processing, HDR expansion, embedded payload guarantee, merge or release.
 
 Revisit when: Existing output formats cannot preserve ordered track metadata/cues, native selection identity is ambiguous or the bounded list requires a broader persisted-format redesign.
+
+
+## D-069: Preserve caption title bytes outside command arguments
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Under active R-048, write bounded per-stream caption labels as operation-owned UTF-8 FFmetadata and map each section to its planned added stream. Delegated to AI recommendation under the owner's non-audio completion scope.
+
+Because: Actual multi-track MKV/MP4 exports correctly refused when an NFC cedilla title returned as decomposed bytes. A bounded standalone Foundation Process reproduction confirms input hex 4672616ec3a7616973206669727374 arrives at the child as 4672616e63cca7616973206669727374. This is an argument bridge transformation, not a subtitle order error. Existing caption-body snapshots preserve their UTF-8 bytes.
+
+Options considered: weaken title equality to canonical equivalence; rewrite all subprocess launch mechanics; carry bounded user text in the already-supported metadata file format. Choose the third. FFmpeg's primary format/metadata-mapping documentation describes stream sections and stream-specific maps.
+
+Consequences: One private metadata snapshot, at most eight language/title stream sections and 32 KiB after ASCII delimiter escaping. Map metadata from each section explicitly; keep all output label/text/timing comparisons byte-exact. Chapter input ordinals account for the additional metadata input. Use owned priority-preserving file work and await cancellation settlement. Do not change ToolRunner, normalization policy or older one-track assertions. Add composed/decomposed Unicode and literal delimiter round-trip evidence in both output containers. Remove temporary test-only metadata prints before ordinary qualification.
+
+Revisit when: The metadata file cannot preserve labels exactly or additional fields require a broader metadata contract.

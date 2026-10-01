@@ -1,5 +1,5 @@
 # StaxRip Mac Slice 038: Ordered external caption tracks
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-068 / R-048.
+Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-068 / D-069 / R-048.
 
 SLICE STATE
 Milestone: Existing single-track paths mapped; no implementation.
@@ -48,7 +48,7 @@ Existing externalSubtitle retains the first reference; an optional bounded addit
 
 ## 9. Verification evidence required
 
-Validate list identity/count/order before pairing immutable snapshots with references; never silently zip away unmatched elements. Bound total capture to eight existing one-MiB inputs. First owned snapshot retains external.srt, later names are operation-owned and index-derived. Each added stream must appear at its planned subtitle ordinal with expected codec, language and title; decode that stream and compare exact cue UTF-8 text and millisecond intervals to its own captured/transformed document. Retain all original one-track tests. Assert actual output absence and next Pending on later-track failure, joined tool/file lifetimes on cancel, and exclusive publication. Track labels in UI errors must identify the failing filename/position without fabricating successful checks. Native tests preserve and restore the prior recovery journal after checking their own completed job.
+Validate list identity/count/order before pairing immutable snapshots with references; never silently zip away unmatched elements. Bound total capture to eight existing one-MiB inputs. First owned snapshot retains external.srt, later names are operation-owned and index-derived. D-069 carries language/title in a bounded 32 KiB UTF-8 metadata snapshot with stream sections, avoiding demonstrated command-argument Unicode decomposition. Map every section explicitly and retain byte-exact title checks. Each added stream must appear at its planned subtitle ordinal with expected codec, language and title; decode that stream and compare exact cue UTF-8 text and millisecond intervals to its own captured/transformed document. Retain all original one-track tests. Assert actual output absence and next Pending on later-track failure, joined tool/file lifetimes on cancel, and exclusive publication. Track labels in UI errors must identify the failing filename/position without fabricating successful checks. Native tests preserve and restore the prior recovery journal after checking their own completed job.
 
 ## 10. Guardrails
 
@@ -62,4 +62,4 @@ All six gates have scoped final-head evidence. Record failed experiments and rem
 
 A single verified export can carry several language/accessibility caption tracks without repeated video generations or manual command-line remuxing.
 
-Approved for build by: Owner autonomous non-audio completion delegation, 2026-10-01; D-068 / R-048.
+Approved for build by: Owner autonomous non-audio completion delegation, 2026-10-01; D-068 / D-069 / R-048.

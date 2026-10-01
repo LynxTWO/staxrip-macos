@@ -1,5 +1,5 @@
 # Verified original-video copy evidence
-Version: 0.1. Date: 2026-10-01. Status: Implementation qualification in progress.
+Version: 0.2. Date: 2026-10-01. Status: Accepted within recorded scope at 22dc1ed.
 
 ## Scope
 
@@ -21,6 +21,14 @@ Initial expanded tests exposed these boundaries rather than qualifying them:
 - A parser-detected payload mismatch stops its probe. ToolRunner correctly reports its own cancellation, but initially hid the audit error. The audit now gives a settled parser failure precedence over its internal tool stop, while an actual task cancellation remains cancellation. Changed-picture tests require Failed with packet evidence.
 - Generating a changed-picture replacement directly as Matroska initially changed metadata too; it was already refused, but did not isolate payload verification. The fixture now encodes to MP4 and remuxes to Matroska with matching metadata, so the test reaches the packet-content guard.
 
-## Remaining gates
+## Native and local qualification
 
-Native light/dark controls, correction/save/reopen/export, optimized build, full ordinary local/hosted tests and final planning audit remain pending. No slice acceptance or full-program completion claim.
+Product commit 22dc1ed: optimized build passed in 18.16 seconds; ordinary local `swift test` passed all 254 tests in 59 suites in 213.244 seconds. Native macOS 27 walkthrough selected Copy original with an existing two-pixel crop, observed the correction warning, explicitly removed the crop, inspected dark/light layouts and accessibility semantics, saved and reopened the recipe, and switched to HEVC to confirm retained Apple hardware, 8732 kb/s and Thorough settings. Selecting copy again and completing destination review published the generated three-second 640 × 360 H.264 source as MKV with 72 verified encoded packets. Independent decoded pixels matched and 72 frames/three-second duration were confirmed. Stored CRF 17 and the inactive settings also matched the saved document. Source/session bytes were unchanged, owned staging was gone and the prior recovery journal was restored after checking the test job's completed destination and verification evidence. Native accessibility-tree inspection is not heard VoiceOver acceptance.
+
+The automation's path helper initially rejected a folder selection because the native picker canonicalized `/var` to `/private/var`; a fresh picker observation confirmed the intended generated directory before Start. Reopening an unchanged saved session needed no replace confirmation; the helper stopped, and fresh state confirmed the correct saved recipe. Neither changed product behavior.
+
+## Final regression and acceptance
+
+Ordinary hosted [run 36868164452](https://github.com/LynxTWO/staxrip-macos/actions/runs/36868164452) passed all 254 tests in 556.061 seconds at 22dc1ed, following an 86.75-second build. The ordinary local command passed 254 tests in 59 suites in 213.244 seconds. Existing deadlines, assertions and default scheduling were unchanged. The planning audit reports zero findings across 40 selected documents; this is not an all-repository documentation audit.
+
+S37-001 through S37-006 are accepted within the generated/native boundaries above. Arbitrary media/player compatibility, long-film timing, HDR/ten-bit/other codecs, filesystem latency, spoken VoiceOver and production release remain unqualified. Draft PR #54 remains unmerged. No audio listening or full-program completion claim.

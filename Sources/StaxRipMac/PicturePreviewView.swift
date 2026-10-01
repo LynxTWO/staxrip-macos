@@ -132,7 +132,7 @@ struct PicturePreviewView: View {
             Picker("Comparison mode", selection: $mode) {
                 Text("Still").tag("Still")
                 Text("Motion").tag("Motion")
-            }.pickerStyle(.segmented).disabled(controller.running || motion.running)
+            }.pickerStyle(.segmented).tint(Color.primaryActionFill).disabled(controller.running || motion.running)
             if mode == "Motion" {
                 MotionComparisonView(time: $time)
             } else {
@@ -164,7 +164,7 @@ struct PicturePreviewView: View {
             }
             if controller.stale {
                 Label("Out of date. Render again for the current source and settings.", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange).font(.headline)
+                    .foregroundStyle(Color.warning).font(.headline)
             }
             if let result = controller.result {
                 HStack(alignment: .top, spacing: 16) {

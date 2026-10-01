@@ -13,7 +13,7 @@ struct MediaInspectorView: View {
                 Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
             }
             if batch.inspecting { ProgressView("Reading media contents…").frame(maxWidth: .infinity, minHeight: 180) }
-            if let error = batch.inspectionError { Text(error).foregroundStyle(.orange).textSelection(.enabled) }
+            if let error = batch.inspectionError { Text(error).foregroundStyle(Color.warning).textSelection(.enabled) }
             if let probe = batch.inspection {
                 HStack(spacing: 24) {
                     stat("CONTAINER", ContainerInspection.text(probe.format?.format_name, fallback: "Unknown"))
@@ -24,7 +24,7 @@ struct MediaInspectorView: View {
                     Text("Tracks (\(ContainerInspection.tracks(probe).count))").tag(0)
                     Text("Chapters (\(probe.chapters?.count ?? 0))").tag(1)
                     Text("Attachments (\(ContainerInspection.attachmentStreams(probe).count))").tag(2)
-                }.pickerStyle(.segmented).labelsHidden()
+                }.pickerStyle(.segmented).tint(Color.primaryActionFill).labelsHidden()
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
                         if section == 0 {
@@ -42,7 +42,7 @@ struct MediaInspectorView: View {
                                     field("Reported end", value: chapter.end, help: "Chapter end reported by the container. No timing correction is applied.")
                                     field("Source identifier", value: chapter.identifier, help: "The reported chapter identifier, which may differ from its position in this list.")
                                     field("Time base", value: chapter.timeBase, help: "The reported seconds per chapter timestamp tick.")
-                                    if let note = chapter.note { Text(note).foregroundStyle(.orange).textSelection(.enabled) }
+                                    if let note = chapter.note { Text(note).foregroundStyle(Color.warning).textSelection(.enabled) }
                                 }
                             }
                         } else {

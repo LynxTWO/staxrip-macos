@@ -58,7 +58,7 @@ struct QuickExportView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Image(systemName: exporter.result != nil ? "checkmark.seal.fill" : exporter.failure != nil ? "exclamationmark.triangle" : "waveform.path")
-                            .foregroundStyle(exporter.failure != nil ? .orange : Color.accent)
+                            .foregroundStyle(exporter.failure != nil ? Color.warning : Color.accent)
                         Text(exporter.status).font(.headline)
                         Spacer()
                         if exporter.running && !exporter.finishing { Text("\(Int(exporter.progress * 100))%").monospacedDigit() }
@@ -71,7 +71,7 @@ struct QuickExportView: View {
                         } else { ProgressView(value: exporter.progress) }
                         Text(exporter.sourceName).font(.caption).foregroundStyle(.secondary)
                     }
-                    if let error = exporter.failure { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
+                    if let error = exporter.failure { Text(error).font(.callout).foregroundStyle(Color.warning).textSelection(.enabled) }
                     if let url = exporter.result {
                         Text(url.lastPathComponent).font(.system(.callout, design: .monospaced)).textSelection(.enabled)
                         HStack {
@@ -91,7 +91,7 @@ struct QuickExportView: View {
                                 model.chooseNativeExport(using: exporter) { !batch.running && !audio.running }
                             } label: {
                                 Label("Export MP4…", systemImage: "arrow.up.forward.video")
-                            }.buttonStyle(.borderedProminent).controlSize(.large)
+                            }.primaryAction().controlSize(.large)
                                 .disabled(model.isDemo || model.loading || model.sourceUnavailable || model.filePanelActive || batch.running || audio.running)
                         }
                     }

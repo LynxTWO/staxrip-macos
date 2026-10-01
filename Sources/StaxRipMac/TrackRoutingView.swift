@@ -23,7 +23,7 @@ struct TrackRoutingView: View {
                     }
                 }
             } else if let error {
-                Text(error).foregroundStyle(.orange).textSelection(.enabled)
+                Text(error).foregroundStyle(Color.warning).textSelection(.enabled)
             } else { ProgressView("Reading source tracks…") }
             Spacer(minLength: 0)
             Text("Importing a new source resets track selection to All. Saved sessions and queue copies preserve it. Missing selected tracks fail preflight.")
@@ -35,7 +35,7 @@ struct TrackRoutingView: View {
                     configuration.audioTracks = audio
                     configuration.subtitleTracks = subtitles
                     dismiss()
-                }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(probe == nil)
+                }.primaryAction().keyboardShortcut(.defaultAction).disabled(probe == nil)
             }
         }.padding(26).frame(width: 620, height: 560)
         .task {
@@ -72,7 +72,7 @@ struct TrackRoutingView: View {
             }
             if let indices = selection.wrappedValue {
                 let missing = indices.filter { index in !streams.contains { $0.index == index } }
-                if !missing.isEmpty { Text("Missing selections: \(missing.map(String.init).joined(separator: ", ")). Choose All or None to reset.").foregroundStyle(.orange) }
+                if !missing.isEmpty { Text("Missing selections: \(missing.map(String.init).joined(separator: ", ")). Choose All or None to reset.").foregroundStyle(Color.warning) }
             }
         }
     }

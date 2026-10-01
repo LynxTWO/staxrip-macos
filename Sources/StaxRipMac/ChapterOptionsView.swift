@@ -141,7 +141,7 @@ private struct ChapterEditorView: View {
             }
             Text(editor.status).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 .accessibilityLabel("Chapter editor status").accessibilityValue(editor.status)
-            if let issue { Text(issue).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
+            if let issue { Text(issue).font(.caption).foregroundStyle(Color.warning).fixedSize(horizontal: false, vertical: true) }
             Divider()
             HStack {
                 Button("Cancel") { editor.cancel(); dismiss() }.keyboardShortcut(.cancelAction)
@@ -150,7 +150,7 @@ private struct ChapterEditorView: View {
                 Button("Apply chapter list") {
                     do { configuration = try editor.applying(to: configuration, source: source); dismiss() }
                     catch { editor.report(error) }
-                }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                }.primaryAction().keyboardShortcut(.defaultAction)
                     .disabled(editor.running || issue != nil)
             }
         }.padding(24).frame(width: 780, height: 680)

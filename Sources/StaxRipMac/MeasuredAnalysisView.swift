@@ -31,7 +31,7 @@ struct MeasuredAnalysisView: View {
                 Button("Open report…") { openReport() }.disabled(busy)
                     .accessibilityHint("Opens a saved loudness report. Its source must be verified separately.")
                 Button("Measure and build report") { if let tools { audio.measuredAnalysis(tools: tools) } }
-                    .buttonStyle(.borderedProminent).disabled(busy || audio.source == nil || tools == nil)
+                    .primaryAction().disabled(busy || audio.source == nil || tools == nil)
                     .accessibilityHint("Measures the selected audio track and your speech intervals. Does not apply gain or export audio.")
             }
             if audio.running {
@@ -47,7 +47,7 @@ struct MeasuredAnalysisView: View {
                 Text("Use stream metadata").tag("metadata")
                 Text("I confirm mono (FC)").tag("mono").accessibilityLabel("I confirm mono, front centre")
                 Text("I confirm stereo (FL / FR)").tag("stereo").accessibilityLabel("I confirm stereo, front left and front right")
-            }.accessibilityHint("Use stream metadata unless the layout is unknown and you know whether the source is mono or stereo.")
+            }.tint(Color.primaryActionFill).accessibilityHint("Use stream metadata unless the layout is unknown and you know whether the source is mono or stereo.")
             .disabled(busy).onChange(of: audio.analysisLayout) { _, _ in audio.analysisReport = nil; audio.analysisSourceVerified = false }
             DisclosureGroup("Optional speech intervals · selected by you") {
                 VStack(alignment: .leading, spacing: 10) {
@@ -84,14 +84,14 @@ struct MeasuredAnalysisView: View {
                         if let s = point.shortTerm { LineMark(x: .value("Seconds", Double(point.frame)/Double(report.sampleRate)), y: .value("LUFS", s), series: .value("Segment", "S-\(point.sSegment)")).foregroundStyle(by: .value("Window", "Short term")) }
                     }
                 }
-                .chartForegroundStyleScale(["Momentary": Color.accent.opacity(0.6), "Short term": Color.orange])
+                .chartForegroundStyleScale(["Momentary": Color(red: 0.24, green: 0.73, blue: 0.64).opacity(0.6), "Short term": Color.orange])
                 .chartXAxisLabel("Source time (seconds)").chartYAxisLabel("LUFS").frame(height: 180)
                 .accessibilityLabel("Loudness over time")
                 .accessibilityHint("Momentary loudness uses 400-millisecond windows. Short-term loudness uses three-second windows. Explore the chart data for measured values; gaps indicate unavailable measurements.")
                 Text("Plot sampled to at most 1,000 points; the saved report retains the 20 ms measurements. Empty portions mean insufficient duration or no finite energy.").font(.caption).foregroundStyle(.secondary)
                 HStack {
                     Label(audio.analysisSourceVerified ? "Fingerprint matched" : "Saved report · source unverified", systemImage: audio.analysisSourceVerified ? "checkmark.seal" : "questionmark.circle")
-                        .foregroundStyle(audio.analysisSourceVerified ? Color.accent : Color.orange)
+                        .foregroundStyle(audio.analysisSourceVerified ? Color.accent : Color.warning)
                     Text("\(Double(report.programme.frames)/Double(report.sampleRate), specifier: "%.2f") s · \(report.sampleRate) Hz · \(report.channelLabels.joined(separator: " / ")) · track #\(report.track)").font(.caption)
                     Spacer()
                     Button("Verify source") { audio.verifyAnalysisSource() }.disabled(busy || audio.source == nil)

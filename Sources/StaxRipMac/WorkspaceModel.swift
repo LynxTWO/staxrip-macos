@@ -62,7 +62,10 @@ final class WorkspaceModel: ObservableObject {
     @Published private var fileRequestID: UUID?
     private var fileSelectionPending = false
     var filePanelActive: Bool { fileRequestID != nil }
-    init(filePanels: (any WorkspacePanelPresenting)? = nil) {
+    private let readSource: SourceLoader.Reader
+    init(filePanels: (any WorkspacePanelPresenting)? = nil,
+         readSource: @escaping SourceLoader.Reader = { try await SourceLoader.read($0) }) {
+        self.readSource = readSource
         self.filePanels = filePanels ?? WorkspaceFilePanels()
     }
 
@@ -106,7 +109,12 @@ final class WorkspaceModel: ObservableObject {
     @Published var player: AVPlayer?
     @Published var sourceName = "Alpine escape.mov"
     @Published var sourceInfo = "3840 × 2160  ·  24 fps  ·  02:34"
-    @Published var loading = false
+    @Published private(set) var loading = false
+    @Published private(set) var sourceLoadingStatus = ""
+    @Published private(set) var sourceLoadStopping = false
+    private var sourceTask: Task<Void, Never>?
+    private struct SourceRequest { let id: UUID; let url: URL; let keepOutputName: Bool }
+    private var pendingSource: SourceRequest?
     @Published var jobs: [QueueJob] = []
     @Published var outputFolder = FileManager.default.urls(for: .moviesDirectory, in: .userDomainMask).first!
     @Published var outputStem = "Alpine escape_encoded"
@@ -146,9 +154,10 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func showDemo() {
+        cancelSourceLoad()
         resetSourceSelections()
         loadID = UUID()
-        loading = false
+        loading = sourceTask != nil
         player?.pause()
         player = nil
         sourceURL = nil
@@ -293,47 +302,55 @@ final class WorkspaceModel: ObservableObject {
     }
 
     func load(_ url: URL, keepOutputName: Bool = false) {
-        clearSettingsHistory()
-        let id = UUID()
-        loadID = id
-        loading = true
-        notice = ""
-        Task {
+        let id = UUID(); loadID = id
+        pendingSource = SourceRequest(id: id, url: url, keepOutputName: keepOutputName)
+        loading = true; sourceLoadStopping = false
+        notice = ""; error = nil
+        if let sourceTask {
+            sourceLoadingStatus = "Stopping the previous source load before opening the selected source…"
+            sourceTask.cancel()
+        } else { beginPendingSource() }
+    }
+
+    func cancelSourceLoad() {
+        guard loading else { return }
+        loadID = UUID(); pendingSource = nil
+        sourceLoadStopping = sourceTask != nil
+        sourceLoadingStatus = sourceTask == nil ? "" : "Stopping source loading. Waiting for the current reader to finish…"
+        notice = "Source loading cancelled. The previous workspace is retained."
+        sourceTask?.cancel()
+        loading = sourceTask != nil
+    }
+
+    private func beginPendingSource() {
+        guard sourceTask == nil, let request = pendingSource else { return }
+        pendingSource = nil
+        loading = true; sourceLoadStopping = false
+        sourceLoadingStatus = "Reading selected source…"
+        sourceTask = Task { [self] in
+            defer {
+                sourceTask = nil
+                if pendingSource != nil { beginPendingSource() }
+                else { loading = false; sourceLoadStopping = false; sourceLoadingStatus = "" }
+            }
             do {
-                let asset = AVURLAsset(url: url)
-                let tracks = try await asset.loadTracks(withMediaType: .video)
-                guard let track = tracks.first else { throw ImportError.noVideo }
-                let size = try await track.load(.naturalSize)
-                let transform = try await track.load(.preferredTransform)
-                let rate = try await track.load(.nominalFrameRate)
-                let duration = try await asset.load(.duration)
-                let bounds = CGRect(origin: .zero, size: size).applying(transform)
-                guard loadID == id else { return }
+                try Task.checkCancellation()
+                let result = try await readSource(request.url)
+                try Task.checkCancellation()
+                guard loadID == request.id else { return }
                 player?.pause()
-                player = AVPlayer(url: url)
-                if !keepOutputName { resetSourceSelections() }
-                sourceURL = url
-                sourceName = url.lastPathComponent
-                if !keepOutputName { outputStem = url.deletingPathExtension().lastPathComponent + "_encoded" }
-                sourceUnavailable = false
-                let seconds = duration.seconds.isFinite ? max(0, Int(duration.seconds)) : 0
-                sourceInfo = "\(Int(abs(bounds.width))) × \(Int(abs(bounds.height)))  ·  \(String(format: "%.2f", rate)) fps  ·  \(String(format: "%02d:%02d", seconds / 60, seconds % 60))"
-                loading = false
+                player = result.nativePreview ? AVPlayer(url: request.url) : nil
+                if !request.keepOutputName { resetSourceSelections() }
+                sourceURL = request.url
+                sourceName = request.url.lastPathComponent
+                if !request.keepOutputName { outputStem = request.url.deletingPathExtension().lastPathComponent + "_encoded" }
+                sourceUnavailable = !result.nativePreview
+                sourceInfo = result.info
+                clearSettingsHistory()
+                notice = result.nativePreview ? "Source loaded" : "Source inspected. Native preview is unavailable; the advanced engine may support it."
             } catch {
-                guard loadID == id else { return }
-                if let tools = FFmpegTools.discover(), let probe = try? await MediaProbe.read(url, tools: tools), let video = probe.video {
-                    guard loadID == id else { return }
-                    player?.pause(); player = nil
-                    if !keepOutputName { resetSourceSelections() }
-                    sourceURL = url; sourceName = url.lastPathComponent; sourceUnavailable = true
-                    loading = false
-                    sourceInfo = "\(video.width ?? 0) × \(video.height ?? 0) · \(video.codec_name ?? "unknown") · native preview unavailable"
-                    if !keepOutputName { outputStem = url.deletingPathExtension().lastPathComponent + "_encoded" }
-                    return
-                }
-                guard loadID == id else { return }
-                loading = false
-                self.error = "Neither native preview nor the available media tools could read a video track from this source.\n\n\(error.localizedDescription)"
+                guard loadID == request.id, !Task.isCancelled, !(error is CancellationError) else { return }
+                self.error = error.localizedDescription
             }
         }
     }
@@ -397,8 +414,4 @@ final class WorkspaceModel: ObservableObject {
         }
     }
 
-    enum ImportError: LocalizedError {
-        case noVideo
-        var errorDescription: String? { "No readable video track was found." }
-    }
 }

@@ -1,5 +1,5 @@
 # StaxRip Mac Slice 031: APFS full-destination qualification
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / D-052 / D-053 / R-035 / R-036 / R-037 / R-038.
+Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / D-052 / D-053 / D-054 / R-035 / R-036 / R-037 / R-038.
 
 SLICE STATE
 Milestone: Local/native capacity and source-worker repair checks passed. Full hosted repair qualification remains pending under D-052.
@@ -17,7 +17,7 @@ Create a new bounded APFS image with unique fixture identity. Fill only its owne
 
 ## 3. In scope, with build order
 
-M1: Owned APFS fixture helper and filesystem/device/marker validation. M2: Actual production batch failure/retry with source, prior-output, staging and later-job assertions. Reuse the existing strict capacity test where its phase matches; otherwise add a separately scoped APFS test while retaining HFS+ assertions unchanged. M3: Native failure/retry, ordinary regression/hosted check and detached-fixture evidence. D-046 adds bounded read-only observation of the unchanged hosted command after two failed runs. D-047 adds a separately reported focused hosted comparison before the unchanged full gate. Focused success never substitutes for full acceptance. D-048 adds bounded existing status detail/progress/publication tracing to the generated destination test to discriminate its stalled boundary. D-049 adds a bounded test-only forwarding observation around the real source reader. D-050 adds preservation of requested source-check worker priority under R-036, with a pre-repair real-worker counterexample and full/native regression evidence. D-051 adds debug-only actual reader body/submission/worker observation to correct the forwarding-entry ambiguity. D-052 adds a per-read owned source queue with actual bounded contention negative/positive evidence. D-053 qualifies and repairs the corresponding final-publication dispatch boundary with no overwrite/cancellation policy change. Other product repairs remain outside this boundary.
+M1: Owned APFS fixture helper and filesystem/device/marker validation. M2: Actual production batch failure/retry with source, prior-output, staging and later-job assertions. Reuse the existing strict capacity test where its phase matches; otherwise add a separately scoped APFS test while retaining HFS+ assertions unchanged. M3: Native failure/retry, ordinary regression/hosted check and detached-fixture evidence. D-046 adds bounded read-only observation of the unchanged hosted command after two failed runs. D-047 adds a separately reported focused hosted comparison before the unchanged full gate. Focused success never substitutes for full acceptance. D-048 adds bounded existing status detail/progress/publication tracing to the generated destination test to discriminate its stalled boundary. D-049 adds a bounded test-only forwarding observation around the real source reader. D-050 adds preservation of requested source-check worker priority under R-036, with a pre-repair real-worker counterexample and full/native regression evidence. D-051 adds debug-only actual reader body/submission/worker observation to correct the forwarding-entry ambiguity. D-052 adds a per-read owned source queue with actual bounded contention negative/positive evidence. D-053 qualifies and repairs the corresponding final-publication dispatch boundary with no overwrite/cancellation policy change. D-054 strengthens the existing HDR cancellation test to observe the exact published progress boundary with unchanged time limits. Other product repairs remain outside this boundary.
 
 ## 4. Out of scope
 
@@ -66,4 +66,4 @@ All eight criteria have scoped local/native evidence and ordinary hosted accepta
 
 A second filesystem qualification for the default Mac storage family and a reusable bounded fixture for separately scoped future failure tests.
 
-Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / D-052 / D-053 / R-035 / R-036 / R-037 / R-038.
+Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / D-052 / D-053 / D-054 / R-035 / R-036 / R-037 / R-038.

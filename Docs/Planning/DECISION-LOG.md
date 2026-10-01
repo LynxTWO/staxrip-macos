@@ -63,6 +63,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-051 | 2026-10-01 | Observe actual source-read dispatch boundary | Confirmed | |
 | D-052 | 2026-10-01 | Isolate source scanning from shared dispatch contention | Confirmed | |
 | D-053 | 2026-10-01 | Isolate final publication from shared dispatch contention | Confirmed | |
+| D-054 | 2026-10-01 | Observe the exact HDR cancellation test boundary | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -818,3 +819,17 @@ Options considered: relax full-suite deadlines; change actor isolation; qualify 
 Consequences: Reuse the bounded debug-only opt-in CPU fixture with a separate publication opt-in flag. Add actual body/submission/worker observation with no release logging. Reproduce delayed real exclusive publication and priority lowering before repair. Then use one owned serial queue per publication and the source reader's priority mapping. Do not change the link operation, collision checks, cancellation settlement, cleanup or publication outcomes. Verify existing batch/native publication cancellation/collision tests, full suites, both capacity fixtures and native advanced plus Quick Export. No audio, deadlines or ordinary scheduling changes.
 
 Revisit when: The actual control fails to reproduce the suspected dispatch boundary, or existing publication guarantees/regressions fail. Arbitrary kernel latency remains outside this repair.
+
+## D-054: Observe the exact HDR cancellation test boundary
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Strengthen the existing generated HDR cancellation test's trigger under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: One full release run stopped before the test caught its polled Inspecting phase. Final-state diagnostics and subsequent isolated/full comparisons did not reproduce it. Polling a transient published phase can miss it, and the current fallback only requires Inspecting after its deadline, not proof of actual source-audit progress. This is a test synchronization defect independent of whether it caused that particular failure.
+
+Options considered: rerun until green; widen deadlines; subscribe to the actual published source-audit progress before starting. Choose the subscription.
+
+Consequences: Require the emitted state to be Inspecting with real source-audit progress and the batch to be running, then cancel synchronously at that event. Keep the 30-second generated source, 20-second observation bound, five-second cancellation bound, Cancelled/no-output/source-integrity assertions and all later mutation/verification checks. Retain final-state diagnostics if the event is absent. Remove the subscription before later subcases. No product, fixture-size, DSP or default scheduling change. Run focused and full local/hosted regression.
+
+Revisit when: The real progress event is absent, cancellation fails, or published-state reentrancy changes. Do not label the earlier unknown stopped outcome a proven polling race.

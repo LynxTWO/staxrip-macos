@@ -296,3 +296,5 @@ R-048 / D-071 permits bounded temporary cancellation-entry timestamps and a same
 R-048 / D-072 isolates actual SubRip snapshot dispatch under bounded CPU contention. A measured failure permits only the matching owned priority-preserving worker repair; no deadline or ordinary scheduling changes. Original snapshot bytes, exclusive creation and settled cancellation remain mandatory.
 
 R-048 / D-073 extends bounded temporary diagnosis to actual batch preparation/verification entry and return boundaries. No task priority, scheduling, deadline or fixture changes; acceptance remains blocked by the ordinary hosted entry failure.
+
+R-048 remains unaccepted after D-073: actual snapshot writes are prompt, but aggregate preparation/encoding consumes the entry window under hosted load. CAPTION-ENTRY-REFRAME.md records the unresolved owner decision; no further harness or product expansion while this gate is open.

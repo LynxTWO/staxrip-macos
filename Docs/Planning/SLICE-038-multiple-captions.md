@@ -3,7 +3,7 @@ Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-068 / D-069 /
 
 SLICE STATE
 Milestone: Ordered capture, mapping, verification and native editor implemented; focused/native checks passed; final regression pending.
-Blocked by: Hosted verifier-entry failure remains after snapshot repair; D-073 diagnosis, no acceptance yet.
+Blocked by: Four hosted verifier-entry failures; owner acceptance-contract decision in CAPTION-ENTRY-REFRAME.md. Temporary diagnosis removed; no acceptance.
 Evidence so far: MULTIPLE-CAPTIONS-EVIDENCE.md; generated independent decoding, later-track refusal and native save/reopen/export.
 Last audit: 2026-10-01.
 

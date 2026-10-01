@@ -10,9 +10,6 @@ struct BatchStatus: Codable {
 
 @MainActor
 final class BatchController: ObservableObject {
-    #if DEBUG
-    @TaskLocal static var observeStage: (@Sendable (String) -> Void)?
-    #endif
     @Published var running = false
     @Published private(set) var publicationJobID: UUID?
     @Published var toolDescription = "Checking FFmpeg…"
@@ -174,13 +171,7 @@ final class BatchController: ObservableObject {
         for job in selected { statuses[job.id] = BatchStatus() }
         do {
             if let journalURL { journalLease = try BatchJournalLease(journalURL: journalURL) }
-            #if DEBUG
-            Self.observeStage?("checkpoint begin")
-            #endif
             try checkpoint()
-            #if DEBUG
-            Self.observeStage?("checkpoint returned")
-            #endif
         }
         catch { journalLease = nil; recoveryError = "Batch did not start because recovery state could not be saved: " + error.localizedDescription; return }
         recovery = nil; recoveryError = nil
@@ -191,13 +182,7 @@ final class BatchController: ObservableObject {
                 if Task.isCancelled { break }
                 statuses[job.id] = BatchStatus(phase: "Inspecting")
                 do {
-                    #if DEBUG
-                    Self.observeStage?("checkpoint begin")
-                    #endif
                     try checkpoint()
-                    #if DEBUG
-                    Self.observeStage?("checkpoint returned")
-                    #endif
                     try await encode(job, tools: tools)
                 } catch let error as ExportCleanupError {
                     if let output = error.publishedOutput {
@@ -259,13 +244,7 @@ final class BatchController: ObservableObject {
         publicationJobID = jobID
         defer { publicationJobID = nil }
         statuses[jobID]?.detail = "Finishing output. Waiting for the destination filesystem to publish the verified file."
-        #if DEBUG
-        Self.observeStage?("checkpoint begin")
-        #endif
         try checkpoint()
-        #if DEBUG
-        Self.observeStage?("checkpoint returned")
-        #endif
         try await publishOutput(staged, output)
     }
     func reset(_ id: UUID) { guard !running else { return }; statuses[id] = nil }
@@ -282,43 +261,19 @@ final class BatchController: ObservableObject {
         try SessionDocument.validate(job.configuration)
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         if preservingHDR { try EncodePlan.validateHDRSettings(job.configuration) }
-        #if DEBUG
-        Self.observeStage?("source fingerprint begin")
-        #endif
         let fingerprint = try await fingerprint(source, jobID: job.id, label: "Checking source content before inspection")
-        #if DEBUG
-        Self.observeStage?("source fingerprint returned")
-        #endif
         try Task.checkCancellation()
         statuses[job.id]?.progress = 0
         statuses[job.id]?.detail = "Inspecting source metadata"
         var hdr: HDR10Contract?
         if preservingHDR {
             statuses[job.id] = BatchStatus(phase: "Inspecting", detail: "HDR10: checking tool coverage and source identity before full-frame audit")
-            #if DEBUG
-            Self.observeStage?("checkpoint begin")
-            #endif
             try checkpoint()
-            #if DEBUG
-            Self.observeStage?("checkpoint returned")
-            #endif
             try await HDR10Audit.checkTools(tools)
         }
-        #if DEBUG
-        Self.observeStage?("source probe begin")
-        #endif
         let probe = try await MediaProbe.read(source, tools: tools)
-        #if DEBUG
-        Self.observeStage?("source probe returned")
-        #endif
         if !job.configuration.externalCaptions.isEmpty { statuses[job.id]?.detail = "Reading and validating external caption files" }
-        #if DEBUG
-        Self.observeStage?("caption capture begin")
-        #endif
         let externalSnapshots = try await job.configuration.captureExternalCaptions()
-        #if DEBUG
-        Self.observeStage?("caption capture returned")
-        #endif
         if preservingHDR {
             statuses[job.id]?.detail = "HDR10: decoding every source frame; checking static metadata and fixed cadence"
             hdr = try await HDR10Audit.read(source, tools: tools, probe: probe) { [weak self] frames, fraction in
@@ -333,102 +288,42 @@ final class BatchController: ObservableObject {
         try Task.checkCancellation()
         let directory = output.deletingLastPathComponent().appendingPathComponent(".staxrip-batch-" + UUID().uuidString)
         let staged = directory.appendingPathComponent("encoded." + job.configuration.container.lowercased())
-        #if DEBUG
-        Self.observeStage?("plan begin")
-        #endif
         let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: staged, hdr: hdr, externalSnapshots: externalSnapshots)
-        #if DEBUG
-        Self.observeStage?("plan returned")
-        #endif
-        #if DEBUG
-        Self.observeStage?("staging directory begin")
-        #endif
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
-        #if DEBUG
-        Self.observeStage?("staging directory returned")
-        #endif
         var operationError: Error?
         var publishedOutput: URL?
         do {
             for (index, external) in plan.externalSubtitles.enumerated() {
-                #if DEBUG
-                Self.observeStage?("snapshot begin")
-                #endif
                 try await external.document.writeSnapshot(to: directory.appendingPathComponent(ExternalCaptionSnapshot.filename(index)))
-                #if DEBUG
-                Self.observeStage?("snapshot returned")
-                #endif
             }
-            #if DEBUG
-            Self.observeStage?("titles begin")
-            #endif
             try await ExternalCaptionTitles.write(plan.captionTitles, to: directory)
-            #if DEBUG
-            Self.observeStage?("titles returned")
-            #endif
-            #if DEBUG
-            Self.observeStage?("chapter metadata begin")
-            #endif
             try await plan.chapterPlan.writeMetadata(to: directory)
-            #if DEBUG
-            Self.observeStage?("chapter metadata returned")
-            #endif
             let copiedVideo: VideoCopyManifest?
             if let contract = plan.videoCopy {
                 statuses[job.id]?.detail = "Capturing original encoded video packets for verification"
-                #if DEBUG
-                Self.observeStage?("checkpoint begin")
-                #endif
                 try checkpoint()
-                #if DEBUG
-                Self.observeStage?("checkpoint returned")
-                #endif
                 copiedVideo = try await VideoCopyManifest.capture(source, contract: contract, directory: directory, tools: tools)
                 guard try await self.fingerprint(source, jobID: job.id, label: "Rechecking source after video packet capture") == fingerprint else {
                     throw VideoCopyContract.failure("Source changed during packet capture. Nothing published.")
                 }
             } else { copiedVideo = nil }
             statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
-            #if DEBUG
-            Self.observeStage?("checkpoint begin")
-            #endif
             try checkpoint()
-            #if DEBUG
-            Self.observeStage?("checkpoint returned")
-            #endif
             let parser = ProgressParser(duration: plan.duration) { [weak self] fraction in
                 Task { @MainActor in
                     guard self?.statuses[job.id]?.phase == "Encoding" else { return }
                     self?.statuses[job.id]?.progress = fraction
                 }
             }
-            #if DEBUG
-            Self.observeStage?("encode begin")
-            #endif
             let result = try await ToolRunner().run(executable: tools.ffmpeg, arguments: plan.arguments) { data in parser.accept(data) }
-            #if DEBUG
-            Self.observeStage?("encode returned")
-            #endif
             try Task.checkCancellation()
             guard result.status == 0 else {
                 throw NativeExportError.invalid("FFmpeg exited \(result.status).\n" + String(decoding: result.stderr, as: UTF8.self))
             }
             statuses[job.id]?.phase = "Verifying"
             statuses[job.id]?.progress = 0
-            #if DEBUG
-            Self.observeStage?("checkpoint begin")
-            #endif
             try checkpoint()
-            #if DEBUG
-            Self.observeStage?("checkpoint returned")
-            #endif
-            #if DEBUG
-            Self.observeStage?("output probe begin")
-            #endif
             let actual = try await MediaProbe.read(staged, tools: tools)
-            #if DEBUG
-            Self.observeStage?("output probe returned")
-            #endif
             guard actual.video?.codec_name == plan.expectedCodec,
                   actual.streams.filter({ $0.codec_type == "audio" }).count == plan.audioCount,
                   actual.streams.filter({ $0.codec_type == "subtitle" }).count == plan.subtitleCount,

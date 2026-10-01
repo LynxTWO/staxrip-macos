@@ -290,9 +290,6 @@ struct SubRipDocument: Equatable, Sendable {
                 #endif
                 do {
                     try bytes.write(to: url, options: .withoutOverwriting)
-                    #if DEBUG
-                    observe?("worker finished")
-                    #endif
                     continuation.resume()
                 } catch { continuation.resume(throwing: error) }
             }

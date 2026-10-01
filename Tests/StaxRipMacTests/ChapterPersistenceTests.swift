@@ -80,12 +80,6 @@ struct ChapterPersistenceTests {
     // suite's UI actor blocks unrelated responsiveness observations.
     @Test nonisolated func oversizedWritesRetainExistingSessionAndRecoveryBytes() async throws {
         #expect(!Thread.isMainThread)
-        let started = ContinuousClock.now
-        func trace(_ event: String) {
-            print("CHAPTER_STORAGE_STRESS uptime=\(ProcessInfo.processInfo.systemUptime) \(started.duration(to: .now)) \(event) main=\(Thread.isMainThread)")
-        }
-        trace("body entered")
-        defer { trace("body returning") }
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
         var config = EncodeConfiguration()
         config.chapterEdits = .init(mode: .custom, entries: (0..<1000).map {
@@ -94,13 +88,10 @@ struct ChapterPersistenceTests {
         let jobs = (0..<10).map { job(config, index: $0) }
         let document = SessionDocument(configuration: EncodeConfiguration(), outputFolder: "/generated", outputStem: "output", jobs: jobs)
         _ = try document.validated() // Structural budget is distinct from encoded bytes.
-        trace("structural validation returned")
         let prior = Data("Existing saved document".utf8)
         for name in ["session.json", "journal.json"] { try prior.write(to: root.appendingPathComponent(name)) }
         #expect(throws: (any Error).self) { try document.write(to: root.appendingPathComponent("session.json")) }
-        trace("session write refusal returned")
         #expect(throws: (any Error).self) { try BatchJournal(jobs: jobs, statuses: [:]).write(to: root.appendingPathComponent("journal.json")) }
-        trace("journal write refusal returned")
         #expect(try Data(contentsOf: root.appendingPathComponent("session.json")) == prior)
         #expect(try Data(contentsOf: root.appendingPathComponent("journal.json")) == prior)
         var excessive = document; excessive.jobs.append(job(config, index: 10))

@@ -41,3 +41,5 @@ Native Quick Export preset accessibility and readiness-driven subprocess output 
 The workspace now has a live settings-only recipe with direct correction, keyboard section shortcuts and persistent destination/queue actions. [Recipe evidence](Planning/WORKSPACE-RECIPE-EVIDENCE.md) records local/native/hosted acceptance. This is requested intent, not a source compatibility or measured-output claim.
 
 Restoring a session now defers media reads until explicit matching-source review, preserving its recipe and output name. [Restored source evidence](Planning/RESTORED-SOURCE-EVIDENCE.md) records complete native session round-trip equality and local/hosted acceptance. Matching paths do not establish unchanged bytes or durable access.
+
+SDR video now requests timestamp passthrough with the filter time base. [Cadence evidence](Planning/SDR-CADENCE-EVIDENCE.md) records the actual-plan 18-19 ms quantization failure and corrected short software/hardware matrix. Runtime per-frame audit and long-film A/V sync remain open. Native destination publication also repeated the recorded filesystem wait before succeeding on a reviewed-destination retry; its root cause is unproven.

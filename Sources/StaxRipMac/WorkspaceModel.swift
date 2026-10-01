@@ -122,6 +122,7 @@ final class WorkspaceModel: ObservableObject {
     @Published var error: String?
     @Published var sessionName = "Untitled session"
     @Published var sourceUnavailable = false
+    @Published private(set) var sourceNeedsReview = false
     private var savedSnapshot: SessionDocument?
     private var loadID = UUID()
     var isDemo: Bool { sourceURL == nil }
@@ -162,6 +163,7 @@ final class WorkspaceModel: ObservableObject {
         player = nil
         sourceURL = nil
         sourceUnavailable = false
+        sourceNeedsReview = false
         sourceName = "Alpine escape.mov"
         sourceInfo = "3840 × 2160  ·  24 fps  ·  02:34"
         outputStem = "Alpine escape_encoded"
@@ -282,13 +284,28 @@ final class WorkspaceModel: ObservableObject {
         if let path = document.sourcePath {
             sourceURL = URL(fileURLWithPath: path)
             sourceName = sourceURL!.lastPathComponent
-            sourceInfo = "Saved source · preview not loaded"
+            sourceInfo = "Saved source · review access to load preview"
             sourceUnavailable = true
-            if FileManager.default.fileExists(atPath: path) { load(sourceURL!, keepOutputName: true) }
+            sourceNeedsReview = true
         }
         clearSettingsHistory()
         savedSnapshot = document
-        notice = "Session restored"
+        notice = sourceNeedsReview ? "Session restored. Review the saved source when you are ready to load its preview." : "Session restored"
+    }
+
+    func reviewSavedSource() {
+        guard sourceNeedsReview, !loading, let expected = sourceURL,
+              let intent = beginFileRequest() else { return }
+        selectFile(.reviewSource(expected), intent: intent) { [weak self] url in
+            guard let self, self.consumeSelection(intent) else { return }
+            guard let url else { self.finishFileRequest(intent); return }
+            guard self.intentIsCurrent(intent), self.finishFileRequest(intent) else { return }
+            guard url.isFileURL, url.standardizedFileURL == expected.standardizedFileURL else {
+                self.error = "Choose the saved source, \(expected.lastPathComponent), at its saved location. To use a different video, choose Open source; that resets source-specific track choices and output naming. Your saved session settings have been retained."
+                return
+            }
+            self.load(url, keepOutputName: true)
+        }
     }
 
     func chooseSource() {
@@ -345,6 +362,7 @@ final class WorkspaceModel: ObservableObject {
                 sourceName = request.url.lastPathComponent
                 if !request.keepOutputName { outputStem = request.url.deletingPathExtension().lastPathComponent + "_encoded" }
                 sourceUnavailable = !result.nativePreview
+                sourceNeedsReview = false
                 sourceInfo = result.info
                 clearSettingsHistory()
                 notice = result.nativePreview ? "Source loaded" : "Source inspected. Native preview is unavailable; the advanced engine may support it."

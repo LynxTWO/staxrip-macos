@@ -184,9 +184,10 @@ struct WorkspaceView: View {
                     .help("Cancel this source import and keep the previous workspace. Waits for the current reader to finish.")
             }
             if model.sourceURL != nil {
-                Button("Choose tracks") { showingTracks = true }.disabled(batch.running)
+                Button("Choose tracks") { showingTracks = true }.disabled(batch.running || model.loading || model.sourceNeedsReview)
                 Button { showingInspector = true } label: { Image(systemName: "info.circle") }
                     .buttonStyle(.borderless).help("Inspect media contents").accessibilityLabel("Inspect media contents")
+                    .disabled(model.loading || model.sourceNeedsReview)
             }
             if !model.isDemo || model.loading {
                 Button { model.showDemo() } label: { Image(systemName: "arrow.counterclockwise") }
@@ -200,6 +201,17 @@ struct WorkspaceView: View {
             Group {
                 if let player = model.player {
                     NativeVideoPreview(player: player)
+                } else if model.sourceNeedsReview {
+                    VStack(spacing: 12) {
+                        Image(systemName: "doc.badge.clock").font(.largeTitle).foregroundStyle(Color.accent)
+                        Text("Your recipe is here. Bring back the picture.").font(.headline)
+                        Text("Select the saved source to load its preview. Your settings, track choices and output name stay in place.")
+                            .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Button("Review saved source…") { model.reviewSavedSource() }
+                            .disabled(model.loading || exporter.running || batch.running)
+                            .accessibilityHint("Select the saved file at its saved location. Cancelling keeps the restored session.")
+                    }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if !model.isDemo {
                     VStack(spacing: 12) {
                         Image(systemName: "video.slash").font(.largeTitle).foregroundStyle(.secondary)
@@ -213,11 +225,12 @@ struct WorkspaceView: View {
             }.frame(height: 230).frame(maxWidth: .infinity).clipped()
             HStack(spacing: 8) {
                 Image(systemName: model.isDemo ? "photo" : "play.rectangle")
-                Text(model.isDemo ? "Illustrated demo · open a video for playback" : "Source playback · encoding filters are not applied")
+                Text(model.isDemo ? "Illustrated demo · open a video for playback" : model.sourceNeedsReview ? "Saved source · preview awaits your selection" : "Source playback · encoding filters are not applied")
                 Spacer(minLength: 0)
                 if !model.isDemo {
                     Button("Preview picture…") { showingPicturePreview = true }
                         .accessibilityHint("Compare an original frame with crop, resize and deinterlace settings applied.")
+                        .disabled(model.loading || model.sourceNeedsReview)
                 }
                 Image(systemName: "arrow.down.doc").help("Drop a video onto the preview")
             }.font(.system(size: 10)).foregroundStyle(.secondary).padding(12)

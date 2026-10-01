@@ -26,7 +26,10 @@ struct QuickExportView: View {
                         Text(model.isDemo ? "MOV and MP4 are a good place to start." : model.sourceInfo).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button(model.isDemo ? "Open video…" : "Change source…") { model.chooseSource() }
+                    Button(model.sourceNeedsReview ? "Review saved source…" : model.isDemo ? "Open video…" : "Change source…") {
+                        if model.sourceNeedsReview { model.reviewSavedSource() }
+                        else { model.chooseSource() }
+                    }
                         .disabled(exporter.running || model.loading || batch.running || audio.running)
                 }.padding(20).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
                 HStack(spacing: 12) {

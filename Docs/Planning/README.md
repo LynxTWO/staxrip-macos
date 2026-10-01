@@ -80,3 +80,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 33. [Slice 023: spoken native preset choices](SLICE-023-native-preset-accessibility.md).
 
 [Native preset and subprocess evidence](NATIVE-PRESET-ACCESSIBILITY-EVIDENCE.md) records Slice 023 scoped acceptance, final hosted success and retained diagnostic limits.
+
+34. [Slice 024: live workspace recipe](SLICE-024-workspace-recipe.md).
+
+[Workspace recipe evidence](WORKSPACE-RECIPE-EVIDENCE.md) records local/native checks and the hosted gate.

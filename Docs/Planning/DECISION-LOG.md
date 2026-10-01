@@ -44,6 +44,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-035 | 2026-09-30 | Bound declared output duration tolerance | Confirmed | |
 | D-036 | 2026-09-30 | Clarify native preset accessibility | Confirmed | |
 | D-037 | 2026-09-30 | Remove demonstrated subprocess worker starvation | Confirmed | |
+| D-038 | 2026-09-30 | Review and navigate a live workspace recipe | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -573,3 +574,18 @@ Options considered: serialize the test suite; limit process launches behind anot
 Consequences: Preserve literal arguments, bounded retained output, streaming callbacks, cancellation escalation and actual process/pipe settlement. Add scoped concurrency/stream lifecycle regression, repeat the isolated diagnostic, full release/debug and hosted regression, and one generated native advanced export/cancel walkthrough. No audio algorithm, saved format, encoder arguments, merge or release changes.
 
 Revisit when: Descendant process ownership, intentionally blocking callbacks, arbitrary filesystem latency or global admission control are scoped.
+
+
+## D-038: Review and navigate a live workspace recipe
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 024 under the owner's renewed autonomous non-audio delegation and explicit creative design direction. Delegated to AI recommendation.
+
+Because: Native inspection shows an output panel with four terse rows, no trim, caption or track-selection intent, and a clipped decorative prompt. A user cannot review those choices together or jump from that summary to correction.
+
+Options considered: cosmetic restyling alone; a broad workspace replacement; an interactive recipe beside the source with scrollable details and a persistent queue action. Choose the third. It improves a real review-and-correct journey without moving established controls or changing encoding.
+
+Consequences: A distinctive numbered recipe, direct navigation to Picture/Video/Audio/Subtitles, explicit settings-only status, complete relevant configuration summaries, scrollable output details and a pinned queue action. All summaries derive from current configuration, not simulated measurements. Actual source compatibility remains in queue review. No model persistence, encode command, audio processing, merge or release change.
+
+Revisit when: Native width/height checks fail, owner feedback changes the visual direction, or a source-aware validated plan can replace settings-only intent.

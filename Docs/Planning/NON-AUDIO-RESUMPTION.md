@@ -131,3 +131,7 @@ Slice 023 closed at 543b991 with hosted run 36808673370: 192 tests in 439.807 se
 ## Owner design direction, 2026-09-30
 
 The owner explicitly invites creative visual and interaction design, with no expectation of matching Windows StaxRip or taking the easiest conventional path. Explore a distinctive native workspace that makes source preparation, intended changes, comparison and verified results understandable. This is design latitude, not a mandate for decorative effects or hidden advanced controls. Preserve native keyboard and accessibility semantics, independent Quick Export behavior and explicit source/output protection. Audio listening remains parked. Next work begins with current-interface inspection and a bounded design brief; no new product slice is active yet.
+
+Slice 024 is active under D-038 / R-028 after renewed overnight delegation: native settings-only recipe, direct correction and readable output details. Audio listening remains parked. A new 12-hour caffeinate assertion prevents idle display/system sleep; it does not disable manual or managed lock policy.
+
+Slice 024 closed at daf27e6 with hosted run 36811284038: 195 tests in 469.903 seconds. Recipe navigation, keyboard shortcuts, live corrections, light/dark minimum-window layout and generated-source queue review passed within WORKSPACE-RECIPE-EVIDENCE.md limits. Draft PR 41 remains unmerged. Audio listening stays parked.

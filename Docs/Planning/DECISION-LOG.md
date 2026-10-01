@@ -54,6 +54,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-042 | 2026-10-01 | Correct native output name collisions | Confirmed | |
 | D-043 | 2026-10-01 | Review batch destinations before starting | Confirmed | |
 | D-044 | 2026-10-01 | Author and verify chapter lists | Confirmed | |
+| D-045 | 2026-10-01 | Qualify APFS full-destination recovery | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -683,3 +684,17 @@ Options considered: raw editable FFmpeg metadata; title-only overrides; typed so
 Consequences: Millisecond authoring, explicit import rounding, custom trim intersection/offset, MP4 continuity checks, bounded owned metadata staging and retained output audits. Add native draft editing, operation ownership, session v7/recovery v6 and source-specific preset/reset rules. Default source chapter behavior stays compatible. See CHAPTER-EDITING-RESEARCH.md for current evidence and limits.
 
 Revisit when: Actual chapter outputs disagree, nonzero/unknown timelines or nested editions are needed, or player compatibility expands beyond metadata verification.
+
+## D-045: Qualify APFS full-destination recovery
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Build Slice 031 after scoped Slice 030 closure under owner overnight autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: The release ledger names APFS capacity failure as unqualified. Blank-image discovery established a bounded new 64 MiB APFS fixture with a distinct mount device and successful detach.
+
+Options considered: rely on HFS+ evidence; fill an existing volume; qualify a new isolated APFS image. Choose the third with unique ownership, capacity and filesystem checks. Existing HFS+ assertions remain unchanged.
+
+Consequences: Opt-in generated fixture only, actual ENOSPC, failed first job and later pending jobs, source/prior-output protection, cleanup and explicit successful retry. Native checks preserve the prior recovery journal. No existing volume, audio, shared-container quota, network or source/journal-full claim. Primary references: https://support.apple.com/guide/disk-utility/create-a-disk-image-dskutl11888/mac and https://support.apple.com/guide/disk-utility/add-delete-or-erase-apfs-volumes-dskua9e6a110/mac, reviewed 2026-10-01.
+
+Revisit when: Fixture ownership cannot be proven, APFS exhaustion occurs in a different phase, detach fails, or broader storage behavior is requested.

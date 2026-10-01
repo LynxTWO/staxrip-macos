@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select the next non-audio slice after scoped chapter acceptance at 0105d5c plus diagnostic-only ded74f6, hosted run 36824096245.
+Next: Slice 031 APFS capacity recovery under D-045 / R-035 after chapter acceptance at 0105d5c plus diagnostic-only ded74f6, hosted run 36824096245.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -248,3 +248,5 @@ Approved R-033 under D-043: native review of distinct pending output folders bef
 ## Chapter editor checkpoint, 2026-10-01
 
 Approved R-034 under D-044: typed chapter authoring/removal, native draft editing and owned source import, source-specific persistence and actual output verification. Gates chapter-validation, chapter-export, chapter-timing, chapter-persistence, chapter-editor-lifecycle, chapter-native, chapter-coexistence and chapter-regression bind S30-001 through S30-008. Consequence: user_data in saved intent and newly published exports; source bytes remain immutable. No audio/DSP, remux or new HDR transform scope.
+
+Approved R-035 under D-045: bounded disposable APFS failure/retry qualification. Gates apfs-ownership, apfs-failure, apfs-protection, apfs-retry and apfs-regression bind S31-001 through S31-005. Consequence: local_only generated fixture; preexisting media and disks excluded. No relaxed HFS+ contract or generalized storage guarantee.

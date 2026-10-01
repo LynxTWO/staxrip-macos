@@ -85,6 +85,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-073 | 2026-10-01 | Trace remaining caption preparation boundaries | Confirmed | |
 | D-074 | 2026-10-01 | Phase-specific caption cancellation qualification | Confirmed | |
 | D-075 | 2026-10-01 | Licensed full-film video qualification | Confirmed | |
+| D-076 | 2026-10-01 | Preserve complete frame audits with compact JSON | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1166,3 +1167,18 @@ Existing control: retain generated integration and pre-publication checks. Their
 Consequences: Fixed source digest/size, no media or owner paths in Git/hosted CI, actual No audio selection, no audio tests/listening changes, no product code changes, no new downloads required. Respect the explicit resource/capture/time bounds and refusal conditions in Slice 039. Any product defect found needs a further evidence-backed decision before repair; no merge or release.
 
 Revisit when: The source no longer matches its reviewed identity, an existing guard refuses the film, independent complete references disagree, or the bounded matrix cannot complete.
+
+
+## D-076: Preserve complete frame audits with compact JSON
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Within R-049, use the documented compact JSON writer for the independent full-film frame query. Delegated to AI recommendation under the owner's non-audio qualification scope.
+
+Because: The first actual matrix at 2783d19 failed after 566.420 seconds when HEVC frame data exceeded the unchanged 4 MiB ToolRunner capture. The same complete query written to local diagnostic files produced 5,282,761 bytes with default formatting and 3,748,297 bytes with compact formatting. Parsed JSON equality proves every field and all 21,312 records match, including empty side-data sections. Copy and H.264 receipts from the failed matrix remain partial evidence only.
+
+Options considered: enlarge the capture limit; drop selected frame data; change only JSON whitespace through FFprobe's documented compact writer. Choose the third. Reference: https://ffmpeg.org/ffprobe.html#json .
+
+Consequences: Change only the test's frame-query writer argument. Preserve all frame fields, counts, tolerances, truncation refusal, subtitle checks, source protection, default scheduling and 15-minute case limit. Rerun the complete matrix in a new owned directory and ordinary local/hosted regression on the resulting head. Retain the first hosted run's separate existing mastering cancellation failure (6.796 seconds against five); do not relax or modify that audio test as part of this correction. No production or workflow changes.
+
+Revisit when: Compact complete data still exceeds the cap, frame or caption references disagree, or ordinary regression remains failing.

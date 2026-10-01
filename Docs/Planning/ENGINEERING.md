@@ -304,3 +304,5 @@ R-048 / D-074: owner approval reopens the phase-specific cancellation qualificat
 R-048 acceptance: all S38-001 through S38-006 gates passed at 2f8cea7 under D-074, ordinary hosted run 36893266046. Sources/workflow match the optimized/native-qualified 6c471b7 product; full local/hosted runs each report 266 tests. Preserve the superseded startup-guard failures as evidence, without a ten-second aggregate throughput claim.
 
 Approved R-049 under D-075: local opt-in licensed full-film video qualification. S39-001 through S39-005 bind film-input, film-video, film-captions, film-native and film-regression. Actual BatchController exports are compared with complete independent frame/PTS and subtitle data. Source/owner recovery state stay protected; no production behavior change or hosted media acquisition.
+
+R-049 / D-076 permits compact JSON formatting after exact complete-field equality showed the original HEVC frame audit exceeded its fixed capture bound. Rerun the entire matrix; retain the first failed matrix and unrelated ordinary hosted cancellation result. No production, audio, cap or time-limit changes.

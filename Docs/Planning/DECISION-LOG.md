@@ -976,3 +976,5 @@ Options considered: add another transport; change AVPlayerView; make only the de
 Consequences: Preserve the border rendering and parent drop target. Disable hit testing only on the decorative stroke. Require actual native transport response, playback continuity and drop acceptance before retaining the change. No new player, observer or transport. If the control remains inaccessible, keep the cause unknown and investigate before accepting the slice.
 
 Revisit when: The change fails to restore player input, drop behavior changes or another overlay owns input intentionally.
+
+D-063 outcome: The same initial native play control works with the original border after recreating the source view. Removing hit testing did not establish a causal improvement. The speculative change was removed before final qualification. Auto-hidden control reveal through the inspection tool remains limited; the generated movie's visible clock independently proves resize continuity. No drop-handler change is retained, so new drop qualification is not a product gate for this rejected experiment.

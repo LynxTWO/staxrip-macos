@@ -2,7 +2,7 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-062 / R-044.
 
 SLICE STATE
-Milestone: Discovery complete; implementation not started.
+Milestone: Implementation and scoped native checks complete; full regression pending.
 Blocked by: None within scope.
 Evidence so far: WorkspaceView fixed frame and NativeVideoPreview identity-preserving update; Slice 034 accepted.
 Last audit: 2026-10-01.
@@ -17,7 +17,7 @@ Open a generated silent video, start playback, select Compact preview, and conti
 
 ## 3. In scope, with build order
 
-M1: One app-only Boolean preference, 150/230-point frame selection and descriptive footer control. M2: Qualify decorative-border hit testing, then native playback, layout, keyboard, persistence, drop acceptance and recovery checks. M3: Optimized build and full local/hosted regression.
+M1: One app-only Boolean preference, 150/230-point frame selection and descriptive footer control. M2: Native playback, layout, keyboard, persistence and recovery checks. D-063 input qualification is recorded as a rejected experiment. M3: Optimized build and full local/hosted regression.
 
 ## 4. Out of scope
 
@@ -29,7 +29,7 @@ No new stub. Existing native media compatibility and filesystem-access limitatio
 
 ## 6. Modules touched
 
-WorkspaceView frame, footer and decorative border hit testing under D-063. NativeVideoPreview is inspected but does not need modification.
+WorkspaceView frame and footer. The D-063 border experiment was rejected without a retained product change. NativeVideoPreview is inspected but does not need modification.
 
 ## 7. Data subset
 

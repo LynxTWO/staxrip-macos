@@ -33,3 +33,5 @@ Advanced export source stability now has scoped local/native/hosted acceptance: 
 Workspace source imports now own native/fallback cancellation and latest-only replacement, with clear waiting state and regular-file refusal. Scoped local/native/hosted acceptance is recorded in [source import evidence](Planning/SOURCE-IMPORT-EVIDENCE.md). Arbitrary filesystem latency, durable access and spoken VoiceOver qualification remain open.
 
 Native Quick Export final publication now awaits a background filesystem operation and preserves save outcomes across late cancellation, with scoped [native publication evidence](Planning/NATIVE-PUBLICATION-EVIDENCE.md). Native source preparation, other synchronous I/O and destination-dialog usability remain separate.
+
+Advanced declared output-duration verification now uses a fixed strict 250-millisecond allowance for known plans, with explicit unknown-source reporting. [Duration evidence](Planning/OUTPUT-DURATION-EVIDENCE.md) includes real shortened/extended-output refusal and long/trim checks. Decoded completeness, per-track timing and audiovisual synchronization remain separate.

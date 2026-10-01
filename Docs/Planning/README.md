@@ -74,3 +74,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Native publication evidence](NATIVE-PUBLICATION-EVIDENCE.md) records Slice 021 scoped local/native/hosted acceptance and the direct-call negative control.
 
 32. [Slice 022: bounded output duration](SLICE-022-output-duration.md).
+
+[Output duration evidence](OUTPUT-DURATION-EVIDENCE.md) records Slice 022 scoped local/native/hosted acceptance and the original-policy regression.

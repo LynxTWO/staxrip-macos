@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 022: Bounded output duration verification
-Version: 0.1. Date: 2026-09-30. Status: Approved for build under D-035 / R-025.
+Version: 0.1. Date: 2026-09-30. Status: Done with scoped evidence under D-035 / R-025.
 
 SLICE STATE
-Milestone: Plan committed before investigation and implementation.
+Milestone: S22-001 through S22-004 accepted within OUTPUT-DURATION-EVIDENCE.md limits.
 Blocked by: None; Slice 021 closed at 3c56caa with hosted run 36801364346.
-Evidence so far: BatchController permits max(0.25 seconds, one percent of planned duration); this becomes 72 seconds for a two-hour source. Actual truncated-output reproduction is pending.
+Evidence so far: Product f52bade, actual old-policy failure, 189 local/hosted tests and native duration result; hosted run 36802839483 passed.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

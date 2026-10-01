@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 032: Silent motion comparison
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-057 / D-058 / R-040.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within recorded evidence under D-057 / D-058 / R-040.
 
 SLICE STATE
-Milestone: Generated CFR/VFR timing, fragmented-file bounds and native decoder feasibility only.
-Blocked by: None. Slice 031 accepted at a940665, plain hosted run 36840667407.
-Evidence so far: motion-discovery receipts and motion-preview-next-notes.md retained locally.
+Milestone: All six criteria have scoped acceptance at 5e9effa; hosted run 36845548454 passed.
+Blocked by: None.
+Evidence so far: MOTION-PREVIEW-EVIDENCE.md records independent media checks, native transport/cancellation/cleanup and regression.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

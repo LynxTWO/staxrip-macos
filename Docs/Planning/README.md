@@ -112,3 +112,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 41. [Slice 031: APFS capacity recovery](SLICE-031-apfs-capacity.md).
 
 42. [Slice 032: Silent motion comparison](SLICE-032-motion-preview.md).
+
+[Motion comparison evidence](MOTION-PREVIEW-EVIDENCE.md) records bounded rendering, native shared transport, cancellation and final local/hosted acceptance.

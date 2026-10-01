@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 032 silent motion comparison under D-057 / R-040, after Slice 031 acceptance at a940665, hosted run 36840667407.
+Next: Select the next non-audio slice after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -128,4 +128,4 @@ Owner approved D-017 and Slice 004. HDR10Audit supplies an immutable process-loc
 
 Current approved build boundary: SLICE-031-apfs-capacity.md under D-045 through D-056 / R-035 through R-039. Scope includes a bounded generated APFS fixture, publication recovery wording, owned priority-preserving source/admission/publication workers, owned subprocess control and qualified regression diagnostics. Existing owner volumes and DSP changes are excluded. All nine criteria have scoped acceptance at a940665 and plain hosted run 36840667407.
 
-Current approved implementation boundary: SLICE-032-motion-preview.md. Add a bounded motion planner/renderer and app-owned player/temporary-file lifecycle beside the existing still controller. Reuse PicturePlan, source identity, ToolRunner and native AVPlayerView. No queue/session/audio schema change.
+Latest accepted boundary: SLICE-032-motion-preview.md at 5e9effa, hosted run 36845548454. The bounded renderer and app-owned player/temporary-file lifecycle reuse PicturePlan, source identity, ToolRunner and native AVPlayerView. MOTION-PREVIEW-EVIDENCE.md records the scoped acceptance and limits.

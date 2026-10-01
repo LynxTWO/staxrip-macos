@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 032 silent motion comparison under D-057 / R-040, after Slice 031 acceptance at a940665, hosted run 36840667407.
+Next: Select the next non-audio slice after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

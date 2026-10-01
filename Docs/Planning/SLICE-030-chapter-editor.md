@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-044 / R-034.
 
 SLICE STATE
-Milestone: Planning and generated metadata discovery complete; implementation next.
+Milestone: Implementation, focused/full local checks and generated native export complete; final Unicode/title-edge release regression passed; final native rebuild and hosted gate next.
 Blocked by: None.
-Evidence so far: CHAPTER-EDITING-RESEARCH.md records MKV/MP4 titles, gaps, fractional offsets and zero-length trim-boundary discovery.
+Evidence so far: CHAPTER-EDITING-RESEARCH.md plus local generated native session/queue/export receipts; hosted acceptance pending.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

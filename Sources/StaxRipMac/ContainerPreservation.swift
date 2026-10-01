@@ -20,7 +20,7 @@ struct ContainerPreservation: Sendable {
 
     static func tag(_ tags: [String: String]?, _ key: String, limit: Int) throws -> String {
         let values = (tags ?? [:]).filter { $0.key.lowercased() == key }.map(\.value)
-        guard Set(values).count <= 1, values.allSatisfy({ $0.utf8.count <= limit }) else {
+        guard Set(values.map { Data($0.utf8) }).count <= 1, values.allSatisfy({ $0.utf8.count <= limit }) else {
             throw failure("Ambiguous or excessive chapter/attachment text cannot be verified.")
         }
         return values.first ?? ""
@@ -64,15 +64,8 @@ struct ContainerPreservation: Sendable {
         }
     }
 
-    static func make(probe: MediaProbe, configuration: EncodeConfiguration) throws -> Self {
-        let p = configuration.picture
-        let chapters = p.start > 0 || p.end > 0 ? [] : try readChapters(probe)
-        if configuration.container == "MP4", !chapters.isEmpty {
-            guard chapters[0].start == 0,
-                  zip(chapters, chapters.dropFirst()).allSatisfy({ abs($0.end - $1.start) <= 0.0000001 }) else {
-                throw failure("MP4 chapters must start at zero and be contiguous. Choose MKV to preserve chapter gaps.")
-            }
-        }
+    static func make(probe: MediaProbe, configuration: EncodeConfiguration, chapterPlan: ChapterPlan? = nil) throws -> Self {
+        let chapters = try (chapterPlan ?? ChapterPlan.make(probe: probe, configuration: configuration)).expected
         let attachments = configuration.container == "MKV" && configuration.subtitleMode == "Keep embedded tracks"
             ? try readAttachments(probe) : []
         return Self(chapters: chapters, attachments: attachments)
@@ -84,7 +77,7 @@ struct ContainerPreservation: Sendable {
         guard actualChapters.count == chapters.count else { throw Self.failure("Output chapter count changed. Nothing published.") }
         for (expected, actual) in zip(chapters, actualChapters) {
             let tolerance = actual.tick + 0.0000001
-            guard actual.tick <= 0.001, expected.title == actual.title,
+            guard actual.tick <= 0.001, expected.title.utf8.elementsEqual(actual.title.utf8),
                   abs(expected.start - actual.start) <= tolerance,
                   abs(expected.end - actual.end) <= tolerance else {
                 throw Self.failure("Output chapter titles or times changed beyond the supported precision. Nothing published.")

@@ -9,6 +9,7 @@ struct StaxRipMacApp: App {
     @StateObject private var audio = AudioController()
     @StateObject private var presets = CustomPresetStore()
     @StateObject private var picturePreview = PicturePreviewController()
+    @StateObject private var chapters = ChapterEditorController()
     @StateObject private var batch = BatchController(journalURL: BatchJournal.defaultURL)
     @AppStorage("appearance") private var appearance = "System"
     var body: some Scene {
@@ -19,6 +20,7 @@ struct StaxRipMacApp: App {
                 .environmentObject(batch)
                 .environmentObject(audio)
                 .environmentObject(picturePreview)
+                .environmentObject(chapters)
                 .environmentObject(presets)
                 .task { await batch.discover() }
                 .onChange(of: model.jobs) { before, after in
@@ -33,6 +35,7 @@ struct StaxRipMacApp: App {
                     delegate.batch = batch
                     delegate.audio = audio
                     delegate.picturePreview = picturePreview
+                    delegate.chapters = chapters
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
                 }
@@ -61,9 +64,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var batch: BatchController?
     weak var audio: AudioController?
     weak var picturePreview: PicturePreviewController?
+    weak var chapters: ChapterEditorController?
     func applicationWillTerminate(_ notification: Notification) { audio?.invalidateMaster() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard exporter?.running == true || batch?.running == true || batch?.reviewing == true || audio?.running == true || picturePreview?.running == true else { return .terminateNow }
+        guard exporter?.running == true || batch?.running == true || batch?.reviewing == true || audio?.running == true || picturePreview?.running == true || chapters?.running == true else { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = "An operation is still running"
         alert.informativeText = "Wait for it to finish or cancel the active operation before quitting."

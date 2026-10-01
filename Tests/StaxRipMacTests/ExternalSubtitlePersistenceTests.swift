@@ -31,7 +31,7 @@ struct ExternalSubtitlePersistenceTests {
         var config = EncodeConfiguration(); config.externalSubtitle = reference
         let item = job(config)
         let document = SessionDocument(sourcePath: item.source, configuration: config, outputFolder: "/generated", outputStem: "workspace", jobs: [item])
-        #expect(document.version == 6)
+        #expect(document.version == 7)
         let data = try JSONEncoder().encode(document)
         let decoded = try JSONDecoder().decode(SessionDocument.self, from: data).validated()
         #expect(decoded.configuration.externalSubtitle == reference)
@@ -45,10 +45,10 @@ struct ExternalSubtitlePersistenceTests {
             old.jobs[0].configuration.externalSubtitle = nil
             _ = try JSONDecoder().decode(SessionDocument.self, from: JSONEncoder().encode(old)).validated()
         }
-        var future = document; future.version = 7
+        var future = document; future.version = 8
         #expect(throws: (any Error).self) { try future.validated() }
         var journal = BatchJournal(jobs: [item], statuses: [item.id: BatchStatus(phase: "Verifying")])
-        #expect(journal.version == 5)
+        #expect(journal.version == 6)
         let recovered = try JSONDecoder().decode(BatchJournal.self, from: JSONEncoder().encode(journal)).validated()
         #expect(recovered.jobs[0].configuration.externalSubtitle == reference)
         #expect(recovered.restoredStatuses()[item.id]?.phase == "Interrupted")
@@ -58,7 +58,7 @@ struct ExternalSubtitlePersistenceTests {
             old.jobs[0].configuration.externalSubtitle = nil
             _ = try old.validated()
         }
-        journal.version = 6
+        journal.version = 7
         #expect(throws: (any Error).self) { try journal.validated() }
     }
 
@@ -97,15 +97,19 @@ struct ExternalSubtitlePersistenceTests {
         model.outputFolder = root
         model.sourceURL = root.appendingPathComponent("previous.mp4")
         model.config.externalSubtitle = reference
+        let chapters = ChapterEdits(mode: .custom, entries: [.init(startMilliseconds: 0, endMilliseconds: 200, title: "Opening")])
+        model.config.chapterEdits = chapters
         model.addToQueue()
         try #require(model.jobs.count == 1)
         for _ in 0..<2 {
             model.config.externalSubtitle = reference
+            model.config.chapterEdits = chapters
             model.load(source)
             while model.loading { try await Task.sleep(for: .milliseconds(10)) }
             #expect(model.sourceURL == source && model.error == nil)
             #expect(model.config.externalSubtitle == nil && !model.canUndoSettings)
             #expect(model.jobs[0].configuration.externalSubtitle == reference)
+            #expect(model.config.chapterEdits == nil && model.jobs[0].configuration.chapterEdits == chapters)
             model.undoSettings()
             #expect(model.config.externalSubtitle == nil)
         }

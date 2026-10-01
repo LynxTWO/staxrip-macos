@@ -3,6 +3,7 @@ import Foundation
 struct EncodePlan: Sendable {
     let arguments: [String]
     let containerPreservation: ContainerPreservation
+    let chapterPlan: ChapterPlan
     let outputGeometry: OutputGeometry
     let outputDisplayAspect: OutputDisplayAspect
     let externalSubtitle: ExternalSubtitleExport?
@@ -80,10 +81,14 @@ struct EncodePlan: Sendable {
                 throw NativeExportError.invalid("Use MKV to preserve these subtitle formats, or remove subtitles for MP4.")
             }
         }
-        let containerPreservation = try ContainerPreservation.make(probe: probe, configuration: c)
+        let chapterPlan = try ChapterPlan.make(probe: probe, configuration: c)
+        let containerPreservation = try ContainerPreservation.make(probe: probe, configuration: c, chapterPlan: chapterPlan)
         var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe"] + orientation.inputArguments(stream: video.index) + ["-i", job.source]
         if external != nil {
             args += ["-f", "srt", "-protocol_whitelist", "file,pipe", "-i", staged.deletingLastPathComponent().appendingPathComponent("external.srt").path]
+        }
+        if chapterPlan.metadata != nil {
+            args += ["-f", "ffmetadata", "-protocol_whitelist", "file,pipe", "-i", staged.deletingLastPathComponent().appendingPathComponent("chapters.ffmetadata").path]
         }
         args += ["-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
         if trimmed {
@@ -133,15 +138,16 @@ struct EncodePlan: Sendable {
                      "-metadata:s:s:\(external.ordinal)", "title=\(external.reference.title)"]
         } else if !keepSubtitles || subtitles.isEmpty { args += ["-sn"] }
         if c.container == "MKV", keepSubtitles { args += ["-map", "0:t?", "-c:t", "copy"] }
-        args += ["-map_metadata", "0", "-map_chapters", trimmed ? "-1" : "0"]
+        let chapterInput = chapterPlan.metadata != nil ? (external == nil ? "1" : "2") : (chapterPlan.preservesSource ? "0" : "-1")
+        args += ["-map_metadata", "0", "-map_chapters", chapterInput]
         if c.container == "MP4" { args += ["-movflags", "+faststart"] }
         args += [staged.path]
-        return EncodePlan(arguments: args, containerPreservation: containerPreservation, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitle: external, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitle: external, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: (keepSubtitles ? subtitles.count : 0) + (external == nil ? 0 : 1),
-                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")" + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" } ?? "") + " · " + outputDisplayAspect.summary)
+                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")" + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" } ?? "") + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary)
     }
 
     static func validateHDRSettings(_ c: EncodeConfiguration) throws {

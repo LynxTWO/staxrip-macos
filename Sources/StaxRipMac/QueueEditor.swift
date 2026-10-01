@@ -61,6 +61,8 @@ struct QueueEditor: View {
                     .disabled(!["AAC", "Opus"].contains(draft.configuration.audio))
             }
             SubtitleOptionsView(configuration: $draft.configuration, sourceAvailable: !draft.isDemo)
+            Divider()
+            ChapterOptionsView(configuration: $draft.configuration, source: draft.isDemo ? nil : URL(fileURLWithPath: draft.source))
             VStack(alignment: .leading, spacing: 8) {
                 eyebrow("Output name")
                 HStack {

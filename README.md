@@ -77,7 +77,7 @@ Audio Lab can target −23, −16 or −14 LUFS. It measures after resampling/ch
 
 ## Picture and timeline (v0.8)
 
-Picture settings now support four-edge cropping, frame-rate-preserving BWDIF deinterlacing (flagged or all frames), and start/end times in seconds. End = 0 uses the source end. Trimmed jobs require AAC/Opus or no audio, and removed subtitles; chapters are omitted. Invalid ranges and crops fail before encoding. Output verification checks original-size cropped dimensions and duration. Resized dimensions, unusual timestamps and long/VFR inputs need broader validation. Native preview remains unfiltered.
+Picture settings now support four-edge cropping, frame-rate-preserving BWDIF deinterlacing (flagged or all frames), and start/end times in seconds. End = 0 uses the source end. Trimmed jobs require AAC/Opus or no audio, and removed subtitles. Source chapters are omitted by default; custom chapter lists are clipped and shifted to output time. Invalid ranges and crops fail before encoding. Output verification checks original-size cropped dimensions and duration. Resized dimensions, unusual timestamps and long/VFR inputs need broader validation. Native preview remains unfiltered.
 
 Picture settings introduced session version 2; current version details are in File handling above. Older supported sessions use neutral defaults for missing picture settings.
 
@@ -111,7 +111,7 @@ Batch cleanup failures now stop the current run and identify the remaining tempo
 
 **Inspect media contents** separates tracks, chapters and embedded attachments, including cover artwork. Chapter titles/times and declared file names/types are reported metadata; missing values stay explicit. The inspector bounds large lists and labels, does not extract attachments, and does not certify output preservation. See [container inspection evidence](Docs/Planning/CONTAINER-INSPECTION-EVIDENCE.md).
 
-Advanced queue publication now verifies the retained flat chapter titles/times and embedded-file payload hashes, sizes, names and declared types. MP4 requires chapters starting at zero with no gaps; use MKV for gaps. Trimmed jobs omit chapters, and only MKV with Keep embedded tracks retains file attachments. Cover artwork, editions and arbitrary metadata are outside this check. See [container preservation evidence](Docs/Planning/CONTAINER-PRESERVATION-EVIDENCE.md) for limits and local/native/hosted validation.
+Advanced queue publication now verifies the retained flat chapter titles/times and embedded-file payload hashes, sizes, names and declared types. MP4 requires chapters starting at zero with no gaps; use MKV for gaps. Trimmed jobs omit source chapters unless a custom chapter list is configured, and only MKV with Keep embedded tracks retains file attachments. Cover artwork, editions and arbitrary metadata are outside this check. See [container preservation evidence](Docs/Planning/CONTAINER-PRESERVATION-EVIDENCE.md) for limits and local/native/hosted validation.
 
 Queue output verification now checks resized raster fit before publication and reports the encoded frame dimensions. Even rounding has a strict less-than-two-pixel allowance; this does not promise square pixels or validate picture content. See [geometry evidence and native access limits](Docs/Planning/PICTURE-GEOMETRY-EVIDENCE.md).
 
@@ -132,3 +132,9 @@ The initial support is one plain SRT of at most 1 MiB, with at most 10000 sequen
 Advanced queue exports read each nonempty regular source in full before inspection and again before publication. A changed content fingerprint blocks publication, even if stream metadata still matches. Progress and cancellation remain responsive; large or slow sources add I/O time, and cancellation waits for pending filesystem reads. This compares source content at check boundaries, not an immutable snapshot. See [source stability evidence](Docs/Planning/SOURCE-STABILITY-EVIDENCE.md).
 
 Source imports now offer **Cancel source loading**, retaining the prior workspace until a current successful read. Replacement requests cancel the current native/fallback reader and start only the latest selection after it settles. Return to demo also cancels outstanding import work. A waiting message remains until cancellation finishes; this does not provide durable file permissions. See [import lifecycle evidence](Docs/Planning/SOURCE-IMPORT-EVIDENCE.md).
+
+### Chapter authoring
+
+The Chapters section (Option-Command-5) preserves, removes or authors a source-timeline chapter list. Its isolated draft supports explicit source import, titles, millisecond ranges, split, sort and removal. Apply saves the list; Cancel retains the current recipe. Sessions and independent queue copies retain chapter intent; reusable presets and new source imports do not carry it across sources.
+
+Custom chapters support zero-origin video with a known duration up to seven days, at most 1000 chapters per list. MP4 requires an output list starting at zero without gaps; MKV can retain gaps. Trim clips overlapping ranges and shifts them to output time; boundary-only entries are excluded. Publication independently verifies output titles and timing. Nested editions, external chapter files and player seek behavior are not covered.

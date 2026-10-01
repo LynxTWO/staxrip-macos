@@ -1,5 +1,6 @@
 import Foundation
 import AVFoundation
+import Darwin
 
 struct LoadedSource: Sendable {
     let nativePreview: Bool
@@ -13,7 +14,9 @@ enum SourceLoader {
     static func read(_ url: URL, tools: FFmpegTools? = FFmpegTools.discover(),
                      nativeReader: Reader = { try await native(AVURLAsset(url: $0)) }) async throws -> LoadedSource {
         try Task.checkCancellation()
-        guard url.isFileURL else { throw NativeExportError.invalid("Choose a local source file.") }
+        guard url.isFileURL, !url.path.utf8.contains(0) else { throw NativeExportError.invalid("Choose a local source file.") }
+        try await requireRegularSource(url)
+        try Task.checkCancellation()
         do {
             let result = try await nativeReader(url)
             try Task.checkCancellation()
@@ -37,6 +40,25 @@ enum SourceLoader {
                 }
             }
             throw NativeExportError.invalid("Neither native preview nor the available media tools could read a video track from this source.\n\n" + nativeError)
+        }
+    }
+
+    private static func requireRegularSource(_ url: URL) async throws {
+        // Inspect the path without opening it: native open on a FIFO can remain
+        // blocked even after asset cancellation. This is not an input snapshot.
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            DispatchQueue.global(qos: .utility).async {
+                var info = stat()
+                guard fstatat(AT_FDCWD, url.path, &info, 0) == 0 else {
+                    continuation.resume(throwing: NativeExportError.invalid("Could not inspect the source file (system error \(errno)). Choose the source again."))
+                    return
+                }
+                guard info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG), info.st_size > 0 else {
+                    continuation.resume(throwing: NativeExportError.invalid("Choose a nonempty regular source file. Live streams and special files are unsupported."))
+                    return
+                }
+                continuation.resume()
+            }
         }
     }
 

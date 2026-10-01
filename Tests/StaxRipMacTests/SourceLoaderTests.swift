@@ -21,6 +21,26 @@ struct SourceLoaderTests {
         #expect(SourceLoader.summary(width: 160, height: 96, rate: 24, seconds: 3_600_000).hasSuffix("60000:00"))
     }
 
+    @Test(.timeLimit(.minutes(1))) func specialEmptyAndMissingPathsNeverStartNativeReadsButRegularSymlinksWork() async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let fifo = root.appendingPathComponent("held.mp4"), empty = root.appendingPathComponent("empty.mp4")
+        try #require(mkfifo(fifo.path, 0o600) == 0)
+        try Data().write(to: empty)
+        for url in [fifo, empty, root, root.appendingPathComponent("missing.mp4"), URL(fileURLWithPath: "/dev/null")] {
+            await #expect(throws: (any Error).self) {
+                try await SourceLoader.read(url, tools: nil, nativeReader: { _ in
+                    Issue.record("An invalid source reached the native reader")
+                    return LoadedSource(nativePreview: false, info: "unexpected")
+                })
+            }
+        }
+        let regular = root.appendingPathComponent("regular.mp4"), link = root.appendingPathComponent("link.mp4")
+        try Data([1]).write(to: regular)
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: regular)
+        let result = try await SourceLoader.read(link, tools: nil, nativeReader: { _ in LoadedSource(nativePreview: false, info: "accepted regular path") })
+        #expect(result.info == "accepted regular path")
+    }
+
     private final class HeldResource: NSObject, AVAssetResourceLoaderDelegate, @unchecked Sendable {
         let entered: AsyncStream<Void>.Continuation
         init(_ entered: AsyncStream<Void>.Continuation) { self.entered = entered }
@@ -30,6 +50,7 @@ struct SourceLoaderTests {
     }
     @Test(.timeLimit(.minutes(1))) func heldNativeReadCancelsWithoutStartingFallback() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try Data([1]).write(to: root.appendingPathComponent("generated.mp4"))
         let marker = root.appendingPathComponent("fallback-called"), wrapper = root.appendingPathComponent("probe")
         try "#!/bin/zsh\n/usr/bin/touch '\(marker.path)'\nexit 1\n".write(to: wrapper, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: wrapper.path)
@@ -75,6 +96,7 @@ struct SourceLoaderTests {
     }
     @Test(.timeLimit(.minutes(1))) func fallbackCancellationWaitsForActualProcessExit() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        try Data([1]).write(to: root.appendingPathComponent("generated.mkv"))
         let pidFile = root.appendingPathComponent("pid"), wrapper = root.appendingPathComponent("probe")
         try "#!/bin/zsh\nprintf '%s' $$ > '\(pidFile.path)'\nexec /bin/sleep 30\n".write(to: wrapper, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: wrapper.path)

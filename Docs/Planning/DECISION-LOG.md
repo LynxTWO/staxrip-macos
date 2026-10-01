@@ -90,6 +90,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-078 | 2026-10-01 | Preserve declared ten-bit SDR HEVC during video copy | Confirmed | |
 | D-079 | 2026-10-01 | Scope idle-sleep prevention to active video exports | Confirmed | |
 | D-080 | 2026-10-01 | Verified MKV caption playback choices | Confirmed | |
+| D-081 | 2026-10-01 | Read-only track identity and role inspection | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1266,3 +1267,20 @@ Consequences: Session 9 and recovery 8 carry only optional typed caption intent;
 Revisit when: M1 cannot preserve unrelated defaults, container flags differ, an older decoder loses intent, or ordinary regression contradicts acceptance.
 
 D-080 outcome: Slice 042 accepted at ba5ba2c, ordinary hosted run 36911094620. Typed MKV playback choices, protected legacy defaults, full caption checks and native save/reopen/export passed. Owner recovery state restored. No player interoperability, audio algorithm, merge or release claim.
+
+
+## D-081: Read-only track identity and role inspection
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 043 / R-053 after Slice 042 acceptance under the owner's autonomous non-audio completion delegation. Delegated to AI recommendation.
+
+Need: understand which reported track is default, forced, commentary or intended for accessibility before selecting it. Authority: owner native app completion and existing inspection/track-routing extension. Worst case: missing or misleading labels lead to choosing the wrong track. Consequence class: user_data. Existing control: source probe, immutable input and explicit stream-index selection. Gap: current inspector omits titles and both inspection/routing omit disposition hints.
+
+Options considered: send users to external tools; list every raw flag without explanation; show five common declared roles with bounded identity labels and explicit unknown states. Choose the third. Keep the same source/probe/selection owners and make no media or saved-data changes.
+
+Source fact: FFmpeg defines default, forced, hearing-impaired, visual-impaired and commentary dispositions as declared stream roles. Reference: https://www.ffmpeg.org/doxygen/trunk/avformat_8h.html . They do not verify content suitability or player behavior. Use plain accessible wording and qualify the report at the point of use.
+
+Consequences: Pure presentation helper and two existing views only, with proportionate generated probe/native checks. No parser, schema, encoder, DSP, timing, merge or release changes. Incomplete and invalid flags stay visible. Reuse existing sanitation and label bounds; retain selection by original stream index.
+
+Revisit when: Native readability or selection behavior regresses, actual probe fields contradict displayed roles, or broader flag/editing semantics are needed.

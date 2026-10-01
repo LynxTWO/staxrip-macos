@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-082 / R-054.
 
 SLICE STATE
-Milestone: M1 negative control and M2 implementation complete; M3 native/full regression next.
+Milestone: M1/M2 and optimized native walkthrough complete; ordinary full local/hosted regression next.
 Blocked by: None within scope.
-Evidence: NATIVE-DURATION-EVIDENCE.md records old-policy shorter/longer publication and 15 focused passing tests after the correction.
+Evidence: NATIVE-DURATION-EVIDENCE.md records old-policy shorter/longer publication, 15 focused tests and native six-second export with independent verification.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

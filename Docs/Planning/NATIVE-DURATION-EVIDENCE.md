@@ -19,6 +19,12 @@ NativeExportDuration requires finite positive source seconds before staging. Nat
 
 Fifteen tests in three suites passed in 1.473 seconds: NativeOutputDurationTests, ExportTests and OutputDurationTests, with no skips in this selection. These include invalid source values, strict 250-millisecond boundaries from one second through one day, real shorter/longer staged refusal, controller failure state, explicit successful retry, original/prior-output/unrelated-staging preservation, all three native presets and existing cancellation/cleanup/publication outcomes. Private log: work/native-duration/focused.log. Existing ChapterPersistenceTests asynchronous Thread.isMainThread build warnings remain.
 
+## Native optimized walkthrough
+
+Optimized build f385cec completed in 18.27 seconds. In the actual app, opened a generated six-second silent source, selected H.264 720p, chose a new MP4 name in the attached save sheet and received Export complete. Visible text and the accessibility tree both explained the strict total-duration check and the frame/sync limitations. No heard VoiceOver claim is made.
+
+Independent ffprobe decoded-frame counting found 144 H.264 frames, 160 by 96, exactly 6.000 seconds and no audio; output size was 210201 bytes. Whole-file source/prior-output hashes remained unchanged, no owned staging remained, and the owner's recovery journal stayed byte-identical. The app was quit normally. Private receipt: work/native-duration/native/verified.json. This single native fixture does not expand the runtime check into a decoded-completeness guarantee.
+
 ## Pending acceptance
 
-Native optimized walkthrough and ordinary full local/hosted regression remain pending. No full slice acceptance, decoded completeness, A/V sync or production-ready claim yet. A repeat of the historical hosted mastering cancellation failure reopens qualification without blind retry or diagnostic expansion.
+Ordinary full local/hosted regression remains pending. No full slice acceptance, decoded completeness, A/V sync or production-ready claim yet. A repeat of the historical hosted mastering cancellation failure reopens qualification without blind retry or diagnostic expansion.

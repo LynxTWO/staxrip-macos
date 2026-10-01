@@ -81,6 +81,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-069 | 2026-10-01 | Preserve caption title bytes outside command arguments | Superseded | D-070 |
 | D-070 | 2026-10-01 | Use literal title argument files without remapping source metadata | Confirmed | |
 | D-071 | 2026-10-01 | Diagnose second-caption cancellation entry before repair | Confirmed | |
+| D-072 | 2026-10-01 | Qualify caption snapshot worker ownership | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1108,3 +1109,16 @@ Options considered: raise the guard or serialize/exclude tests; guess at a produ
 Consequences: Preserve the ten-second entry guard, two-minute test limit, all final settlement/PID/output/next-job assertions and default full-suite scheduling. Record a bounded list of monotonic relative timestamps around current task-local source/caption/tool boundaries and status changes, plus the phase before cancellation. No media payloads, owner paths, credentials or unbounded logs. Ordinary failure remains failure even if the subsequent diagnostic focused case passes. Diagnose before selecting a repair; remove temporary tracing/workflow additions before final plain qualification. No next product slice, audio changes, merge or release.
 
 Revisit when: The correlated trace identifies a bounded correction, or this instrumentation fails to distinguish entry from observation/setup delays.
+
+
+## D-072: Qualify caption snapshot worker ownership
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Under R-048, instrument the existing SubRip snapshot writer and test it under the existing bounded worker-contention harness. If that actual boundary reproduces delayed dispatch, replace only its shared utility dispatch with an operation-owned queue preserving task priority, then rerun the same guard and full qualification. Delegated to AI recommendation.
+
+Because: Hosted diagnostic run 36876558655 repeats the failure. Both caption readers have entered by 9.391 seconds; the ten-second post-start guard expires at 16.445 seconds before encoding, and cancellation settles at 55.395 seconds. Source/caption/tool workers entered promptly at their observed boundaries. The same runner's focused case passes in 0.313 seconds. The intervening snapshot writer still submits to DispatchQueue.global utility and awaits settlement, making dispatch delay a specific testable hypothesis. Title writes already use owned priority-preserving dispatch; this case has no chapter metadata.
+
+Consequences: Retain the complete cancellation test, ten-second entry guard, two-minute limit, all PID/cleanup/publication assertions and default scheduling. Add one opt-in bounded actual snapshot-worker contention probe with a fixed one-second entry expectation and three-second joined competing load. Capture before/after receipts. Preserve snapshot bytes, exclusive creation and cancellation settlement. Do not change unrelated chapter writers, generic ToolRunner, audio processing or test workloads. Remove temporary phase traces and workflow diagnosis before final ordinary checks; the bounded opt-in worker probe may remain as a regression.
+
+Revisit when: The writer boundary does not reproduce dispatch delay, an owned worker does not correct it, or the full hosted guard still fails.

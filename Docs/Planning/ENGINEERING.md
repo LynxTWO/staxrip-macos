@@ -292,3 +292,5 @@ R-048 / D-069 keeps byte-exact caption titles through a private bounded FFmetada
 R-048 / D-070 replaces the rejected FFmetadata-section implementation with literal bounded title argument files consumed by FFmpeg's documented slash-prefixed option syntax. No extra demux inputs or source stream metadata remapping remain. Preserve the original chapter input formula and exact added-title/cue comparisons; retain failed delimiter and metadata experiments as evidence.
 
 R-048 / D-071 permits bounded temporary cancellation-entry timestamps and a same-runner focused comparison. Preserve ordinary full-suite failure, scheduling, deadlines and all settlement/publication assertions. This is diagnosis, not acceptance or permission to alter unrelated worker scheduling.
+
+R-048 / D-072 isolates actual SubRip snapshot dispatch under bounded CPU contention. A measured failure permits only the matching owned priority-preserving worker repair; no deadline or ordinary scheduling changes. Original snapshot bytes, exclusive creation and settled cancellation remain mandatory.

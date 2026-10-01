@@ -49,7 +49,20 @@ struct OutputDisplayAspectIntegrationTests {
         }
         let batch = BatchController(journalURL: root.appendingPathComponent("journal.json")); active = batch
         batch.tools = tools; batch.encoders = ["libx264", "libx265", "libsvtav1"]
-        batch.start(jobs); try await finish(batch)
+        batch.start(jobs)
+        let began = Date()
+        var lastPhases = "", phaseRecords = 0
+        do {
+            while batch.running {
+                let phases = jobs.enumerated().map { "\($0.offset + 1):\(batch.statuses[$0.element.id]?.phase ?? "Pending")" }.joined(separator: " ")
+                if phases != lastPhases, phaseRecords < 96 {
+                    print("Display matrix \(String(format: "%.3f", Date().timeIntervalSince(began)))s \(phases)")
+                    lastPhases = phases; phaseRecords += 1
+                }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+        } catch { batch.cancel(); throw error }
+        print("Display matrix finished after \(String(format: "%.3f", Date().timeIntervalSince(began)))s; inspecting 12 outputs")
         for item in jobs {
             let status = try #require(batch.statuses[item.id])
             try #require(status.phase == "Completed", Comment(rawValue: status.detail))

@@ -35,3 +35,5 @@ Workspace source imports now own native/fallback cancellation and latest-only re
 Native Quick Export final publication now awaits a background filesystem operation and preserves save outcomes across late cancellation, with scoped [native publication evidence](Planning/NATIVE-PUBLICATION-EVIDENCE.md). Native source preparation, other synchronous I/O and destination-dialog usability remain separate.
 
 Advanced declared output-duration verification now uses a fixed strict 250-millisecond allowance for known plans, with explicit unknown-source reporting. [Duration evidence](Planning/OUTPUT-DURATION-EVIDENCE.md) includes real shortened/extended-output refusal and long/trim checks. Decoded completeness, per-track timing and audiovisual synchronization remain separate.
+
+Native Quick Export preset accessibility and readiness-driven subprocess output draining have scoped [local/native/hosted evidence](Planning/NATIVE-PRESET-ACCESSIBILITY-EVIDENCE.md). The 96-child starvation reproduction now passes; arbitrary callback, descendant-pipe and filesystem latency guarantees remain outside this proof.

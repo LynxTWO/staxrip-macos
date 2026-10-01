@@ -44,6 +44,10 @@ struct QuickExportView: View {
                                 .background(exporter.preset == preset ? Color.accent.opacity(0.09) : Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 13))
                                 .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(exporter.preset == preset ? Color.accent : .clear))
                         }.buttonStyle(.plain).disabled(exporter.running || audio.running)
+                            .accessibilityLabel("Native \(AccessibilityLanguage.spokenCodecs(preset.rawValue)) preset")
+                            .accessibilityValue(exporter.preset == preset ? "Selected" : "Not selected")
+                            .accessibilityInputLabels([Text(preset.rawValue)])
+                            .accessibilityHint(AccessibilityLanguage.nativePresetHint(preset))
                     }
                 }
                 Label("Apple’s preset controls video and supported audio tracks. Workspace CRF, crop, audio, subtitles and queued configurations are not used here.", systemImage: "info.circle")

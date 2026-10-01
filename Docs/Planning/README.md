@@ -114,3 +114,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 42. [Slice 032: Silent motion comparison](SLICE-032-motion-preview.md).
 
 [Motion comparison evidence](MOTION-PREVIEW-EVIDENCE.md) records bounded rendering, native shared transport, cancellation and final local/hosted acceptance.
+
+43. [Slice 033: queue outcomes and compact review](SLICE-033-queue-outcomes.md).

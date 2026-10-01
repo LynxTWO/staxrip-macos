@@ -26,13 +26,19 @@ struct VideoCopyContract: Sendable {
         }
         return value
     }
+    private static func supportsPictureFormat(_ video: MediaProbe.Stream) -> Bool {
+        if video.pix_fmt == "yuv420p" { return true }
+        return video.codec_name == "hevc" && video.profile == "Main 10" && video.pix_fmt == "yuv420p10le" &&
+            video.color_primaries == "bt709" && video.color_transfer == "bt709" &&
+            video.color_space == "bt709" && video.color_range == "tv"
+    }
     static func make(probe: MediaProbe, configuration: EncodeConfiguration) throws -> Self {
         try validateSettings(configuration)
         let formats = (probe.format?.format_name ?? "").split(separator: ",")
         guard formats.contains("mov") || formats.contains("matroska"),
               let video = probe.video, ["h264", "hevc"].contains(video.codec_name ?? ""),
               video.disposition?["attached_pic"] != 1,
-              video.pix_fmt == "yuv420p", video.field_order == "progressive", video.sample_aspect_ratio == "1:1",
+              supportsPictureFormat(video), video.field_order == "progressive", video.sample_aspect_ratio == "1:1",
               !["smpte2084", "arib-std-b67"].contains(video.color_transfer ?? ""),
               try SourceOrientation.read(video) == .identity,
               (video.side_data_list ?? []).allSatisfy({ $0.side_data_type == "Display Matrix" }),
@@ -40,7 +46,7 @@ struct VideoCopyContract: Sendable {
               probe.seconds.isFinite, probe.seconds > 0, probe.seconds <= maximumSeconds,
               let width = video.width, let height = video.height, width > 0, height > 0,
               width.isMultiple(of: 2), height.isMultiple(of: 2) else {
-            throw failure("Use a zero-start MP4/QuickTime or Matroska source with upright, progressive, square-pixel 8-bit SDR H.264 or HEVC video, up to 48 hours. Other sources need a supported encoding workflow.")
+            throw failure("Use a zero-start MP4/QuickTime or Matroska source with upright, progressive, square-pixel video, up to 48 hours. Copy supports 8-bit SDR H.264/HEVC, or 10-bit HEVC Main 10 with declared BT.709 limited-range SDR. Other formats need a supported workflow.")
         }
         _ = try VideoCopyPacket.hash(video.extradata_hash ?? "")
         guard let size = video.extradata_size, size > 0, size <= 64 * 1024 * 1024 else {

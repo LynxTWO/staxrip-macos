@@ -49,20 +49,21 @@ final class ToolRunner: @unchecked Sendable {
                             }
                         }
                     } catch { continuation.resume(throwing: error); return }
+                    lock.lock()
+                    if cancelled { lock.unlock(); continuation.resume(throwing: CancellationError()); return }
+                    guard process == nil else {
+                        lock.unlock()
+                        continuation.resume(throwing: NativeExportError.invalid("This tool runner already owns an active process.")); return
+                    }
                     let group = DispatchGroup()
                     // Completion joins process exit and both fully drained, closed readers.
                     // No shared worker waits for a child or another dispatch block.
                     for _ in 0..<3 { group.enter() }
                     task.terminationHandler = { _ in group.leave() }
-                    lock.lock()
-                    if cancelled { lock.unlock(); task.terminationHandler = nil; continuation.resume(throwing: CancellationError()); return }
-                    guard process == nil else {
-                        lock.unlock(); task.terminationHandler = nil
-                        continuation.resume(throwing: NativeExportError.invalid("This tool runner already owns an active process.")); return
-                    }
                     process = task
                     do { try task.run() } catch {
                         process = nil; lock.unlock(); task.terminationHandler = nil
+                        for _ in 0..<3 { group.leave() }
                         continuation.resume(throwing: error); return
                     }
                     lock.unlock()

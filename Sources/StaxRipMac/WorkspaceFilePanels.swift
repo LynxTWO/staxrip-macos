@@ -24,6 +24,7 @@ protocol WorkspacePanelPresenting: AnyObject {
 @MainActor
 final class WorkspaceFilePanels: WorkspacePanelPresenting {
     private var active = false
+    private var nativeNameDelegate: NativeOutputNameDelegate?
     private func window() -> NSWindow? {
         guard !active, let window = NSApp.mainWindow ?? NSApp.windows.first(where: {
             $0.isVisible && $0.canBecomeMain && !($0 is NSPanel)
@@ -70,6 +71,9 @@ final class WorkspaceFilePanels: WorkspacePanelPresenting {
             panel.nameFieldStringValue = source.deletingPathExtension().lastPathComponent + "_native.mp4"
             panel.allowedContentTypes = [.mpeg4Movie]
             panel.message = "Choose a new output name. Existing files will not be replaced."
+            let delegate = NativeOutputNameDelegate()
+            nativeNameDelegate = delegate
+            panel.delegate = delegate
         case .exportQueue:
             panel = NSSavePanel()
             panel.title = "Export prototype queue"
@@ -81,6 +85,7 @@ final class WorkspaceFilePanels: WorkspacePanelPresenting {
             let selected = response == .OK ? panel.url : nil
             panel.orderOut(nil)
             DispatchQueue.main.async {
+                self?.nativeNameDelegate = nil
                 self?.active = false
                 completion(selected)
             }

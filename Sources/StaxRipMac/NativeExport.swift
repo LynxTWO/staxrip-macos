@@ -53,6 +53,9 @@ struct ExportPublication {
         guard result == 0 else {
             let code = errno
             if code == EEXIST { throw NativeExportError.invalid("An output already exists at that name. Choose a new name; nothing was overwritten.") }
+            if code == ENOSPC {
+                throw NativeExportError.invalid("Could not publish the output: No space left on device. Free space on the destination or choose another folder, then retry. No output was published.")
+            }
             throw NativeExportError.invalid("Could not publish the output: \(String(cString: strerror(code))). Choose a local destination that supports hard links.")
         }
     }

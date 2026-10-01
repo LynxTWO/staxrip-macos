@@ -12,6 +12,7 @@ Requires Xcode / Swift 6 and macOS 14 or newer. Run `./build.command`, then open
 - **Queue:** edit, duplicate, reorder and remove configurations. Run sequential FFmpeg encodes with progress, cancellation, verification and Finder reveal.
 - **Session:** explicitly save and reopen source references, workspace settings, output naming and queue. Source media is not copied. Queue-only JSON export is a reference format, not a session.
 - **Appearance:** Auto, Light and Dark modes apply to this app only.
+- **App identity:** original clapperboard artwork is generated into the app bundle. The Dock shows measured encoding progress, indeterminate work or attention, with menu shortcuts back to the workspace. Native layered system variants remain in progress; see [icon evidence](Docs/Planning/DYNAMIC-ICON-EVIDENCE.md).
 
 Keyboard shortcuts: Command-O opens media, Command-J adds a configuration, Command-Shift-S saves a session, and Command-Shift-O opens a session.
 

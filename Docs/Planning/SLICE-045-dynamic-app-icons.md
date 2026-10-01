@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-083 / R-055.
 
 SLICE STATE
-Milestone: M1 icon pipeline feasibility next.
-Blocked by: None within scope.
-Evidence: Official clapperboard reference, Apple Icon Composer and AppKit Dock documentation reviewed; no implemented icon claim yet.
+Milestone: M1 fallback artwork renders pass initial inspection; independent read-only status work proceeds while modern tooling awaits license consent.
+Blocked by: Icon Composer first-run agreement requires owner confirmation before acceptance; no agreement has been accepted.
+Evidence: DYNAMIC-ICON-EVIDENCE.md records original fallback artwork, corrected native Light/Dark sidebar and Finder icon, real export, ten focused checks and 285-test local regression. Modern layered and visual Dock checks remain open.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves
@@ -19,7 +19,7 @@ Open the built app from Finder. Its clapperboard/frame identity appears in the D
 
 M1: Author original editable vector artwork inspired by the official clapperboard, with no copied upstream bitmap. Establish Icon Composer source, default/dark/mono previews and real asset compilation on the installed modern toolchain. Establish a deterministic ICNS fallback from the same source for macOS 14 and older build toolchains. Inspect large and small renders before product integration. If the modern pipeline cannot be qualified, record that limit before choosing a narrower implementation.
 
-M2: Package icon resources through build.command without committing binaries. Add a shared brand treatment in the sidebar. Derive a small immutable Dock presentation from existing observable controller state, retaining system-rendered artwork and badges. Add native Dock navigation/status menu. Keep all operation/publication/cancellation owners unchanged; read audio activity only without DSP changes.
+M2: Independent status work and the verified fallback may proceed while modern-tool license consent is pending; full artwork acceptance still requires M1. Package icon resources through the shared build.command/package.command helper without committing binaries. Add a shared brand treatment in the sidebar. Derive a small immutable Dock presentation from existing observable controller state, retaining system-rendered artwork and badges. Add native Dock navigation/status menu. Keep all operation/publication/cancellation owners unchanged; read audio activity only without DSP changes.
 
 M3: Focused state-transition checks for known/unknown progress, preparation/finishing, failure/cleanup, success/reset and multiple owners; actual optimized native export/settlement and menu navigation; asset/bundle verification; full ordinary local/hosted regression and selected planning audit. Use existing generated fixtures and preserve owner recovery state.
 

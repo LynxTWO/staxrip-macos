@@ -68,8 +68,7 @@ struct WorkspaceView: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
-                Image(systemName: "square.stack.3d.up.fill")
-                    .font(.system(size: 25, weight: .semibold)).foregroundStyle(Color.accent)
+                StaxRipBrandMark()
                 VStack(alignment: .leading, spacing: 1) {
                     Text("StaxRip").font(.system(size: 22, weight: .bold, design: .rounded))
                     Text("MADE FOR MAC").font(.system(size: 8, weight: .bold)).tracking(2).foregroundStyle(.secondary)

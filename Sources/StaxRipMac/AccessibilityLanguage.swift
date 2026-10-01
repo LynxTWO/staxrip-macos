@@ -18,6 +18,12 @@ enum AccessibilityLanguage {
         default: return "Applies this encoding configuration."
         }
     }
+    static func nativePresetHint(_ preset: NativePreset) -> String {
+        let codec = preset == .hevcHD
+            ? "HEVC means High Efficiency Video Coding."
+            : "H two six four is also called AVC, or Advanced Video Coding."
+        return spokenCodecs(preset.detail) + " " + codec + " Workspace encoding settings are not applied by Quick Export."
+    }
     static func channel(_ label: String) -> String {
         switch label {
         case "FL": return "Front left"

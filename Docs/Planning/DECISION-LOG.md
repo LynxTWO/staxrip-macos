@@ -54,6 +54,18 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-042 | 2026-10-01 | Correct native output name collisions | Confirmed | |
 | D-043 | 2026-10-01 | Review batch destinations before starting | Confirmed | |
 | D-044 | 2026-10-01 | Author and verify chapter lists | Confirmed | |
+| D-045 | 2026-10-01 | Qualify APFS full-destination recovery | Confirmed | |
+| D-046 | 2026-10-01 | Observe recurring hosted timing failures | Confirmed | |
+| D-047 | 2026-10-01 | Compare isolated hosted video timing | Confirmed | |
+| D-048 | 2026-10-01 | Identify the delayed export boundary | Confirmed | |
+| D-049 | 2026-10-01 | Distinguish source reader entry and worker delay | Confirmed | |
+| D-050 | 2026-10-01 | Preserve requested source-check worker priority | Confirmed | |
+| D-051 | 2026-10-01 | Observe actual source-read dispatch boundary | Confirmed | |
+| D-052 | 2026-10-01 | Isolate source scanning from shared dispatch contention | Confirmed | |
+| D-053 | 2026-10-01 | Isolate final publication from shared dispatch contention | Confirmed | |
+| D-054 | 2026-10-01 | Observe the actual HDR cancellation test boundary | Confirmed | |
+| D-055 | 2026-10-01 | Own source admission and process control dispatch | Confirmed | |
+| D-056 | 2026-10-01 | Retire temporary hosted dispatch tracing | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -683,3 +695,172 @@ Options considered: raw editable FFmpeg metadata; title-only overrides; typed so
 Consequences: Millisecond authoring, explicit import rounding, custom trim intersection/offset, MP4 continuity checks, bounded owned metadata staging and retained output audits. Add native draft editing, operation ownership, session v7/recovery v6 and source-specific preset/reset rules. Default source chapter behavior stays compatible. See CHAPTER-EDITING-RESEARCH.md for current evidence and limits.
 
 Revisit when: Actual chapter outputs disagree, nonzero/unknown timelines or nested editions are needed, or player compatibility expands beyond metadata verification.
+
+## D-045: Qualify APFS full-destination recovery
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Build Slice 031 after scoped Slice 030 closure under owner overnight autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: The release ledger names APFS capacity failure as unqualified. Blank-image discovery established a bounded new 64 MiB APFS fixture with a distinct mount device and successful detach.
+
+Options considered: rely on HFS+ evidence; fill an existing volume; qualify a new isolated APFS image. Choose the third with unique ownership, capacity and filesystem checks. Existing HFS+ assertions remain unchanged.
+
+Consequences: Opt-in generated fixture only, actual ENOSPC, failed first job and later pending jobs, source/prior-output protection, cleanup and explicit successful retry. Native checks preserve the prior recovery journal. No existing volume, audio, shared-container quota, network or source/journal-full claim. Primary references: https://support.apple.com/guide/disk-utility/create-a-disk-image-dskutl11888/mac and https://support.apple.com/guide/disk-utility/add-delete-or-erase-apfs-volumes-dskua9e6a110/mac, reviewed 2026-10-01.
+
+Revisit when: Fixture ownership cannot be proven, APFS exhaustion occurs in a different phase, detach fails, or broader storage behavior is requested.
+
+## D-046: Observe recurring hosted timing failures
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend active Slice 031 regression diagnosis under owner autonomous non-audio delegation. Delegated to AI recommendation. This is a bounded observation, not permission to weaken a gate or alter parked audio.
+
+Because: Hosted runs 36825820502 and 36826611045 failed existing timing checks despite passing local release/debug and native capacity work. The second destination trace stalled at Verifying, while the first stalled at Inspecting; existing audio cancellation also exceeded its bound on the second run. No single product cause is established.
+
+Options considered: retry unchanged until green; increase deadlines or reduce parallel work; observe the unchanged full command on the ephemeral hosted runner. Choose the third.
+
+Consequences: R-035 gains one read-only observer, bounded to five minutes of test-process discovery and one one-second sample about thirty seconds into that process. Record CPU count, selected descendant CPU/RSS/state and test-process stacks only. No environment/argument dumps, secrets, owner media, arbitrary process sampling, test exclusions, scheduling/deadline/assertion changes or DSP edits. Preserve the original test exit status, stop the observer with the test and record observation overhead. Only generated CI test execution is observed.
+
+Revisit when: The observation identifies a repairable cause, fails to discriminate or materially perturbs timing. Any product repair outside APFS publication requires a separately recorded scope decision.
+
+## D-047: Compare isolated hosted video timing
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend active Slice 031 diagnosis under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: D-046 observed an idle main loop and active existing meter work but did not locate a blocked video operation. Run 36827818289 retained six existing timeout failures. A single stack snapshot cannot prove starvation.
+
+Options considered: speculate about DSP or scheduler changes; repeat unchanged full runs; compare the affected non-audio suites in an additional focused execution. Choose the comparison, followed by the unchanged full gate.
+
+Consequences: R-035 permits one additional hosted diagnostic step selecting QueueDestinationReviewTests, PublicationResponsivenessTests, ExportSourceStabilityTests, OutputDisplayAspectIntegrationTests and ChapterPersistenceTests. Preserve every fixture, assertion, deadline and default scheduling policy. Report the focused step independently; it cannot replace full-suite acceptance. The existing full command and bounded observer remain intact. No production, audio or test-body changes are authorized by this diagnostic decision.
+
+Revisit when: The focused execution fails, or succeeds while the full suite fails. Record the actual comparison before choosing any further repair or experiment.
+
+## D-048: Identify the delayed export boundary
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Extend the active Slice 031 diagnostic trace under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: The same hosted runner passed 19 focused tests in 8.852 seconds but failed six full-suite timeout checks. The existing trace stops at Verifying, which includes probing, content checking and publication. No exact wait boundary is known.
+
+Options considered: promote workers without proof; change test scheduling; include existing production status details in the generated destination test trace. Choose the last.
+
+Consequences: R-035 permits only bounded detail/progress/publication observations for the existing three-job test. No new fixture, injected worker, product code, scheduling, deadline or assertion change. Keep focused and full results separate. Source fingerprints and publication currently use utility dispatch queues while tool workers use userInitiated. Apple documents resource priority differences, but this is not evidence that a particular queue starved: https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/PrioritizeWorkAtTheTaskLevel.html, reviewed 2026-10-01.
+
+Revisit when: The trace identifies a boundary or fails to discriminate. A product repair still requires its own scope and negative/positive evidence.
+
+## D-049: Distinguish source reader entry and worker delay
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Add one bounded forwarding observation to the existing generated destination test under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: D-048 locates a 28.306-second prepublication recheck of a 20 KB source. A concurrent stack sample contains no active fingerprint scan. Worker priority and asynchronous reader entry remain different possible causes.
+
+Options considered: change worker priority speculatively; change the reader executor speculatively; observe entry, first/final progress and completion around the real reader. Choose observation.
+
+Consequences: R-035 permits a test-only forwarding reader for the existing three-job case, at most 32 timing messages, forwarding unchanged callbacks and invoking the production fingerprint implementation. No waits, fake fingerprints, fixture changes, deadlines, test scheduling changes, production or audio changes. Retain focused/local and unchanged full hosted checks separately.
+
+Revisit when: Entry/worker timing identifies a repair boundary, or observation does not discriminate. Further product changes require a recorded scope.
+
+## D-050: Preserve requested source-check worker priority
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend active Slice 031 with R-036, a scoped source-worker priority repair under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: D-049 entered the real reader promptly but observed no byte progress for the next 31 seconds before cancellation; active worker samples contained no fingerprint scan. The bridge unconditionally lowers medium/high task requests to a utility queue. A local actual-QoS control reproduced medium-to-utility lowering.
+
+Options considered: raise every background operation; move file scanning onto the main actor; preserve the requesting task's priority when dispatching this source check. Choose the third.
+
+Consequences: Snapshot Task.currentPriority at source-read entry and map high/medium/low/background to userInitiated/default/utility/background Dispatch work. Retain off-main scanning, cancellation checks, descriptor lifetime, whole-source identity checks, progress and no-publication-on-change semantics. No publication-worker or actor-isolation redesign, audio changes or new time guarantees. Add a real-worker foreground priority floor check with generated bytes, reproduce its failure before the repair, then run unchanged local/full hosted tests, both capacity fixtures and native queue export. Keep diagnostic observations until the full comparison is understood.
+
+Revisit when: Actual worker priority still falls below the request, source timing does not improve, unchanged checks fail, or energy/platform behavior requires different classification. This does not claim to repair unsampled or previously observed kernel waits.
+
+## D-051: Observe actual source-read dispatch boundary
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Add bounded debug-only task-local boundary observations under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: D-050 verifies requested worker priority but the hosted full suite still fails. D-049 measured a wrapper before its async call, so its entry event cannot establish actual read-body entry or submission. Correct that inference before changing executors.
+
+Options considered: change worker queue or actor inheritance speculatively; observe the actual body and dispatch boundaries. Choose observation.
+
+Consequences: Compile the optional observer only in DEBUG, capture it before dispatch and invoke it synchronously at body entry, before submission and worker entry. The existing generated destination test installs it with TaskLocal and retains bounded messages. No new waits, source reads, scheduling override, time-limit changes, audio changes or release-build logging. Existing callbacks and source checks remain unchanged. Focused success remains diagnostic only.
+
+Revisit when: The full hosted trace discriminates the delayed boundary. Any repair requires scoped evidence before acceptance.
+
+## D-052: Isolate source scanning from shared dispatch contention
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend Slice 031 with R-037 for a per-read owned source Dispatch queue under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: D-051 directly measures a 25.276-second gap between submission and actual worker entry, followed by about 1.7 ms of source open/hash work. A local sustained-CPU comparison delays shared default work for 2.990 seconds while owned default-queue work begins in 0.231 ms.
+
+Options considered: raise all requests to high priority; change caller actors; own the blocking file-work execution domain while preserving requested priority. Choose the owned per-read serial queue. A shared serial source queue could allow one blocked file to prevent independent reads, so each read owns its queue.
+
+Consequences: Keep existing task-to-QoS mapping, off-main open/hash, cancellation, progress, descriptor lifetime and source checks. Add a debug-only opt-in contention test that loads at most 32 owned CPU queues for three seconds, then checks actual source worker entry within one second. It is separate from default scheduling and does not remove or relax any existing test. Join every generated load worker before fixture cleanup. Reproduce the old shared-worker failure before changing production code. Run unchanged focused/full/local/native/hosted gates afterward. Keep explicit limits: this is not a guarantee against arbitrary OS load or kernel waits.
+
+Revisit when: The actual control does not reproduce, an owned source worker still delays, or unchanged full regressions fail.
+
+## D-053: Isolate final publication from shared dispatch contention
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend Slice 031 with R-038 for the final publication worker under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: The repaired source worker enters promptly on the hosted runner, but the next publication boundary waits from 20.021 seconds through cancellation at 58.531 seconds. Publication still uses shared utility dispatch, the same queue pattern demonstrated by the source contention control.
+
+Options considered: relax full-suite deadlines; change actor isolation; qualify the actual publication operation under controlled CPU load and then give it an owned queue preserving request priority. Choose the third.
+
+Consequences: Reuse the bounded debug-only opt-in CPU fixture with a separate publication opt-in flag. Add actual body/submission/worker observation with no release logging. Reproduce delayed real exclusive publication and priority lowering before repair. Then use one owned serial queue per publication and the source reader's priority mapping. Do not change the link operation, collision checks, cancellation settlement, cleanup or publication outcomes. Verify existing batch/native publication cancellation/collision tests, full suites, both capacity fixtures and native advanced plus Quick Export. No audio, deadlines or ordinary scheduling changes.
+
+Revisit when: The actual control fails to reproduce the suspected dispatch boundary, or existing publication guarantees/regressions fail. Arbitrary kernel latency remains outside this repair.
+
+## D-054: Observe the actual HDR cancellation test boundary
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Strengthen the existing generated HDR cancellation test's trigger under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: One full release run stopped before the test caught its polled Inspecting phase. Final-state diagnostics and subsequent isolated/full comparisons did not reproduce it. Polling a transient published phase can miss it, and the current fallback only requires Inspecting after its deadline, not proof of actual source-audit progress. This is a test synchronization defect independent of whether it caused that particular failure.
+
+Options considered: rerun until green; widen deadlines; subscribe to the actual published source-audit progress before starting. Choose the subscription.
+
+Consequences: Require the emitted state to be Inspecting with real source-audit progress and the batch to be running, then cancel synchronously at that event. Keep the 30-second generated source, 20-second observation bound, five-second cancellation bound, Cancelled/no-output/source-integrity assertions and all later mutation/verification checks. Retain final-state diagnostics if the event is absent. Remove the subscription before later subcases. No product, fixture-size, DSP or default scheduling change. Run focused and full local/hosted regression.
+
+Revisit when: The real progress event is absent, cancellation fails, or published-state reentrancy changes. Do not label the earlier unknown stopped outcome a proven polling race.
+
+## D-055: Own source admission and process control dispatch
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend Slice 031 with R-039 for source-admission and subprocess-control dispatch under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: Both repaired file workers now let the hosted three-job queue finish in 21.370 seconds. Remaining full-suite failures concern source import and ToolRunner cancellation/retry, whose admission and control paths still use shared queues.
+
+Options considered: change test scheduling; increase deadlines; reproduce these actual operations under bounded CPU load and isolate their dispatch domains. Choose the third.
+
+Consequences: Add debug-only opt-in observations and sequential controlled negative/positive checks for actual regular-file admission and a real process launch. Source admission gets a per-call owned queue preserving task priority. Native/fallback reads and cancellation checks remain unchanged. ToolRunner gets one owned user-initiated control queue for launch, completion notification and its existing two-/four-second escalation timers. Keep its existing priority, pipe queues, draining, callbacks, exit/join/retry behavior and signal policy. Preserve default tests and all limits. Verify existing 96-child, cancellation/retry, native/fallback lifecycle and full/native checks. No DSP, callback-discard policy, caption/chapter adapter or test-scheduling change.
+
+Revisit when: Controlled operations do not reproduce delay, lifecycle guarantees fail, or the unchanged full regression identifies a different boundary.
+
+
+## D-056: Retire temporary hosted dispatch tracing
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Restore the ordinary hosted test command after scoped dispatch repair qualification, under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: Hosted run 36839378179 at 51284d5 passed all 227 tests in 446.181 seconds. Local release/debug, both capacity fixtures and native queue plus Quick Export passed. The diagnostic comparison and sampler have served their purpose, but acceptance should also exercise the ordinary workflow without them.
+
+Options considered: retain routine sampling and the focused warm-up; remove temporary CI instrumentation and qualify the direct production reader. Choose removal.
+
+Consequences: Restore plain swift test with unchanged default scheduling, limits and assertions. Remove the test-only forwarding source reader and use BatchController's default reader. Keep bounded status diagnostics, the manual observer script and debug-only hooks required by explicit contention controls. Record a full local and hosted run after cleanup. Do not infer arbitrary kernel wait guarantees or production completion.
+
+Revisit when: Ordinary regression fails or new evidence requires a separately scoped observation.

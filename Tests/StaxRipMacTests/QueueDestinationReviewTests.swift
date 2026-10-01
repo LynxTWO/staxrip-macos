@@ -164,10 +164,17 @@ struct QueueDestinationReviewTests {
         #expect(f.panels.selections.count == 2)
         trace("review complete; batch started")
         var lastPhases = ""
+        var remainingTraceEvents = 64
         do {
             while f.batch.running {
-                let phases = f.model.jobs.dropFirst().map { f.batch.statuses[$0.id]?.phase ?? "No status" }.joined(separator: ",")
-                if phases != lastPhases { trace(phases); lastPhases = phases }
+                let phases = f.model.jobs.dropFirst().map { job in
+                    guard let status = f.batch.statuses[job.id] else { return "No status" }
+                    return "\(status.phase) [\(status.detail.prefix(180)); progress=\(status.progress); publishing=\(f.batch.publicationJobID == job.id)]"
+                }.joined(separator: ",")
+                if phases != lastPhases {
+                    if remainingTraceEvents > 0 { trace(phases); remainingTraceEvents -= 1 }
+                    lastPhases = phases
+                }
                 try await Task.sleep(for: .milliseconds(10))
             }
         } catch { trace("cancelled while batch active: " + lastPhases); f.batch.cancel(); throw error }

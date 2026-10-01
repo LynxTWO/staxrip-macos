@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import Darwin
 import Testing
 @testable import StaxRipMac
@@ -179,11 +180,25 @@ struct HDR10Tests {
         let before = try await SourceFingerprint.read(source)
         var c = config(); c.speed = "Thorough"
         let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: dir.appendingPathComponent("result.mkv").path, configuration: c, created: Date())
+        var cancellationRequested: Date?
+        var observedLiveAudit = false
+        let observation = batch.$statuses.sink { statuses in
+            guard cancellationRequested == nil, let state = statuses[job.id],
+                  state.phase == "Inspecting", state.detail.contains("source audit ·") else { return }
+            observedLiveAudit = batch.running
+            cancellationRequested = Date()
+            // Source-audit progress is emitted with no source check or
+            // publication active. Cancel changes task state, not this dictionary.
+            batch.cancel()
+        }
+        defer { observation.cancel() }
         await batch.discover(); batch.start([job])
         let deadline = Date().addingTimeInterval(20)
-        while batch.running && batch.statuses[job.id]?.detail.contains("source audit ·") != true && Date() < deadline { try await Task.sleep(for: .milliseconds(1)) }
-        try #require(batch.running && batch.statuses[job.id]?.phase == "Inspecting")
-        let cancelled = Date(); batch.cancel()
+        while batch.running && cancellationRequested == nil && Date() < deadline { try await Task.sleep(for: .milliseconds(1)) }
+        try #require(observedLiveAudit && cancellationRequested != nil,
+                     Comment(rawValue: "HDR audit cancellation boundary: running=\(batch.running), phase=\(batch.statuses[job.id]?.phase ?? "missing"), detail=\(batch.statuses[job.id]?.detail ?? "missing")"))
+        let cancelled = try #require(cancellationRequested)
+        observation.cancel()
         while batch.running { try await Task.sleep(for: .milliseconds(10)) }
         #expect(batch.statuses[job.id]?.phase == "Cancelled")
         #expect(Date().timeIntervalSince(cancelled) < 5)

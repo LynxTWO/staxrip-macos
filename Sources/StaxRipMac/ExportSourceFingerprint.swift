@@ -4,13 +4,38 @@ import Darwin
 
 /// Observes content at check boundaries; this is not an immutable input snapshot.
 enum ExportSourceFingerprint {
+    #if DEBUG
+    // Opt-in timing observation for generated tests; no release-build logging.
+    @TaskLocal static var observeBoundary: (@Sendable (String) -> Void)?
+    #endif
     typealias Reader = @Sendable (URL, @escaping @Sendable (Int64, Int64) -> Void) async throws -> SourceFingerprint
     static func read(_ url: URL, progress: @escaping @Sendable (Int64, Int64) -> Void = { _, _ in }) async throws -> SourceFingerprint {
+        #if DEBUG
+        let observe = observeBoundary
+        observe?("body entered")
+        #endif
         let cancellation = Cancellation()
+        // A continuation does not promote a utility worker to its awaiting task's
+        // priority. Preserve the request at this boundary without moving I/O onto
+        // the caller's actor or raising background requests to foreground work.
+        let priority = Task.currentPriority
+        let workerQoS: DispatchQoS.QoSClass = priority >= .high ? .userInitiated :
+            priority >= .medium ? .default : priority >= .low ? .utility : .background
         return try await withTaskCancellationHandler {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
-                DispatchQueue.global(qos: .utility).async {
+                #if DEBUG
+                observe?("submitting worker")
+                #endif
+                // Keep blocking file work out of the shared root queue's work
+                // backlog. Each read owns its queue so one stalled filesystem
+                // call cannot serialize independent source checks behind it.
+                let queue = DispatchQueue(label: "StaxRip.source-fingerprint",
+                    qos: DispatchQoS(qosClass: workerQoS, relativePriority: 0))
+                queue.async {
+                    #if DEBUG
+                    observe?("worker entered")
+                    #endif
                     // Resume only after the descriptor is closed, including cancellation.
                     continuation.resume(with: Result { try scan(url, cancellation: cancellation, progress: progress) })
                 }

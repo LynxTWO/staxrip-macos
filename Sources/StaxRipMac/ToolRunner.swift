@@ -10,6 +10,12 @@ struct ToolResult: Sendable {
 
 // Owns one process. Pipes are drained concurrently and retained output is bounded.
 final class ToolRunner: @unchecked Sendable {
+    #if DEBUG
+    @TaskLocal static var observeBoundary: (@Sendable (String) -> Void)?
+    #endif
+    // Control never waits for a child or a pipe callback. Its own queue keeps
+    // launch, escalation and completion out of unrelated shared-work backlogs.
+    private let controlQueue = DispatchQueue(label: "StaxRip.tool-control", qos: .userInitiated)
     private let lock = NSLock()
     private var process: Process?
     private var cancelled = false
@@ -21,19 +27,29 @@ final class ToolRunner: @unchecked Sendable {
         lock.unlock()
         guard let current, current.isRunning else { return }
         current.interrupt()
-        DispatchQueue.global().asyncAfter(deadline: .now() + 2) {
+        controlQueue.asyncAfter(deadline: .now() + 2) {
             if current.isRunning { current.terminate() }
         }
-        DispatchQueue.global().asyncAfter(deadline: .now() + 4) {
+        controlQueue.asyncAfter(deadline: .now() + 4) {
             if current.isRunning { Darwin.kill(current.processIdentifier, SIGKILL) }
         }
     }
 
     func run(executable: URL, arguments: [String], stdoutLimit: Int = 4 * 1024 * 1024, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
+        #if DEBUG
+        let observe = Self.observeBoundary
+        observe?("body entered")
+        #endif
         try Task.checkCancellation()
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
-                DispatchQueue.global(qos: .userInitiated).async { [self] in
+                #if DEBUG
+                observe?("submitting worker")
+                #endif
+                controlQueue.async { [self] in
+                    #if DEBUG
+                    observe?("worker entered")
+                    #endif
                     let task = Process()
                     task.executableURL = executable
                     task.arguments = arguments
@@ -97,7 +113,7 @@ final class ToolRunner: @unchecked Sendable {
                         }
                         source.resume()
                     }
-                    group.notify(queue: .global(qos: .userInitiated)) { [self] in
+                    group.notify(queue: controlQueue) { [self] in
                         task.terminationHandler = nil
                         lock.lock(); process = nil; let wasCancelled = cancelled; lock.unlock()
                         if let error = readFailure.error { continuation.resume(throwing: error); return }

@@ -108,3 +108,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 40. [Slice 030: chapter editor](SLICE-030-chapter-editor.md) and [metadata discovery](CHAPTER-EDITING-RESEARCH.md).
 
 [Chapter editor evidence](CHAPTER-EDITOR-EVIDENCE.md) records native authoring, literal title verification, persistence, regression and retained timing uncertainty.
+
+41. [Slice 031: APFS capacity recovery](SLICE-031-apfs-capacity.md).

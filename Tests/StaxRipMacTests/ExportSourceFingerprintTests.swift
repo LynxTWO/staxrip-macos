@@ -5,6 +5,34 @@ import Testing
 @testable import StaxRipMac
 
 struct ExportSourceFingerprintTests {
+    private final class WorkerObservation: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value: (qos: UInt32, mainThread: Bool)?
+        func record() { lock.withLock { if value == nil { value = (qos_class_self().rawValue, Thread.isMainThread) } } }
+        func snapshot() -> (qos: UInt32, mainThread: Bool)? { lock.withLock { value } }
+    }
+
+    @Test(.timeLimit(.minutes(1)), arguments: [TaskPriority.medium, .high])
+    func foregroundRequestKeepsWorkerPriorityWithoutReadingOnMain(priority: TaskPriority) async throws {
+        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+        let file = root.appendingPathComponent("source"), bytes = Data("abc".utf8)
+        try bytes.write(to: file)
+        let observation = WorkerObservation()
+        let task = Task.detached(priority: priority) {
+            try await ExportSourceFingerprint.read(file) { _, _ in observation.record() }
+        }
+        let result = try await task.value
+        let worker = try #require(observation.snapshot())
+        // A higher-priority waiter may promote the task. The worker must at
+        // least retain this explicitly requested floor, never force utility.
+        let minimum = priority == .high ? QOS_CLASS_USER_INITIATED.rawValue : QOS_CLASS_DEFAULT.rawValue
+        #expect(worker.qos >= minimum)
+        #expect(!worker.mainThread)
+        #expect(result.sha256 == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+        #expect(result.byteCount == 3)
+        #expect(try Data(contentsOf: file) == bytes)
+    }
+
     private func directory() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("source-check-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)

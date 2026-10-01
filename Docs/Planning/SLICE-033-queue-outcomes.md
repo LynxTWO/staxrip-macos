@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 033: Queue outcomes and compact review
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-059 / R-041.
+Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-059 / D-060 / R-041 / R-042.
 
 SLICE STATE
-Milestone: Native presentation defect mapped; implementation not started.
+Milestone: Queue presentation and native outcome checks passed; final hosted regression failed two existing file/cancellation limits. D-060 qualification is active.
 Blocked by: None. Slice 032 accepted at 5e9effa, hosted run 36845548454.
 Evidence so far: QueueView, BatchController, BatchJournal and prior native multi-job observations.
 Last audit: 2026-10-01.
@@ -17,7 +17,7 @@ Open a generated multi-job session. Review compact output/source/recipe rows, ex
 
 ## 3. In scope, with build order
 
-M1: A read-only presentation adapter for current job IDs and actual statuses, with state counterexamples. M2: Truthful header/counts and compact native job rows. Routine details use a disclosure; active state, failures, interrupted/cancelled outcomes, preliminary issues and cleanup warnings remain visible. M3: Native success/failure/correction/removal walkthrough, existing cleanup/recovery protections and full regression.
+M1: A read-only presentation adapter for current job IDs and actual statuses, with state counterexamples. M2: Truthful header/counts and compact native job rows. Routine details use a disclosure; active state, failures, interrupted/cancelled outcomes, preliminary issues and cleanup warnings remain visible. M3: Native success/failure/correction/removal walkthrough, existing cleanup/recovery protections and full regression. D-060 adds bounded actual subtitle dispatch and test-entry observation qualification after final hosted failures, with scoped repair only after negative controls.
 
 ## 4. Out of scope
 
@@ -29,7 +29,7 @@ No stub inside the queue path. Historical cleanup warnings live in BatchStatus.d
 
 ## 6. Modules touched
 
-QueueView, a read-only queue presentation helper, scoped tests and evidence. BatchController/BatchJournal remain authoritative and their execution/serialization contracts stay unchanged. Existing file-access controls and destination review remain available.
+QueueView, a read-only queue presentation helper, scoped tests and evidence. D-060 also covers ExternalSubtitle read dispatch and the cancellation test entry event, preserving their data/lifecycle contracts. BatchController/BatchJournal remain authoritative and their execution/serialization contracts stay unchanged. Existing file-access controls and destination review remain available.
 
 ## 7. Data subset
 
@@ -61,4 +61,4 @@ All five gates have scoped evidence at the final product head, with failures and
 
 A queue that serves as a clear execution record and correction surface for the existing encoder.
 
-Approved for build by: Owner overnight autonomous non-audio and design delegation, 2026-10-01; D-059 / R-041.
+Approved for build by: Owner overnight autonomous non-audio and design delegation, 2026-10-01; D-059 / D-060 / R-041 / R-042.

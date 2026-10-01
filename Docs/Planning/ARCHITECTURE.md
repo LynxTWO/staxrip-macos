@@ -131,3 +131,5 @@ Current approved build boundary: SLICE-031-apfs-capacity.md under D-045 through 
 Latest accepted boundary: SLICE-032-motion-preview.md at 5e9effa, hosted run 36845548454. The bounded renderer and app-owned player/temporary-file lifecycle reuse PicturePlan, source identity, ToolRunner and native AVPlayerView. MOTION-PREVIEW-EVIDENCE.md records the scoped acceptance and limits.
 
 Current approved boundary: SLICE-033-queue-outcomes.md. Add read-only outcome presentation and compact native review to the existing QueueView. Controller, file-access, session and journal contracts remain unchanged.
+
+D-060 / R-042 extends Slice 033 only at actual external-caption I/O dispatch and the cancellation test's entry-observation boundary. Queue presentation qualification remains intact, but full acceptance is held after hosted run 36848579493. Contrast discovery is retained locally and is not active implementation.

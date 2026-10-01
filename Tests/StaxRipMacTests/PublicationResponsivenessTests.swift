@@ -21,19 +21,19 @@ private final class PublicationGate: @unchecked Sendable {
     private var entered = false
     private var mainThread = false
     private var staged: URL?
-    private let observe: @Sendable (String) -> Void
-    init(observe: @escaping @Sendable (String) -> Void = { _ in }) { self.observe = observe }
+    private let observe: (@Sendable (String) -> Void)?
+    init(observe: (@Sendable (String) -> Void)? = nil) { self.observe = observe }
     var snapshot: (Bool, Bool, URL?) { lock.withLock { (entered, mainThread, staged) } }
-    func release() { observe("gate release requested"); releaseSignal.signal() }
+    func release() { observe?("gate release requested"); releaseSignal.signal() }
     func publish(_ source: URL, _ destination: URL) throws {
         lock.withLock { entered = true; mainThread = Thread.isMainThread; staged = source }
-        observe("gate entered")
-        DispatchQueue.main.async { [observe] in observe("main queue canary") }
+        observe?("gate entered")
+        if let observe { DispatchQueue.main.async { observe("main queue canary") } }
         guard releaseSignal.wait(timeout: .now() + 20) == .success else {
-            observe("gate timed out")
+            observe?("gate timed out")
             throw NativeExportError.invalid("Test publication gate timed out")
         }
-        observe("gate released; publishing")
+        observe?("gate released; publishing")
         try ExportPublication.publish(staged: source, destination: destination)
     }
 }

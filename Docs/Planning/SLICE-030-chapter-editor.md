@@ -2,7 +2,7 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-044 / R-034.
 
 SLICE STATE
-Milestone: Implementation, focused/full local checks and generated native export complete; final Unicode/title-edge release regression passed; final native rebuild and hosted gate next.
+Milestone: Implementation, focused/full local checks and generated native export complete; final Unicode/title-edge release regression passed; native rebuild passed; investigating the hosted destination-review timeout with phase diagnostics.
 Blocked by: None.
 Evidence so far: CHAPTER-EDITING-RESEARCH.md plus local generated native session/queue/export receipts; hosted acceptance pending.
 Last audit: 2026-10-01.

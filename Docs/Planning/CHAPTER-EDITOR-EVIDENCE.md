@@ -1,6 +1,6 @@
 # Chapter editor evidence
 
-Date: 2026-10-01. Slice 030 under D-044 / R-034. Local/native evidence recorded below; final release regression passed 222 tests / 46 suites in 38.555 seconds; final native rebuild passed; hosted acceptance pending.
+Date: 2026-10-01. Slice 030 under D-044 / R-034. Local/native evidence recorded below; final release regression passed 222 tests / 46 suites in 38.555 seconds; final native rebuild passed; hosted run 36823007963 failed the existing destination-review 60-second gate, so acceptance remains open.
 
 ## S30-001 through S30-003: bounded authoring and actual exports
 
@@ -45,3 +45,9 @@ Final local checkpoint: 222 tests / 46 suites passed in 38.555 seconds after the
 A second serialization negative control attached combining marks to metadata delimiters. Both actual MKV/MP4 tests refused changed output titles under the character-based serializer. Escaping now iterates Unicode scalars, so an ASCII delimiter remains escaped even when Swift groups it with a combining mark. The negative log is retained. Final scalar-repair regression/build/hosted checks supersede the earlier product head.
 
 Final scalar-repair local regression: 222 tests / 46 suites passed in 38.389 seconds, including both actual combining-delimiter outputs. No assertions or tolerances were relaxed.
+
+Hosted interim checkpoint: run 36822641744 passed at e6b6f82 on Swift 6.1.2, 222 tests in 404.174 seconds. Chapter suites passed (export suite 47.388 seconds); queue destination review passed in 47.541 seconds. This predates the combining-delimiter repair. Final product head 0105d5c requires its own run 36823007963; that result remains pending. Final scalar-repair ad-hoc build passed in 16.40 seconds.
+
+The final 0105d5c bundle reopened natively. A draft title with surrounding spaces, accented text, punctuation carrying combining marks and Japanese text applied and reopened visibly intact. This checks final native input/state retention; actual serialized MKV/MP4 byte verification is supplied by the final regression. The app then exited.
+
+Final hosted failure: run 36823007963 at 0105d5c passed chapter tests but failed matchingFoldersStartOneRealBatchAndSkipCompletedDestinations at its unchanged 60-second limit. The whole run reported 222 tests with one issue in 442.969 seconds. The failing log lacked destination phase timing, so no stuck phase or root cause is established. A diagnostic-only follow-up adds elapsed fixture, batch phase and independent-probe timestamps without changing scheduling, assertions, fixtures or deadlines. A focused local debug oversized-document test passed in 0.279 seconds; that does not explain hosted timing. Full local debug destination trace finished all assertions 4.733 seconds after entering its body (6.098 seconds reported by Testing), with all three jobs completed. Final full debug and hosted diagnostic results remain pending.

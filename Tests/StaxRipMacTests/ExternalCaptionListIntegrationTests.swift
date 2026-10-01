@@ -173,7 +173,11 @@ struct ExternalCaptionListIntegrationTests {
 
     @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
     func cancellingSecondTrackVerifierSettlesBeforeCleanup() async throws {
+        let trace = CaptionCancellationTrace()
+        defer { trace.dump() }
+        trace.mark("fixture begin")
         let f = try await fixture("MKV", embedded: false)
+        trace.mark("fixture ready")
         let batch = BatchController(journalURL: f.root.appendingPathComponent("journal.json"))
         defer { if batch.running { batch.cancel() } else { try? FileManager.default.removeItem(at: f.root) } }
         var c = configuration(f, container: "MKV"); c.subtitleMode = "Remove all subtitles"
@@ -181,12 +185,32 @@ struct ExternalCaptionListIntegrationTests {
         let body = "#!/bin/sh\nset -e\nsecond=0\nfor arg do\nif [ \"$arg\" = \"0:2\" ]; then second=1; fi\ntarget=\"$arg\"\ndone\nif [ \"$second\" = 1 ] && [ \"$target\" = \"pipe:1\" ]; then printf '%s' \"$$\" > " + quote(pidFile.path) + "; exec /bin/sleep 30; fi\nexec " + quote(f.tools.ffmpeg.path) + " \"$@\"\n"
         try Data(body.utf8).write(to: wrapper); try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: wrapper.path)
         let item = job(f, c), next = job(f, c, name: "next")
-        batch.tools = FFmpegTools(ffmpeg: wrapper, ffprobe: f.tools.ffprobe); batch.encoders = ["libx264"]; batch.start([item, next])
+        batch.tools = FFmpegTools(ffmpeg: wrapper, ffprobe: f.tools.ffprobe); batch.encoders = ["libx264"]
+        trace.mark("batch start")
+        #if DEBUG
+        ToolRunner.$observeBoundary.withValue({ trace.mark("tool " + $0) }) {
+            ExternalSubtitle.$observeBoundary.withValue({ trace.mark("caption " + $0) }) {
+                ExportSourceFingerprint.$observeBoundary.withValue({ trace.mark("source " + $0) }) {
+                    batch.start([item, next])
+                }
+            }
+        }
+        #else
+        batch.start([item, next])
+        #endif
         let until = Date().addingTimeInterval(10)
-        while !FileManager.default.fileExists(atPath: pidFile.path) && batch.running && Date() < until { try await Task.sleep(for: .milliseconds(10)) }
+        var previous = ""
+        while !FileManager.default.fileExists(atPath: pidFile.path) && batch.running && Date() < until {
+            let phase = (batch.statuses[item.id]?.phase ?? "none") + ":" + (batch.statuses[item.id]?.detail ?? "")
+            if phase != previous { trace.mark("phase " + String(phase.prefix(220))); previous = phase }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        trace.mark("before cancel " + (batch.statuses[item.id]?.phase ?? "none") + ":" + String((batch.statuses[item.id]?.detail ?? "").prefix(220)))
         let entered = FileManager.default.fileExists(atPath: pidFile.path)
+        trace.mark("entry observed=\(entered)")
         batch.cancel()
         while batch.running { try await Task.sleep(for: .milliseconds(10)) }
+        trace.mark("cancel settled")
         try #require(entered, Comment(rawValue: batch.statuses[item.id]?.detail ?? "No status"))
         #expect(batch.statuses[item.id]?.phase == "Cancelled" && batch.statuses[next.id]?.phase == "Pending")
         #expect(!FileManager.default.fileExists(atPath: item.destination))
@@ -221,4 +245,21 @@ struct ExternalCaptionListIntegrationTests {
         try protected(f)
     }
 
+}
+
+// Temporary bounded diagnosis under D-071; no media bytes or source arguments.
+private final class CaptionCancellationTrace: @unchecked Sendable {
+    private let lock = NSLock()
+    private let origin = ProcessInfo.processInfo.systemUptime
+    private var events: [String] = []
+    func mark(_ value: String) {
+        lock.withLock {
+            guard events.count < 128 else { return }
+            events.append(String(format: "%.6f", ProcessInfo.processInfo.systemUptime - origin) + " " + value)
+        }
+    }
+    func dump() {
+        let rows = lock.withLock { events }
+        for row in rows { print("CAPTION_CANCEL_TRACE " + row) }
+    }
 }

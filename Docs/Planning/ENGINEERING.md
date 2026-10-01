@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select the next reversible non-audio slice. Slice 021 closed at 3c56caa with hosted run 36801364346.
+Next: Slice 022 bounded declared output duration under D-035. Slice 021 closed at 3c56caa with hosted run 36801364346.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -206,3 +206,7 @@ Approved R-023 under delegated Slice 020: one owned native/fallback source inspe
 ## Slice 021 native publication checkpoint
 
 Approved R-024 under delegated Slice 021: reuse awaited background publication for native Quick Export, preserve true filesystem outcomes under cancellation, and expose finishing status. Gates native-publication-responsive, native-publication-outcome, native-publication-ui and native-publication-regression bind S21-001 through S21-004. The user's authoritative result is the completed filesystem operation, not a late cancellation request. Only current-operation staging is cleaned after settlement; source and existing outputs remain protected. Other native I/O, audio and release remain outside scope.
+
+## Slice 022 duration checkpoint
+
+Approved R-025 under delegated Slice 022: retain a strict 250-millisecond container-duration allowance without percentage growth, explicit unknown source duration and finite-value checks. Gates duration-policy, duration-refusal, duration-compatibility and duration-regression bind S22-001 through S22-004. A shortened real encode that passes because the programme is long is the counterexample. Only current staged outputs are examined; no cadence, source, audio mastering or persistent-format changes.

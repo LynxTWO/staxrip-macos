@@ -252,3 +252,5 @@ Approved R-034 under D-044: typed chapter authoring/removal, native draft editin
 Approved R-035 under D-045: bounded disposable APFS failure/retry qualification. Gates apfs-ownership, apfs-failure, apfs-protection, apfs-retry and apfs-regression bind S31-001 through S31-005. Consequence: local_only generated fixture; preexisting media and disks excluded. No relaxed HFS+ contract or generalized storage guarantee.
 
 D-046 extends R-035 regression diagnosis with one bounded read-only hosted test-process observer. Consequence: local_only ephemeral generated CI execution; no owner media, secrets or runtime telemetry. Original tests, scheduling, deadlines and assertions remain authoritative.
+
+D-047 adds one focused hosted comparison under R-035, using unchanged affected non-audio suites before the full test gate. Diagnostic success alone is not acceptance; no product, DSP, fixture, scheduling or deadline changes are included.

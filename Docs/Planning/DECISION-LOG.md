@@ -56,6 +56,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-044 | 2026-10-01 | Author and verify chapter lists | Confirmed | |
 | D-045 | 2026-10-01 | Qualify APFS full-destination recovery | Confirmed | |
 | D-046 | 2026-10-01 | Observe recurring hosted timing failures | Confirmed | |
+| D-047 | 2026-10-01 | Compare isolated hosted video timing | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -713,3 +714,17 @@ Options considered: retry unchanged until green; increase deadlines or reduce pa
 Consequences: R-035 gains one read-only observer, bounded to five minutes of test-process discovery and one one-second sample about thirty seconds into that process. Record CPU count, selected descendant CPU/RSS/state and test-process stacks only. No environment/argument dumps, secrets, owner media, arbitrary process sampling, test exclusions, scheduling/deadline/assertion changes or DSP edits. Preserve the original test exit status, stop the observer with the test and record observation overhead. Only generated CI test execution is observed.
 
 Revisit when: The observation identifies a repairable cause, fails to discriminate or materially perturbs timing. Any product repair outside APFS publication requires a separately recorded scope decision.
+
+## D-047: Compare isolated hosted video timing
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend active Slice 031 diagnosis under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: D-046 observed an idle main loop and active existing meter work but did not locate a blocked video operation. Run 36827818289 retained six existing timeout failures. A single stack snapshot cannot prove starvation.
+
+Options considered: speculate about DSP or scheduler changes; repeat unchanged full runs; compare the affected non-audio suites in an additional focused execution. Choose the comparison, followed by the unchanged full gate.
+
+Consequences: R-035 permits one additional hosted diagnostic step selecting QueueDestinationReviewTests, PublicationResponsivenessTests, ExportSourceStabilityTests, OutputDisplayAspectIntegrationTests and ChapterPersistenceTests. Preserve every fixture, assertion, deadline and default scheduling policy. Report the focused step independently; it cannot replace full-suite acceptance. The existing full command and bounded observer remain intact. No production, audio or test-body changes are authorized by this diagnostic decision.
+
+Revisit when: The focused execution fails, or succeeds while the full suite fails. Record the actual comparison before choosing any further repair or experiment.

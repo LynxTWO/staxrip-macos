@@ -85,6 +85,7 @@ final class BatchController: ObservableObject {
     private let readSource: ExportSourceFingerprint.Reader
     private let publishOutput: (URL, URL) async throws -> Void
     private let removeStaging: (URL) async throws -> Void
+    private let beginActivity: ExportActivity.Factory
     private let journalURL: URL?
     private var journalLease: BatchJournalLease?
     private var journalJobs: [QueueJob] = []
@@ -94,10 +95,12 @@ final class BatchController: ObservableObject {
     init(journalURL: URL? = nil,
          readSource: @escaping ExportSourceFingerprint.Reader = { try await ExportSourceFingerprint.read($0, progress: $1) },
          publishOutput: @escaping (URL, URL) async throws -> Void = { try await ExportPublication.publishAsync(staged: $0, destination: $1) },
-         removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) }) {
+         removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) },
+         beginActivity: @escaping ExportActivity.Factory = ExportActivity.begin) {
         self.readSource = readSource
         self.publishOutput = publishOutput
         self.removeStaging = removeStaging
+        self.beginActivity = beginActivity
         self.journalURL = journalURL
         if let journalURL, FileManager.default.fileExists(atPath: journalURL.path) {
             do { recovery = try BatchJournal.read(from: journalURL) }
@@ -176,8 +179,9 @@ final class BatchController: ObservableObject {
         catch { journalLease = nil; recoveryError = "Batch did not start because recovery state could not be saved: " + error.localizedDescription; return }
         recovery = nil; recoveryError = nil
         running = true
+        let endActivity = beginActivity("StaxRip advanced video queue")
         task = Task {
-            defer { running = false; task = nil; journalLease = nil }
+            defer { endActivity(); running = false; task = nil; journalLease = nil }
             for job in selected {
                 if Task.isCancelled { break }
                 statuses[job.id] = BatchStatus(phase: "Inspecting")

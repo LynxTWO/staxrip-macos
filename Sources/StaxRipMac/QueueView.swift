@@ -40,6 +40,10 @@ struct QueueView: View {
                     .disabled(model.jobs.isEmpty || model.filePanelActive || fileAccess.reviewing)
             }
             Text(batch.toolDescription).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).lineLimit(2)
+            if batch.running {
+                Label(ExportActivity.explanation, systemImage: "moon.zzz")
+                    .font(.caption).foregroundStyle(.secondary).accessibilityElement(children: .combine)
+            }
             if !batch.reviewStatus.isEmpty {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(batch.reviewStatus).font(.callout).accessibilityLabel("Queue check status").accessibilityValue(batch.reviewStatus)

@@ -53,8 +53,10 @@ struct ExportTests {
         try await makeFixture(at: source)
         let original = try Data(contentsOf: source)
         let destination = dir.appendingPathComponent("result.mp4")
-        let service = NativeExportService()
-        try await service.export(source: source, destination: destination, preset: preset)
+        let activity = ExportActivityRecorder()
+        let service = NativeExportService(beginActivity: activity.begin)
+        try await service.export(source: source, destination: destination, preset: preset, finishing: { #expect(activity.active == 1) }, progress: { _ in #expect(activity.active == 1) })
+        activity.expectSettled()
         #expect(try Data(contentsOf: source) == original)
         let asset = AVURLAsset(url: destination)
         let tracks = try await asset.loadTracks(withMediaType: .video)
@@ -72,6 +74,7 @@ struct ExportTests {
             try await service.export(source: source, destination: destination, preset: preset)
             Issue.record("Existing output should have been rejected")
         } catch { }
+        activity.expectSettled(count: 2)
         #expect(try Data(contentsOf: destination) == resultBefore)
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).allSatisfy { !$0.hasPrefix(".staxrip-export-") })
     }
@@ -82,12 +85,14 @@ struct ExportTests {
         let source = dir.appendingPathComponent("source.mov")
         try await makeFixture(at: source)
         let target = dir.appendingPathComponent("cancelled.mp4")
-        let service = NativeExportService()
+        let activity = ExportActivityRecorder()
+        let service = NativeExportService(beginActivity: activity.begin)
         let task = Task { try await service.export(source: source, destination: target, preset: .h264Small) }
         task.cancel()
         do { try await task.value; Issue.record("Cancelled task should not publish") }
         catch is CancellationError { }
         #expect(!FileManager.default.fileExists(atPath: target.path))
+        activity.expectSettled()
         #expect(!service.active)
     }
 
@@ -97,15 +102,18 @@ struct ExportTests {
         let source = dir.appendingPathComponent("source.mov")
         try await makeFixture(at: source)
         let target = dir.appendingPathComponent("cancelled.mp4")
-        let service = NativeExportService()
+        let activity = ExportActivityRecorder()
+        let service = NativeExportService(beginActivity: activity.begin)
         var requested = false
         var firstProgress: Double?
         do {
             try await service.export(source: source, destination: target, preset: .h264HD, progress: { value in
-                if !requested { firstProgress = value; requested = true; service.cancel() }
+                #expect(activity.active == 1)
+                if !requested { firstProgress = value; requested = true; service.cancel(); #expect(activity.active == 1) }
             })
             Issue.record("Active cancellation should prevent publication")
         } catch is CancellationError { }
+        activity.expectSettled()
         #expect(requested)
         #expect(firstProgress == 0)
         #expect(!FileManager.default.fileExists(atPath: target.path))
@@ -174,9 +182,11 @@ struct ExportTests {
         try await makeFixture(at: source)
         let original = try Data(contentsOf: source)
         let target = dir.appendingPathComponent("result.mp4")
+        let activity = ExportActivityRecorder()
         let service = NativeExportService(removeStaging: { _ in
+            #expect(activity.active == 1)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
-        })
+        }, beginActivity: activity.begin)
         do {
             try await service.export(source: source, destination: target, preset: .h264Small, progress: { _ in
                 if cancel { service.cancel() }
@@ -188,6 +198,7 @@ struct ExportTests {
             #expect((error.cleanupError as NSError).code == Int(EACCES))
             #expect(error.directory.deletingLastPathComponent().standardizedFileURL == dir.standardizedFileURL)
         }
+        activity.expectSettled()
         #expect(!service.active)
         #expect(FileManager.default.fileExists(atPath: target.path) == !cancel)
         #expect(try Data(contentsOf: source) == original)
@@ -199,10 +210,12 @@ struct ExportTests {
         let source = dir.appendingPathComponent("invalid.mov")
         try Data("not a video".utf8).write(to: source)
         let target = dir.appendingPathComponent("result.mp4")
-        let service = NativeExportService()
+        let activity = ExportActivityRecorder()
+        let service = NativeExportService(beginActivity: activity.begin)
         do { try await service.export(source: source, destination: target, preset: .h264Small); Issue.record("Invalid media accepted") }
         catch { }
         #expect(!FileManager.default.fileExists(atPath: target.path))
+        activity.expectSettled()
         #expect(!service.active)
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).count == 1)
     }

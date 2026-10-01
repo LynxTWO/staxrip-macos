@@ -7,11 +7,11 @@ struct ChapterPersistenceTests {
     private var edits: ChapterEdits {
         .init(mode: .custom, entries: [.init(startMilliseconds: 0, endMilliseconds: 1250, title: "Opening 日本語")])
     }
-    private func job(_ config: EncodeConfiguration, index: Int = 0) -> QueueJob {
+    nonisolated private func job(_ config: EncodeConfiguration, index: Int = 0) -> QueueJob {
         .init(id: UUID(), source: "/generated/source.mp4", isDemo: false, destination: "/generated/output-\(index).mkv",
               configuration: config, created: Date(timeIntervalSince1970: 1000))
     }
-    private func directory() throws -> URL {
+    nonisolated private func directory() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("chapter-persistence-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false); return root
     }
@@ -76,7 +76,10 @@ struct ChapterPersistenceTests {
         #expect(throws: (any Error).self) { try invalid.validated() }
     }
 
-    @Test func oversizedWritesRetainExistingSessionAndRecoveryBytes() throws {
+    // This bounded value/file stress is not a UI operation. Keeping it on the
+    // suite's UI actor blocks unrelated responsiveness observations.
+    @Test nonisolated func oversizedWritesRetainExistingSessionAndRecoveryBytes() async throws {
+        #expect(!Thread.isMainThread)
         let started = ContinuousClock.now
         func trace(_ event: String) {
             print("CHAPTER_STORAGE_STRESS uptime=\(ProcessInfo.processInfo.systemUptime) \(started.duration(to: .now)) \(event) main=\(Thread.isMainThread)")

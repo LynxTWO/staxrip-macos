@@ -61,7 +61,9 @@ struct WorkspaceRecipeView: View {
                 Image(systemName: "slider.horizontal.3").foregroundStyle(Color.accent).accessibilityHidden(true)
             }
             Text("Shape the next version.")
-                .font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 4).padding(.bottom, 18)
+                .font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 4)
+            Text("Jump to a section: ⌥⌘1–4")
+                .font(.system(size: 10)).foregroundStyle(.secondary).padding(.top, 6).padding(.bottom, 18)
             ForEach(Array(WorkspaceRecipe(configuration).entries.enumerated()), id: \.element.id) { index, entry in
                 recipeRow(entry, number: index + 1)
                     .padding(.bottom, 8)
@@ -99,9 +101,10 @@ struct WorkspaceRecipeView: View {
             .contentShape(RoundedRectangle(cornerRadius: 11))
         }
         .buttonStyle(.plain)
+        .keyboardShortcut(KeyEquivalent(Character(String(number))), modifiers: [.command, .option])
         .accessibilityLabel("\(entry.id) recipe: \(AccessibilityLanguage.spokenCodecs(entry.title))")
         .accessibilityValue(selected ? "Editing" : "Not selected")
-        .accessibilityHint(AccessibilityLanguage.spokenCodecs(entry.detail) + " Opens \(entry.id.lowercased()) settings.")
+        .accessibilityHint(AccessibilityLanguage.spokenCodecs(entry.detail) + " Opens \(entry.id.lowercased()) settings. Shortcut: Option Command \(number).")
         .accessibilityInputLabels([Text(entry.id), Text(entry.title)])
         .accessibilityAddTraits(selected ? .isSelected : [])
     }

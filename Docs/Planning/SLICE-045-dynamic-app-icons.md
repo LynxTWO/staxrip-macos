@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-083 / R-055.
 
 SLICE STATE
-Milestone: M1 fallback artwork renders pass initial inspection; independent read-only status work proceeds while modern tooling awaits license consent.
+Milestone: Product 260f5fd has fallback/native, state/API, 285-test local/hosted and hosted bundle evidence. Modern layered and visible Dock qualification remain held.
 Blocked by: Icon Composer first-run agreement requires owner confirmation before acceptance; no agreement has been accepted.
-Evidence: DYNAMIC-ICON-EVIDENCE.md records original fallback artwork, corrected native Light/Dark sidebar and Finder icon, real export, ten focused checks and 285-test local regression. Modern layered and visual Dock checks remain open.
+Evidence: DYNAMIC-ICON-EVIDENCE.md records original fallback artwork, corrected native Light/Dark sidebar and Finder icon, real export, ten focused checks and 285-test local/hosted regression. Modern layered and visual Dock checks remain open.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

@@ -126,3 +126,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 45. [Slice 035: compact source preview](SLICE-035-compact-preview.md).
 
 [Compact preview evidence](COMPACT-PREVIEW-EVIDENCE.md) records native playback continuity, retained remedies and final local/hosted acceptance.
+
+46. [Slice 036: trimmed external captions](SLICE-036-trimmed-captions.md) and [feasibility](SUBTITLE-TRIM-RESEARCH.md).
+
+[Trimmed caption evidence](SUBTITLE-TRIM-EVIDENCE.md) records native correction/export, decoded caption/video/audio/chapter timelines and ordinary local/hosted acceptance after scoped test-fixture isolation.

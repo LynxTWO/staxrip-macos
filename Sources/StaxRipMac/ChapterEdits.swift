@@ -63,12 +63,14 @@ struct ChapterEdits: Codable, Equatable, Sendable {
 }
 
 struct ChapterPlan: Sendable {
+    enum MetadataTimeline { case source, output }
     let expected: [ContainerPreservation.Chapter]
     let metadata: Data?
     let preservesSource: Bool
     let summary: String
 
-    static func make(probe: MediaProbe, configuration: EncodeConfiguration, includeMetadata: Bool = true) throws -> Self {
+    static func make(probe: MediaProbe, configuration: EncodeConfiguration, includeMetadata: Bool = true,
+                     metadataTimeline: MetadataTimeline = .source) throws -> Self {
         let p = configuration.picture
         let trimmed = p.start > 0 || p.end > 0
         guard let edits = configuration.chapterEdits else {
@@ -106,11 +108,18 @@ struct ChapterPlan: Sendable {
         let data: Data?
         if selected.isEmpty || !includeMetadata { data = nil }
         else {
-            // Keep original source times. FFmpeg's output seek applies the offset
-            // exactly once. Exclude boundary-only entries before FFmpeg can emit
-            // zero-length chapters, and use microseconds for fractional trims.
-            let text = ";FFMETADATA1\n" + selected.map { entry in
-                "[CHAPTER]\nTIMEBASE=1/1000000\nSTART=\(entry.startMilliseconds * 1000)\nEND=\(entry.endMilliseconds * 1000)\ntitle=\(escaped(entry.title))\n"
+            // Ordinary output seeking offsets source metadata once. The caption
+            // trim path instead filters media and needs output-time metadata here.
+            let entries: [(start: Int64, end: Int64, title: String)]
+            switch metadataTimeline {
+            case .source:
+                entries = selected.map { ($0.startMilliseconds * 1000, $0.endMilliseconds * 1000, $0.title) }
+            case .output:
+                entries = expected.map { (Int64(($0.start * 1_000_000).rounded()),
+                                          Int64(($0.end * 1_000_000).rounded()), $0.title) }
+            }
+            let text = ";FFMETADATA1\n" + entries.map { entry in
+                "[CHAPTER]\nTIMEBASE=1/1000000\nSTART=\(entry.start)\nEND=\(entry.end)\ntitle=\(escaped(entry.title))\n"
             }.joined()
             data = Data(text.utf8)
         }

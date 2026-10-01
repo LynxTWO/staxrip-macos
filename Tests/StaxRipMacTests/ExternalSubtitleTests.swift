@@ -73,7 +73,7 @@ struct ExternalSubtitleTests {
         if let videoStart { video["start_pts"] = videoStart }
         return try JSONDecoder().decode(MediaProbe.self, from: JSONSerialization.data(withJSONObject: ["streams": [video], "format": format]))
     }
-    @Test func timelineRequiresKnownZeroStartAndNoRetiming() throws {
+    @Test func timelineRequiresKnownZeroStartAndSDR() throws {
         let document = try SubRipDocument(data: cue("x"))
         let config = EncodeConfiguration()
         try document.validateTimeline(probe: probe(), configuration: config)
@@ -82,9 +82,44 @@ struct ExternalSubtitleTests {
             #expect(throws: (any Error).self) { try document.validateTimeline(probe: source, configuration: config) }
         }
         var trimmed = config; trimmed.picture.start = 0.1
-        #expect(throws: (any Error).self) { try document.validateTimeline(probe: probe(), configuration: trimmed) }
+        let clipped = try document.forExport(probe: probe(), configuration: trimmed)
+        #expect(clipped.cues == [SubRipCue(start: 0, end: 899, text: "x")])
         var hdr = config; hdr.colorMode = "Preserve static HDR10"
         #expect(throws: (any Error).self) { try document.validateTimeline(probe: probe(), configuration: hdr) }
+    }
+
+    @Test func intersectionClipsBothBoundariesWithoutChangingText() throws {
+        let source = "1\n00:00:00,000 --> 00:00:01,000\nOutside\n\n2\n00:00:01,000 --> 00:00:03,000\nCafé 👩‍💻 e\u{301}\n\n3\n00:00:03,000 --> 00:00:04,000\nAdjacent\n\n4\n00:00:04,500 --> 00:00:06,000\nCross end\n\n5\n00:00:06,000 --> 00:00:07,000\nAfter\n\n"
+        let document = try SubRipDocument(data: Data(source.utf8))
+        let clipped = try document.clipped(start: 2000, end: 5000)
+        #expect(clipped.cues == [SubRipCue(start: 0, end: 1000, text: "Café 👩‍💻 e\u{301}"),
+                                SubRipCue(start: 1000, end: 2000, text: "Adjacent"),
+                                SubRipCue(start: 2500, end: 3000, text: "Cross end")])
+        #expect(try SubRipDocument(data: clipped.canonicalData) == clipped)
+        #expect(document.canonicalData == Data(source.utf8))
+        #expect(try document.clipped(start: 1100, end: 1200).cues == [SubRipCue(start: 0, end: 100, text: "Café 👩‍💻 e\u{301}")])
+        #expect(try document.clipped(start: 3000, end: 4000).cues == [SubRipCue(start: 0, end: 1000, text: "Adjacent")])
+        for interval: (Int64, Int64) in [(4000, 4500), (7000, 8000), (0, 0), (-1, 100), (0, SubRipDocument.maximumTime + 1)] {
+            #expect(throws: (any Error).self) { try document.clipped(start: interval.0, end: interval.1) }
+        }
+    }
+
+    @Test func trimPrecisionAndOpenEndAreExplicit() throws {
+        #expect(try SubRipDocument.trimMilliseconds(12.345) == 12345)
+        #expect(try SubRipDocument.trimMilliseconds(0.1 + 0.2) == 300)
+        #expect(try SubRipDocument.trimMilliseconds(172800) == SubRipDocument.maximumTime)
+        for value in [Double.nan, .infinity, -.infinity, -0.001, 0.0001, 12.3456, 172800.001] {
+            #expect(throws: (any Error).self) { try SubRipDocument.trimMilliseconds(value) }
+        }
+        let document = try SubRipDocument(data: cue("x"))
+        var c = EncodeConfiguration(); c.picture.start = 0.5
+        #expect(try document.forExport(probe: probe(), configuration: c).cues[0].end == 499)
+        c.picture.start = 0; c.picture.end = 0.5
+        #expect(try document.forExport(probe: probe(), configuration: c).cues[0].end == 500)
+        c.picture.start = 0.999; c.picture.end = 1
+        #expect(throws: (any Error).self) { try document.forExport(probe: probe(), configuration: c) }
+        c.picture.start = 0; c.picture.end = 1.001
+        #expect(throws: (any Error).self) { try document.forExport(probe: probe(), configuration: c) }
     }
 
     @Test(.timeLimit(.minutes(1))) func boundedRegularReadCapturesFreshContentsAndRefusesSpecialFiles() async throws {

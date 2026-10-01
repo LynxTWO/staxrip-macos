@@ -139,3 +139,9 @@ Slices 033 and 034 now have scoped acceptance at 3d14456 and 34d6c0d respectivel
 Current approved boundary: SLICE-035-compact-preview.md under D-062 / R-044. WorkspaceView changes only the existing preview frame and footer; NativeVideoPreview and its AVPlayer identity remain intact. One app-only size preference is separate from sessions and encoding intent.
 
 Slice 035 is accepted at 24e8f2b with hosted run 36856655748. COMPACT-PREVIEW-EVIDENCE.md records the native continuity proof and rejected border experiment.
+
+Current approved boundary: SLICE-036-trimmed-captions.md under D-064 / R-045. ExternalSubtitle owns cue intersection, EncodePlan owns this combination's timing filters, ChapterPlan selects source/output metadata time explicitly, and BatchController writes the plan-owned caption snapshot. Existing verifier and exclusive publication remain the final authority.
+
+D-065 / R-046 holds Slice 036 acceptance after an existing hosted publication observation timeout. Diagnostic changes remain in the test gate and existing DEBUG task-local hooks; no publication or audio implementation change is approved yet. Video-copy discovery is retained locally, not an active implementation slice.
+
+Slice 036 now has scoped acceptance at product content e2d1152 / ordinary qualification 331d1d8 with hosted run 36863640437. D-066 resolved the qualification hold through one pure-storage test fixture's actor isolation, without a production publication/validation change. All temporary diagnostics are removed. SUBTITLE-TRIM-EVIDENCE.md records actual output timelines and the complete failure/repair receipts.

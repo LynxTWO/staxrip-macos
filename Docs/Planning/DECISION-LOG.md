@@ -73,6 +73,9 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-061 | 2026-10-01 | Adapt semantic accent and warning contrast | Confirmed | |
 | D-062 | 2026-10-01 | Resize source preview without replacing playback | Confirmed | |
 | D-063 | 2026-10-01 | Qualify preview border hit testing | Confirmed | |
+| D-064 | 2026-10-01 | Clip external captions to the selected timeline | Confirmed | |
+| D-065 | 2026-10-01 | Locate publication observation timeout | Confirmed | |
+| D-066 | 2026-10-01 | Keep value-storage stress off the UI actor | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -978,3 +981,50 @@ Consequences: Preserve the border rendering and parent drop target. Disable hit 
 Revisit when: The change fails to restore player input, drop behavior changes or another overlay owns input intentionally.
 
 D-063 outcome: The same initial native play control works with the original border after recreating the source view. Removing hit testing did not establish a causal improvement. The speculative change was removed before final qualification. Auto-hidden control reveal through the inspection tool remains limited; the generated movie's visible clock independently proves resize continuity. No drop-handler change is retained, so new drop qualification is not a product gate for this rejected experiment.
+
+
+## D-064: Clip external captions to the selected timeline
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 036 and R-045 under owner autonomous program-completion delegation, excluding original mastering and owner listening. Delegated to AI recommendation.
+
+Because: External captions currently refuse all trim. Generated discovery shows that global output seek drops a crossing cue and retains an overlong final cue; MP4 also retained an unwanted offset. Explicit cue intersection plus filtered video timing produced the intended decoded captions in both containers. Slice 035 is accepted.
+
+Options considered: retain refusal; add a second full remux pass; use a captured clipped caption snapshot with explicit video/audio timestamp filters only for this combination. Choose the third, with combined chapter timing qualification.
+
+Consequences: Retain known zero-start SDR source bounds, plain nonoverlapping SRT limits, no copied audio or retained embedded subtitles on trim, and fresh caption capture per attempt. Require explicit trim boundaries on millisecond precision; do not silently round owner intent. Intersect cues with the requested interval, shift once and refuse an empty result with correction guidance. For this path only, filter video/audio to the source interval and subtract the common start instead of global output seek. Feed custom chapters in verified output time. Existing untrimmed and non-caption trim paths remain unchanged. Independently decode actual captions, frame timestamps, audio timing and combined chapters before acceptance; runtime exact caption verification, source protection, staging and publication guards remain intact. No original mastering, new session fields, merge or release.
+
+Revisit when: Timestamp precision, audio delay, VFR frame selection, custom chapters or captured-snapshot verification disagree with the intended interval.
+
+
+## D-065: Locate the publication observation timeout before repair
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Extend Slice 036 regression qualification under R-046 with bounded test-only publication boundary diagnostics. Delegated to AI recommendation under the owner's autonomous non-audio authorization.
+
+Because: Final-head hosted run 36859104083 failed one existing mainActorRunsWhileFilesystemWorkerWaits test with its unchanged twenty-second gate timeout. All 247 tests ran; the earlier product head passed hosted 247 and final local passed 247. Many unrelated main-actor tests report about 26 seconds together. This does not establish whether the app main queue, task continuation or filesystem dispatch was delayed.
+
+Options considered: rerun until green; relax or serialize the test; trace the existing worker and observation boundaries before choosing any repair. Choose the third.
+
+Consequences: Keep existing assertions, twenty-second gate, one-minute test limit and default scheduling. Add bounded test-only monotonic events for actual publication body/submission/worker entry, gate entry, main-queue canary, polling continuation, release and completion. Use the existing DEBUG task-local hook; no product implementation change. Hold Slice 036 acceptance and video-copy implementation. Preserve the failed receipt. A causal repair needs evidence and a further decision.
+
+Revisit when: The hosted diagnostic identifies the delay, or a reproduction requires a separate controlled experiment.
+
+
+## D-066: Keep value-storage stress off the UI actor
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Extend R-046 to the oversized chapter persistence fixture's actor isolation, under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: Hosted diagnostics 36860779217 and 36860834644 passed 247 tests but held the main-queue canary for about 17.916 and 18.741 seconds after publication gate entry, near the unchanged twenty-second limit. Worker entry was already observed off main. A local full-run stack profile places 556 of 753 main-thread samples in the existing oversized chapter fixture, chiefly repeated validation; this fixture tests value validation/file-write refusal, not UI actor behavior. Correlated hosted fixture timestamps are still pending and will refine this attribution.
+
+Options considered: optimize production validation speculatively; relax the publication gate; isolate the bounded pure-storage stress fixture from the UI actor. Choose the third. The measured local native-search comparison did not justify a production optimization.
+
+Consequences: Make only oversizedWritesRetainExistingSessionAndRecoveryBytes explicitly nonisolated async, with its stateless directory/job helpers nonisolated. Add a non-main-thread assertion. Retain identical chapter counts, title sizes, session/journal refusals, existing-byte checks and excessive-entry rejection. Other chapter UI tests remain main-actor isolated. Default Swift Testing parallel execution, all existing publication assertions, twenty-second gate and one-minute test deadline remain unchanged. This is a test-isolation repair, not a claim that synchronous production persistence or arbitrary filesystem latency has been solved. Require local/hosted contrast of actual worker/main-queue events, then remove temporary diagnostic prints before final ordinary qualification. No product code, listening, merge or release.
+
+Revisit when: The nonisolated fixture still runs on main, gate timing remains near its bound, hosted correlation contradicts the attribution or another real application blocker is identified.
+
+D-066 outcome: Correlated run 36861898847 places 11.913 seconds of synchronous storage stress on main during the publication observer's wait. Repair run 36862281818 passes all 247 tests and shows the actor releasing the publication gate before the unchanged off-main storage workload finishes. Remove temporary diagnostics, retain the explicit fixture isolation and assertion, and require final ordinary gates. No production publication/validation change is inferred from this test-environment finding.

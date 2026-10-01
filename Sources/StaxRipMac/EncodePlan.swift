@@ -43,7 +43,7 @@ struct EncodePlan: Sendable {
             throw NativeExportError.invalid("The trim range must lie within the source duration.")
         }
         guard !trimmed || (c.audio != "Copy original" && c.subtitleMode == "Remove all subtitles") else {
-            throw NativeExportError.invalid("Precise trimming requires re-encoded audio (or no audio) and removed subtitles. Embedded subtitle and copied-audio timing cannot yet be preserved by this trim workflow.")
+            throw NativeExportError.invalid("Precise trimming requires re-encoded audio (or no audio) and removed embedded subtitles. Embedded subtitle and copied-audio timing cannot yet be preserved by this trim workflow.")
         }
         let outputDuration = trimmed ? (picture.end > 0 ? picture.end : probe.seconds) - picture.start : probe.seconds
         let hardware = c.rate.backend == "Apple hardware"
@@ -68,8 +68,8 @@ struct EncodePlan: Sendable {
         let audio = try selectedStreams(probe, type: "audio", indices: c.audioTracks)
         let subtitles = try selectedStreams(probe, type: "subtitle", indices: c.subtitleTracks)
         let keepSubtitles = c.subtitleMode == "Keep embedded tracks"
-        let external = c.externalSubtitle.map {
-            ExternalSubtitleExport(reference: $0, document: externalDocument!, ordinal: keepSubtitles ? subtitles.count : 0,
+        let external = try c.externalSubtitle.map {
+            ExternalSubtitleExport(reference: $0, document: try externalDocument!.forExport(probe: probe, configuration: c), ordinal: keepSubtitles ? subtitles.count : 0,
                                    codec: c.container == "MP4" ? "mov_text" : "subrip")
         }
         if c.container == "MP4" {
@@ -81,7 +81,9 @@ struct EncodePlan: Sendable {
                 throw NativeExportError.invalid("Use MKV to preserve these subtitle formats, or remove subtitles for MP4.")
             }
         }
-        let chapterPlan = try ChapterPlan.make(probe: probe, configuration: c)
+        let captionTrim = trimmed && external != nil
+        let chapterPlan = try ChapterPlan.make(probe: probe, configuration: c,
+                                              metadataTimeline: captionTrim ? .output : .source)
         let containerPreservation = try ContainerPreservation.make(probe: probe, configuration: c, chapterPlan: chapterPlan)
         var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe"] + orientation.inputArguments(stream: video.index) + ["-i", job.source]
         if external != nil {
@@ -91,7 +93,7 @@ struct EncodePlan: Sendable {
             args += ["-f", "ffmetadata", "-protocol_whitelist", "file,pipe", "-i", staged.deletingLastPathComponent().appendingPathComponent("chapters.ffmetadata").path]
         }
         args += ["-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
-        if trimmed {
+        if trimmed && !captionTrim {
             args += ["-ss", String(picture.start), "-t", String(outputDuration)]
         }
         if c.rate.mode == "Constant quality" { args += ["-crf", String(Int(c.quality))] }
@@ -115,7 +117,16 @@ struct EncodePlan: Sendable {
             args += ["-fps_mode:v", "passthrough", "-enc_time_base:v", "filter"]
         }
         let picturePlan = PicturePlan(c)
-        let filters = orientation.filters + picturePlan.filters
+        var filters = orientation.filters + picturePlan.filters
+        if captionTrim {
+            let bounds = "start=\(picture.start)" + (picture.end > 0 ? ":end=\(picture.end)" : "")
+            // Preserve source filter history, then subtract one common origin.
+            // Global output seek would trim/offset the already-retimed captions again.
+            filters += ["trim=\(bounds)", "setpts=PTS-\(picture.start)/TB"]
+            if c.audio != "No audio", !audio.isEmpty {
+                args += ["-af", "atrim=\(bounds),asetpts=PTS-\(picture.start)/TB"]
+            }
+        }
         if !filters.isEmpty { args += ["-vf", filters.joined(separator: ",")] }
         var expectedAudio: String?
         if c.audio != "No audio", !audio.isEmpty {
@@ -147,7 +158,7 @@ struct EncodePlan: Sendable {
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: (keepSubtitles ? subtitles.count : 0) + (external == nil ? 0 : 1),
-                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")" + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" } ?? "") + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary)
+                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")" + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" + (captionTrim ? ", clipped to trim" : "") } ?? "") + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary)
     }
 
     static func validateHDRSettings(_ c: EncodeConfiguration) throws {

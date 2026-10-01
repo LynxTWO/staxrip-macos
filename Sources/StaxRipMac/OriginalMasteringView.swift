@@ -13,10 +13,10 @@ struct OriginalMasteringView: View {
             Text("A shared gain envelope, measured speech anchors and a verified lossless result. Mono or stereo, at the original sample rate.").foregroundStyle(.secondary)
             HStack(alignment: .top,spacing: 24) {
                 VStack(alignment: .leading,spacing: 12) {
-                    Picker("Mode",selection: $audio.masterSettings.mode) { ForEach(MasterMode.allCases,id: \.self) { Text($0.rawValue).tag($0) } }
+                    Picker("Mode",selection: $audio.masterSettings.mode) { ForEach(MasterMode.allCases,id: \.self) { Text($0.rawValue).tag($0) } }.tint(Color.primaryActionFill)
                         .onChange(of: audio.masterSettings.mode) { _,mode in audio.masterSettings.maximumLRA = mode == .night ? 3 : 11 }
                         .accessibilityHint("Smart prefers constant gain when feasible. Night reduces volume differences and checks momentary and short-term excursions.")
-                    Picker("Loudness reference",selection: $audio.masterSettings.reference) { ForEach(MasterReference.allCases,id: \.self) { Text($0.rawValue).tag($0) } }
+                    Picker("Loudness reference",selection: $audio.masterSettings.reference) { ForEach(MasterReference.allCases,id: \.self) { Text($0.rawValue).tag($0) } }.tint(Color.primaryActionFill)
                         .accessibilityHint("Whole programme targets overall loudness. Selected speech targets the combined gated energy of your confirmed intervals; music in those intervals is included.")
                     if audio.masterSettings.reference == .speech {
                         Toggle("I confirm the speech intervals above are representative",isOn: $audio.masterSettings.speechConfirmed)

@@ -37,7 +37,7 @@ struct SubtitleOptionsView: View {
                             configuration.externalSubtitle?.language ?? "und"
                         }, set: { configuration.externalSubtitle?.language = $0 })) {
                             ForEach(ExternalSubtitle.languages, id: \.0) { item in Text(item.1).tag(item.0) }
-                        }.labelsHidden()
+                        }.tint(Color.primaryActionFill).labelsHidden()
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         eyebrow("Track title")

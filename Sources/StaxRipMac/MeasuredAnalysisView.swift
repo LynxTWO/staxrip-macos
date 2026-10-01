@@ -47,7 +47,7 @@ struct MeasuredAnalysisView: View {
                 Text("Use stream metadata").tag("metadata")
                 Text("I confirm mono (FC)").tag("mono").accessibilityLabel("I confirm mono, front centre")
                 Text("I confirm stereo (FL / FR)").tag("stereo").accessibilityLabel("I confirm stereo, front left and front right")
-            }.accessibilityHint("Use stream metadata unless the layout is unknown and you know whether the source is mono or stereo.")
+            }.tint(Color.primaryActionFill).accessibilityHint("Use stream metadata unless the layout is unknown and you know whether the source is mono or stereo.")
             .disabled(busy).onChange(of: audio.analysisLayout) { _, _ in audio.analysisReport = nil; audio.analysisSourceVerified = false }
             DisclosureGroup("Optional speech intervals · selected by you") {
                 VStack(alignment: .leading, spacing: 10) {

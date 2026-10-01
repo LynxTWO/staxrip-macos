@@ -437,6 +437,7 @@ func settingPicker(_ title: String, selection: Binding<String>, values: [String]
                 Text(value).tag(value).accessibilityLabel(AccessibilityLanguage.spokenCodecs(value))
             }
         }
+            .tint(Color.primaryActionFill)
             .accessibilityValue(AccessibilityLanguage.spokenCodecs(selection.wrappedValue))
             .labelsHidden().frame(maxWidth: .infinity).controlSize(.large)
     }.frame(maxWidth: .infinity, alignment: .leading)

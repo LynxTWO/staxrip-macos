@@ -31,7 +31,7 @@ struct AudioLabView: View {
                             ForEach(audio.tracks) { track in
                                 Text("#\(track.index) · \(track.codec_name ?? "unknown") · \(track.channels ?? 0) ch · \(track.sample_rate ?? "?") Hz · \(track.tags?["language"] ?? "und")").tag(track.index)
                             }
-                        }.padding(12).disabled(busy)
+                        }.tint(Color.primaryActionFill).padding(12).disabled(busy)
                         .onChange(of: audio.track) { _, _ in audio.report = nil; audio.channelReports = []; audio.dialogueReport = nil; audio.output = nil; audio.outputReport = nil; audio.analysisReport = nil; audio.analysisSourceVerified = false; audio.analysisLayout = "metadata" }
                     }
                 }
@@ -41,19 +41,19 @@ struct AudioLabView: View {
                     HStack(alignment: .top, spacing: 20) {
                         AudioPanel("Legacy FFmpeg output recipe") {
                             VStack(spacing: 16) {
-                                Picker("Format", selection: $audio.settings.format) { ForEach(["FLAC", "WAV", "AAC", "Opus"], id: \.self) { Text($0) } }
+                                Picker("Format", selection: $audio.settings.format) { ForEach(["FLAC", "WAV", "AAC", "Opus"], id: \.self) { Text($0) } }.tint(Color.primaryActionFill)
                                 Picker("Sample rate", selection: $audio.settings.sampleRate) {
                                     if audio.settings.format != "Opus" { Text("44.1 kHz").tag(44100); Text("96 kHz").tag(96000) }
                                     Text("48 kHz").tag(48000)
-                                }
-                                Picker("Channels", selection: $audio.settings.channels) { Text("Keep source").tag(0); Text("Mono").tag(1); Text("Stereo").tag(2) }
+                                }.tint(Color.primaryActionFill)
+                                Picker("Channels", selection: $audio.settings.channels) { Text("Keep source").tag(0); Text("Mono").tag(1); Text("Stereo").tag(2) }.tint(Color.primaryActionFill)
                                 Toggle("Normalize loudness", isOn: $audio.settings.normalize)
                                 if audio.settings.normalize {
                                     Picker("Mastering mode", selection: $audio.settings.loudnessMode) {
                                         Text("Smart master").tag("Smart master")
                                         Text("Night / Venue · experimental").tag("Night / Venue")
                                             .accessibilityLabel("Night and venue processing. Experimental")
-                                    }.accessibilityHint(audio.settings.loudnessMode == "Night / Venue" ? "Uses compression to reduce volume differences. Listening comfort is not guaranteed." : "Prefers constant gain when feasible, then verifies the encoded output. This does not detect dialogue.")
+                                    }.tint(Color.primaryActionFill).accessibilityHint(audio.settings.loudnessMode == "Night / Venue" ? "Uses compression to reduce volume differences. Listening comfort is not guaranteed." : "Prefers constant gain when feasible, then verifies the encoded output. This does not detect dialogue.")
                                     .onChange(of: audio.settings.loudnessMode) { _, mode in
                                         audio.settings.targetLRA = mode == "Night / Venue" ? 3 : 11
                                         if mode == "Night / Venue" { audio.settings.targetLUFS = -18 }
@@ -71,7 +71,7 @@ struct AudioLabView: View {
                                     Text("LUFS −36 to −9; LRA 1–20 LU. Smart master prefers constant gain when feasible. Night / Venue adds linked compression. Both measure before processing and verify the encoded output: ±0.5 LU, LRA ≤ target +1 LU, true peak ≤ −1 dBTP. Silence stays gated; this is not automatic dialogue detection or a listening-comfort guarantee.").font(.caption).foregroundStyle(.secondary)
                                 }
                                 if ["AAC", "Opus"].contains(audio.settings.format) {
-                                    Picker("Bitrate", selection: $audio.settings.bitrate) { ForEach([128, 192, 256, 320], id: \.self) { Text("\($0) kb/s").tag($0) } }
+                                    Picker("Bitrate", selection: $audio.settings.bitrate) { ForEach([128, 192, 256, 320], id: \.self) { Text("\($0) kb/s").tag($0) } }.tint(Color.primaryActionFill)
                                 } else { Text("24-bit integer output · resampled to the chosen rate").font(.caption).foregroundStyle(.secondary) }
                             }.padding(14).disabled(busy)
                             .onChange(of: audio.settings.format) { _, format in if format == "Opus" { audio.settings.sampleRate = 48000 } }

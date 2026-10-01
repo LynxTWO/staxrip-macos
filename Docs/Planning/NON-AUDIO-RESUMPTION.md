@@ -139,3 +139,5 @@ Slice 024 closed at daf27e6 with hosted run 36811284038: 195 tests in 469.903 se
 Slice 025 is active under D-039 / R-029: explicit source review after restoring a session, with saved recipe and name retention. Audio listening remains parked.
 
 Slice 025 closed at 42c8c07 with hosted run 36812490982: 197 tests in 479.518 seconds. Native cancellation, mismatch refusal, explicit preview loading and complete saved-session equality passed. Draft PR 42 remains unmerged. Audio listening stays parked.
+
+Slice 026 is active under D-040 / R-030: reproduce and correct SDR encoder time-base quantization with decoded generated-frame evidence. Audio listening stays parked.

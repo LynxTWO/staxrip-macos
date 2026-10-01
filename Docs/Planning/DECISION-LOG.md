@@ -47,6 +47,8 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-038 | 2026-09-30 | Review and navigate a live workspace recipe | Confirmed | |
 | D-039 | 2026-09-30 | Explicit review before reading restored media | Confirmed | |
 
+| D-040 | 2026-10-01 | Preserve SDR decoded frame timing | Confirmed | |
+
 ## D-001: Native offline product
 Date: 2026-09-28
 Status: Confirmed
@@ -605,3 +607,17 @@ Options considered: keep automatic reads and add another timeout; persist securi
 Consequences: Restoring a session does not inspect or load its media path. A visible matching-source picker starts preview loading, retaining configuration, captions, output name and queue. Cancel, wrong path, stale callbacks and read failure preserve restored intent. Standard Open source remains a separate replacement path. No saved format, encoder, audio algorithm, durable-access or arbitrary-I/O cancellation guarantee.
 
 Revisit when: Durable file access or deliberate relocation of a moved source is scoped, or platform evidence shows another native read failure after explicit selection.
+
+## D-040: Preserve SDR decoded frame timing
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Build Slice 026 after Slice 025 acceptance under renewed autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: A short generated variable-rate clip retained all 24 frames but shifted timestamps by up to 19 milliseconds with traced current arguments. Explicit source/filter time-base experiments preserved timestamps on the local five encoders. Actual EncodePlan negative-control evidence is required before changing policy.
+
+Options considered: leave muxer and encoder timing defaults; passthrough alone; passthrough with the filter time base. Choose the third for SDR because passthrough alone reproduced the quantization. Keep the audited static HDR path unchanged.
+
+Consequences: Video-only timing arguments and scoped decoded-frame regression. FFmpeg documents a default encoder time base of inverse frame rate, plus filter/demux alternatives; muxers may still change timestamps. No saved-format, audio time-base, runtime frame-audit or general A/V sync claim. Reference: https://ffmpeg.org/ffmpeg.html#Advanced-options, reviewed 2026-10-01.
+
+Revisit when: A supported encoder rejects the time base, decoded fixture evidence disagrees, or broader timing/conversion and runtime audit scope is approved.

@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Record Slice 010 hosted status; local inspector and native section checks passed. Slice 009 local, native and hosted checks passed; see BATCH-CLEANUP-EVIDENCE.md. Slice 008 local, native and hosted checks passed; see QUEUE-PREFLIGHT-EVIDENCE.md. Slice 007 native and hosted checks passed; see ORIENTATION-EVIDENCE.md. Audio listening remains parked.
+Next: Slice 026 SDR frame timing under D-040 / R-030 after Slice 025 closure at 42c8c07, hosted run 36812490982.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -118,7 +118,7 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
-Current approved implementation: Slice 004, implemented within HDR10-EVIDENCE.md limits; hosted run 36607764563 passed at 16a889c. Native cleanup and Slice 003 hosted checks also passed. No merge or release is authorized. Latest accepted build boundary: SLICE-023-native-preset-accessibility.md under D-036/D-037, product head 543b991 and hosted run 36808673370. Slice 024 is accepted at daf27e6 under D-038 / R-028 with hosted run 36811284038. Slice 025 is accepted at 42c8c07 under D-039 / R-029 with hosted run 36812490982. No next slice is active. Slices 014 through 022 have scoped acceptance receipts linked from the planning index. Slice 005 has local evidence in PICTURE-PREVIEW-EVIDENCE.md. Owner approved it and delegated subsequent reversible non-audio slice decisions on 2026-09-29.
+Current approved implementation: Slice 004, implemented within HDR10-EVIDENCE.md limits; hosted run 36607764563 passed at 16a889c. Native cleanup and Slice 003 hosted checks also passed. No merge or release is authorized. Latest accepted build boundary: SLICE-023-native-preset-accessibility.md under D-036/D-037, product head 543b991 and hosted run 36808673370. Slice 024 is accepted at daf27e6 under D-038 / R-028 with hosted run 36811284038. Slice 025 is accepted at 42c8c07 under D-039 / R-029 with hosted run 36812490982. Current approved build boundary: SLICE-026-sdr-cadence.md under D-040 / R-030. Slices 014 through 022 have scoped acceptance receipts linked from the planning index. Slice 005 has local evidence in PICTURE-PREVIEW-EVIDENCE.md. Owner approved it and delegated subsequent reversible non-audio slice decisions on 2026-09-29.
 
 Slice 001 remains accepted with evidence in MEASURED-ANALYSIS-EVIDENCE.md. Slice 002 remains paused by owner request, not accepted. Preserve MASTERING-EVIDENCE.md, the verified v2 listening pack and unresolved D-015 findings. Audio resumes when the owner can review it with headphones.
 

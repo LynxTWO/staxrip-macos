@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 035: Compact source preview
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-062 / R-044.
+Version: 0.1. Date: 2026-10-01. Status: Done with evidence under D-062 / R-044.
 
 SLICE STATE
-Milestone: Implementation and scoped native checks complete; full regression pending.
+Milestone: All four gates accepted at 24e8f2b; hosted run 36856655748.
 Blocked by: None within scope.
-Evidence so far: WorkspaceView fixed frame and NativeVideoPreview identity-preserving update; Slice 034 accepted.
+Evidence so far: COMPACT-PREVIEW-EVIDENCE.md, native clock continuity, local/hosted 244 tests, optimized build and audit.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

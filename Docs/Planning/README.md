@@ -124,3 +124,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Semantic appearance evidence](APPEARANCE-CONTRAST-EVIDENCE.md) records native light/dark actions, cross-version contrast correction and final local/hosted acceptance.
 
 45. [Slice 035: compact source preview](SLICE-035-compact-preview.md).
+
+[Compact preview evidence](COMPACT-PREVIEW-EVIDENCE.md) records native playback continuity, retained remedies and final local/hosted acceptance.

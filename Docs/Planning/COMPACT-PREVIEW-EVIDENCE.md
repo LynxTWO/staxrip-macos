@@ -1,6 +1,6 @@
 # Compact source preview evidence
 
-Slice 035 under D-062 / R-044 is implemented but not yet accepted.
+Slice 035 under D-062 / R-044 has scoped acceptance at product head 24e8f2b, hosted run 36856655748.
 
 Need: more settings space without restarting playback. Authority: owner overnight non-audio design delegation. Effect and worst case are local presentation and lost playback position; no encoding or saved recipe field changes. The smallest coherent implementation changes the existing view frame from 230 to 150 points through one app-only preference, default false. A separate footer action row prevents description/action crowding. No new player, dependency, observer or test harness is introduced.
 
@@ -12,4 +12,6 @@ A generated 180-second, 640 by 360, 24 fps H.264 movie contains a visible second
 
 The first clock-generation attempt had a filter quoting error; corrected syntax established that this FFmpeg build has no drawtext filter. The generated testsrc seconds counter supplied the needed observable clock without installing a dependency. No private media was used. The source and generated session hashes remain unchanged, and no queue encoding or output publication occurred. The app exited normally with Light restored.
 
-Full local/hosted regression and final documentation audit are pending. Heard VoiceOver, other operating systems' native layout and broad playback compatibility remain outside this scoped evidence.
+Final optimized ad-hoc build passed in 16.00 seconds. Full local regression passed 244 tests / 55 suites in 204.896 seconds at product head 24e8f2b. Planning audit reports zero findings across 38 selected documents and diff hygiene passes. Hosted run 36856655748 passed all 244 tests in 442.281 seconds. Heard VoiceOver, other operating systems' native layout and broad playback compatibility remain outside this scoped evidence.
+
+All four gates have scoped acceptance. No border or drop behavior change was retained. Playback continuity is directly observed, while broad media compatibility and reliable auto-hidden control reveal through the inspection tool remain separate.

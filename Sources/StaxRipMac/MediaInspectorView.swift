@@ -83,11 +83,13 @@ struct MediaInspectorView: View {
             }
             field("Reported title", value: TrackInspection.title(stream), help: "A title or track name from the source metadata. It has not been inferred from the track's content.")
             field("Reported language", value: TrackInspection.language(stream), help: "The language label declared by the source. No language detection has been performed.")
-            DisclosureGroup("Declared track roles") {
+            DisclosureGroup {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(TrackInspection.roles(stream)) { role in field(role.label, value: role.state.rawValue, help: role.help) }
                 }.padding(.top, 8)
-            }.accessibilityLabel("Declared roles for source track \(stream.index)")
+            } label: {
+                Text("Declared track roles").accessibilityLabel("Declared roles for source track \(stream.index)")
+            }
             Text(TrackInspection.summary(stream)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let width = stream.width, let height = stream.height { Text("\(width) × \(height) · \(ContainerInspection.text(stream.pix_fmt, fallback: "unknown pixel format"))") }
             if let channels = stream.channels { Text("\(channels) channels · \(ContainerInspection.text(stream.channel_layout, fallback: "layout unspecified")) · \(ContainerInspection.text(stream.sample_rate, fallback: "?")) Hz") }

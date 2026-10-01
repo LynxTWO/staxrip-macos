@@ -2,19 +2,38 @@ import Foundation
 import Testing
 @testable import StaxRipMac
 
+private final class PublicationTrace: @unchecked Sendable {
+    private let lock = NSLock()
+    private let start = ContinuousClock.now
+    private var count = 0
+    func record(_ event: String) {
+        lock.withLock {
+            guard count < 24 else { return }
+            count += 1
+            print("PUBLICATION_OBSERVATION \(start.duration(to: .now)) \(event) main=\(Thread.isMainThread)")
+        }
+    }
+}
+
 private final class PublicationGate: @unchecked Sendable {
     private let lock = NSLock()
     private let releaseSignal = DispatchSemaphore(value: 0)
     private var entered = false
     private var mainThread = false
     private var staged: URL?
+    private let observe: @Sendable (String) -> Void
+    init(observe: @escaping @Sendable (String) -> Void = { _ in }) { self.observe = observe }
     var snapshot: (Bool, Bool, URL?) { lock.withLock { (entered, mainThread, staged) } }
-    func release() { releaseSignal.signal() }
+    func release() { observe("gate release requested"); releaseSignal.signal() }
     func publish(_ source: URL, _ destination: URL) throws {
         lock.withLock { entered = true; mainThread = Thread.isMainThread; staged = source }
+        observe("gate entered")
+        DispatchQueue.main.async { [observe] in observe("main queue canary") }
         guard releaseSignal.wait(timeout: .now() + 20) == .success else {
+            observe("gate timed out")
             throw NativeExportError.invalid("Test publication gate timed out")
         }
+        observe("gate released; publishing")
         try ExportPublication.publish(staged: source, destination: destination)
     }
 }
@@ -32,9 +51,26 @@ struct PublicationResponsivenessTests {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("staged"), output = root.appendingPathComponent("output")
         try Data("verified media".utf8).write(to: source)
-        let gate = PublicationGate(); defer { gate.release() }
-        let task = Task { try await ExportPublication.publishAsync(staged: source, destination: output, operation: { try gate.publish($0, $1) }) }
-        while !gate.snapshot.0 { try await Task.sleep(for: .milliseconds(5)) }
+        let trace = PublicationTrace(); trace.record("test body entered")
+        let gate = PublicationGate(observe: { trace.record($0) }); defer { gate.release() }
+        let task = Task {
+            trace.record("child task entered")
+            #if DEBUG
+            try await ExportPublication.$observeBoundary.withValue({ trace.record($0) }) {
+                try await ExportPublication.publishAsync(staged: source, destination: output, operation: { try gate.publish($0, $1) })
+            }
+            #else
+            try await ExportPublication.publishAsync(staged: source, destination: output, operation: { try gate.publish($0, $1) })
+            #endif
+            trace.record("publication await returned")
+        }
+        var firstPoll = true
+        while !gate.snapshot.0 {
+            if firstPoll { trace.record("first poll suspending") }
+            try await Task.sleep(for: .milliseconds(5))
+            if firstPoll { trace.record("first poll resumed"); firstPoll = false }
+        }
+        trace.record("main actor observed gate")
         // This main-actor continuation must run before the blocked worker is released.
         MainActor.preconditionIsolated()
         #expect(!gate.snapshot.1)

@@ -110,3 +110,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Chapter editor evidence](CHAPTER-EDITOR-EVIDENCE.md) records native authoring, literal title verification, persistence, regression and retained timing uncertainty.
 
 41. [Slice 031: APFS capacity recovery](SLICE-031-apfs-capacity.md).
+
+42. [Slice 032: Silent motion comparison](SLICE-032-motion-preview.md).

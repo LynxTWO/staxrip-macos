@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select a bounded non-audio slice after Slice 031 acceptance at a940665, hosted run 36840667407.
+Next: Slice 032 silent motion comparison under D-057 / R-040, after Slice 031 acceptance at a940665, hosted run 36840667407.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -266,3 +266,5 @@ Approved R-037 under D-052: per-read owned source worker queue preserving reques
 Approved R-038 under D-053: preserve requested priority and own final-publication dispatch. S31-008 requires actual exclusive-publication contention negative/positive checks, unchanged collision/cancellation/cleanup behavior and full local/native/hosted regression.
 
 Approved R-039 under D-055: own regular-source admission dispatch with inherited task priority and a per-ToolRunner initiated control queue for launch/notify/escalation. S31-009 binds bounded actual-operation counterexamples and unchanged source/process lifecycle plus full/native regression.
+
+Approved R-040 under D-057: bounded silent original/filtered motion comparison. S32-001 through S32-006 bind motion-timing, motion-picture, motion-admission, motion-lifecycle, motion-native and motion-regression gates. Consequence: local_only derived media in uniquely owned temporary storage; no publication or changes to user files. Requires parser/sink negative controls, real source/child/player settlement, independent media verification and full local/native/hosted checks.

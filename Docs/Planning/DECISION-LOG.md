@@ -66,6 +66,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-054 | 2026-10-01 | Observe the actual HDR cancellation test boundary | Confirmed | |
 | D-055 | 2026-10-01 | Own source admission and process control dispatch | Confirmed | |
 | D-056 | 2026-10-01 | Retire temporary hosted dispatch tracing | Confirmed | |
+| D-057 | 2026-10-01 | Silent shared-timeline motion comparison | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -864,3 +865,18 @@ Options considered: retain routine sampling and the focused warm-up; remove temp
 Consequences: Restore plain swift test with unchanged default scheduling, limits and assertions. Remove the test-only forwarding source reader and use BatchController's default reader. Keep bounded status diagnostics, the manual observer script and debug-only hooks required by explicit contention controls. Record a full local and hosted run after cleanup. Do not infer arbitrary kernel wait guarantees or production completion.
 
 Revisit when: Ordinary regression fails or new evidence requires a separately scoped observation.
+
+
+## D-057: Silent shared-timeline motion comparison
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 032 and R-040 under owner overnight autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: Still comparison cannot demonstrate temporal picture settings. Generated discovery establishes matching rational CFR/VFR frames, bounded fragmented-file feasibility and native decode, while production ownership and native transport remain unbuilt.
+
+Options considered: two synchronized players; an image sequence; one composite original/filtered movie with one native playback clock. Choose the composite to avoid independent clocks and duplicate player state.
+
+Consequences: Fixed silent three-second interval, up to 600 selected frames, 64 MiB owned file and 120-second cancellation request. Preserve full filter history and source identity. Fragmented MP4 with no B-frames avoids the timestamp shift observed in discovery. Bound and independently verify both branch sequences, output timing/geometry/color and absence of audio; child exit alone is insufficient. Fit display proportions with declared even-pixel rounding. Stream bounded metadata through an optional stderr observer without altering ordinary retention/drain behavior. App-owned lifecycle waits for process settlement and detaches playback before cleanup. Keep exact still inspection, existing admissions and no-publication guarantees. Native playback and cancellation, counterexamples, full regressions and audit are acceptance gates. No DSP, saved schema, distribution or general quality claim.
+
+Revisit when: Metadata/timestamp completeness cannot be established, native playback or cleanup cannot be owned safely, generated references disagree, or the bounded interval is unsuitable for intended inspection.

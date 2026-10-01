@@ -20,11 +20,12 @@ struct ExternalSubtitle: Codable, Equatable, Sendable {
     var path: String
     var language = "und"
     var title = "External captions"
+    var playback: CaptionPlayback? = nil
     var access: SubtitleFileAccess? = nil
 
-    private enum CodingKeys: String, CodingKey { case path, language, title }
+    private enum CodingKeys: String, CodingKey { case path, language, title, playback }
     static func == (lhs: Self, rhs: Self) -> Bool {
-        lhs.path == rhs.path && lhs.language == rhs.language && lhs.title.utf8.elementsEqual(rhs.title.utf8)
+        lhs.path == rhs.path && lhs.language == rhs.language && lhs.title.utf8.elementsEqual(rhs.title.utf8) && lhs.playback == rhs.playback
     }
     static let languages = [
         ("und", "Unspecified"), ("eng", "English"), ("fra", "French"),

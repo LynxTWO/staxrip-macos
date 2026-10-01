@@ -15,6 +15,12 @@ extension EncodeConfiguration {
               externalCaptions.count <= Self.maximumExternalCaptions else {
             throw SubRipDocument.failure("Use at most eight ordered external tracks, with a first track before additional references.")
         }
+        guard externalCaptions.filter({ $0.playback?.isDefault == true }).count <= 1 else {
+            throw SubRipDocument.failure("Choose Default for only one added caption track. Change the other default to Automatic, Optional or Forced.")
+        }
+        guard container == "MKV" || externalCaptions.allSatisfy({ $0.playback == nil }) else {
+            throw SubRipDocument.failure("Explicit caption playback choices require MKV. Choose MKV or set every added caption to Automatic for MP4.")
+        }
         var paths = Set<String>()
         for (index, reference) in externalCaptions.enumerated() {
             do {
@@ -68,7 +74,7 @@ struct CaptionFileSelection {
             previous = nil
         }
         let reference = ExternalSubtitle(path: url.path, language: previous?.language ?? "und",
-                                         title: previous?.title ?? "External captions", access: SubtitleFileAccess(url))
+                                         title: previous?.title ?? "External captions", playback: previous?.playback, access: SubtitleFileAccess(url))
         if let replacing { result[replacing] = reference } else { result.append(reference) }
         var candidate = current; candidate.externalCaptions = result
         try candidate.validateExternalCaptions()

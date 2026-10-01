@@ -89,6 +89,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-077 | 2026-10-01 | Locate existing cancellation settlement delay | Confirmed | |
 | D-078 | 2026-10-01 | Preserve declared ten-bit SDR HEVC during video copy | Confirmed | |
 | D-079 | 2026-10-01 | Scope idle-sleep prevention to active video exports | Confirmed | |
+| D-080 | 2026-10-01 | Verified MKV caption playback choices | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1246,3 +1247,22 @@ Consequences: Five bounded gates cover the real OS request, balanced actual queu
 Revisit when: Tokens outlive work, overlapping activities cancel each other, the specific OS flag changes scheduling, existing gates fail, or broader sleep/power behavior is requested.
 
 D-079 outcome: Slice 041 accepted at c54f915, hosted run 36907486989. Temporary idle-sleep requests were independently observed during native queue and Quick Export work and absent after settlement. All five gates passed; no permanent system, display/lock, QoS, DSP or release changes.
+
+
+## D-080: Verified MKV caption playback choices
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 042 / R-052 after Slice 041 acceptance under the owner's autonomous non-audio completion delegation. Delegated to AI recommendation.
+
+Need: express a preferred or forced external caption track without a separate remux tool. Authority: owner native encoder completion direction and the existing video-plan/track extension. Worst case: a successful export silently selects the wrong captions or changes audio defaults. Consequence class: user_data. Existing control: ordered caption snapshots and complete pre-publication text/timing/title/language checks. Gap: no playback-flag intent or output check.
+
+Options considered: leave flags to the muxer; add unchecked arguments; qualify typed MKV choices with preserved legacy defaults and checked output. Choose the third. Explicit default replaces other caption defaults as explained at the control. Optional/Forced clear that track's default without choosing a substitute. Missing choice keeps prior behavior. MP4 remains Automatic until separately qualified.
+
+Source facts: FFmpeg's disposition options disable its automatic default assignment for all stream types; incremental flags can preserve unrelated flags. Matroska default_mode passthrough records supplied defaults. References: https://ffmpeg.org/ffmpeg.html and https://ffmpeg.org/ffmpeg-formats.html#matroska . These are configured semantics; bounded M1 verifies actual coexistence before product code.
+
+Consequences: Session 9 and recovery 8 carry only optional typed caption intent; older formats reject new intent rather than discarding it. No audio DSP, scheduling, deadline, dependency, merge or release change. Keep actual mapped audio/video baseline defaults and verify default/forced bits before publication. M1 bounds, actual generated integration/refusal and native checks are explicitly part of R-052.
+
+Revisit when: M1 cannot preserve unrelated defaults, container flags differ, an older decoder loses intent, or ordinary regression contradicts acceptance.
+
+D-080 outcome: Slice 042 accepted at ba5ba2c, ordinary hosted run 36911094620. Typed MKV playback choices, protected legacy defaults, full caption checks and native save/reopen/export passed. Owner recovery state restored. No player interoperability, audio algorithm, merge or release claim.

@@ -2,7 +2,7 @@ import Foundation
 
 struct SessionDocument: Codable, Equatable {
     var format = "staxrip-mac-session"
-    var version = 8
+    var version = 9
     var sourcePath: String?
     var configuration: EncodeConfiguration
     var outputFolder: String
@@ -10,7 +10,7 @@ struct SessionDocument: Codable, Equatable {
     var jobs: [QueueJob]
 
     func validated() throws -> SessionDocument {
-        guard format == "staxrip-mac-session", [1, 2, 3, 4, 5, 6, 7, 8].contains(version) else {
+        guard format == "staxrip-mac-session", [1, 2, 3, 4, 5, 6, 7, 8, 9].contains(version) else {
             throw SessionError.invalid("This session version is not supported.")
         }
         guard jobs.count <= 1000 else { throw SessionError.invalid("This session contains too many queue items.") }
@@ -22,6 +22,9 @@ struct SessionDocument: Codable, Equatable {
         }
         guard version >= 8 || (configuration.additionalExternalSubtitles == nil && jobs.allSatisfy { $0.configuration.additionalExternalSubtitles == nil }) else {
             throw SessionError.invalid("Multiple external caption tracks require session version 8.")
+        }
+        guard version >= 9 || ([configuration] + jobs.map(\.configuration)).allSatisfy({ $0.externalCaptions.allSatisfy { $0.playback == nil } }) else {
+            throw SessionError.invalid("Caption playback choices require session version 9.")
         }
         let chapterCount = (configuration.chapterEdits?.entries.count ?? 0) + jobs.reduce(0) { $0 + ($1.configuration.chapterEdits?.entries.count ?? 0) }
         guard chapterCount <= 10000 else { throw SessionError.invalid("A session can store at most 10000 authored chapter entries across its workspace and queue.") }

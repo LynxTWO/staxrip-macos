@@ -364,6 +364,7 @@ final class BatchController: ObservableObject {
             verifiedSummary += " · " + (try plan.outputDisplayAspect.verify(width: actual.video?.width, height: actual.video?.height,
                                                                            sampleAspectRatio: actual.video?.sample_aspect_ratio))
             verifiedSummary += " · " + (try plan.containerPreservation.verify(actual))
+            if let playback = plan.captionPlayback { verifiedSummary += " · " + (try playback.verify(actual)) }
             for (index, external) in plan.externalSubtitles.enumerated() {
                 statuses[job.id]?.detail = "Verifying caption track \(index + 1), \(URL(fileURLWithPath: external.reference.path).lastPathComponent)"
                 do { verifiedSummary += " · Track \(index + 1) (\(external.reference.language)): " + (try await external.verify(staged, probe: actual, tools: tools)) }

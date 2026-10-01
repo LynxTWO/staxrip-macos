@@ -75,6 +75,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-063 | 2026-10-01 | Qualify preview border hit testing | Confirmed | |
 | D-064 | 2026-10-01 | Clip external captions to the selected timeline | Confirmed | |
 | D-065 | 2026-10-01 | Locate publication observation timeout | Confirmed | |
+| D-066 | 2026-10-01 | Keep value-storage stress off the UI actor | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1010,3 +1011,18 @@ Options considered: rerun until green; relax or serialize the test; trace the ex
 Consequences: Keep existing assertions, twenty-second gate, one-minute test limit and default scheduling. Add bounded test-only monotonic events for actual publication body/submission/worker entry, gate entry, main-queue canary, polling continuation, release and completion. Use the existing DEBUG task-local hook; no product implementation change. Hold Slice 036 acceptance and video-copy implementation. Preserve the failed receipt. A causal repair needs evidence and a further decision.
 
 Revisit when: The hosted diagnostic identifies the delay, or a reproduction requires a separate controlled experiment.
+
+
+## D-066: Keep value-storage stress off the UI actor
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Extend R-046 to the oversized chapter persistence fixture's actor isolation, under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: Hosted diagnostics 36860779217 and 36860834644 passed 247 tests but held the main-queue canary for about 17.916 and 18.741 seconds after publication gate entry, near the unchanged twenty-second limit. Worker entry was already observed off main. A local full-run stack profile places 556 of 753 main-thread samples in the existing oversized chapter fixture, chiefly repeated validation; this fixture tests value validation/file-write refusal, not UI actor behavior. Correlated hosted fixture timestamps are still pending and will refine this attribution.
+
+Options considered: optimize production validation speculatively; relax the publication gate; isolate the bounded pure-storage stress fixture from the UI actor. Choose the third. The measured local native-search comparison did not justify a production optimization.
+
+Consequences: Make only oversizedWritesRetainExistingSessionAndRecoveryBytes explicitly nonisolated async, with its stateless directory/job helpers nonisolated. Add a non-main-thread assertion. Retain identical chapter counts, title sizes, session/journal refusals, existing-byte checks and excessive-entry rejection. Other chapter UI tests remain main-actor isolated. Default Swift Testing parallel execution, all existing publication assertions, twenty-second gate and one-minute test deadline remain unchanged. This is a test-isolation repair, not a claim that synchronous production persistence or arbitrary filesystem latency has been solved. Require local/hosted contrast of actual worker/main-queue events, then remove temporary diagnostic prints before final ordinary qualification. No product code, listening, merge or release.
+
+Revisit when: The nonisolated fixture still runs on main, gate timing remains near its bound, hosted correlation contradicts the attribution or another real application blocker is identified.

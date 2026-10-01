@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-078 / R-050.
 
 SLICE STATE
-Milestone: Approved bounded extension after Slice 039 acceptance.
-Blocked by: M1 format feasibility before product changes.
-Evidence so far: Read-only code mapping identifies both eight-bit admission checks; installed libx265 lists yuv420p10le. No ten-bit copy support is claimed yet.
+Milestone: M1 complete; M2 bounded implementation may proceed.
+Blocked by: None for the approved implementation.
+Evidence so far: TEN-BIT-COPY-EVIDENCE.md records four generated complete-picture/packet comparisons, actual low-order ten-bit samples and retained incomplete-fixture refusal. No product support is claimed yet.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

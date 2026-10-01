@@ -76,6 +76,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-064 | 2026-10-01 | Clip external captions to the selected timeline | Confirmed | |
 | D-065 | 2026-10-01 | Locate publication observation timeout | Confirmed | |
 | D-066 | 2026-10-01 | Keep value-storage stress off the UI actor | Confirmed | |
+| D-067 | 2026-10-01 | Verify original-video copy before publication | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1028,3 +1029,18 @@ Consequences: Make only oversizedWritesRetainExistingSessionAndRecoveryBytes exp
 Revisit when: The nonisolated fixture still runs on main, gate timing remains near its bound, hosted correlation contradicts the attribution or another real application blocker is identified.
 
 D-066 outcome: Correlated run 36861898847 places 11.913 seconds of synchronous storage stress on main during the publication observer's wait. Repair run 36862281818 passes all 247 tests and shows the actor releasing the publication gate before the unchanged off-main storage workload finishes. Remove temporary diagnostics, retain the explicit fixture isolation and assertion, and require final ordinary gates. No production publication/validation change is inferred from this test-environment finding.
+
+
+## D-067: Verify original-video copy before publication
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 037 / R-047 under owner autonomous non-audio program-completion delegation. Delegated to AI recommendation. Slice 036 has ordinary local/native/hosted acceptance.
+
+Because: Container or track changes currently require video re-encoding. Generated H.264/HEVC copies preserve packet and decoded picture content across MKV/MP4, but shifted and missing-packet counterexamples show that codec/duration checks alone are insufficient.
+
+Options considered: keep transcode-only behavior; expose unchecked FFmpeg copy; add an explicit bounded copy contract with packet payload/presentation verification. Choose the third.
+
+Consequences: Use the existing validated Copy original/copy codec pair, with encoding controls visibly inactive and incompatible picture/color requests refused rather than cleared. Limit initial codecs, containers, pixel/display/timing semantics and audit resources as stated in Slice 037. Retain existing track routing, source identity, caption/chapter checks and exclusive publication. Require complete ordered packet payload/count/PTS/duration verification plus relevant stream metadata, actual decoded references and corruption refusal before acceptance. No new persisted fields, DSP/listening, merge or release. Older readers must reject the unknown pair safely.
+
+Revisit when: Container conversion changes the promised bitstream or timing beyond the defined precision, audit bounds cannot be enforced, or existing workflows/ownership contracts change.

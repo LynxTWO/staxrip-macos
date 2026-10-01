@@ -135,3 +135,7 @@ Current approved boundary: SLICE-033-queue-outcomes.md. Add read-only outcome pr
 D-060 / R-042 extends Slice 033 only at actual external-caption I/O dispatch and the cancellation test's entry-observation boundary. Queue presentation qualification remains intact, but full acceptance is held after hosted run 36848579493. Contrast discovery is retained locally and is not active implementation.
 
 Slices 033 and 034 now have scoped acceptance at 3d14456 and 34d6c0d respectively, with hosted runs 36851151827 and 36854310994. This closes the earlier D-060 hold. Queue and appearance evidence records remaining filesystem and accessibility limits. No slice is currently awaiting implementation.
+
+Current approved boundary: SLICE-035-compact-preview.md under D-062 / R-044. WorkspaceView changes only the existing preview frame and footer; NativeVideoPreview and its AVPlayer identity remain intact. One app-only size preference is separate from sessions and encoding intent.
+
+Slice 035 is accepted at 24e8f2b with hosted run 36856655748. COMPACT-PREVIEW-EVIDENCE.md records the native continuity proof and rejected border experiment.

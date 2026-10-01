@@ -71,6 +71,8 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-059 | 2026-10-01 | Truthful compact queue outcomes | Confirmed | |
 | D-060 | 2026-10-01 | Qualify subtitle dispatch and cancellation observation | Confirmed | |
 | D-061 | 2026-10-01 | Adapt semantic accent and warning contrast | Confirmed | |
+| D-062 | 2026-10-01 | Resize source preview without replacing playback | Confirmed | |
+| D-063 | 2026-10-01 | Qualify preview border hit testing | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -944,3 +946,35 @@ Options considered: one darker constant; system blue throughout; appearance-awar
 Consequences: Use AppKit dynamic colors for light, dark and increased-contrast appearances. Target at least 4.5:1 for active app-owned accent/warning text on documented opaque reference surfaces and actual used tints, with 7:1 for increased-contrast variants. Separate the white-label primary-action pair from text accent. Preserve native prominent button behavior and action guards. System secondary/disabled colors and chart-series colors remain separate. Qualify actual resolved colors, the old counterexample, native light/dark control and warning views, keyboard actions, optimized build and full regression. No DSP, file access, session schema, layout redesign, release or broad accessibility conformance claim.
 
 Revisit when: Native resolution disagrees with tested appearance, a label/background pair loses contrast, or material compositing requires an explicitly different surface.
+
+
+## D-062: Resize source preview without replacing playback
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 035 and R-044 under owner overnight autonomous non-audio and design delegation. Delegated to AI recommendation.
+
+Because: The fixed 230-point source preview competes with settings at the minimum workspace size. Slice 034 has scoped acceptance at 34d6c0d and hosted run 36854310994.
+
+Options considered: hide playback; replace the player with a thumbnail; resize its existing view. Choose a reversible 150-point compact view and retain the existing 230-point default.
+
+Consequences: Add one app-only display preference and a visible keyboard-accessible size control. Keep the same player and view branch across resizing, preserving playback and source settings. Restored-source and unavailable-preview remedies retain full height and no misleading resize action. The footer must remain readable at minimum width. Verify native real silent playback continuity, preference persistence, restored-source review, keyboard operation, full regression and optimized build. No media processing, session schema, source access, DSP or release changes.
+
+Revisit when: Resizing interrupts playback, a remedy becomes clipped, the footer crowds controls or the app preference affects encoding intent.
+
+
+## D-063: Qualify preview border hit testing
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Extend Slice 035's R-044 native interaction boundary to the decorative preview border under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: The generated source renders, but clicking its center and lower transport region leaves the output-name field focused and no player controls exposed. A full rectangular SwiftUI overlay sits above NativeVideoPreview. Interception is a hypothesis, not yet a proven cause.
+
+Options considered: add another transport; change AVPlayerView; make only the decorative stroke ignore hit testing and repeat native input. Choose the smallest discriminating change first.
+
+Consequences: Preserve the border rendering and parent drop target. Disable hit testing only on the decorative stroke. Require actual native transport response, playback continuity and drop acceptance before retaining the change. No new player, observer or transport. If the control remains inaccessible, keep the cause unknown and investigate before accepting the slice.
+
+Revisit when: The change fails to restore player input, drop behavior changes or another overlay owns input intentionally.
+
+D-063 outcome: The same initial native play control works with the original border after recreating the source view. Removing hit testing did not establish a causal improvement. The speculative change was removed before final qualification. Auto-hidden control reveal through the inspection tool remains limited; the generated movie's visible clock independently proves resize continuity. No drop-handler change is retained, so new drop qualification is not a product gate for this rejected experiment.

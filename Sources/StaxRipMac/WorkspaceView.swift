@@ -12,6 +12,7 @@ struct WorkspaceView: View {
     @State private var showingPicturePreview = false
     @State private var showingPresets = false
     @AppStorage("appearance") private var appearance = "System"
+    @AppStorage("compactSourcePreview") private var compactSourcePreview = false
     @State private var isDropTarget = false
     var body: some View {
         HStack(spacing: 0) {
@@ -196,6 +197,8 @@ struct WorkspaceView: View {
         }
     }
 
+    private var canResizePreview: Bool { model.player != nil || model.isDemo }
+
     private var preview: some View {
         VStack(spacing: 0) {
             Group {
@@ -222,18 +225,37 @@ struct WorkspaceView: View {
                 } else {
                     AlpinePreview()
                 }
-            }.frame(height: 230).frame(maxWidth: .infinity).clipped()
-            HStack(spacing: 8) {
-                Image(systemName: model.isDemo ? "photo" : "play.rectangle")
-                Text(model.isDemo ? "Illustrated demo · open a video for playback" : model.sourceNeedsReview ? "Saved source · preview awaits your selection" : "Source playback · encoding filters are not applied")
-                Spacer(minLength: 0)
-                if !model.isDemo {
-                    Button("Preview picture…") { showingPicturePreview = true }
-                        .accessibilityHint("Compare original and filtered pictures as still frames or a short silent motion sample.")
-                        .disabled(model.loading || model.sourceNeedsReview)
-                }
-                Image(systemName: "arrow.down.doc").help("Drop a video onto the preview")
-            }.font(.system(size: 10)).foregroundStyle(.secondary).padding(12)
+            }.frame(height: canResizePreview && compactSourcePreview ? 150 : 230)
+                .frame(maxWidth: .infinity).clipped()
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: model.isDemo ? "photo" : "play.rectangle")
+                    Text(model.isDemo ? "Illustrated demo · open a video for playback" : model.sourceNeedsReview ? "Saved source · preview awaits your selection" : "Source playback · encoding filters are not applied")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    Image(systemName: "arrow.down.doc").help("Drop a video onto the preview")
+                }.font(.system(size: 10)).foregroundStyle(.secondary)
+                HStack(spacing: 12) {
+                    if canResizePreview {
+                        Button {
+                            compactSourcePreview.toggle()
+                        } label: {
+                            Label(compactSourcePreview ? "Expand preview" : "Compact preview",
+                                  systemImage: compactSourcePreview ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
+                        }
+                        .keyboardShortcut("p", modifiers: [.command, .option])
+                        .accessibilityValue(compactSourcePreview ? "Compact" : "Full size")
+                        .accessibilityHint("Changes only the source preview size. Playback and encoding settings stay in place.")
+                        .help("Change source preview size (Option-Command-P)")
+                    }
+                    Spacer(minLength: 0)
+                    if !model.isDemo {
+                        Button("Preview picture…") { showingPicturePreview = true }
+                            .accessibilityHint("Compare original and filtered pictures as still frames or a short silent motion sample.")
+                            .disabled(model.loading || model.sourceNeedsReview)
+                    }
+                }.controlSize(.small)
+            }.padding(12)
                 .background(Color(nsColor: .controlBackgroundColor))
         }
         .clipShape(RoundedRectangle(cornerRadius: 13))

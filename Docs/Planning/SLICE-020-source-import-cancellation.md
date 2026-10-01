@@ -17,7 +17,7 @@ Load generated media and inspect the native preview. Cancel a controlled pending
 
 ## 3. In scope, with build order
 
-M1: Extract a cancellable native/fallback source inspector with AVAsset.cancelLoading and explicit cancellation propagation before fallback. M2: Own one active worker and one latest pending request in WorkspaceModel, preserving generation and file-panel intent guards. M3: Distinct Cancel source loading control, clear waiting status, deterministic lifecycle tests, generated native/fallback tests and native walkthrough. M4: Regression/build/hosted acceptance.
+M1: Extract a cancellable native/fallback source inspector with nontrapping display formatting for nonfinite or unrepresentable metadata, plus AVAsset.cancelLoading and explicit cancellation propagation before fallback. M2: Own one active worker and one latest pending request in WorkspaceModel, preserving generation and file-panel intent guards. M3: Distinct Cancel source loading control, clear waiting status, deterministic lifecycle tests, generated native/fallback tests and native walkthrough. M4: Regression/build/hosted acceptance.
 
 ## 4. Out of scope
 
@@ -41,7 +41,7 @@ One active task/asset or fallback process and one replaceable pending source req
 | --- | --- | --- | --- |
 | S20-001 | Native cancellation settles the owned asset without starting fallback | Held AVAssetResourceLoader case and cancellation negative control | import-native-cancel |
 | S20-002 | Fallback and stale operations cannot change newer intent | Held model and process tests, latest-only replacement, failure/cancel cases | import-lifecycle |
-| S20-003 | Supported native and fallback imports retain current behavior | Generated MP4/MKV and source-specific setting/reset assertions | import-compatibility |
+| S20-003 | Supported native and fallback imports retain current behavior | Generated MP4/MKV, invalid display metadata and source-specific setting/reset assertions | import-compatibility |
 | S20-004 | Cancellation and waiting state are clear in native controls | Native walkthrough, accessibility tree, regression/build/hosted | import-ui |
 
 ## 9. Verification evidence required

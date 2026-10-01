@@ -189,12 +189,19 @@ struct EncodePlan: Sendable {
         let videoSummary = copyingVideo
             ? "Copy original \(video.codec_name ?? "") video · no video re-encoding · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · packet verification required"
             : "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")"
-        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitles: external, captionTitles: try ExternalCaptionTitles.make(external.map(\.reference)), videoCopy: videoCopy, expectedCodec: copyingVideo ? video.codec_name! : c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+        let captionSummary: String = external.map { track in
+            let trimDescription = captionTrim ? ", clipped to trim" : ""
+            return " · additional SRT: \(track.document.cues.count) captured cues" + trimDescription + " (\(track.reference.language))"
+        }.joined()
+        let summary = videoSummary + captionSummary + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary
+        let captionTitles = try ExternalCaptionTitles.make(external.map(\.reference))
+        let expectedCodec = copyingVideo ? video.codec_name! : c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264"
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitles: external, captionTitles: captionTitles, videoCopy: videoCopy, expectedCodec: expectedCodec, expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: (keepSubtitles ? subtitles.count : 0) + external.count,
-                          duration: outputDuration, summary: videoSummary + external.map { " · additional SRT: \($0.document.cues.count) captured cues" + (captionTrim ? ", clipped to trim" : "") + " (\($0.reference.language))" }.joined() + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary)
+                          duration: outputDuration, summary: summary)
     }
 
     static func validateHDRSettings(_ c: EncodeConfiguration) throws {

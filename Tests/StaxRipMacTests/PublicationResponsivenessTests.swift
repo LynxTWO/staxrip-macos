@@ -10,7 +10,7 @@ private final class PublicationTrace: @unchecked Sendable {
         lock.withLock {
             guard count < 24 else { return }
             count += 1
-            print("PUBLICATION_OBSERVATION \(start.duration(to: .now)) \(event) main=\(Thread.isMainThread)")
+            print("PUBLICATION_OBSERVATION uptime=\(ProcessInfo.processInfo.systemUptime) \(start.duration(to: .now)) \(event) main=\(Thread.isMainThread)")
         }
     }
 }

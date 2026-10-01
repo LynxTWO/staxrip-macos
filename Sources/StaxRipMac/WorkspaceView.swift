@@ -172,7 +172,12 @@ struct WorkspaceView: View {
                 Text(model.sourceInfo).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
-            if model.loading { ProgressView().controlSize(.small) }
+            if model.loading {
+                ProgressView().controlSize(.small).accessibilityLabel("Source loading status").accessibilityValue(model.sourceLoadingStatus)
+                Button("Cancel source loading") { model.cancelSourceLoad() }
+                    .disabled(model.sourceLoadStopping)
+                    .help("Cancel this source import and keep the previous workspace. Waits for the current reader to finish.")
+            }
             if model.sourceURL != nil {
                 Button("Choose tracks") { showingTracks = true }.disabled(batch.running)
                 Button { showingInspector = true } label: { Image(systemName: "info.circle") }
@@ -372,7 +377,7 @@ struct WorkspaceView: View {
     private var statusBar: some View {
         HStack(spacing: 7) {
             Circle().fill(Color.accent).frame(width: 5, height: 5)
-            Text(exporter.running ? exporter.status : model.loading ? "Reading source…" : model.notice.isEmpty ? "Ready to explore" : model.notice)
+            Text(exporter.running ? exporter.status : model.loading ? model.sourceLoadingStatus : model.notice.isEmpty ? "Ready to explore" : model.notice)
             Spacer()
             Text(model.sessionName).lineLimit(1).foregroundStyle(.tertiary)
             Text("·").foregroundStyle(.tertiary)

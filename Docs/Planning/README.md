@@ -66,3 +66,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Source stability evidence](SOURCE-STABILITY-EVIDENCE.md) records scoped local/native/hosted acceptance and the negative control.
 
 30. [Slice 020: owned source import cancellation](SLICE-020-source-import-cancellation.md) and [research](SOURCE-IMPORT-RESEARCH.md).
+
+[Source import evidence](SOURCE-IMPORT-EVIDENCE.md) records local checks and the native cancellation negative control; native/hosted acceptance is pending.

@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 027: Attach native export destination selection
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-041 / R-031.
+Version: 0.2. Date: 2026-10-01. Status: Accepted within evidence limits under D-041 / R-031.
 
 SLICE STATE
-Milestone: Planning complete; implementation next.
+Milestone: Local/native/hosted checks passed at 70d0ac6; hosted run 36815249560.
 Blocked by: None.
-Evidence so far: ExportController.chooseDestination uses runModal; WorkspaceModel already owns attached requests with snapshot and load identity checks.
+Evidence so far: NATIVE-EXPORT-PANEL-EVIDENCE.md records guarded callbacks, real export/collision protection, native cancellation and hosted success.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

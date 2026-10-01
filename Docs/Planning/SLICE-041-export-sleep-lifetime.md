@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 041: Keep active video exports awake
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-079 / R-051.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within scope at c54f915 under D-079 / R-051.
 
 SLICE STATE
-Milestone: M1 passed; M2 bounded implementation approved.
-Blocked by: None within approved discovery.
-Evidence so far: EXPORT-SLEEP-EVIDENCE.md records two real Foundation assertions, independent overlap and removal after both matching end calls. No product implementation or acceptance yet.
+Milestone: M1, M2 and M3 complete; all five scoped gates passed.
+Blocked by: None within this slice.
+Evidence: EXPORT-SLEEP-EVIDENCE.md records actual system requests, balanced actual queue/native lifetimes, native cancellation/completion, protected originals and prior journal restoration. Local and hosted 270-test ordinary runs passed; hosted run 36907486989.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

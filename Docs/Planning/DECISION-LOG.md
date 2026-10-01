@@ -1244,3 +1244,5 @@ Alternatives: rely on external caffeinate, leaving ordinary app users without ex
 Consequences: Five bounded gates cover the real OS request, balanced actual queue/native lifetimes including refusal/cancellation/cleanup, native guidance and unchanged regression. No permanent preferences, lock/display suppression, audio processing, new schema, dependency, forced-sleep test or release. Matching end happens after settlement, never on cancel request alone. The existing hosted mastering cancellation issue remains an independent reopen trigger.
 
 Revisit when: Tokens outlive work, overlapping activities cancel each other, the specific OS flag changes scheduling, existing gates fail, or broader sleep/power behavior is requested.
+
+D-079 outcome: Slice 041 accepted at c54f915, hosted run 36907486989. Temporary idle-sleep requests were independently observed during native queue and Quick Export work and absent after settlement. All five gates passed; no permanent system, display/lock, QoS, DSP or release changes.

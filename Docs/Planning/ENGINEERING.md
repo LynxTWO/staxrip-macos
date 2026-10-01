@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 040 accepted at 23583c3; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 041 active export idle-sleep lifetime under D-079 / R-051.
+Last completed: Slice 041 accepted at c54f915; Slice 002 experimental implementation and local listening pack preserved.
+Next: Select the next bounded non-audio capability after Slice 041 acceptance.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -316,3 +316,5 @@ Approved R-050 under D-078: declared ten-bit SDR HEVC copy through existing stri
 Slice 040 is accepted at 23583c3 under D-078 / R-050, ordinary hosted run 36904515988. All six gates have scoped actual-controller, native, independent output and ordinary regression evidence in TEN-BIT-COPY-EVIDENCE.md. Existing cancellation and broader color/player limitations remain explicit.
 
 Approved R-051 under D-079: temporary automatic-system-sleep prevention tied to actual video-export lifetime. S41-001 through S41-005 bind system assertion, queue lifecycle, native service, native UI and ordinary regression. Consequence: local_only energy use; bounded per-process system observations and existing actual-export seams only.
+
+Slice 041 is accepted at c54f915 under D-079 / R-051, hosted run 36907486989. EXPORT-SLEEP-EVIDENCE.md binds the five gates to actual temporary system assertions, settled export lifetimes, native/local/hosted results and owner-state restoration. Display/lock, manual sleep, power loss, Audio Lab and broader platforms remain outside this scope.

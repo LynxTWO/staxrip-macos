@@ -41,6 +41,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 
 | D-033 | 2026-09-30 | Own and cancel source imports | Confirmed | |
 | D-034 | 2026-09-30 | Responsive native final publication | Confirmed | |
+| D-035 | 2026-09-30 | Bound declared output duration tolerance | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -525,3 +526,17 @@ Options considered: retain synchronous publication; abandon slow publication wit
 Consequences: Quick Export final-save status, cancellation/outcome protection, held-worker native export tests and normal native walkthrough. No source preparation, saved-schema, audio, merge or distribution changes.
 
 Revisit when: Broader native source validation, persistent access, filesystem deadlines or save-panel lifecycle are scoped.
+
+## D-035: Bound declared output duration verification
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 022 under autonomous non-audio delegation after Slice 021 hosted closure.
+
+Because: The current percentage-based duration allowance grows to 72 seconds on a two-hour programme. That does not support a meaningful completion check for long files.
+
+Options considered: keep proportional tolerance; require mathematically identical metadata; retain the existing 250-millisecond allowance without growth and expose unknown source duration. Choose the third, subject to actual shortened/extended-output reproduction and positive long/trim checks.
+
+Consequences: Known duration mismatches refuse before publication with useful measurements. Unknown source duration remains explicitly unverified. No encoding arguments, decoded timing, audio mastering, schema, merge or release changes.
+
+Revisit when: Legitimate muxing exceeds this allowance, selected-track duration planning is expanded, or decoded audiovisual timing is scoped.

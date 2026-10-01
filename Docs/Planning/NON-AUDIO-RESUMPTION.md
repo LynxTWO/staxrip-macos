@@ -118,3 +118,7 @@ Slice 020 closed at 1933bee with hosted run 36799453765: 184 tests in 477.783 se
 Slice 021 is active under D-034/R-024 after Slice 020 closure: awaited native final publication and truthful finishing/outcome handling. Audio stays parked.
 
 Slice 021 closed at 3c56caa with hosted run 36801364346: 186 tests in 403.950 seconds, 8m11s job. Native H.264 export, existing-output refusal, HEVC retry and Escape cancellation passed. Draft PR 38 remains unmerged. Audio stays parked.
+
+Slice 022 is active under D-035/R-025 after Slice 021 closure: reproduce and remove percentage growth from declared output-duration verification. Audio stays parked.
+
+Slice 022 closed at f52bade with hosted run 36802839483: 189 tests in 468.757 seconds, 9m01s job. Real shortened/extended-output refusal, two-hour low-rate export, fractional trim and native duration result passed within metadata-only limits. Draft PR 39 remains unmerged. Audio stays parked.

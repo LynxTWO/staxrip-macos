@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 043 accepted at ce27093; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select a bounded Quick Export duration verification slice after accepted track inspection.
+Next: Execute Slice 044 Quick Export duration verification under D-082 / R-054.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -327,3 +327,5 @@ Slice 042 is accepted at ba5ba2c under D-080 / R-052, hosted run 36911094620. CA
 Approved R-053 under D-081: read-only track identity and five declared roles. S43-001 through S43-004 bind bounded presentation, actual immutable source, native selection and ordinary regression checks. Consequence: user_data; existing probe and native seams only.
 
 Slice 043 is accepted at ce27093 under D-081 / R-053, hosted run 36914015358. TRACK-ROLE-EVIDENCE.md records all four gates, the corrected accessibility-label finding and unchanged source/recovery bytes. No content suitability, heard VoiceOver or player qualification is implied.
+
+Approved R-054 under D-082: Quick Export total-duration verification. S44-001 through S44-004 bind strict native timing policy, actual shorter/longer staged refusal and retry, native walkthrough and ordinary regression. Consequence: user_data. One DEBUG-only pre-verification generated-file substitution seam is authorized; no decoded-frame, A/V sync, DSP or broader runtime observer scope.

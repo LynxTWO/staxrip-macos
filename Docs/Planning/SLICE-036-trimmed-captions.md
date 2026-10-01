@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 036: Trimmed external captions
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-064 / R-045.
+Version: 0.1. Date: 2026-10-01. Status: Done with evidence under D-064 through D-066 / R-045 and R-046.
 
 SLICE STATE
-Milestone: Implemented at e2d1152; native/local gates passed, final-head hosted gate held after one existing publication observation timeout.
-Blocked by: S36-005 investigation under D-065 / D-066 / R-046; no owner action required.
-Evidence so far: SUBTITLE-TRIM-RESEARCH.md and SUBTITLE-TRIM-EVIDENCE.md; actual caption/video/audio/chapter timelines, native correction/export and local 247 tests.
+Milestone: All five gates accepted; product e2d1152, ordinary qualification 331d1d8 and hosted run 36863640437.
+Blocked by: None within scope.
+Evidence so far: SUBTITLE-TRIM-RESEARCH.md and SUBTITLE-TRIM-EVIDENCE.md; actual caption/video/audio/chapter timelines, native correction/export and ordinary local/hosted 247 tests.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

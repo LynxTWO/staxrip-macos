@@ -144,3 +144,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 51. [Slice 041: active export idle-sleep lifetime](SLICE-041-export-sleep-lifetime.md) and [evidence](EXPORT-SLEEP-EVIDENCE.md), accepted at c54f915 under D-079 / R-051.
 
 52. [Slice 042: verified MKV caption playback choices](SLICE-042-caption-playback-flags.md), accepted at ba5ba2c under D-080 / R-052; [evidence](CAPTION-FLAGS-EVIDENCE.md).
+
+53. [Slice 043: inspect track identity and roles](SLICE-043-track-role-inspection.md), accepted at ce27093 under D-081 / R-053; [evidence](TRACK-ROLE-EVIDENCE.md).

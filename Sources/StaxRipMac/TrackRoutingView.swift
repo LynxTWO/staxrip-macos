@@ -26,6 +26,7 @@ struct TrackRoutingView: View {
                 Text(error).foregroundStyle(Color.warning).textSelection(.enabled)
             } else { ProgressView("Reading source tracks…") }
             Spacer(minLength: 0)
+            Text(TrackInspection.explanation).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             Text("Importing a new source resets track selection to All. Saved sessions and queue copies preserve it. Missing selected tracks fail preflight.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
@@ -64,9 +65,10 @@ struct TrackRoutingView: View {
                     selection.wrappedValue = indices.sorted()
                 })) {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("#\(stream.index) · \(stream.tags?["language"] ?? "und") · \(stream.codec_name ?? "unknown")")
-                        if let title = stream.tags?["title"] { Text(title).font(.caption).foregroundStyle(.secondary) }
-                        if let channels = stream.channels { Text("\(channels) channels · \(stream.channel_layout ?? "unspecified layout")").font(.caption).foregroundStyle(.secondary) }
+                        Text("#\(stream.index) · \(TrackInspection.language(stream)) · \(ContainerInspection.text(stream.codec_name, fallback: "unknown"))")
+                        Text("Title: " + TrackInspection.title(stream)).font(.caption).foregroundStyle(.secondary)
+                        Text(TrackInspection.summary(stream)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                        if let channels = stream.channels { Text("\(channels) channels · \(ContainerInspection.text(stream.channel_layout, fallback: "unspecified layout"))").font(.caption).foregroundStyle(.secondary) }
                     }
                 }
             }

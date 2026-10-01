@@ -19,7 +19,7 @@ struct QueueView: View {
             HStack(spacing: 16) {
                 outcomeCount(overview.completed, title: "Completed", symbol: "checkmark.circle", color: .secondary)
                 outcomeCount(overview.remaining, title: "Remaining", symbol: "clock", color: .secondary)
-                if overview.attention > 0 { outcomeCount(overview.attention, title: "Need attention", symbol: "exclamationmark.triangle", color: .orange) }
+                if overview.attention > 0 { outcomeCount(overview.attention, title: overview.attention == 1 ? "Needs attention" : "Need attention", symbol: "exclamationmark.triangle", color: .orange) }
                 Spacer()
                 if batch.reviewing {
                     Button("Cancel check", role: .cancel) { batch.cancelReview() }

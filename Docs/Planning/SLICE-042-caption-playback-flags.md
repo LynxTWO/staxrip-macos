@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-080 / R-052.
 
 SLICE STATE
-Milestone: M1 passed; M2 implementation next.
+Milestone: M1, M2 and local/native M3 complete; final hosted regression pending.
 Blocked by: None within delegated scope.
-Evidence: CAPTION-FLAGS-EVIDENCE.md records M1; no product code yet.
+Evidence: CAPTION-FLAGS-EVIDENCE.md records focused/full local, final native output and restored owner state; hosted run 36911094620 pending.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

@@ -83,6 +83,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-071 | 2026-10-01 | Diagnose second-caption cancellation entry before repair | Confirmed | |
 | D-072 | 2026-10-01 | Qualify caption snapshot worker ownership | Confirmed | |
 | D-073 | 2026-10-01 | Trace remaining caption preparation boundaries | Confirmed | |
+| D-074 | 2026-10-01 | Phase-specific caption cancellation qualification | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1136,3 +1137,16 @@ Because: Plain hosted run 36878448882 at 6c471b7 still fails only the second-cap
 Consequences: Preserve the original ten-second entry guard, two-minute limit, full-suite scheduling, fixtures and all output/PID/cleanup assertions. Record only a bounded monotonic stage/event list with no media bytes, source paths or arguments. Instrument exact entry and return boundaries without changing task priority or executor choice. Restore plain workflow and remove temporary diagnosis before final qualification. A same-runner focused comparison may follow a failed ordinary command, without converting that failure into acceptance. No further production repair is approved until evidence identifies its boundary; do not proceed to the proposed real-film slice yet.
 
 Revisit when: A specific stage explains the remaining delay, or instrumentation cannot distinguish worker time from task resumption and actor contention.
+
+
+## D-074: Phase-specific caption cancellation qualification
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: The owner explicitly approved CAPTION-ENTRY-REFRAME.md in chat: "yep, i approve that approach". Implement its phase-specific lifecycle qualification within R-048. This supersedes D-071 through D-073's aggregate ten-second startup guard; it does not claim that guard passed.
+
+Because: Four hosted failures and the exact D-073 trace show that aggregate preparation, encoding and first-caption inspection consume the old window under full load. The user-data need is settled cancellation of the actual second verifier with no publication, next-job advance or original/staging damage. The owner approved separating preparation from verifier entry and cancellation settlement after reviewing the failed evidence.
+
+Consequences: Keep the two-minute full-case limit, unchanged complete generated fixture, ordinary parallel suite scheduling and every existing PID/output/next-job/original/staging assertion. Require first-verifier child entry within 90 seconds of batch start, second-verifier entry within ten seconds of observing the first marker, and cancellation settlement within ten seconds. Use a monotonic clock. Early termination, timeout or task cancellation must cancel and join the owned batch before checking/removing its staging. A deterministic deliberate pre-verifier stall uses the same wait logic with a shorter negative-only budget after its own child entry is observed; this tests refusal without spending another 90 seconds. Record the actual PID and require it gone. Keep the fixed snapshot-worker contention regression and all broad output/corruption tests. No production code or scheduling change is required. Restore ordinary local/hosted validation, update evidence, and accept only if all scoped gates pass.
+
+Revisit when: The phase-specific test fails its unchanged per-phase/whole-case requirements or cancellation leaves a live tool or published output.

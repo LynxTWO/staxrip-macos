@@ -1,5 +1,5 @@
 # Caption cancellation entry: owner decision packet
-Date: 2026-10-01. Status: Open; Slice 038 remains unaccepted.
+Date: 2026-10-01. Status: Owner approved the recommended approach under D-074; implementation/qualification pending.
 
 ## Need and authority
 
@@ -28,7 +28,7 @@ At 37726d5, fixture creation took 11.040 seconds, outside the guard. Batch start
 
 The D-072 writer repair has separate bounded before/after dispatch evidence and remains. Plain 6c471b7 local regression passed 265 tests in 212.180 seconds; optimized/native independent output checks passed. Instrumented local 37726d5 passed 265 tests in 204.942 seconds. Temporary D-073 observers and workflow diagnosis are now restored exactly to 6c471b7. No new passing hosted result is claimed.
 
-## Concrete proposed decision (not implemented)
+## Approved decision (qualification pending)
 
 Recommend making this a cancellation-lifecycle test with explicit phase budgets, rather than a ten-second total-throughput test:
 
@@ -40,8 +40,8 @@ Recommend making this a cancellation-lifecycle test with explicit phase budgets,
 
 This deliberately replaces the old aggregate ten-second startup assertion; it is a proposed acceptance-contract change, not a passing result or an assertion that the original guard was met. It does not increase the whole-test deadline, reduce fixture content, serialize/exclude suites or alter production scheduling. A different choice is to retain the aggregate ten-second bound and explicitly fund further controlled performance diagnosis; there is not yet evidence for another production repair.
 
-## Owner question
+## Owner approval
 
-Approve the phase-specific cancellation test above (recommended), or retain the ten-second end-to-end startup requirement and continue performance investigation?
+The owner approved the recommended phase-specific approach in chat on 2026-10-01: "yep, i approve that approach". D-074 records exact execution and negative-test bounds. The previous failed runs remain evidence; approval does not turn them into passes.
 
 No merge, release, audio listening or next product slice is authorized by this packet. The full-film qualification proposal remains inactive. The checkpoint intentionally avoids another unchanged hosted attempt; failed receipts remain authoritative.

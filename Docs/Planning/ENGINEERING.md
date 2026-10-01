@@ -298,3 +298,5 @@ R-048 / D-072 isolates actual SubRip snapshot dispatch under bounded CPU content
 R-048 / D-073 extends bounded temporary diagnosis to actual batch preparation/verification entry and return boundaries. No task priority, scheduling, deadline or fixture changes; acceptance remains blocked by the ordinary hosted entry failure.
 
 R-048 remains unaccepted after D-073: actual snapshot writes are prompt, but aggregate preparation/encoding consumes the entry window under hosted load. CAPTION-ENTRY-REFRAME.md records the unresolved owner decision; no further harness or product expansion while this gate is open.
+
+R-048 / D-074: owner approval reopens the phase-specific cancellation qualification. Preserve the two-minute case and data/process assertions; 90 seconds for first-verifier preparation, ten seconds for observed-first-to-second verifier entry, ten seconds for settled cancellation. Shared wait logic must reject a deliberate stalled preparation and always join owned work before cleanup. No production or suite-scheduling changes.

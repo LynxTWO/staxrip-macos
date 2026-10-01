@@ -1,0 +1,24 @@
+# Native Quick Export duration evidence
+Date: 2026-10-01. Scope: Slice 044 / D-082 / R-054.
+
+## Baseline and need
+
+Approved plan 31b4a74 precedes implementation; baseline 959e35c has accepted track-role inspection. NativeExportService previously checked that source/result contained readable video, but did not compare their duration. This is a runtime verification gap, not evidence of spontaneous AVFoundation truncation.
+
+Apple documents asynchronous duration loading in https://developer.apple.com/documentation/avfoundation/loading-media-data-asynchronously . The value is aggregate asset timing. This change cannot certify every decoded frame, individual-track timing, audio/video sync, source stability or HDR.
+
+## Negative control
+
+M1 added only a DEBUG-only pre-verification boundary after the native writer completed, plus one parameterized regression. Generated silent three-second source video went through the real native export/controller. The test replaced only its settled owned staged result with a real one-second or five-second MP4, then allowed ordinary verification/publication to proceed. AVFoundation read one video track and the independently authored replacement duration in each case.
+
+The original readable-video policy published both replacements: expected 3 seconds, actual 1 and 5 seconds. The regression failed with six assertions across its two cases in 0.143 seconds. Source/prior output, unrelated staging and explicit normal retry checks did not fail. This is the intended old-policy negative control, preserved in private work/native-duration/negative-control.log; no test was weakened to pass it.
+
+## Implementation and focused checks
+
+NativeExportDuration requires finite positive source seconds before staging. NativeExportService loads source duration asynchronously, keeps the immutable contract through the export, reads staged duration after the completed writer callback and applies the existing unchanged strict OutputDurationCheck before finishing/publication. Cancellation, lifetime and cleanup ownership remain. The generated replacement hook exists only in DEBUG builds and cannot bypass verification. Quick Export states the total-duration check and its limits.
+
+Fifteen tests in three suites passed in 1.473 seconds: NativeOutputDurationTests, ExportTests and OutputDurationTests, with no skips in this selection. These include invalid source values, strict 250-millisecond boundaries from one second through one day, real shorter/longer staged refusal, controller failure state, explicit successful retry, original/prior-output/unrelated-staging preservation, all three native presets and existing cancellation/cleanup/publication outcomes. Private log: work/native-duration/focused.log. Existing ChapterPersistenceTests asynchronous Thread.isMainThread build warnings remain.
+
+## Pending acceptance
+
+Native optimized walkthrough and ordinary full local/hosted regression remain pending. No full slice acceptance, decoded completeness, A/V sync or production-ready claim yet. A repeat of the historical hosted mastering cancellation failure reopens qualification without blind retry or diagnostic expansion.

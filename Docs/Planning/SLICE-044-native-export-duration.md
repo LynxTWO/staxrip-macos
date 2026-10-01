@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-082 / R-054.
 
 SLICE STATE
-Milestone: M1 ready after Slice 043 acceptance at ce27093.
+Milestone: M1 negative control and M2 implementation complete; M3 native/full regression next.
 Blocked by: None within scope.
-Evidence: NativeExport.swift checks readable video but not total duration; existing OutputDurationCheck supplies the strict policy.
+Evidence: NATIVE-DURATION-EVIDENCE.md records old-policy shorter/longer publication and 15 focused passing tests after the correction.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

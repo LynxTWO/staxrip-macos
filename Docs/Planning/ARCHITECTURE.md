@@ -139,3 +139,5 @@ Slices 033 and 034 now have scoped acceptance at 3d14456 and 34d6c0d respectivel
 Current approved boundary: SLICE-035-compact-preview.md under D-062 / R-044. WorkspaceView changes only the existing preview frame and footer; NativeVideoPreview and its AVPlayer identity remain intact. One app-only size preference is separate from sessions and encoding intent.
 
 Slice 035 is accepted at 24e8f2b with hosted run 36856655748. COMPACT-PREVIEW-EVIDENCE.md records the native continuity proof and rejected border experiment.
+
+Current approved boundary: SLICE-036-trimmed-captions.md under D-064 / R-045. ExternalSubtitle owns cue intersection, EncodePlan owns this combination's timing filters, ChapterPlan selects source/output metadata time explicitly, and BatchController writes the plan-owned caption snapshot. Existing verifier and exclusive publication remain the final authority.

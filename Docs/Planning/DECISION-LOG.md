@@ -73,6 +73,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-061 | 2026-10-01 | Adapt semantic accent and warning contrast | Confirmed | |
 | D-062 | 2026-10-01 | Resize source preview without replacing playback | Confirmed | |
 | D-063 | 2026-10-01 | Qualify preview border hit testing | Confirmed | |
+| D-064 | 2026-10-01 | Clip external captions to the selected timeline | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -978,3 +979,18 @@ Consequences: Preserve the border rendering and parent drop target. Disable hit 
 Revisit when: The change fails to restore player input, drop behavior changes or another overlay owns input intentionally.
 
 D-063 outcome: The same initial native play control works with the original border after recreating the source view. Removing hit testing did not establish a causal improvement. The speculative change was removed before final qualification. Auto-hidden control reveal through the inspection tool remains limited; the generated movie's visible clock independently proves resize continuity. No drop-handler change is retained, so new drop qualification is not a product gate for this rejected experiment.
+
+
+## D-064: Clip external captions to the selected timeline
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 036 and R-045 under owner autonomous program-completion delegation, excluding original mastering and owner listening. Delegated to AI recommendation.
+
+Because: External captions currently refuse all trim. Generated discovery shows that global output seek drops a crossing cue and retains an overlong final cue; MP4 also retained an unwanted offset. Explicit cue intersection plus filtered video timing produced the intended decoded captions in both containers. Slice 035 is accepted.
+
+Options considered: retain refusal; add a second full remux pass; use a captured clipped caption snapshot with explicit video/audio timestamp filters only for this combination. Choose the third, with combined chapter timing qualification.
+
+Consequences: Retain known zero-start SDR source bounds, plain nonoverlapping SRT limits, no copied audio or retained embedded subtitles on trim, and fresh caption capture per attempt. Require explicit trim boundaries on millisecond precision; do not silently round owner intent. Intersect cues with the requested interval, shift once and refuse an empty result with correction guidance. For this path only, filter video/audio to the source interval and subtract the common start instead of global output seek. Feed custom chapters in verified output time. Existing untrimmed and non-caption trim paths remain unchanged. Independently decode actual captions, frame timestamps, audio timing and combined chapters before acceptance; runtime exact caption verification, source protection, staging and publication guards remain intact. No original mastering, new session fields, merge or release.
+
+Revisit when: Timestamp precision, audio delay, VFR frame selection, custom chapters or captured-snapshot verification disagree with the intended interval.

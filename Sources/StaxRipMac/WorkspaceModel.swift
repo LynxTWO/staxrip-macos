@@ -238,6 +238,24 @@ final class WorkspaceModel: ObservableObject {
         }
     }
 
+    func chooseNativeExport(using exporter: ExportController,
+                            canStart: @escaping @MainActor () -> Bool = { true }) {
+        guard !loading, !sourceUnavailable, !sourceNeedsReview, !exporter.running,
+              canStart(), let source = sourceURL, let intent = beginFileRequest() else { return }
+        let preset = exporter.preset
+        selectFile(.nativeExport(source), intent: intent) { [weak self] destination in
+            guard let self, self.consumeSelection(intent) else { return }
+            guard let destination else { self.finishFileRequest(intent); return }
+            guard self.intentIsCurrent(intent), self.finishFileRequest(intent) else { return }
+            guard !self.loading, !self.sourceUnavailable, !self.sourceNeedsReview,
+                  !exporter.running, exporter.preset == preset, canStart() else {
+                self.notice = "The source, native preset or available operation changed. Choose Export MP4 again when ready."
+                return
+            }
+            exporter.start(source: source, destination: destination)
+        }
+    }
+
     func saveSession() {
         guard let intent = beginFileRequest() else { return }
         selectFile(.saveSession, intent: intent) { [weak self] url in

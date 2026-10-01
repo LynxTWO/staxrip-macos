@@ -8,6 +8,7 @@ enum WorkspaceFileRequest: Equatable {
     case openSession
     case saveSession
     case exportQueue
+    case nativeExport(URL)
 }
 
 @MainActor
@@ -62,6 +63,13 @@ final class WorkspaceFilePanels: WorkspacePanelPresenting {
             panel.title = "Save StaxRip Mac session"
             panel.nameFieldStringValue = "StaxRip session.json"
             panel.allowedContentTypes = [.json]
+        case .nativeExport(let source):
+            panel = NSSavePanel()
+            panel.title = "Export MP4 with Apple media tools"
+            panel.prompt = "Export"
+            panel.nameFieldStringValue = source.deletingPathExtension().lastPathComponent + "_native.mp4"
+            panel.allowedContentTypes = [.mpeg4Movie]
+            panel.message = "Choose a new output name. Existing files will not be replaced."
         case .exportQueue:
             panel = NSSavePanel()
             panel.title = "Export prototype queue"

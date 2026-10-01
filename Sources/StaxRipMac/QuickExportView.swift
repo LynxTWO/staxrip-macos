@@ -87,10 +87,12 @@ struct QuickExportView: View {
                                 .disabled(exporter.finishing)
                                 .help(exporter.finishing ? "The filesystem save is in progress and cannot be recalled. Its result will be reported when it finishes." : "Cancel encoding before the completed output is saved.")
                         } else {
-                            Button { if let source = model.sourceURL { exporter.chooseDestination(source: source) } } label: {
+                            Button {
+                                model.chooseNativeExport(using: exporter) { !batch.running && !audio.running }
+                            } label: {
                                 Label("Export MP4…", systemImage: "arrow.up.forward.video")
                             }.buttonStyle(.borderedProminent).controlSize(.large)
-                                .disabled(model.isDemo || model.loading || model.sourceUnavailable || batch.running || audio.running)
+                                .disabled(model.isDemo || model.loading || model.sourceUnavailable || model.filePanelActive || batch.running || audio.running)
                         }
                     }
                 }.padding(22).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))

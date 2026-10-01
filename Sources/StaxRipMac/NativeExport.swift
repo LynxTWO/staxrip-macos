@@ -1,7 +1,5 @@
 import AVFoundation
-import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 import Darwin
 
 enum NativePreset: String, CaseIterable, Identifiable {
@@ -230,18 +228,6 @@ final class ExportController: ObservableObject {
     private var task: Task<Void, Never>?
 
     init(service: NativeExportService? = nil) { self.service = service ?? NativeExportService() }
-
-    func chooseDestination(source: URL) {
-        guard !running else { return }
-        let panel = NSSavePanel()
-        panel.title = "Export MP4 with Apple media tools"
-        panel.prompt = "Export"
-        panel.nameFieldStringValue = source.deletingPathExtension().lastPathComponent + "_native.mp4"
-        panel.allowedContentTypes = [.mpeg4Movie]
-        panel.message = "Choose a new output name. Existing files will not be replaced."
-        guard panel.runModal() == .OK, let destination = panel.url else { return }
-        start(source: source, destination: destination)
-    }
 
     func start(source: URL, destination: URL) {
         guard !running else { return }

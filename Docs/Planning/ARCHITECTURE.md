@@ -178,3 +178,5 @@ Slice 043 is accepted at ce27093 under D-081 / R-053, hosted run 36914015358. TR
 Current approved boundary: SLICE-044-native-export-duration.md under D-082 / R-054. NativeExportService records finite source duration, reads staged duration after writer completion and applies the existing strict OutputDurationCheck before publication. A process-local native contract and bounded DEBUG-only fault seam retain existing controller, staging and publication ownership.
 
 Slice 044 is accepted at f385cec under D-082 / R-054, hosted run 36916404356. NATIVE-DURATION-EVIDENCE.md records all four gates, real shortened/extended-output refusal, successful retry, optimized native output and ordinary local/hosted checks. Aggregate duration is narrower than decoded completeness, individual-track timing, A/V sync and source stability.
+
+Current approved boundary: SLICE-045-dynamic-app-icons.md under D-083 / R-055. Build resources own native layered/fallback identity; a process-local Dock presentation reads existing controller state and AppDelegate provides native navigation. Processing, cancellation, publication and persisted state owners remain unchanged.

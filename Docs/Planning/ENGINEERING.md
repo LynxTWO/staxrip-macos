@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 018 filtered frame stepping under D-031. Slice 017 closed at b177432 with hosted run 36790619197.
+Next: Slice 019 export source stability under D-032. Slice 018 closed at fc1aa88 with hosted run 36792778159.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -194,3 +194,7 @@ Approved R-020 under delegated Slice 017: independently verify known declared st
 ## Slice 018 frame stepping checkpoint
 
 Approved R-021 under delegated Slice 018: discover decoded source-frame neighbors and require original/filtered timestamps to match the chosen rational identity, retaining the existing preview scope. Gates frame-step-neighbor, frame-step-picture, frame-step-lifecycle and frame-step-ui bind S18-001 through S18-004. Consequence: local-only bounded decoding and ephemeral images; no media writes, saved-format changes, audio or release scope.
+
+## Slice 019 source stability checkpoint
+
+Approved R-022 under delegated Slice 019: compare observed source bytes before inspection and before publication using a regular-file utility reader. Gates source-content-reader, source-content-refusal, source-content-lifecycle and source-content-export bind S19-001 through S19-004. Two additional reads for ordinary SDR; no snapshot or arbitrary filesystem latency guarantee. Audio stays parked.

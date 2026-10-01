@@ -292,16 +292,16 @@ struct WorkspaceView: View {
     private var videoSettings: some View {
         VStack(alignment: .leading, spacing: 17) {
             HStack {
-                sectionTitle("Video encoding", subtitle: "Quality first. Every setting within reach.")
+                sectionTitle(model.config.copiesVideo ? "Original video" : "Video encoding", subtitle: model.config.copiesVideo ? "Keep the picture. Choose the rest." : "Quality first. Every setting within reach.")
                 Spacer()
-                Text(model.config.rate.backend.uppercased()).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
+                Text(model.config.copiesVideo ? "STREAM COPY" : model.config.rate.backend.uppercased()).font(.system(size: 9, weight: .medium)).foregroundStyle(.secondary)
             }
             HStack(spacing: 12) {
                 settingPicker("Codec", selection: Binding(get: { model.config.codec }, set: { value in
                     var next = model.config
                     next.selectCodec(value)
                     model.config = next
-                }), values: ["AV1", "HEVC", "H.264"])
+                }), values: ["AV1", "HEVC", "H.264", "Copy original"])
                 VStack(alignment: .leading, spacing: 6) {
                     eyebrow("ENCODER")
                     Text(model.config.activeEncoder).font(.system(size: 12, weight: .medium)).frame(maxWidth: .infinity, alignment: .leading).padding(9)
@@ -309,7 +309,7 @@ struct WorkspaceView: View {
                 }
             }
             VideoRateOptionsView(configuration: $model.config)
-            if model.config.rate.mode == "Constant quality" {
+            if !model.config.copiesVideo && model.config.rate.mode == "Constant quality" {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Constant quality").font(.system(size: 12, weight: .medium))
@@ -326,7 +326,9 @@ struct WorkspaceView: View {
                 }.font(.system(size: 10)).foregroundStyle(.secondary)
             }.padding(14).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
             }
-            settingPicker("Speed preference", selection: $model.config.speed, values: ["Thorough", "Balanced", "Fast"]).disabled(model.config.rate.backend != "Software")
+            if !model.config.copiesVideo {
+                settingPicker("Speed preference", selection: $model.config.speed, values: ["Thorough", "Balanced", "Fast"]).disabled(model.config.rate.backend != "Software")
+            }
             Text("FFmpeg applies these settings when you start the queue. First video and chosen audio tracks. The selected color workflow determines supported sources and verification.")
                 .font(.system(size: 10)).foregroundStyle(.secondary)
         }

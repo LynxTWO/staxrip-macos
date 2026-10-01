@@ -23,8 +23,9 @@ struct EncodeConfiguration: Codable, Equatable {
         get { videoRateOptions ?? VideoRateOptions() }
         set { videoRateOptions = newValue }
     }
-    var rateSummary: String { rate.mode == "Constant quality" ? "CRF \(Int(quality))" : "\(rate.bitrate) kb/s" }
-    var activeEncoder: String { rate.backend == "Software" ? encoder : "VideoToolbox" }
+    var copiesVideo: Bool { codec == "Copy original" }
+    var rateSummary: String { copiesVideo ? "No video re-encoding" : rate.mode == "Constant quality" ? "CRF \(Int(quality))" : "\(rate.bitrate) kb/s" }
+    var activeEncoder: String { copiesVideo ? "No video encoder" : rate.backend == "Software" ? encoder : "VideoToolbox" }
     var audioTracks: [Int]?
     var subtitleTracks: [Int]?
     var externalSubtitle: ExternalSubtitle?
@@ -39,7 +40,7 @@ struct EncodeConfiguration: Codable, Equatable {
 extension EncodeConfiguration {
     mutating func selectCodec(_ value: String) {
         codec = value
-        encoder = value == "AV1" ? "SVT-AV1" : value == "HEVC" ? "x265" : "x264"
+        encoder = value == "Copy original" ? "copy" : value == "AV1" ? "SVT-AV1" : value == "HEVC" ? "x265" : "x264"
         if value == "AV1", rate.backend != "Software" { rate.backend = "Software" }
     }
     mutating func selectBackend(_ value: String) {

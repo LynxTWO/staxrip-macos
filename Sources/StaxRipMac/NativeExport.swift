@@ -110,9 +110,12 @@ struct ExportStaging {
 @MainActor
 final class NativeExportService {
     private let removeStaging: (URL) async throws -> Void
+    private let publishOperation: @Sendable (URL, URL) throws -> Void
 
-    init(removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) }) {
+    init(removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) },
+         publishOperation: @escaping @Sendable (URL, URL) throws -> Void = { try ExportPublication.publish(staged: $0, destination: $1) }) {
         self.removeStaging = removeStaging
+        self.publishOperation = publishOperation
     }
 
     private var session: AVAssetExportSession?
@@ -124,7 +127,7 @@ final class NativeExportService {
         session?.cancelExport()
     }
 
-    func export(source: URL, destination: URL, preset: NativePreset, progress: @escaping (Double) -> Void = { _ in }) async throws {
+    func export(source: URL, destination: URL, preset: NativePreset, finishing: @escaping () -> Void = {}, progress: @escaping (Double) -> Void = { _ in }) async throws {
         guard !active else { throw NativeExportError.invalid("An export is already running.") }
         active = true
         cancelled = false
@@ -161,6 +164,7 @@ final class NativeExportService {
         defer { poll.cancel() }
         var operationError: Error?
         var publishedOutput: URL?
+        var publicationStarted = false
         do {
             // The async throwing API can resume cancellation while the writer still
             // owns staging files. The completion callback is our cleanup boundary.
@@ -186,10 +190,16 @@ final class NativeExportService {
                 throw NativeExportError.invalid("The exported file contains no readable video.")
             }
             try checkCancellation()
-            try ExportPublication.publish(staged: staged, destination: destination)
+            poll.cancel()
+            finishing()
+            try checkCancellation()
+            publicationStarted = true
+            // A dispatched filesystem save cannot be recalled. Keep its true
+            // outcome, even if cancellation arrives while awaiting completion.
+            try await ExportPublication.publishAsync(staged: staged, destination: destination, operation: publishOperation)
             publishedOutput = destination
         } catch {
-            operationError = cancelled || Task.isCancelled ? CancellationError() : error
+            operationError = publicationStarted ? error : (cancelled || Task.isCancelled ? CancellationError() : error)
         }
         poll.cancel()
         do { try await removeStaging(temporary) }
@@ -210,13 +220,16 @@ final class NativeExportService {
 final class ExportController: ObservableObject {
     @Published var preset: NativePreset = .h264HD
     @Published var running = false
+    @Published private(set) var finishing = false
     @Published var progress = 0.0
     @Published var status = "Ready for your first export"
     @Published var failure: String?
     @Published var result: URL?
     @Published var sourceName = ""
-    private let service = NativeExportService()
+    private let service: NativeExportService
     private var task: Task<Void, Never>?
+
+    init(service: NativeExportService? = nil) { self.service = service ?? NativeExportService() }
 
     func chooseDestination(source: URL) {
         guard !running else { return }
@@ -233,6 +246,7 @@ final class ExportController: ObservableObject {
     func start(source: URL, destination: URL) {
         guard !running else { return }
         running = true
+        finishing = false
         progress = 0
         failure = nil
         result = nil
@@ -240,16 +254,22 @@ final class ExportController: ObservableObject {
         status = "Preparing export…"
         let chosenPreset = preset
         task = Task { [self] in
-            defer { running = false; task = nil }
+            defer { running = false; finishing = false; task = nil }
             do {
-                try await service.export(source: source, destination: destination, preset: chosenPreset) { [weak self] value in
-                    self?.progress = value
-                    if value > 0 { self?.status = "Exporting \(Int(value * 100))%" }
-                }
+                try await service.export(source: source, destination: destination, preset: chosenPreset, finishing: { [weak self] in
+                    self?.finishing = true
+                    self?.status = "Finishing output. Waiting for the destination to save the completed file…"
+                }, progress: { [weak self] value in
+                    guard let self, !self.finishing else { return }
+                    self.progress = value
+                    if value > 0 { self.status = "Exporting \(Int(value * 100))%" }
+                })
                 result = destination
+                progress = 1
                 status = "Export complete"
             } catch let error as ExportCleanupError {
                 result = error.publishedOutput
+                if result != nil { progress = 1 }
                 failure = error.localizedDescription
                 status = error.publishedOutput == nil ? "Export stopped · temporary files remain" : "Export saved · temporary files remain"
             } catch is CancellationError {
@@ -263,7 +283,7 @@ final class ExportController: ObservableObject {
 
     func cancel() {
         guard running else { return }
-        status = "Cancelling…"
+        status = finishing ? "Finishing output. Waiting for the save result before cleanup…" : "Cancelling…"
         service.cancel()
         task?.cancel()
     }

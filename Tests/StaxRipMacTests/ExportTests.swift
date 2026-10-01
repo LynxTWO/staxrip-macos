@@ -5,6 +5,22 @@ import CoreVideo
 import CoreGraphics
 @testable import StaxRipMac
 
+private final class NativePublicationGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private let signal = DispatchSemaphore(value: 0)
+    private var value: (entered: Bool, mainThread: Bool, staged: URL?) = (false, false, nil)
+    var snapshot: (entered: Bool, mainThread: Bool, staged: URL?) { lock.withLock { value } }
+    func release() { signal.signal() }
+    func publish(_ staged: URL, _ destination: URL, fail: Bool) throws {
+        lock.withLock { value = (true, Thread.isMainThread, staged) }
+        guard signal.wait(timeout: .now() + 30) == .success else {
+            throw NativeExportError.invalid("Held native publication timed out before its main-actor observer could release it")
+        }
+        if fail { throw NativeExportError.invalid("Injected destination refused publication") }
+        try ExportPublication.publish(staged: staged, destination: destination)
+    }
+}
+
 @MainActor
 struct ExportTests {
     private func folder() throws -> URL {
@@ -85,9 +101,9 @@ struct ExportTests {
         var requested = false
         var firstProgress: Double?
         do {
-            try await service.export(source: source, destination: target, preset: .h264HD) { value in
+            try await service.export(source: source, destination: target, preset: .h264HD, progress: { value in
                 if !requested { firstProgress = value; requested = true; service.cancel() }
-            }
+            })
             Issue.record("Active cancellation should prevent publication")
         } catch is CancellationError { }
         #expect(requested)
@@ -162,9 +178,9 @@ struct ExportTests {
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
         })
         do {
-            try await service.export(source: source, destination: target, preset: .h264Small) { _ in
+            try await service.export(source: source, destination: target, preset: .h264Small, progress: { _ in
                 if cancel { service.cancel() }
-            }
+            })
             Issue.record("Cleanup failure must not be suppressed")
         } catch let error as ExportCleanupError {
             #expect(error.publishedOutput == (cancel ? nil : target))
@@ -189,6 +205,98 @@ struct ExportTests {
         #expect(!FileManager.default.fileExists(atPath: target.path))
         #expect(!service.active)
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).count == 1)
+    }
+
+    @Test func cancellationAtFinalSaveBoundaryDoesNotDispatchPublication() async throws {
+        let dir = try folder(); defer { try? FileManager.default.removeItem(at: dir) }
+        let source = dir.appendingPathComponent("source.mov"), output = dir.appendingPathComponent("output.mp4")
+        try await makeFixture(at: source)
+        let original = try Data(contentsOf: source)
+        let dispatched = dir.appendingPathComponent("unexpected-publication")
+        let service = NativeExportService(publishOperation: { _, _ in try Data([1]).write(to: dispatched) })
+        do {
+            try await service.export(source: source, destination: output, preset: .h264Small, finishing: { service.cancel() })
+            Issue.record("Cancellation before dispatch must not report a save")
+        } catch { #expect(error is CancellationError) }
+        #expect(!FileManager.default.fileExists(atPath: dispatched.path) && !service.active && !FileManager.default.fileExists(atPath: output.path))
+        #expect(try Data(contentsOf: source) == original)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).allSatisfy { !$0.hasPrefix(".staxrip-export-") })
+    }
+
+    @Test(.timeLimit(.minutes(3)), arguments: ["success", "collision", "failure", "cleanup"])
+    func finalPublicationKeepsUIAndStagingOwnedAndReportsRealOutcome(outcome: String) async throws {
+        let dir = try folder()
+        let gate = NativePublicationGate()
+        var cleanupCalls = 0
+        var cleaned: URL?
+        let service = NativeExportService(removeStaging: { directory in
+            cleanupCalls += 1; cleaned = directory
+            if outcome == "cleanup" { throw NativeExportError.invalid("Injected cleanup refusal") }
+            try await ExportStaging.remove(directory)
+        }, publishOperation: { staged, destination in
+            try gate.publish(staged, destination, fail: outcome == "failure")
+        })
+        defer {
+            gate.release()
+            if !service.active { try? FileManager.default.removeItem(at: dir) }
+        }
+        let source = dir.appendingPathComponent("source.mov")
+        try await makeFixture(at: source)
+        let original = try Data(contentsOf: source)
+        let protected = dir.appendingPathComponent("prior.mp4"), protectedBytes = Data("prior output".utf8)
+        try protectedBytes.write(to: protected)
+        let destination = dir.appendingPathComponent("output.mp4")
+        let controller = ExportController(service: service)
+        controller.preset = .h264Small
+        controller.start(source: source, destination: destination)
+        while controller.running && !gate.snapshot.entered { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(!gate.snapshot.mainThread)
+        try #require(gate.snapshot.entered && controller.running)
+        MainActor.preconditionIsolated()
+        #expect(controller.finishing && controller.status.hasPrefix("Finishing output"))
+        let staged = try #require(gate.snapshot.staged)
+        #expect(service.active && cleanupCalls == 0)
+        #expect(FileManager.default.fileExists(atPath: staged.path))
+        #expect(!FileManager.default.fileExists(atPath: destination.path))
+        // Cancellation cannot abandon the filesystem operation or erase its result.
+        controller.cancel()
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(controller.running && controller.finishing && service.active && cleanupCalls == 0)
+        #expect(controller.status.hasPrefix("Finishing output"))
+        #expect(FileManager.default.fileExists(atPath: staged.path))
+        let competitor = Data("competing output".utf8)
+        if outcome == "collision" { try competitor.write(to: destination) }
+        gate.release()
+        while controller.running { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(!service.active && !controller.finishing && cleanupCalls == 1)
+        #expect(cleaned == staged.deletingLastPathComponent())
+        #expect(try Data(contentsOf: source) == original)
+        #expect(try Data(contentsOf: protected) == protectedBytes)
+        #expect(FileManager.default.fileExists(atPath: staged.path) == (outcome == "cleanup"))
+        if outcome == "success" || outcome == "cleanup" {
+            #expect(controller.result == destination && controller.progress == 1)
+            #expect(controller.status == (outcome == "cleanup" ? "Export saved · temporary files remain" : "Export complete"))
+            #expect((controller.failure != nil) == (outcome == "cleanup"))
+            let tracks = try await AVURLAsset(url: destination).loadTracks(withMediaType: .video)
+            #expect(tracks.count == 1)
+        } else {
+            #expect(controller.result == nil && controller.status == "Export failed")
+            if outcome == "collision" {
+                #expect(controller.failure?.contains("nothing was overwritten") == true)
+                #expect(try Data(contentsOf: destination) == competitor)
+                // An explicit retry gets a fresh lifecycle and a new destination.
+                let retry = dir.appendingPathComponent("retry.mp4")
+                gate.release()
+                controller.start(source: source, destination: retry)
+                while controller.running { try await Task.sleep(for: .milliseconds(5)) }
+                #expect(controller.result == retry && controller.failure == nil && controller.status == "Export complete")
+                #expect(try Data(contentsOf: destination) == competitor)
+                #expect(cleanupCalls == 2)
+            } else {
+                #expect(controller.failure == "Injected destination refused publication")
+                #expect(!FileManager.default.fileExists(atPath: destination.path))
+            }
+        }
     }
 
     private func makeFixture(at url: URL) async throws {

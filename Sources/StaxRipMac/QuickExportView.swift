@@ -54,10 +54,14 @@ struct QuickExportView: View {
                             .foregroundStyle(exporter.failure != nil ? .orange : Color.accent)
                         Text(exporter.status).font(.headline)
                         Spacer()
-                        if exporter.running { Text("\(Int(exporter.progress * 100))%").monospacedDigit() }
+                        if exporter.running && !exporter.finishing { Text("\(Int(exporter.progress * 100))%").monospacedDigit() }
                     }
                     if exporter.running {
-                        ProgressView(value: exporter.progress)
+                        if exporter.finishing {
+                            ProgressView().accessibilityLabel("Saving completed output")
+                            Text("Saving has started. The app will wait for the destination’s result before removing temporary files.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        } else { ProgressView(value: exporter.progress) }
                         Text(exporter.sourceName).font(.caption).foregroundStyle(.secondary)
                     }
                     if let error = exporter.failure { Text(error).font(.callout).foregroundStyle(.orange).textSelection(.enabled) }
@@ -72,7 +76,9 @@ struct QuickExportView: View {
                         Text("Existing media is never replaced.").font(.caption).foregroundStyle(.secondary)
                         Spacer()
                         if exporter.running {
-                            Button("Cancel export", role: .cancel) { exporter.cancel() }
+                            Button(exporter.finishing ? "Saving output…" : "Cancel export", role: .cancel) { exporter.cancel() }
+                                .disabled(exporter.finishing)
+                                .help(exporter.finishing ? "The filesystem save is in progress and cannot be recalled. Its result will be reported when it finishes." : "Cancel encoding before the completed output is saved.")
                         } else {
                             Button { if let source = model.sourceURL { exporter.chooseDestination(source: source) } } label: {
                                 Label("Export MP4…", systemImage: "arrow.up.forward.video")

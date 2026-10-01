@@ -28,15 +28,18 @@ struct AppPaletteTests {
         let appearance = try #require(NSAppearance(named: name))
         let dark = name == .darkAqua || name == .accessibilityHighContrastDarkAqua
         let reference = Array(repeating: dark ? 0.12 : 0.93, count: 3)
-        let surfaces = [reference, try components(.windowBackgroundColor, in: appearance),
+        let marginSurface = Array(repeating: dark ? 0.22 : 0.90, count: 3)
+        let surfaces = [reference, marginSurface, try components(.windowBackgroundColor, in: appearance),
                         try components(.controlBackgroundColor, in: appearance)]
+        var minimum = Double.infinity
         for role: AppPalette.Role in [.accent, .warning] {
             let foreground = try components(AppPalette.color(role), in: appearance)
             for surface in surfaces {
                 for opacity in [0.0, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12] {
                     let background = over(foreground, surface, opacity: opacity)
+                    minimum = min(minimum, contrast(foreground, background))
                     #expect(contrast(foreground, background) >= 7,
-                            "Active text must remain readable on the resolved surface and its tint")
+                            "Role \(role), surface \(surface), tint \(opacity), appearance \(appearance.name.rawValue)")
                 }
             }
         }
@@ -44,6 +47,7 @@ struct AppPaletteTests {
         let white = [1.0, 1.0, 1.0]
         #expect(contrast(white, fill) >= 7)
         #expect(contrast(over(white, fill, opacity: 0.85), fill) >= 4.5)
+        print("PALETTE_REFERENCE requested=\(name.rawValue) effective=\(appearance.name.rawValue) surfaces=\(surfaces) minimum=\(minimum)")
     }
 
     @Test func originalFixedAccentFailsLightTextBenchmark() {

@@ -17,9 +17,9 @@ enum AppPalette {
             let hex: UInt32
             switch role {
             case .accent:
-                hex = dark ? 0x71E5CF : 0x034236
+                hex = dark ? 0xAFFFEE : 0x034236
             case .warning:
-                hex = dark ? 0xFFD28D : 0x633000
+                hex = dark ? 0xFFEDCD : 0x633000
             case .primaryFill:
                 hex = 0x034236
             }

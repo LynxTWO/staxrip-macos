@@ -65,6 +65,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-053 | 2026-10-01 | Isolate final publication from shared dispatch contention | Confirmed | |
 | D-054 | 2026-10-01 | Observe the actual HDR cancellation test boundary | Confirmed | |
 | D-055 | 2026-10-01 | Own source admission and process control dispatch | Confirmed | |
+| D-056 | 2026-10-01 | Retire temporary hosted dispatch tracing | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -848,3 +849,18 @@ Options considered: change test scheduling; increase deadlines; reproduce these 
 Consequences: Add debug-only opt-in observations and sequential controlled negative/positive checks for actual regular-file admission and a real process launch. Source admission gets a per-call owned queue preserving task priority. Native/fallback reads and cancellation checks remain unchanged. ToolRunner gets one owned user-initiated control queue for launch, completion notification and its existing two-/four-second escalation timers. Keep its existing priority, pipe queues, draining, callbacks, exit/join/retry behavior and signal policy. Preserve default tests and all limits. Verify existing 96-child, cancellation/retry, native/fallback lifecycle and full/native checks. No DSP, callback-discard policy, caption/chapter adapter or test-scheduling change.
 
 Revisit when: Controlled operations do not reproduce delay, lifecycle guarantees fail, or the unchanged full regression identifies a different boundary.
+
+
+## D-056: Retire temporary hosted dispatch tracing
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Restore the ordinary hosted test command after scoped dispatch repair qualification, under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: Hosted run 36839378179 at 51284d5 passed all 227 tests in 446.181 seconds. Local release/debug, both capacity fixtures and native queue plus Quick Export passed. The diagnostic comparison and sampler have served their purpose, but acceptance should also exercise the ordinary workflow without them.
+
+Options considered: retain routine sampling and the focused warm-up; remove temporary CI instrumentation and qualify the direct production reader. Choose removal.
+
+Consequences: Restore plain swift test with unchanged default scheduling, limits and assertions. Remove the test-only forwarding source reader and use BatchController's default reader. Keep bounded status diagnostics, the manual observer script and debug-only hooks required by explicit contention controls. Record a full local and hosted run after cleanup. Do not infer arbitrary kernel wait guarantees or production completion.
+
+Revisit when: Ordinary regression fails or new evidence requires a separately scoped observation.

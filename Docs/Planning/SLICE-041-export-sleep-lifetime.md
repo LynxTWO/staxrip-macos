@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-079 / R-051.
 
 SLICE STATE
-Milestone: M1 format-independent system API feasibility pending.
+Milestone: M1 passed; M2 bounded implementation approved.
 Blocked by: None within approved discovery.
-Evidence so far: BatchController.start and NativeExportService.export own the actual asynchronous lifetime through settled cleanup, but neither calls a process activity API. Apple documents a temporary idle-system-sleep activity and matching end call.
+Evidence so far: EXPORT-SLEEP-EVIDENCE.md records two real Foundation assertions, independent overlap and removal after both matching end calls. No product implementation or acceptance yet.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

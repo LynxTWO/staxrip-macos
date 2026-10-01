@@ -29,7 +29,7 @@ No new stub. Broad real-film, discontinuous audio, long-film sync and cross-play
 
 ## 6. Modules touched
 
-ExternalSubtitle, EncodePlan, BatchController snapshot selection, ChapterPlan metadata timing, SubtitleOptionsView help and focused tests/evidence. Keep source capture/access and publication contracts unchanged.
+ExternalSubtitle, EncodePlan, BatchController snapshot selection, ChapterPlan metadata timing, SubtitleOptionsView and PictureOptionsView help and focused tests/evidence. Keep source capture/access and publication contracts unchanged.
 
 ## 7. Data subset
 

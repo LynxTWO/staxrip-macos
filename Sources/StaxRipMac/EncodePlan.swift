@@ -43,7 +43,7 @@ struct EncodePlan: Sendable {
             throw NativeExportError.invalid("The trim range must lie within the source duration.")
         }
         guard !trimmed || (c.audio != "Copy original" && c.subtitleMode == "Remove all subtitles") else {
-            throw NativeExportError.invalid("Precise trimming requires re-encoded audio (or no audio) and removed subtitles. Embedded subtitle and copied-audio timing cannot yet be preserved by this trim workflow.")
+            throw NativeExportError.invalid("Precise trimming requires re-encoded audio (or no audio) and removed embedded subtitles. Embedded subtitle and copied-audio timing cannot yet be preserved by this trim workflow.")
         }
         let outputDuration = trimmed ? (picture.end > 0 ? picture.end : probe.seconds) - picture.start : probe.seconds
         let hardware = c.rate.backend == "Apple hardware"

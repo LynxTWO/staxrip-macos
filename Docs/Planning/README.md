@@ -122,3 +122,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 44. [Slice 034: readable semantic appearance](SLICE-034-appearance-contrast.md).
 
 [Semantic appearance evidence](APPEARANCE-CONTRAST-EVIDENCE.md) records native light/dark actions, cross-version contrast correction and final local/hosted acceptance.
+
+45. [Slice 035: compact source preview](SLICE-035-compact-preview.md).

@@ -71,6 +71,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-059 | 2026-10-01 | Truthful compact queue outcomes | Confirmed | |
 | D-060 | 2026-10-01 | Qualify subtitle dispatch and cancellation observation | Confirmed | |
 | D-061 | 2026-10-01 | Adapt semantic accent and warning contrast | Confirmed | |
+| D-062 | 2026-10-01 | Resize source preview without replacing playback | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -944,3 +945,18 @@ Options considered: one darker constant; system blue throughout; appearance-awar
 Consequences: Use AppKit dynamic colors for light, dark and increased-contrast appearances. Target at least 4.5:1 for active app-owned accent/warning text on documented opaque reference surfaces and actual used tints, with 7:1 for increased-contrast variants. Separate the white-label primary-action pair from text accent. Preserve native prominent button behavior and action guards. System secondary/disabled colors and chart-series colors remain separate. Qualify actual resolved colors, the old counterexample, native light/dark control and warning views, keyboard actions, optimized build and full regression. No DSP, file access, session schema, layout redesign, release or broad accessibility conformance claim.
 
 Revisit when: Native resolution disagrees with tested appearance, a label/background pair loses contrast, or material compositing requires an explicitly different surface.
+
+
+## D-062: Resize source preview without replacing playback
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 035 and R-044 under owner overnight autonomous non-audio and design delegation. Delegated to AI recommendation.
+
+Because: The fixed 230-point source preview competes with settings at the minimum workspace size. Slice 034 has scoped acceptance at 34d6c0d and hosted run 36854310994.
+
+Options considered: hide playback; replace the player with a thumbnail; resize its existing view. Choose a reversible 150-point compact view and retain the existing 230-point default.
+
+Consequences: Add one app-only display preference and a visible keyboard-accessible size control. Keep the same player and view branch across resizing, preserving playback and source settings. Restored-source and unavailable-preview remedies retain full height and no misleading resize action. The footer must remain readable at minimum width. Verify native real silent playback continuity, preference persistence, restored-source review, keyboard operation, full regression and optimized build. No media processing, session schema, source access, DSP or release changes.
+
+Revisit when: Resizing interrupts playback, a remedy becomes clipped, the footer crowds controls or the app preference affects encoding intent.

@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 020: Owned source import cancellation
-Version: 0.1. Date: 2026-09-30. Status: Active under D-033 / R-023.
+Version: 0.1. Date: 2026-09-30. Status: Done with scoped evidence under D-033 / R-023.
 
 SLICE STATE
-Milestone: Plan committed before implementation.
+Milestone: S20-001 through S20-004 accepted within SOURCE-IMPORT-EVIDENCE.md limits.
 Blocked by: None; Slice 019 closed at 5ede61e with hosted run 36796194802.
-Evidence so far: Current source-load Task is unretained; held AVFoundation resource settles with cancelLoading but not Task.cancel alone; SOURCE-IMPORT-RESEARCH.md.
+Evidence so far: Product 1933bee, 184 local/hosted tests, scoped native checks and cancellation negative control; hosted run 36799453765 passed.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

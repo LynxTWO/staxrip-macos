@@ -1,6 +1,6 @@
 # Owned source import cancellation evidence
 
-Date: 2026-09-30. Slice 020, D-033 / R-023. Status: focused and full local regression passed; native/hosted gates pending.
+Date: 2026-09-30. Slice 020, D-033 / R-023. Status: corrected local regression/build and scoped native checks passed; final hosted gate passed at 1933bee.
 
 ## Behavior and ownership
 
@@ -34,4 +34,13 @@ The initial build imported the generated prior MP4 correctly and retained its ou
 
 The slice was amended before the corrective implementation: an asynchronous metadata check now requires a nonempty regular local source path before creating AVURLAsset. It follows ordinary symlinks to regular files, refuses FIFO/directory/device/empty/missing inputs, and does not open special files. A new test requires that rejected paths never invoke the native reader. This is a path observation, not an immutable snapshot; concurrent replacement and arbitrary filesystem metadata latency remain limitations. The held-framework and fallback-process cancellation tests remain in place.
 
-The corrected release regression passed 184 tests in 36 suites in 36.910 seconds; the ad-hoc app built in 13.79 seconds. In the corrected native build, opening the same generated FIFO session immediately produced the nonempty regular-file refusal. Dismissing it restored enabled source controls without a waiting worker. Opening the generated MP4 then showed 160 x 96, 24.00 fps, 00:01 and native playback controls; the FFV1 MKV showed 160 x 96, ffv1 and explicit native-preview-unavailable status. Both source SHA-256 values remained unchanged and no export was created. Cancellation controls were observed on the initial build; actual framework/process settlement and latest-only ownership are established by the retained deterministic tests, not by the failed FIFO attempt. Final corrected hosted evidence remains pending. The initial hosted run 36798039269 passed but does not cover the corrective file check.
+The corrected release regression passed 184 tests in 36 suites in 36.910 seconds; the ad-hoc app built in 13.79 seconds. In the corrected native build, opening the same generated FIFO session immediately produced the nonempty regular-file refusal. Dismissing it restored enabled source controls without a waiting worker. Opening the generated MP4 then showed 160 x 96, 24.00 fps, 00:01 and native playback controls; the FFV1 MKV showed 160 x 96, ffv1 and explicit native-preview-unavailable status. Both source SHA-256 values remained unchanged and no export was created. Cancellation controls were observed on the initial build; actual framework/process settlement and latest-only ownership are established by the retained deterministic tests, not by the failed FIFO attempt. Final corrected hosted run 36799453765 passed at 1933bee: Swift 6.1.2, 184 tests in 477.783 seconds, 9m23s job. The initial hosted run 36798039269 passed but does not cover the corrective file check.
+
+## Acceptance mapping
+
+| Gate | Scoped receipt | Remaining gate |
+| --- | --- | --- |
+| S20-001 import-native-cancel | Held native resource settles, cancellation skips fallback; omission negative control fails | Hosted run 36799453765 passed |
+| S20-002 import-lifecycle | Held model keeps one worker, discards stale outcomes, drops cancelled replacements and preserves prior intent; real fallback process exits | Hosted run 36799453765 passed |
+| S20-003 import-compatibility | Corrected 184-test regression, native MP4 and fallback MKV walkthrough, unchanged generated files, regular-file refusal | Hosted run 36799453765 passed |
+| S20-004 import-ui | Initial build exposed named Cancel and waiting controls; corrected build immediately refuses the reproduced special-file hang and accepts both ordinary fixtures | Hosted run 36799453765 passed; spoken VoiceOver and wider platforms remain outside this scoped receipt |

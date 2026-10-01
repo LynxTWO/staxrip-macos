@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 020 owned source import cancellation under D-033. Slice 019 closed at 5ede61e with hosted run 36796194802.
+Next: Select the next reversible non-audio slice. Slice 020 closed at 1933bee with hosted run 36799453765.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

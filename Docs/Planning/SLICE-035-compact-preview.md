@@ -17,7 +17,7 @@ Open a generated silent video, start playback, select Compact preview, and conti
 
 ## 3. In scope, with build order
 
-M1: One app-only Boolean preference, 150/230-point frame selection and descriptive footer control. M2: Native playback, layout, keyboard, persistence and recovery checks. M3: Optimized build and full local/hosted regression.
+M1: One app-only Boolean preference, 150/230-point frame selection and descriptive footer control. M2: Qualify decorative-border hit testing, then native playback, layout, keyboard, persistence, drop acceptance and recovery checks. M3: Optimized build and full local/hosted regression.
 
 ## 4. Out of scope
 
@@ -29,7 +29,7 @@ No new stub. Existing native media compatibility and filesystem-access limitatio
 
 ## 6. Modules touched
 
-WorkspaceView frame and footer. NativeVideoPreview is inspected but does not need modification.
+WorkspaceView frame, footer and decorative border hit testing under D-063. NativeVideoPreview is inspected but does not need modification.
 
 ## 7. Data subset
 

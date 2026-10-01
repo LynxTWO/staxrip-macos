@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 021: Responsive Quick Export publication
-Version: 0.1. Date: 2026-09-30. Status: Approved for build under D-034 / R-024.
+Version: 0.1. Date: 2026-09-30. Status: Done with scoped evidence under D-034 / R-024.
 
 SLICE STATE
-Milestone: Plan committed before implementation.
+Milestone: S21-001 through S21-004 accepted within NATIVE-PUBLICATION-EVIDENCE.md limits.
 Blocked by: None; Slice 020 closed at 1933bee with hosted run 36799453765.
-Evidence so far: NativeExportService calls synchronous publication on MainActor; advanced batch already uses the asynchronous helper. This is a source finding, not a reproduced native filesystem stall.
+Evidence so far: Product 3c56caa, 186 local/hosted tests, held-publication negative control and native export/refusal/retry; hosted run 36801364346 passed.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

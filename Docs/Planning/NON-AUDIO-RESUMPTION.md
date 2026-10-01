@@ -116,3 +116,5 @@ Slice 020 is active under D-033/R-023 after Slice 019 closure: owned native/fall
 Slice 020 closed at 1933bee with hosted run 36799453765: 184 tests in 477.783 seconds, 9m23s job. Corrected native refusal and subsequent MP4/MKV imports passed; initial FIFO failure and scope limits remain recorded. Draft PR 37 stays unmerged. Audio stays parked.
 
 Slice 021 is active under D-034/R-024 after Slice 020 closure: awaited native final publication and truthful finishing/outcome handling. Audio stays parked.
+
+Slice 021 closed at 3c56caa with hosted run 36801364346: 186 tests in 403.950 seconds, 8m11s job. Native H.264 export, existing-output refusal, HEVC retry and Escape cancellation passed. Draft PR 38 remains unmerged. Audio stays parked.

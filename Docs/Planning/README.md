@@ -70,3 +70,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Source import evidence](SOURCE-IMPORT-EVIDENCE.md) records corrected local/native checks, special-file refusal and the native cancellation negative control; final hosted acceptance passed at 1933bee.
 
 31. [Slice 021: responsive Quick Export publication](SLICE-021-native-publication.md).
+
+[Native publication evidence](NATIVE-PUBLICATION-EVIDENCE.md) records Slice 021 scoped local/native/hosted acceptance and the direct-call negative control.

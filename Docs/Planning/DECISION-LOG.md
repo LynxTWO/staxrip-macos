@@ -57,6 +57,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-045 | 2026-10-01 | Qualify APFS full-destination recovery | Confirmed | |
 | D-046 | 2026-10-01 | Observe recurring hosted timing failures | Confirmed | |
 | D-047 | 2026-10-01 | Compare isolated hosted video timing | Confirmed | |
+| D-048 | 2026-10-01 | Identify the delayed export boundary | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -728,3 +729,17 @@ Options considered: speculate about DSP or scheduler changes; repeat unchanged f
 Consequences: R-035 permits one additional hosted diagnostic step selecting QueueDestinationReviewTests, PublicationResponsivenessTests, ExportSourceStabilityTests, OutputDisplayAspectIntegrationTests and ChapterPersistenceTests. Preserve every fixture, assertion, deadline and default scheduling policy. Report the focused step independently; it cannot replace full-suite acceptance. The existing full command and bounded observer remain intact. No production, audio or test-body changes are authorized by this diagnostic decision.
 
 Revisit when: The focused execution fails, or succeeds while the full suite fails. Record the actual comparison before choosing any further repair or experiment.
+
+## D-048: Identify the delayed export boundary
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Extend the active Slice 031 diagnostic trace under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: The same hosted runner passed 19 focused tests in 8.852 seconds but failed six full-suite timeout checks. The existing trace stops at Verifying, which includes probing, content checking and publication. No exact wait boundary is known.
+
+Options considered: promote workers without proof; change test scheduling; include existing production status details in the generated destination test trace. Choose the last.
+
+Consequences: R-035 permits only bounded detail/progress/publication observations for the existing three-job test. No new fixture, injected worker, product code, scheduling, deadline or assertion change. Keep focused and full results separate. Source fingerprints and publication currently use utility dispatch queues while tool workers use userInitiated. Apple documents resource priority differences, but this is not evidence that a particular queue starved: https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/PrioritizeWorkAtTheTaskLevel.html, reviewed 2026-10-01.
+
+Revisit when: The trace identifies a boundary or fails to discriminate. A product repair still requires its own scope and negative/positive evidence.

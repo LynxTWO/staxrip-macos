@@ -254,3 +254,5 @@ Approved R-035 under D-045: bounded disposable APFS failure/retry qualification.
 D-046 extends R-035 regression diagnosis with one bounded read-only hosted test-process observer. Consequence: local_only ephemeral generated CI execution; no owner media, secrets or runtime telemetry. Original tests, scheduling, deadlines and assertions remain authoritative.
 
 D-047 adds one focused hosted comparison under R-035, using unchanged affected non-audio suites before the full test gate. Diagnostic success alone is not acceptance; no product, DSP, fixture, scheduling or deadline changes are included.
+
+D-048 extends R-035 with bounded production-status observations in the existing generated destination test. Every fixture, assertion, time limit and scheduling policy remains unchanged. Worker-priority changes are not yet authorized.

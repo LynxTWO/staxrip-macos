@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 024: A live workspace recipe
-Version: 0.1. Date: 2026-09-30. Status: Approved for build under D-038 / R-028.
+Version: 0.2. Date: 2026-09-30. Status: Accepted within evidence limits under D-038 / R-028.
 
 SLICE STATE
-Milestone: Planning complete; implementation next.
+Milestone: Local/native/hosted checks passed at daf27e6; hosted run 36811284038.
 Blocked by: None.
-Evidence so far: Native workspace inspection and source trace at 4828cbc.
+Evidence so far: WORKSPACE-RECIPE-EVIDENCE.md; final product daf27e6, local 195 tests and native correction/keyboard/layout checks.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

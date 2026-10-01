@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 024 live workspace recipe under D-038 / R-028. Slice 023 closed at 543b991 with hosted run 36808673370.
+Next: Select the restored-source review slice after Slice 024 closure at daf27e6, hosted run 36811284038. No next product slice is active.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

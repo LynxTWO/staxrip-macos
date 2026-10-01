@@ -171,27 +171,136 @@ struct ExternalCaptionListIntegrationTests {
         try protected(f)
     }
 
+    private enum EntryFailure: Error, Equatable {
+        case timedOut(String)
+        case batchEnded(String)
+    }
+
+    private func waitForEntry(_ marker: URL, batch: BatchController, phase: String,
+                              deadline: ContinuousClock.Instant) async throws -> ContinuousClock.Instant {
+        let clock = ContinuousClock()
+        while true {
+            try Task.checkCancellation()
+            let now = clock.now
+            guard now < deadline else { throw EntryFailure.timedOut(phase) }
+            if FileManager.default.fileExists(atPath: marker.path) { return now }
+            guard batch.running else { throw EntryFailure.batchEnded(phase) }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+    }
+
+    private func cancelAndJoin(_ batch: BatchController) async -> Duration {
+        let clock = ContinuousClock(), start = ContinuousClock.now
+        batch.cancel()
+        // An unstructured join is deliberately independent of cancellation of
+        // this test task. Never remove staging while the batch still owns it.
+        await Task { @MainActor in
+            while batch.running { try? await Task.sleep(for: .milliseconds(10)) }
+        }.value
+        return start.duration(to: clock.now)
+    }
+
+    private func requireChildExited(_ marker: URL) throws {
+        let pid = try #require(Int32(String(contentsOf: marker, encoding: .utf8)))
+        #expect(Darwin.kill(pid, 0) == -1 && errno == ESRCH)
+    }
+
+    private func markPID(_ marker: URL) -> String {
+        // Publish a complete marker; readers must never observe a partial PID.
+        "printf '%s' \"$$\" > " + quote(marker.path + ".tmp") +
+            "; /bin/mv " + quote(marker.path + ".tmp") + " " + quote(marker.path) + "; "
+    }
+
     @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
     func cancellingSecondTrackVerifierSettlesBeforeCleanup() async throws {
         let f = try await fixture("MKV", embedded: false)
         let batch = BatchController(journalURL: f.root.appendingPathComponent("journal.json"))
         defer { if batch.running { batch.cancel() } else { try? FileManager.default.removeItem(at: f.root) } }
         var c = configuration(f, container: "MKV"); c.subtitleMode = "Remove all subtitles"
+        let first = f.root.appendingPathComponent("first-verifier.pid")
         let pidFile = f.root.appendingPathComponent("second-verifier.pid"), wrapper = f.root.appendingPathComponent("encoder-wrapper")
-        let body = "#!/bin/sh\nset -e\nsecond=0\nfor arg do\nif [ \"$arg\" = \"0:2\" ]; then second=1; fi\ntarget=\"$arg\"\ndone\nif [ \"$second\" = 1 ] && [ \"$target\" = \"pipe:1\" ]; then printf '%s' \"$$\" > " + quote(pidFile.path) + "; exec /bin/sleep 30; fi\nexec " + quote(f.tools.ffmpeg.path) + " \"$@\"\n"
+        let body = """
+        #!/bin/sh
+        set -e
+        track=0
+        for arg do
+          case "$arg" in 0:1) track=1 ;; 0:2) track=2 ;; esac
+          target="$arg"
+        done
+        if [ "$target" = "pipe:1" ]; then
+          if [ "$track" = 1 ]; then \(markPID(first))fi
+          if [ "$track" = 2 ]; then \(markPID(pidFile))exec /bin/sleep 30; fi
+        fi
+        exec \(quote(f.tools.ffmpeg.path)) "$@"
+
+        """
         try Data(body.utf8).write(to: wrapper); try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: wrapper.path)
         let item = job(f, c), next = job(f, c, name: "next")
-        batch.tools = FFmpegTools(ffmpeg: wrapper, ffprobe: f.tools.ffprobe); batch.encoders = ["libx264"]; batch.start([item, next])
-        let until = Date().addingTimeInterval(10)
-        while !FileManager.default.fileExists(atPath: pidFile.path) && batch.running && Date() < until { try await Task.sleep(for: .milliseconds(10)) }
-        let entered = FileManager.default.fileExists(atPath: pidFile.path)
-        batch.cancel()
-        while batch.running { try await Task.sleep(for: .milliseconds(10)) }
-        try #require(entered, Comment(rawValue: batch.statuses[item.id]?.detail ?? "No status"))
+        batch.tools = FFmpegTools(ffmpeg: wrapper, ffprobe: f.tools.ffprobe); batch.encoders = ["libx264"]
+        let started = ContinuousClock.now
+        batch.start([item, next])
+        var entryError: Error?
+        do {
+            let firstObserved = try await waitForEntry(first, batch: batch, phase: "preparation", deadline: started + .seconds(90))
+            _ = try await waitForEntry(pidFile, batch: batch, phase: "second verifier", deadline: firstObserved + .seconds(10))
+        } catch { entryError = error }
+        let settlement = await cancelAndJoin(batch)
+        #expect(settlement < .seconds(10))
         #expect(batch.statuses[item.id]?.phase == "Cancelled" && batch.statuses[next.id]?.phase == "Pending")
         #expect(!FileManager.default.fileExists(atPath: item.destination))
-        let pid = try #require(Int32(String(contentsOf: pidFile, encoding: .utf8)))
-        #expect(Darwin.kill(pid, 0) == -1 && errno == ESRCH)
+        try protected(f)
+        if FileManager.default.fileExists(atPath: first.path) { try requireChildExited(first) }
+        if let entryError { throw entryError }
+        try requireChildExited(pidFile)
+    }
+
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)), arguments: ["preparation", "second verifier"])
+    func stalledCaptionPhaseTimesOutAndJoinsBeforeCleanup(phase: String) async throws {
+        let f = try await fixture("MKV", embedded: false)
+        let batch = BatchController(journalURL: f.root.appendingPathComponent("journal.json"))
+        defer { if !batch.running { try? FileManager.default.removeItem(at: f.root) } }
+        var c = configuration(f, container: "MKV"); c.subtitleMode = "Remove all subtitles"
+        let childPID = f.root.appendingPathComponent("stalled-child.pid")
+        let absentEntry = f.root.appendingPathComponent("absent-entry.pid"), wrapper = f.root.appendingPathComponent("encoder-wrapper")
+        let trigger = phase == "preparation" ? "[ \"$encode\" = 1 ]" : "[ \"$first\" = 1 ] && [ \"$target\" = \"pipe:1\" ]"
+        let expectedTrack = phase == "preparation" ? "$first" : "$second"
+        let body = """
+        #!/bin/sh
+        set -e
+        encode=0
+        first=0
+        second=0
+        for arg do
+          case "$arg" in -progress) encode=1 ;; 0:1) first=1 ;; 0:2) second=1 ;; esac
+          target="$arg"
+        done
+        if [ "\(expectedTrack)" = 1 ] && [ "$target" = "pipe:1" ]; then \(markPID(absentEntry))fi
+        if \(trigger); then \(markPID(childPID))exec /bin/sleep 30; fi
+        exec \(quote(f.tools.ffmpeg.path)) "$@"
+
+        """
+        try Data(body.utf8).write(to: wrapper); try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: wrapper.path)
+        let item = job(f, c), next = job(f, c, name: "next")
+        batch.tools = FFmpegTools(ffmpeg: wrapper, ffprobe: f.tools.ffprobe); batch.encoders = ["libx264"]
+        let started = ContinuousClock.now
+        batch.start([item, next])
+        var observed: Error?
+        do {
+            let entered = try await waitForEntry(childPID, batch: batch, phase: "stalled child", deadline: started + .seconds(90))
+            let pid = try #require(Int32(String(contentsOf: childPID, encoding: .utf8)))
+            #expect(Darwin.kill(pid, 0) == 0)
+            // The same preparation guard must reject a known blocked child.
+            // Only the deliberate preparation negative uses a short budget.
+            let budget: Duration = phase == "preparation" ? .milliseconds(100) : .seconds(10)
+            _ = try await waitForEntry(absentEntry, batch: batch, phase: phase, deadline: entered + budget)
+        } catch { observed = error }
+        let settlement = await cancelAndJoin(batch)
+        #expect(settlement < .seconds(10))
+        #expect(observed as? EntryFailure == .timedOut(phase))
+        #expect(!FileManager.default.fileExists(atPath: absentEntry.path))
+        #expect(batch.statuses[item.id]?.phase == "Cancelled" && batch.statuses[next.id]?.phase == "Pending")
+        #expect(!FileManager.default.fileExists(atPath: item.destination))
+        try requireChildExited(childPID)
         try protected(f)
     }
 

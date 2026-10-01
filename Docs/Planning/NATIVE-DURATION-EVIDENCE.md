@@ -29,6 +29,8 @@ Independent ffprobe decoded-frame counting found 144 H.264 frames, 160 by 96, ex
 
 Full local swift test at f385cec passed 280 tests across 68 suites in 214.202 seconds, with 25 existing opt-in/tool-dependent skips. Private log: work/native-duration/full-local.log.
 
-## Pending acceptance
+Hosted macOS 15 run [36916404356](https://github.com/LynxTWO/staxrip-macos/actions/runs/36916404356), exact product f385cec925f0683d5eaa5bb6799e9beb6a349c8e, passed 280 tests in 497.150 seconds after a 116.13-second build, with the same 25 existing skips. Private log: work/native-duration/hosted-final.log. Existing asynchronous/Sendable compiler warnings remain; the historical mastering cancellation failure did not recur.
 
-Ordinary hosted regression remains pending. No full slice acceptance, decoded completeness, A/V sync or production-ready claim yet. A repeat of the historical hosted mastering cancellation failure reopens qualification without blind retry or diagnostic expansion.
+## Scoped acceptance
+
+All four S44 gates passed: strict policy, real shorter/longer refusal and explicit retry, optimized native guidance/output, and ordinary local/hosted regression. Selected planning audit and diff checks pass. No decoded completeness, A/V sync or production-ready claim. A repeat of the historical hosted mastering cancellation failure reopens qualification without blind retry or diagnostic expansion.

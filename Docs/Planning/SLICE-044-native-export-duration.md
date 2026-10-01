@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 044: Verify Quick Export duration
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-082 / R-054.
+Version: 0.1. Date: 2026-10-01. Status: Accepted under D-082 / R-054.
 
 SLICE STATE
-Milestone: M1/M2 and optimized native walkthrough complete; 280-test full local regression passed; hosted next.
+Milestone: All four scoped gates passed at f385cec; hosted run 36916404356 accepted.
 Blocked by: None within scope.
-Evidence: NATIVE-DURATION-EVIDENCE.md records old-policy shorter/longer publication, 15 focused tests and native six-second export with independent verification.
+Evidence: NATIVE-DURATION-EVIDENCE.md records the negative control, focused/native verification and ordinary local/hosted acceptance.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

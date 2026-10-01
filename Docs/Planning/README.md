@@ -147,4 +147,4 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 53. [Slice 043: inspect track identity and roles](SLICE-043-track-role-inspection.md), accepted at ce27093 under D-081 / R-053; [evidence](TRACK-ROLE-EVIDENCE.md).
 
-54. [Slice 044: verify Quick Export duration](SLICE-044-native-export-duration.md), active under D-082 / R-054.
+54. [Slice 044: verify Quick Export duration](SLICE-044-native-export-duration.md), accepted at f385cec under D-082 / R-054; [evidence](NATIVE-DURATION-EVIDENCE.md).

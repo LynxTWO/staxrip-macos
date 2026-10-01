@@ -7,7 +7,7 @@ private final class DestinationSourceTrace: @unchecked Sendable {
     private let lock = NSLock()
     private let started: ContinuousClock.Instant
     private var count = 0
-    private var remaining = 32
+    private var remaining = 64
     init(started: ContinuousClock.Instant) { self.started = started }
     private func record(_ index: Int, _ event: String) {
         lock.withLock {
@@ -20,10 +20,17 @@ private final class DestinationSourceTrace: @unchecked Sendable {
         let index = lock.withLock { count += 1; return count }
         record(index, "entered priority=\(Task.currentPriority)")
         defer { record(index, "returned") }
-        return try await ExportSourceFingerprint.read(source) { bytes, total in
+        let forward: @Sendable (Int64, Int64) -> Void = { bytes, total in
             if bytes == 0 || bytes == total { self.record(index, "worker progress=\(bytes)/\(total)") }
             progress(bytes, total)
         }
+        #if DEBUG
+        return try await ExportSourceFingerprint.$observeBoundary.withValue({ self.record(index, $0) }) {
+            try await ExportSourceFingerprint.read(source, progress: forward)
+        }
+        #else
+        return try await ExportSourceFingerprint.read(source, progress: forward)
+        #endif
     }
 }
 

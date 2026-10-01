@@ -4,8 +4,16 @@ import Darwin
 
 /// Observes content at check boundaries; this is not an immutable input snapshot.
 enum ExportSourceFingerprint {
+    #if DEBUG
+    // Opt-in timing observation for generated tests; no release-build logging.
+    @TaskLocal static var observeBoundary: (@Sendable (String) -> Void)?
+    #endif
     typealias Reader = @Sendable (URL, @escaping @Sendable (Int64, Int64) -> Void) async throws -> SourceFingerprint
     static func read(_ url: URL, progress: @escaping @Sendable (Int64, Int64) -> Void = { _, _ in }) async throws -> SourceFingerprint {
+        #if DEBUG
+        let observe = observeBoundary
+        observe?("body entered")
+        #endif
         let cancellation = Cancellation()
         // A continuation does not promote a utility worker to its awaiting task's
         // priority. Preserve the request at this boundary without moving I/O onto
@@ -16,7 +24,13 @@ enum ExportSourceFingerprint {
         return try await withTaskCancellationHandler {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
+                #if DEBUG
+                observe?("submitting worker")
+                #endif
                 DispatchQueue.global(qos: workerQoS).async {
+                    #if DEBUG
+                    observe?("worker entered")
+                    #endif
                     // Resume only after the descriptor is closed, including cancellation.
                     continuation.resume(with: Result { try scan(url, cancellation: cancellation, progress: progress) })
                 }

@@ -2,6 +2,31 @@ import Foundation
 import Testing
 @testable import StaxRipMac
 
+// Observation only: the generated integration case still reads real source bytes.
+private final class DestinationSourceTrace: @unchecked Sendable {
+    private let lock = NSLock()
+    private let started: ContinuousClock.Instant
+    private var count = 0
+    private var remaining = 32
+    init(started: ContinuousClock.Instant) { self.started = started }
+    private func record(_ index: Int, _ event: String) {
+        lock.withLock {
+            guard remaining > 0 else { return }
+            remaining -= 1
+            print("DESTINATION_SOURCE \(started.duration(to: .now)) read=\(index) \(event)")
+        }
+    }
+    func read(_ source: URL, progress: @escaping @Sendable (Int64, Int64) -> Void) async throws -> SourceFingerprint {
+        let index = lock.withLock { count += 1; return count }
+        record(index, "entered priority=\(Task.currentPriority)")
+        defer { record(index, "returned") }
+        return try await ExportSourceFingerprint.read(source) { bytes, total in
+            if bytes == 0 || bytes == total { self.record(index, "worker progress=\(bytes)/\(total)") }
+            progress(bytes, total)
+        }
+    }
+}
+
 @MainActor
 struct QueueDestinationReviewTests {
     private final class Panels: WorkspacePanelPresenting {
@@ -20,7 +45,9 @@ struct QueueDestinationReviewTests {
         let batch: BatchController
         let originalJournal: Data
     }
-    private func fixture() throws -> Fixture {
+    private func fixture(readSource: @escaping ExportSourceFingerprint.Reader = {
+        try await ExportSourceFingerprint.read($0, progress: $1)
+    }) throws -> Fixture {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("queue-destinations-" + UUID().uuidString)
         let first = root.appendingPathComponent("Output A", isDirectory: true), second = root.appendingPathComponent("Output B", isDirectory: true)
         for folder in [first, second] { try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true) }
@@ -33,7 +60,7 @@ struct QueueDestinationReviewTests {
         }
         let journal = root.appendingPathComponent("previous.json")
         try BatchJournal(jobs: model.jobs, statuses: [:]).write(to: journal)
-        let batch = BatchController(journalURL: journal)
+        let batch = BatchController(journalURL: journal, readSource: readSource)
         // Non-executing lifecycle cases must never invoke these tools.
         batch.tools = FFmpegTools(ffmpeg: URL(fileURLWithPath: "/usr/bin/false"), ffprobe: URL(fileURLWithPath: "/usr/bin/false"))
         return Fixture(root: root, first: first, second: second, journal: journal, panels: panels,
@@ -140,7 +167,8 @@ struct QueueDestinationReviewTests {
         let started = ContinuousClock.now
         func trace(_ stage: String) { print("DESTINATION_REVIEW \(started.duration(to: .now)) \(stage)") }
         trace("fixture start")
-        let f = try fixture()
+        let sourceTrace = DestinationSourceTrace(started: started)
+        let f = try fixture(readSource: sourceTrace.read)
         defer { if f.batch.running { f.batch.cancel() } else { try? FileManager.default.removeItem(at: f.root) } }
         let tools = try #require(FFmpegTools.discover()), source = f.root.appendingPathComponent("source.mp4")
         let generated = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-n", "-f", "lavfi", "-i", "testsrc2=size=160x96:rate=24:duration=0.5", "-c:v", "libx264", "-preset", "ultrafast", source.path])

@@ -34,9 +34,9 @@ struct WorkspaceRecipe {
         }
         let embedded = c.subtitleMode == "Keep embedded tracks" && c.subtitleTracks != []
         let subtitles = Entry(id: "Subtitles", symbol: "captions.bubble",
-                              title: embedded ? "Keep embedded captions" : (c.externalSubtitle == nil ? "No subtitles" : "External captions only"),
+                              title: embedded ? "Keep embedded captions" : (c.externalCaptions.isEmpty ? "No subtitles" : "External captions only"),
                               detail: (embedded ? Self.tracks(c.subtitleTracks, kind: "subtitle") + "." : "Embedded subtitles omitted.")
-                                + (c.externalSubtitle.map { " Add \(URL(fileURLWithPath: $0.path).lastPathComponent) (\($0.language))." } ?? ""))
+                                + c.externalCaptions.enumerated().map { " Add \($0.offset + 1): \(URL(fileURLWithPath: $0.element.path).lastPathComponent) (\($0.element.language))." }.joined())
         let chapterTitle: String
         let chapterDetail: String
         switch c.chapterEdits?.mode {

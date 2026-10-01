@@ -127,10 +127,10 @@ private struct QueueJobRow: View {
                     Text("From " + sourceName).font(.caption).foregroundStyle(.secondary).lineLimit(1).help(job.source)
                     Text(recipe).font(.caption).foregroundStyle(.secondary)
                         .accessibilityLabel(AccessibilityLanguage.spokenCodecs(recipe))
-                    if let captions = job.configuration.externalSubtitle {
-                        Text("Additional captions: " + URL(fileURLWithPath: captions.path).lastPathComponent)
+                    ForEach(Array(job.configuration.externalCaptions.enumerated()), id: \.offset) { captionIndex, captions in
+                        Text("Caption \(captionIndex + 1) (\(captions.language)): " + URL(fileURLWithPath: captions.path).lastPathComponent)
                             .font(.caption).foregroundStyle(.secondary)
-                            .accessibilityLabel("Additional SubRip subtitle file, " + URL(fileURLWithPath: captions.path).lastPathComponent)
+                            .accessibilityLabel("Additional SubRip subtitle track \(captionIndex + 1), \(captions.language), " + URL(fileURLWithPath: captions.path).lastPathComponent)
                     }
                 }
                 Spacer(minLength: 8)

@@ -77,11 +77,9 @@ enum QueuePreflight {
         }
         // Planning creates arguments only. This path never runs an encoder,
         // creates staging, or writes a recovery journal or destination.
-        let externalDocument: SubRipDocument?
-        if let reference = c.externalSubtitle { externalDocument = try await reference.read() }
-        else { externalDocument = nil }
+        let externalSnapshots = try await c.captureExternalCaptions()
         try Task.checkCancellation()
-        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: output, externalDocument: externalDocument)
+        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: output, externalSnapshots: externalSnapshots)
         if c.copiesVideo {
             return QueueCheck(id: job.id, kind: .deferred, detail: "Paths and copy settings checked. Complete source/output video packet verification runs during execution, with additional scans and up to 128 MiB of temporary audit storage. " + plan.summary)
         }

@@ -29,6 +29,7 @@ struct EncodeConfiguration: Codable, Equatable {
     var audioTracks: [Int]?
     var subtitleTracks: [Int]?
     var externalSubtitle: ExternalSubtitle?
+    var additionalExternalSubtitles: [ExternalSubtitle]?
     var chapterEdits: ChapterEdits?
     private var pictureOptions: PictureOptions?
     var picture: PictureOptions {
@@ -486,7 +487,7 @@ final class WorkspaceModel: ObservableObject {
 
     private func resetSourceSelections() {
         var next = config
-        next.audioTracks = nil; next.subtitleTracks = nil; next.externalSubtitle = nil; next.chapterEdits = nil
+        next.audioTracks = nil; next.subtitleTracks = nil; next.externalCaptions = []; next.chapterEdits = nil
         config = next
         // Reselecting the same source also clears old source-specific intent;
         // settings undo must not resurrect its discarded caption reference.

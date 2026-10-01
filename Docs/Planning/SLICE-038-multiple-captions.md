@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-068 / D-069 / D-070 / R-048.
 
 SLICE STATE
-Milestone: Existing single-track paths mapped; no implementation.
+Milestone: Ordered capture, mapping, verification and native editor implemented; focused/native checks passed; final regression pending.
 Blocked by: None within scope.
-Evidence so far: Accepted external-caption and trim contracts; local scope discovery.
+Evidence so far: MULTIPLE-CAPTIONS-EVIDENCE.md; generated independent decoding, later-track refusal and native save/reopen/export.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

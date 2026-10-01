@@ -1,5 +1,5 @@
 # StaxRip Mac Slice 031: APFS full-destination qualification
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / D-046 / D-047 / D-048 / D-049 / R-035.
+Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / R-035 / R-036.
 
 SLICE STATE
 Milestone: Local/native capacity qualification complete. Recurrent existing hosted timing failures require bounded runtime observation under D-046.
@@ -17,7 +17,7 @@ Create a new bounded APFS image with unique fixture identity. Fill only its owne
 
 ## 3. In scope, with build order
 
-M1: Owned APFS fixture helper and filesystem/device/marker validation. M2: Actual production batch failure/retry with source, prior-output, staging and later-job assertions. Reuse the existing strict capacity test where its phase matches; otherwise add a separately scoped APFS test while retaining HFS+ assertions unchanged. M3: Native failure/retry, ordinary regression/hosted check and detached-fixture evidence. D-046 adds bounded read-only observation of the unchanged hosted command after two failed runs. D-047 adds a separately reported focused hosted comparison before the unchanged full gate. Focused success never substitutes for full acceptance. D-048 adds bounded existing status detail/progress/publication tracing to the generated destination test to discriminate its stalled boundary. D-049 adds a bounded test-only forwarding observation around the real source reader. Fix product code only for a demonstrated defect within this boundary.
+M1: Owned APFS fixture helper and filesystem/device/marker validation. M2: Actual production batch failure/retry with source, prior-output, staging and later-job assertions. Reuse the existing strict capacity test where its phase matches; otherwise add a separately scoped APFS test while retaining HFS+ assertions unchanged. M3: Native failure/retry, ordinary regression/hosted check and detached-fixture evidence. D-046 adds bounded read-only observation of the unchanged hosted command after two failed runs. D-047 adds a separately reported focused hosted comparison before the unchanged full gate. Focused success never substitutes for full acceptance. D-048 adds bounded existing status detail/progress/publication tracing to the generated destination test to discriminate its stalled boundary. D-049 adds a bounded test-only forwarding observation around the real source reader. D-050 adds preservation of requested source-check worker priority under R-036, with a pre-repair real-worker counterexample and full/native regression evidence. Other product repairs remain outside this boundary.
 
 ## 4. Out of scope
 
@@ -29,7 +29,7 @@ A disposable local APFS image is scoped evidence, not a guarantee for all storag
 
 ## 6. Modules touched
 
-Owned fixture script, opt-in capacity tests as needed and evidence documentation. Production BatchController/publication/cleanup only if a reproduced defect warrants a repair.
+Owned fixture script, opt-in capacity tests as needed and evidence documentation. Production publication wording and ExportSourceFingerprint worker-priority mapping within demonstrated scope; source checks and cancellation assertions remain authoritative.
 
 ## 7. Data subset
 
@@ -44,6 +44,7 @@ Generated short H.264 video, sentinel output and filler only. A new fixed 64 MiB
 | S31-003 | Source and prior output bytes survive; cleanup affects only current owned staging | Independent hashes and directory/journal checks | apfs-protection |
 | S31-004 | Explicit retry completes after removing only generated filler | Actual readable output and native retry | apfs-retry |
 | S31-005 | Fixture detaches; existing regression behavior remains | Detach receipt, local/hosted suite and unchanged HFS+ contract | apfs-regression |
+| S31-006 | The source-check bridge honors foreground task priority while reading off main and preserving source/cancellation contracts | Real worker QoS negative/positive checks, unchanged source tests, full suites and native export | source-worker-priority |
 
 ## 9. Verification evidence required
 
@@ -55,10 +56,10 @@ No existing disk is erased, reformatted or filled. Validate mount identity befor
 
 ## 11. Definition of done
 
-All five criteria have scoped local/native evidence and ordinary hosted acceptance, the fixture is detached, and the release ledger states remaining storage limitations.
+All six criteria have scoped local/native evidence and ordinary hosted acceptance, the fixture is detached, and the release ledger states remaining storage limitations.
 
 ## 12. What this unlocks
 
 A second filesystem qualification for the default Mac storage family and a reusable bounded fixture for separately scoped future failure tests.
 
-Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-045 / D-046 / D-047 / D-048 / D-049 / R-035.
+Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / R-035 / R-036.

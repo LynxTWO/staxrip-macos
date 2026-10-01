@@ -258,3 +258,5 @@ D-047 adds one focused hosted comparison under R-035, using unchanged affected n
 D-048 extends R-035 with bounded production-status observations in the existing generated destination test. Every fixture, assertion, time limit and scheduling policy remains unchanged. Worker-priority changes are not yet authorized.
 
 D-049 extends R-035 with at most 32 timing messages around the unchanged production source reader in the existing generated destination test. Forward callbacks without waits or fake results; no executor or worker-priority repair is authorized yet.
+
+Approved R-036 under D-050: preserve requested task priority at the source-check Dispatch boundary, without changing hashing, ownership, cancellation, actor isolation or audio. Gate source-worker-priority binds S31-006 with actual worker QoS, pre-repair failure, existing mutation/cancellation checks and full local/hosted/native regression. Snapshot priority is not a promise of later dynamic priority propagation or bounded filesystem latency.

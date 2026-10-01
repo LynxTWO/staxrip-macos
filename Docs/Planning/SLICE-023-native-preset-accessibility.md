@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 023: Spoken native preset choices
-Version: 0.1. Date: 2026-09-30. Status: Approved for build under D-036 / R-026.
+Version: 0.2. Date: 2026-09-30. Status: Approved for build under D-036 / R-026.
 
 SLICE STATE
-Milestone: Plan committed before implementation.
-Blocked by: None; Slice 022 closed at f52bade with hosted run 36802839483.
-Evidence so far: Native Quick Export cards expose raw H.264 text; workspace presets already use the owner-approved H two six four pronunciation helper.
+Milestone: Local/native verification passed; hosted regression investigation active.
+Blocked by: Hosted regression has not passed; attempt 1 recorded clustered timeouts.
+Evidence so far: NATIVE-PRESET-ACCESSIBILITY-EVIDENCE.md records local release/debug and native success plus the failed hosted attempt.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves
@@ -60,3 +60,9 @@ S23-001 through S23-003 have scoped local/native/hosted evidence and the plannin
 Consistent native/workspace codec pronunciation and clearer independent preset choices.
 
 Approved for build by: Owner autonomous non-audio delegation under D-036 / R-026, 2026-09-30, after Slice 022 closure; reuses the previously owner-approved codec pronunciation.
+
+## Verification amendment, 2026-09-30
+
+R-026 permits one bounded, isolated diagnostic of the existing ToolRunner implementation after hosted attempt 1 recorded clustered worker timeouts. Compare 16 and 96 generated child processes with stdout/stderr payloads, exact byte/status outcomes and a 45-second external watchdog per case. Use only ignored scratch files, no private media or repository payloads. Record process state and clean up only the diagnostic's identified live children after a deadline. This tests a worker-contention hypothesis, not a general concurrency guarantee. No application or CI behavior change is authorized by this diagnostic amendment; a demonstrated repair needs a recorded scope decision before implementation. Existing regression assertions and limits stay intact.
+
+Approved for build by: Owner autonomous non-audio delegation under D-036 / R-026, 2026-09-30; bounded hosted-gate diagnosis only.

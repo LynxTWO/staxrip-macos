@@ -43,7 +43,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-034 | 2026-09-30 | Responsive native final publication | Confirmed | |
 | D-035 | 2026-09-30 | Bound declared output duration tolerance | Confirmed | |
 | D-036 | 2026-09-30 | Clarify native preset accessibility | Confirmed | |
-| D-037 | Remove demonstrated subprocess worker starvation | Confirmed | R-027 / Slice 023 amendment |
+| D-037 | 2026-09-30 | Remove demonstrated subprocess worker starvation | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28

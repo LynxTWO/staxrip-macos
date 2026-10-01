@@ -31,7 +31,7 @@ struct FullFilmVideoTests {
     }
     private func frames(_ file: URL, tools: FFmpegTools) async throws -> [Frame] {
         let data = try await run(tools.ffprobe, ["-v", "error", "-select_streams", "v:0", "-show_frames",
-            "-show_entries", "frame=best_effort_timestamp_time,width,height,pix_fmt:frame_side_data=", "-of", "json", file.path])
+            "-show_entries", "frame=best_effort_timestamp_time,width,height,pix_fmt:frame_side_data=", "-of", "json=compact=1", file.path])
         let result = try JSONDecoder().decode(Frames.self, from: data).frames
         try #require(result.count == 21_312)
         var previous = -1.0

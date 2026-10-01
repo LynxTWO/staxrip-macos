@@ -7,6 +7,7 @@ struct EncodePlan: Sendable {
     let outputGeometry: OutputGeometry
     let outputDisplayAspect: OutputDisplayAspect
     let externalSubtitle: ExternalSubtitleExport?
+    let videoCopy: VideoCopyContract?
     let expectedCodec: String
     let expectedAudio: String?
     let expectedWidth: Int?
@@ -23,6 +24,8 @@ struct EncodePlan: Sendable {
         guard !job.isDemo else { throw NativeExportError.invalid("Demo configurations cannot be encoded. Open a real source first.") }
         guard let video = probe.video else { throw NativeExportError.invalid("This queue currently requires a video source.") }
         let c = job.configuration
+        let copyingVideo = c.copiesVideo
+        let videoCopy = copyingVideo ? try VideoCopyContract.make(probe: probe, configuration: c) : nil
         if c.externalSubtitle != nil {
             guard let externalDocument else { throw SubRipDocument.failure("A fresh validated caption snapshot is required before planning this job.") }
             try externalDocument.validateTimeline(probe: probe, configuration: c)
@@ -46,9 +49,9 @@ struct EncodePlan: Sendable {
             throw NativeExportError.invalid("Precise trimming requires re-encoded audio (or no audio) and removed embedded subtitles. Embedded subtitle and copied-audio timing cannot yet be preserved by this trim workflow.")
         }
         let outputDuration = trimmed ? (picture.end > 0 ? picture.end : probe.seconds) - picture.start : probe.seconds
-        let hardware = c.rate.backend == "Apple hardware"
-        let encoder = hardware ? (c.codec == "HEVC" ? "hevc_videotoolbox" : "h264_videotoolbox") : c.codec == "AV1" ? "libsvtav1" : c.codec == "HEVC" ? "libx265" : "libx264"
-        guard encoders.contains(encoder) else { throw NativeExportError.invalid("The installed FFmpeg does not provide \(encoder).") }
+        let hardware = !copyingVideo && c.rate.backend == "Apple hardware"
+        let encoder = copyingVideo ? "copy" : hardware ? (c.codec == "HEVC" ? "hevc_videotoolbox" : "h264_videotoolbox") : c.codec == "AV1" ? "libsvtav1" : c.codec == "HEVC" ? "libx265" : "libx264"
+        guard copyingVideo || encoders.contains(encoder) else { throw NativeExportError.invalid("The installed FFmpeg does not provide \(encoder).") }
         guard preservingHDR || (!["smpte2084", "arib-std-b67"].contains(video.color_transfer ?? "") &&
               ["yuv420p", "nv12"].contains(video.pix_fmt ?? "")) else {
             throw NativeExportError.invalid("This first advanced pipeline supports 8-bit SDR 4:2:0 sources. HDR, high bit depth and other pixel formats need an explicit color workflow before encoding.")
@@ -92,29 +95,33 @@ struct EncodePlan: Sendable {
         if chapterPlan.metadata != nil {
             args += ["-f", "ffmetadata", "-protocol_whitelist", "file,pipe", "-i", staged.deletingLastPathComponent().appendingPathComponent("chapters.ffmetadata").path]
         }
-        args += ["-map", "0:\(video.index)", "-c:v", encoder, "-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
-        if trimmed && !captionTrim {
-            args += ["-ss", String(picture.start), "-t", String(outputDuration)]
-        }
-        if c.rate.mode == "Constant quality" { args += ["-crf", String(Int(c.quality))] }
-        else { args += ["-b:v", "\(c.rate.bitrate)k"] }
+        args += ["-map", "0:\(video.index)", "-c:v", encoder]
         let speed: String
-        if hardware {
-            speed = "hardware default"
-            args += ["-allow_sw", "0"]
-        } else if c.codec == "AV1" {
-            speed = c.speed == "Thorough" ? "4" : c.speed == "Fast" ? "8" : "6"
-            args += ["-svtav1-params", "lp=4"]
-        } else { speed = c.speed == "Thorough" ? "slow" : c.speed == "Fast" ? "fast" : "medium" }
-        if !hardware { args += ["-preset", speed] }
-        if c.codec == "HEVC", !hardware { args += ["-x265-params", preservingHDR ? hdr!.x265Parameters : "pools=4:frame-threads=2"] }
-        if preservingHDR {
-            args += ["-profile:v", "main10", "-fps_mode", "passthrough", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-chroma_sample_location", "left"]
-        }
-        if !preservingHDR {
-            // Nominal frame-rate time bases quantize genuine VFR intervals even
-            // with passthrough. Preserve the filter timeline for video only.
-            args += ["-fps_mode:v", "passthrough", "-enc_time_base:v", "filter"]
+        if copyingVideo { speed = "not applied" }
+        else {
+            args += ["-pix_fmt", preservingHDR ? "yuv420p10le" : "yuv420p", "-threads", "4"]
+            if trimmed && !captionTrim {
+                args += ["-ss", String(picture.start), "-t", String(outputDuration)]
+            }
+            if c.rate.mode == "Constant quality" { args += ["-crf", String(Int(c.quality))] }
+            else { args += ["-b:v", "\(c.rate.bitrate)k"] }
+            if hardware {
+                speed = "hardware default"
+                args += ["-allow_sw", "0"]
+            } else if c.codec == "AV1" {
+                speed = c.speed == "Thorough" ? "4" : c.speed == "Fast" ? "8" : "6"
+                args += ["-svtav1-params", "lp=4"]
+            } else { speed = c.speed == "Thorough" ? "slow" : c.speed == "Fast" ? "fast" : "medium" }
+            if !hardware { args += ["-preset", speed] }
+            if c.codec == "HEVC", !hardware { args += ["-x265-params", preservingHDR ? hdr!.x265Parameters : "pools=4:frame-threads=2"] }
+            if preservingHDR {
+                args += ["-profile:v", "main10", "-fps_mode", "passthrough", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-chroma_sample_location", "left"]
+            }
+            if !preservingHDR {
+                // Nominal frame-rate time bases quantize genuine VFR intervals even
+                // with passthrough. Preserve the filter timeline for video only.
+                args += ["-fps_mode:v", "passthrough", "-enc_time_base:v", "filter"]
+            }
         }
         let picturePlan = PicturePlan(c)
         var filters = orientation.filters + picturePlan.filters
@@ -151,14 +158,27 @@ struct EncodePlan: Sendable {
         if c.container == "MKV", keepSubtitles { args += ["-map", "0:t?", "-c:t", "copy"] }
         let chapterInput = chapterPlan.metadata != nil ? (external == nil ? "1" : "2") : (chapterPlan.preservesSource ? "0" : "-1")
         args += ["-map_metadata", "0", "-map_chapters", chapterInput]
-        if c.container == "MP4" { args += ["-movflags", "+faststart"] }
+        if copyingVideo {
+            for (flag, value) in [("-color_range:v", video.color_range), ("-color_primaries:v", video.color_primaries),
+                                  ("-color_trc:v", video.color_transfer), ("-colorspace:v", video.color_space),
+                                  ("-chroma_sample_location:v", video.chroma_location)] {
+                if let value { args += [flag, value] }
+            }
+        }
+        if c.container == "MP4" {
+            let explicitColor = copyingVideo && [video.color_range, video.color_primaries, video.color_transfer, video.color_space].contains { $0 != nil }
+            args += ["-movflags", explicitColor ? "+faststart+write_colr" : "+faststart"]
+        }
         args += [staged.path]
-        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitle: external, expectedCodec: c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+        let videoSummary = copyingVideo
+            ? "Copy original \(video.codec_name ?? "") video · no video re-encoding · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · packet verification required"
+            : "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")"
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitle: external, videoCopy: videoCopy, expectedCodec: copyingVideo ? video.codec_name! : c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,
                           audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: (keepSubtitles ? subtitles.count : 0) + (external == nil ? 0 : 1),
-                          duration: outputDuration, summary: "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")" + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" + (captionTrim ? ", clipped to trim" : "") } ?? "") + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary)
+                          duration: outputDuration, summary: videoSummary + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" + (captionTrim ? ", clipped to trim" : "") } ?? "") + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary)
     }
 
     static func validateHDRSettings(_ c: EncodeConfiguration) throws {

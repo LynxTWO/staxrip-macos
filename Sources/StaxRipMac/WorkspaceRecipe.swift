@@ -20,7 +20,9 @@ struct WorkspaceRecipe {
                             detail: PicturePlan(c).summary + ". " + range)
         let engine = c.rate.backend == "Software" ? "\(c.activeEncoder) · \(c.speed.lowercased()) speed" : "Apple hardware · no software fallback"
         let rate = c.rate.mode == "Constant quality" ? c.rateSummary : "Target \(c.rate.bitrate) kb/s"
-        let video = Entry(id: "Video", symbol: "film", title: "\(c.codec) · \(rate)",
+        let video = c.copiesVideo
+            ? Entry(id: "Video", symbol: "film", title: "Copy original video", detail: "No video re-encoding. Original size and no picture filters or trim required. Audio and subtitle choices still apply.")
+            : Entry(id: "Video", symbol: "film", title: "\(c.codec) · \(rate)",
                           detail: "\(engine). \(c.colorMode == "SDR" ? "8-bit SDR requested" : "Static HDR10 preservation requested").")
         let audio: Entry
         if c.audio == "No audio" || c.audioTracks == [] {

@@ -34,11 +34,11 @@ struct QueueEditor: View {
                     var next = draft.configuration
                     next.selectCodec(value)
                     draft.configuration = next
-                }), values: ["AV1", "HEVC", "H.264"])
+                }), values: ["AV1", "HEVC", "H.264", "Copy original"])
                 settingPicker("Container", selection: $draft.configuration.container, values: ["MKV", "MP4"])
             }
             VideoRateOptionsView(configuration: $draft.configuration)
-            if draft.configuration.rate.mode == "Constant quality" {
+            if !draft.configuration.copiesVideo && draft.configuration.rate.mode == "Constant quality" {
             HStack {
                 Text("Constant quality")
                 Slider(value: $draft.configuration.quality, in: 0...51, step: 1)
@@ -47,7 +47,9 @@ struct QueueEditor: View {
             }.font(.system(size: 12))
             }
             HStack(spacing: 16) {
-                settingPicker("Speed preference", selection: $draft.configuration.speed, values: ["Thorough", "Balanced", "Fast"]).disabled(draft.configuration.rate.backend != "Software")
+                if !draft.configuration.copiesVideo {
+                    settingPicker("Speed preference", selection: $draft.configuration.speed, values: ["Thorough", "Balanced", "Fast"]).disabled(draft.configuration.rate.backend != "Software")
+                }
                 settingPicker("Output size", selection: $draft.configuration.resolution, values: ["Original", "1920 × 1080", "1280 × 720"])
             }
             HStack(spacing: 16) {

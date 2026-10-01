@@ -82,6 +82,9 @@ enum QueuePreflight {
         else { externalDocument = nil }
         try Task.checkCancellation()
         let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: output, externalDocument: externalDocument)
+        if c.copiesVideo {
+            return QueueCheck(id: job.id, kind: .deferred, detail: "Paths and copy settings checked. Complete source/output video packet verification runs during execution, with additional scans and up to 128 MiB of temporary audit storage. " + plan.summary)
+        }
         if c.rate.backend == "Apple hardware" {
             return QueueCheck(id: job.id, kind: .deferred, detail: "Paths and encoding plan checked. The encoder is advertised by FFmpeg, but actual hardware availability is checked during encoding. " + plan.summary)
         }

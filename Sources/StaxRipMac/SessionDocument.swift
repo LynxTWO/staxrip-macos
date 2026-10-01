@@ -81,7 +81,7 @@ struct SessionDocument: Codable, Equatable {
               ["Off", "Flagged frames", "All frames"].contains(picture.deinterlace) else {
             throw SessionError.invalid("Invalid crop, trim range or deinterlacing mode.")
         }
-        let encoders = ["AV1": "SVT-AV1", "HEVC": "x265", "H.264": "x264"]
+        let encoders = ["AV1": "SVT-AV1", "HEVC": "x265", "H.264": "x264", "Copy original": "copy"]
         guard encoders[config.codec] == config.encoder,
               config.quality.isFinite, (0...51).contains(config.quality),
               ["MKV", "MP4"].contains(config.container),

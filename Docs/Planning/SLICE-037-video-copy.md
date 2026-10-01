@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-067 / R-047.
 
 SLICE STATE
-Milestone: Generated feasibility complete; implementation not started.
+Milestone: Implementation and focused adversarial checks complete; native and ordinary regression qualification pending.
 Blocked by: None within scope.
-Evidence so far: VIDEO-COPY-RESEARCH.md; packet, decoded-pixel and timing references plus shifted/missing-packet counterexamples.
+Evidence so far: VIDEO-COPY-RESEARCH.md and VIDEO-COPY-EVIDENCE.md; packet, decoded-pixel and timing references plus shifted/missing-packet counterexamples.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

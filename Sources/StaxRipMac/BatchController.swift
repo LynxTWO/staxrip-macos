@@ -299,6 +299,15 @@ final class BatchController: ObservableObject {
         do {
             if let external = plan.externalSubtitle { try await external.document.writeSnapshot(to: directory.appendingPathComponent("external.srt")) }
             try await plan.chapterPlan.writeMetadata(to: directory)
+            let copiedVideo: VideoCopyManifest?
+            if let contract = plan.videoCopy {
+                statuses[job.id]?.detail = "Capturing original encoded video packets for verification"
+                try checkpoint()
+                copiedVideo = try await VideoCopyManifest.capture(source, contract: contract, directory: directory, tools: tools)
+                guard try await self.fingerprint(source, jobID: job.id, label: "Rechecking source after video packet capture") == fingerprint else {
+                    throw VideoCopyContract.failure("Source changed during packet capture. Nothing published.")
+                }
+            } else { copiedVideo = nil }
             statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
             try checkpoint()
             let parser = ProgressParser(duration: plan.duration) { [weak self] fraction in
@@ -355,6 +364,10 @@ final class BatchController: ObservableObject {
             if let external = plan.externalSubtitle {
                 statuses[job.id]?.detail = "Verifying added caption text and cue timing before publication"
                 verifiedSummary += " · " + (try await external.verify(staged, probe: actual, tools: tools))
+            }
+            if let copiedVideo {
+                statuses[job.id]?.detail = "Verifying original video packets and presentation timing before publication"
+                verifiedSummary += " · " + (try await copiedVideo.verify(staged, probe: actual, tools: tools))
             }
             try Task.checkCancellation()
             guard try await self.fingerprint(source, jobID: job.id, label: "Rechecking source content before publication") == fingerprint else {

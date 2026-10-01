@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 031: APFS full-destination qualification
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / D-052 / D-053 / D-054 / D-055 / D-056 / R-035 / R-036 / R-037 / R-038 / R-039.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within recorded evidence under D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / D-052 / D-053 / D-054 / D-055 / D-056 / R-035 / R-036 / R-037 / R-038 / R-039.
 
 SLICE STATE
-Milestone: Combined repair passed full local/hosted and native export qualification. Ordinary workflow acceptance after diagnostic cleanup remains pending under D-056.
+Milestone: All nine criteria have scoped acceptance at a940665; ordinary hosted run 36840667407 passed.
 Blocked by: None.
 Evidence so far: APFS-CAPACITY-EVIDENCE.md records actual ENOSPC, protected bytes, native retry and detach, including an unrelated source-open interruption.
 Last audit: 2026-10-01.

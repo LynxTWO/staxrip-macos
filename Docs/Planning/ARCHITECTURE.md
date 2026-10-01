@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 031 APFS capacity recovery under D-045 / R-035 after chapter acceptance at 0105d5c plus diagnostic-only ded74f6, hosted run 36824096245.
+Next: Select a bounded non-audio slice after Slice 031 acceptance at a940665, hosted run 36840667407.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -126,4 +126,4 @@ Slice 001 remains accepted with evidence in MEASURED-ANALYSIS-EVIDENCE.md. Slice
 
 Owner approved D-017 and Slice 004. HDR10Audit supplies an immutable process-local color/timing contract to EncodePlan. BatchController binds it to source identity, audits the staged output and publishes only on comparison success. Session v5 and journal v4 retain explicit color intent, with legacy SDR defaults. The native shared video controls and queue results expose scope and costs. HDR10-EVIDENCE.md is the coverage policy and evidence ledger. This supersedes earlier active-slice and unimplemented-HDR wording; audio remains parked.
 
-Current approved build boundary: SLICE-031-apfs-capacity.md under D-045 / R-035. Only a new bounded generated disk-image fixture; existing owner volumes are excluded.
+Current approved build boundary: SLICE-031-apfs-capacity.md under D-045 through D-056 / R-035 through R-039. Scope includes a bounded generated APFS fixture, publication recovery wording, owned priority-preserving source/admission/publication workers, owned subprocess control and qualified regression diagnostics. Existing owner volumes and DSP changes are excluded. All nine criteria have scoped acceptance at a940665 and plain hosted run 36840667407.

@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 031 APFS capacity recovery under D-045 / R-035 after chapter acceptance at 0105d5c plus diagnostic-only ded74f6, hosted run 36824096245.
+Next: Select a bounded non-audio slice after Slice 031 acceptance at a940665, hosted run 36840667407.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 039 accepted at 542fde3; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 040 ten-bit SDR HEVC video copy under D-078 / R-050, starting with bounded format feasibility.
+Last completed: Slice 040 accepted at 23583c3; Slice 002 experimental implementation and local listening pack preserved.
+Next: Select the next bounded non-audio capability after Slice 040 acceptance.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -312,3 +312,5 @@ R-049 / D-077 permits one bounded observation of the existing Fresh analysis can
 Slice 039 is accepted at ordinary qualification head 542fde3, hosted run 36901339753, with byte-equivalent film/local tests at 2fe44cf and unchanged native product Sources at 6c471b7. FULL-FILM-VIDEO-EVIDENCE.md retains the two unexplained earlier hosted cancellation failures and all single-film limits. No cancellation repair, audio acceptance or production completion is claimed.
 
 Approved R-050 under D-078: declared ten-bit SDR HEVC copy through existing strict metadata/packet/publication contracts. S40-001 through S40-006 bind plan, complete pictures, track coexistence, refusal, native and regression gates. Generated references must remain ten-bit and retain meaningful low-order samples. No DSP, schema, deadline or general transcode expansion.
+
+Slice 040 is accepted at 23583c3 under D-078 / R-050, ordinary hosted run 36904515988. All six gates have scoped actual-controller, native, independent output and ordinary regression evidence in TEN-BIT-COPY-EVIDENCE.md. Existing cancellation and broader color/player limitations remain explicit.

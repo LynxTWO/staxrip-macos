@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 040: Preserve ten-bit SDR HEVC when copying video
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-078 / R-050.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within scope at 23583c3 under D-078 / R-050.
 
 SLICE STATE
-Milestone: M1 complete; M2 bounded implementation may proceed.
-Blocked by: None for the approved implementation.
-Evidence so far: TEN-BIT-COPY-EVIDENCE.md records four generated complete-picture/packet comparisons, actual low-order ten-bit samples and retained incomplete-fixture refusal. No product support is claimed yet.
+Milestone: M1, M2 and M3 complete; all six scoped gates passed.
+Blocked by: None within this slice.
+Evidence: TEN-BIT-COPY-EVIDENCE.md records focused/ordinary local and hosted checks, native output, independent full ten-bit references, owner journal restoration and retained incomplete-fixture refusal. Hosted run 36904515988 passed; broader playback/color, audio and distribution acceptance remain outside scope.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

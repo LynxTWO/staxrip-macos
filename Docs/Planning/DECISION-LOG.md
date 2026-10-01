@@ -1224,3 +1224,5 @@ Options considered: keep the blanket ten-bit refusal; enable arbitrary bit depth
 Consequences: Main 10, yuv420p10le, declared bt709 primaries/transfer/matrix and tv range only, retaining existing geometry/time/resource/unknown-side-data constraints. M1 must establish complete real ten-bit picture and packet preservation before code changes. No schema/dependency or general transcode change. Keep captions/chapters on their existing verified path and improve visible/spoken guidance. Preserve all older assertions/deadlines and parked DSP/listening. A repeat of the unresolved hosted cancellation failure reopens qualification without blind retries. No merge or release.
 
 Revisit when: Complete picture/packet metadata differ, color declarations are incomplete, a broader source format is requested, or ordinary regression contradicts acceptance.
+
+D-078 outcome: Slice 040 accepted at 23583c3, ordinary hosted run 36904515988. All six gates passed with strict ten-bit references, actual-controller and native output evidence. Earlier unexplained mastering cancellation delays remain unresolved; no DSP, playback certification, merge or release claim.

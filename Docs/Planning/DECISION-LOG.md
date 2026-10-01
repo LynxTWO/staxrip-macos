@@ -77,6 +77,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-065 | 2026-10-01 | Locate publication observation timeout | Confirmed | |
 | D-066 | 2026-10-01 | Keep value-storage stress off the UI actor | Confirmed | |
 | D-067 | 2026-10-01 | Verify original-video copy before publication | Confirmed | |
+| D-068 | 2026-10-01 | Independently verify ordered external caption tracks | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28

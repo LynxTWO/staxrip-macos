@@ -63,7 +63,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-051 | 2026-10-01 | Observe actual source-read dispatch boundary | Confirmed | |
 | D-052 | 2026-10-01 | Isolate source scanning from shared dispatch contention | Confirmed | |
 | D-053 | 2026-10-01 | Isolate final publication from shared dispatch contention | Confirmed | |
-| D-054 | 2026-10-01 | Observe the exact HDR cancellation test boundary | Confirmed | |
+| D-054 | 2026-10-01 | Observe the actual HDR cancellation test boundary | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -820,7 +820,7 @@ Consequences: Reuse the bounded debug-only opt-in CPU fixture with a separate pu
 
 Revisit when: The actual control fails to reproduce the suspected dispatch boundary, or existing publication guarantees/regressions fail. Arbitrary kernel latency remains outside this repair.
 
-## D-054: Observe the exact HDR cancellation test boundary
+## D-054: Observe the actual HDR cancellation test boundary
 Date: 2026-10-01
 Status: Confirmed
 

@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / R-035.
 
 SLICE STATE
-Milestone: Primary-source research and bounded blank-image feasibility complete.
+Milestone: Local full regression/build and native failure/retry complete; direct publication remedy and final hosted checks in progress.
 Blocked by: None.
-Evidence so far: A new 64 MiB APFS image mounted with a distinct device identity and detached successfully; no fill or encode attempted during discovery.
+Evidence so far: APFS-CAPACITY-EVIDENCE.md records actual ENOSPC, protected bytes, native retry and detach, including an unrelated source-open interruption.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

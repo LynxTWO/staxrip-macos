@@ -57,6 +57,28 @@ struct APFSCapacityTests {
         close(fd)
         try #require(exhausted || (syncResult < 0 && syncError == ENOSPC), "Fixture must actually reach ENOSPC")
         print("APFS_CAPACITY filesystem=\(filesystemName) device=\(mounted.st_dev) fixture_bytes=\(capacity) filler_bytes=\(written) actual_ENOSPC=true")
+        // Exercise the publication remedy directly as well: the subsequent real
+        // encode may exhaust capacity earlier while closing its own output.
+        var publishedLinks: [URL] = []
+        var publicationExhausted = false
+        for index in 0..<1024 {
+            let destination = owned.appendingPathComponent("capacity-link-\(index)")
+            do {
+                try ExportPublication.publish(staged: sentinel, destination: destination)
+                publishedLinks.append(destination)
+            } catch {
+                let detail = error.localizedDescription
+                #expect(detail.contains("Could not publish the output: No space left on device"))
+                #expect(detail.contains("Free space on the destination"))
+                #expect(!detail.contains("supports hard links"))
+                #expect(!FileManager.default.fileExists(atPath: destination.path))
+                publicationExhausted = detail.contains("No space left on device")
+                print("APFS_CAPACITY direct_publication=\(detail) successful_links=\(publishedLinks.count)")
+                break
+            }
+        }
+        try #require(publicationExhausted, "Bounded APFS link fixture must exercise actual publication ENOSPC")
+        for link in publishedLinks { try FileManager.default.removeItem(at: link) }
         var c = EncodeConfiguration(); c.codec = "H.264"; c.encoder = "x264"; c.container = "MKV"; c.audio = "No audio"; c.subtitleMode = "Remove all subtitles"; c.picture.deinterlace = "Off"
         let first = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: owned.appendingPathComponent("result.mkv").path, configuration: c, created: Date())
         let next = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: owned.appendingPathComponent("next.mkv").path, configuration: c, created: Date())

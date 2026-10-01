@@ -137,4 +137,4 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 [Caption entry reframe](CAPTION-ENTRY-REFRAME.md): The owner approved the phase-specific cancellation gate under D-074 after four hosted entry failures; ordinary hosted run 36893266046 passed.
 
-49. [Slice 039: licensed full-film video qualification](SLICE-039-full-film-video.md), approved under D-075 / R-049 after Slice 038 acceptance.
+49. [Slice 039: licensed full-film video qualification](SLICE-039-full-film-video.md) and [evidence](FULL-FILM-VIDEO-EVIDENCE.md), accepted at 542fde3 under D-075 through D-077 / R-049.

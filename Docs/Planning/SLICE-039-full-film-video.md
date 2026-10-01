@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 039: Licensed full-film video qualification
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-075 / R-049.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within scope at 542fde3 under D-075 through D-077 / R-049.
 
 SLICE STATE
-Milestone: Complete final-head film matrix and native walkthrough passed; ordinary regression pending.
-Blocked by: Final ordinary local and hosted regression.
-Evidence so far: FULL-FILM-VIDEO-EVIDENCE.md records the passing complete matrix at 2fe44cf, native independent copy checks, first failed capture and exact compact-format equivalence.
+Milestone: All five gates have scoped local, native and ordinary hosted evidence.
+Blocked by: None within this accepted slice; broader release and listening gates remain open.
+Evidence so far: FULL-FILM-VIDEO-EVIDENCE.md records the complete matrix at 2fe44cf, native independent copy, ordinary local 267-test pass and final hosted run 36901339753 at byte-equivalent 542fde3. Historical capture/cancellation failures remain recorded.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves
@@ -62,3 +62,6 @@ All five gates have scoped final-head receipts and explicit limitations. Ordinar
 Evidence that the short generated cases extend to an entire licensed film for the existing supported video/caption workflows, and a reproducible local reference for future video changes.
 
 Approved for build by: Owner standing autonomous non-audio completion delegation, continued after D-074 and Slice 038 acceptance; D-075 / R-049.
+
+
+Acceptance: 2026-10-01. S39-001 through S39-005 passed within FULL-FILM-VIDEO-EVIDENCE.md limits. The selected planning audit reports zero findings across 42 documents. Audio listening and broader production readiness are not included.

@@ -1,5 +1,5 @@
 # Licensed full-film video evidence
-Date: 2026-10-01. Status: Complete film matrix and native checks passed; final ordinary regression pending.
+Date: 2026-10-01. Status: Scoped acceptance at ordinary qualification head 542fde3; production Sources unchanged from 6c471b7.
 
 ## Need and boundary
 
@@ -19,7 +19,7 @@ The actual queue uses video copy, software H.264 CRF 20 Fast and HEVC CRF 22 Fas
 
 One 15-minute whole-case deadline bounds the sequential run. Each tool's captured output is limited to the existing 4 MiB maximum; subtitles to 1 MiB per track. A result with truncated output or a nonzero tool exit fails. Each output must be smaller than 2 GiB after export; this is not an in-flight disk quota. Per-output receipts record complete frame and caption counts, maximum timing difference, output bytes, pipeline time, tool/system identity and the copied-picture hash where applicable. Pipeline time includes application checks and publication, not just encoder throughput. Error/cancellation joins the owned batch before propagating failure and leaves its artifacts local.
 
-The first compile confirms only that the opt-in test builds and is disabled by default; it is not film acceptance. The native walkthrough and complete final local matrix passed as recorded below; ordinary full local/hosted regression remains pending. No audio listening/processing, A/V synchronization, visual quality, calibrated HDR, arbitrary player, feature-length live-action or release claim is made.
+The first compile confirms only that the opt-in test builds and is disabled by default; it is not film acceptance. The native walkthrough and complete final local matrix passed as recorded below; ordinary full local/hosted regression passed as recorded in the closure below. No audio listening/processing, A/V synchronization, visual quality, calibrated HDR, arbitrary player, feature-length live-action or release claim is made.
 
 
 ## First run and bounded format correction
@@ -45,7 +45,7 @@ Every output has one video stream, no audio, increasing complete frame timestamp
 
 Pipeline timing starts at actual batch launch and includes application verification/publication. It excludes separate preflight and independent reference decoding; the whole-case time includes those checks. These are single-run observations at different quality settings, not matched-quality throughput or compression superiority evidence. Sizes are postconditions, not quotas. Final source/tool/controller/test changes invalidate the corresponding receipts and require scoped requalification. Other platforms, codecs, files and visual/audio claims remain outside this result.
 
-S39-001 film-input, S39-002 film-video, S39-003 film-captions and S39-004 film-native have scoped passing evidence. S39-005 film-regression is pending ordinary final-head local and hosted results; no slice acceptance yet.
+S39-001 film-input, S39-002 film-video, S39-003 film-captions and S39-004 film-native have scoped passing evidence. S39-005 film-regression passed at the ordinary closure below; the historical hold and diagnostic results are retained.
 
 
 ## Ordinary regression hold and bounded diagnosis
@@ -61,3 +61,12 @@ D-077 local comparison at diagnostic head aa7f5bd: ordinary swift test passed 26
 The [diagnostic hosted run 36899766961](https://github.com/LynxTWO/staxrip-macos/actions/runs/36899766961) at aa7f5bd passed 267 reported tests in 509.548 seconds after a 78.10-second build. Its trace observed task entry at 4.534595 seconds, target phase at 7.802048, the cancellation callback at 9.544578, cancel request at 9.544638, cancel return at 9.544699, task exit at 9.588910 and result observation at 9.589003. Thus this passing run settled cancellation in about 44 milliseconds; the earlier delay did not reproduce and its cause remains unknown. The trace also shows scheduling delays before the measured cancellation window, which cannot be substituted as the cause of the earlier failures.
 
 The temporary observer is being retired under D-077. OriginalMasteringTests will be restored byte-for-byte to 2fe44cf; production code and all workload/deadline/assertion choices remain unchanged. Ordinary final-head hosted regression is still required. This passing diagnostic is not a claimed cancellation repair. A further ordinary failure invokes the recorded third-failure stop without expanding the observer.
+
+
+## Ordinary closure and acceptance
+
+Final ordinary [hosted run 36901339753](https://github.com/LynxTWO/staxrip-macos/actions/runs/36901339753) at 542fde3 passed 267 reported tests in 527.517 seconds after a 70.95-second build; 25 opt-in tests were skipped. The complete actual film case ran separately and passed at 2fe44cf. Git comparison confirms Sources, Tests, Package.swift and the hosted workflow at 542fde3 are byte-identical to 2fe44cf, so the ordinary local 267-test/62-suite result in 206.658 seconds and the full-film matrix remain applicable. The temporary cancellation trace is absent. Optimized native product evidence at 6c471b7 remains applicable because production Sources are unchanged.
+
+All five Slice 039 gates have scoped observed passing evidence. S39-001 covers fixed source identity, attribution and protected originals; S39-002 the complete three-output frame/raster/timestamp matrix and copied-picture hash; S39-003 all retained/generated caption payloads and supported metadata; S39-004 the native reviewed silent copy and safely restored prior journal; S39-005 ordinary local/hosted regression, source provenance and a zero-finding selected planning audit across 42 documents. This accepts one licensed-film qualification slice, not the broader program or a universal preservation guarantee.
+
+The two prior ordinary hosted cancellation failures remain unexplained. The later diagnostic and ordinary passes do not establish a repair or reliable five-second settlement under every workload. Repeated failure reopens that lifecycle qualification; do not silently lengthen its guard or expand diagnostics. Owner listening, calibrated HDR, feature-length/live-action corpus, broader platforms/filesystems, software licensing and signed distribution remain open. No merge or release was performed.

@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 038 accepted at 2f8cea7; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 039 full-film video qualification under D-075/D-076 / R-049; matrix and final regression pending.
+Last completed: Slice 039 accepted at 542fde3; Slice 002 experimental implementation and local listening pack preserved.
+Next: Select the next bounded non-audio capability after the full-film qualification closure; no new slice is active.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -308,3 +308,5 @@ Approved R-049 under D-075: local opt-in licensed full-film video qualification.
 R-049 / D-076 permits compact JSON formatting after exact complete-field equality showed the original HEVC frame audit exceeded its fixed capture bound. Rerun the entire matrix; retain the first failed matrix and unrelated ordinary hosted cancellation result. No production, audio, cap or time-limit changes.
 
 R-049 / D-077 permits one bounded observation of the existing Fresh analysis cancellation case and existing DEBUG ToolRunner events, with unchanged fixtures, assertions, five-second guard and ordinary scheduling. After two hosted failures, a third failure stops for a reframe; no audio/DSP implementation change is authorized.
+
+Slice 039 is accepted at ordinary qualification head 542fde3, hosted run 36901339753, with byte-equivalent film/local tests at 2fe44cf and unchanged native product Sources at 6c471b7. FULL-FILM-VIDEO-EVIDENCE.md retains the two unexplained earlier hosted cancellation failures and all single-film limits. No cancellation repair, audio acceptance or production completion is claimed.

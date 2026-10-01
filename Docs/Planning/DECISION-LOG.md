@@ -1203,3 +1203,6 @@ Revisit when: The trace cannot identify the delayed boundary, the third run fail
 
 
 D-077 outcome: diagnostic hosted run 36899766961 at aa7f5bd passed all 267 reported tests in 509.548 seconds after a 78.10-second build. Cancel request at trace time 9.544638 returned at 9.544699; task exit was 9.588910 and result observation 9.589003. The prior over-five-second delay did not reproduce. Retire the temporary test-only observer, restore the original cancellation test byte-for-byte, and require ordinary final-head hosted regression. This is not a production repair or an explanation of the earlier failures. No additional diagnostic surface is authorized; another ordinary failure would be the third failed hosted run and invokes the recorded reframe stop.
+
+
+D-077 ordinary closure: restored uninstrumented head 542fde3 passed hosted run 36901339753, 267 reported tests in 527.517 seconds. Sources, Tests, Package.swift and workflow match the already tested ordinary head 2fe44cf. No production cancellation patch was made. Slice 039 accepts its observed film and regression results while retaining the unresolved historical timing failures; a recurrence reopens qualification rather than authorizing a relaxed guard or another diagnostic expansion.

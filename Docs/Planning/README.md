@@ -92,3 +92,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 36. [Slice 026: SDR frame timing](SLICE-026-sdr-cadence.md).
 
 [SDR cadence evidence](SDR-CADENCE-EVIDENCE.md) records decoded timestamps, native publication retry and regression.
+
+37. [Slice 027: attached native export dialog](SLICE-027-native-export-panel.md).
+
+[Native export dialog evidence](NATIVE-EXPORT-PANEL-EVIDENCE.md) records attached selection, retained results and regression.

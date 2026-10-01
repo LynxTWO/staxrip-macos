@@ -49,6 +49,8 @@ Version: 0.1 Draft. Date: 2026-09-28.
 
 | D-040 | 2026-10-01 | Preserve SDR decoded frame timing | Confirmed | |
 
+| D-041 | 2026-10-01 | Attach native export destination selection | Confirmed | |
+
 ## D-001: Native offline product
 Date: 2026-09-28
 Status: Confirmed
@@ -621,3 +623,17 @@ Options considered: leave muxer and encoder timing defaults; passthrough alone; 
 Consequences: Video-only timing arguments and scoped decoded-frame regression. FFmpeg documents a default encoder time base of inverse frame rate, plus filter/demux alternatives; muxers may still change timestamps. No saved-format, audio time-base, runtime frame-audit or general A/V sync claim. Reference: https://ffmpeg.org/ffmpeg.html#Advanced-options, reviewed 2026-10-01.
 
 Revisit when: A supported encoder rejects the time base, decoded fixture evidence disagrees, or broader timing/conversion and runtime audit scope is approved.
+
+## D-041: Attach native export destination selection
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Build Slice 027 under overnight autonomous non-audio delegation after Slice 026 acceptance. Delegated to AI recommendation.
+
+Because: Quick Export still owns a runModal save panel outside the workspace request lifecycle and reads its preset after selection. The existing attached presenter and captured-intent model already solve duplicate and stale file-command callbacks.
+
+Options considered: keep the nested modal panel; add a separate controller-specific presenter; reuse the workspace presenter and request identity. Choose the third to maintain one file-dialog owner and established source-generation checks.
+
+Consequences: Attached destination selection and guarded export initiation only. The current preset must match the captured choice, and source/availability must remain current. Keep NativeExportService, no-overwrite publication and encoding unchanged. Existing-file system Replace wording and arbitrary filesystem access remain separate debts.
+
+Revisit when: Native sheet evidence fails, a source-independent export workflow needs its own lifecycle, or collision-panel behavior is scoped.

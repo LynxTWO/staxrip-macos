@@ -143,3 +143,7 @@ Slice 025 closed at 42c8c07 with hosted run 36812490982: 197 tests in 479.518 se
 Slice 026 is active under D-040 / R-030: reproduce and correct SDR encoder time-base quantization with decoded generated-frame evidence. Audio listening stays parked.
 
 Slice 026 closed at f06d431 with hosted run 36813735721: 200 tests in 616.001 seconds. Local hardware/software timestamp matrix and native published output passed; initial native filesystem wait and interrupted staging remain documented in SDR-CADENCE-EVIDENCE.md. Draft PR 43 remains unmerged. Audio listening stays parked.
+
+Slice 027 is active under D-041 / R-031: route Quick Export destination selection through attached workspace dialog ownership and captured intent. Audio listening stays parked.
+
+Slice 027 closed at 70d0ac6 with hosted run 36815249560: 203 tests in 440.625 seconds. Native attached sheet, disabled competing file commands, cancelled selection and real export passed. Draft PR 44 remains unmerged. Audio listening stays parked.

@@ -14,6 +14,9 @@ final class SubtitleFileAccess: @unchecked Sendable {
 }
 
 struct ExternalSubtitle: Codable, Equatable, Sendable {
+    #if DEBUG
+    @TaskLocal static var observeBoundary: (@Sendable (String) -> Void)?
+    #endif
     var path: String
     var language = "und"
     var title = "External captions"
@@ -47,11 +50,21 @@ struct ExternalSubtitle: Codable, Equatable, Sendable {
     }
 
     func read() async throws -> SubRipDocument {
+        #if DEBUG
+        let observe = Self.observeBoundary
+        observe?("body entered")
+        #endif
         try validate()
         try Task.checkCancellation()
         let reference = self
         let document: SubRipDocument = try await withCheckedThrowingContinuation { continuation in
+            #if DEBUG
+            observe?("submitting worker")
+            #endif
             DispatchQueue.global(qos: .utility).async {
+                #if DEBUG
+                observe?("worker entered")
+                #endif
                 do {
                     let document = try withExtendedLifetime(reference.access) {
                         let url = reference.access?.url ?? URL(fileURLWithPath: reference.path)

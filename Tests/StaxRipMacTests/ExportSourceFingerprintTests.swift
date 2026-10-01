@@ -100,6 +100,16 @@ struct ExportSourceFingerprintTests {
     private final class Gate: @unchecked Sendable {
         let entered = DispatchSemaphore(value: 0), release = DispatchSemaphore(value: 0)
         let lock = NSLock(); var finished = false
+        func signalEntry() { entered.signal() }
+        func waitForEntry(observe: (@Sendable (String) -> Void)? = nil) async {
+            observe?("submitting worker")
+            await withCheckedContinuation { continuation in
+                DispatchQueue.global().async {
+                    observe?("worker entered")
+                    self.entered.wait(); continuation.resume()
+                }
+            }
+        }
         func finish() { lock.lock(); finished = true; lock.unlock() }
         func isFinished() -> Bool { lock.lock(); defer { lock.unlock() }; return finished }
     }
@@ -110,12 +120,10 @@ struct ExportSourceFingerprintTests {
         let task = Task {
             defer { gate.finish() }
             return try await ExportSourceFingerprint.read(file) { count, _ in
-                if count == 0 { gate.entered.signal(); gate.release.wait() }
+                if count == 0 { gate.signalEntry(); gate.release.wait() }
             }
         }
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global().async { gate.entered.wait(); continuation.resume() }
-        }
+        await gate.waitForEntry()
         task.cancel()
         #expect(!gate.isFinished())
         gate.release.signal()
@@ -128,4 +136,23 @@ struct ExportSourceFingerprintTests {
         await #expect(throws: CancellationError.self) { try await cancelled.value }
         #expect(try Data(contentsOf: file) == Data(repeating: 7, count: 2 * 1024 * 1024))
     }
+    #if DEBUG
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["STAXRIP_SOURCE_ENTRY_STRESS"] == "1"), .timeLimit(.minutes(1)))
+    func sourceCancellationEntryObserverStartsDuringBoundedCPUContention() async throws {
+        let count = ProcessInfo.processInfo.activeProcessorCount
+        try #require((2...32).contains(count))
+        let load = WorkerContentionLoad(count: count), gate = Gate()
+        // Isolate the existing observer dispatch; the worker-entry signal is ready.
+        gate.signalEntry()
+        await gate.waitForEntry(observe: { load.observe($0) })
+        await load.settle()
+        let timing = load.lock.withLock { (load.ready, load.submitted, load.worker) }
+        try #require(timing.0)
+        let submitted = try #require(timing.1), entered = try #require(timing.2)
+        let delay = submitted.duration(to: entered)
+        print("SOURCE_ENTRY_CONTENTION CPUs=\(count) submitted-to-observer=\(delay)")
+        #expect(delay < .seconds(1))
+    }
+    #endif
+
 }

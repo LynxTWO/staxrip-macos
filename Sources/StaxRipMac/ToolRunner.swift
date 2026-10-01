@@ -40,43 +40,80 @@ final class ToolRunner: @unchecked Sendable {
                     task.standardInput = FileHandle.nullDevice
                     let output = Pipe(), errors = Pipe()
                     task.standardOutput = output; task.standardError = errors
+                    do {
+                        for pipe in [output, errors] {
+                            let fd = pipe.fileHandleForReading.fileDescriptor
+                            let flags = fcntl(fd, F_GETFL)
+                            guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else {
+                                throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
+                            }
+                        }
+                    } catch { continuation.resume(throwing: error); return }
+                    let group = DispatchGroup()
+                    // Completion joins process exit and both fully drained, closed readers.
+                    // No shared worker waits for a child or another dispatch block.
+                    for _ in 0..<3 { group.enter() }
+                    task.terminationHandler = { _ in group.leave() }
                     lock.lock()
-                    if cancelled { lock.unlock(); continuation.resume(throwing: CancellationError()); return }
+                    if cancelled { lock.unlock(); task.terminationHandler = nil; continuation.resume(throwing: CancellationError()); return }
+                    guard process == nil else {
+                        lock.unlock(); task.terminationHandler = nil
+                        continuation.resume(throwing: NativeExportError.invalid("This tool runner already owns an active process.")); return
+                    }
                     process = task
                     do { try task.run() } catch {
-                        process = nil; lock.unlock(); continuation.resume(throwing: error); return
+                        process = nil; lock.unlock(); task.terminationHandler = nil
+                        continuation.resume(throwing: error); return
                     }
                     lock.unlock()
                     let stdout = BoundedBytes(limit: max(0, min(stdoutLimit, 4 * 1024 * 1024)))
                     let stderr = BoundedBytes(limit: 64 * 1024)
-                    let group = DispatchGroup()
+                    let readFailure = ToolReadFailure()
                     for (handle, buffer, callback) in [(output.fileHandleForReading, stdout, onOutput), (errors.fileHandleForReading, stderr, nil)] {
-                        group.enter()
-                        DispatchQueue.global().async {
-                            defer { try? handle.close(); group.leave() }
-                            while true {
-                                // FileHandle creates autoreleased Foundation buffers. Drain per
-                                // chunk so long PCM streams do not retain an entire movie.
-                                let hadData = autoreleasepool {
-                                    let data = handle.availableData
-                                    guard !data.isEmpty else { return false }
+                        let queue = DispatchQueue(label: "StaxRip.tool-pipe", qos: .userInitiated)
+                        let source = DispatchSource.makeReadSource(fileDescriptor: handle.fileDescriptor, queue: queue)
+                        source.setEventHandler { [self] in
+                            autoreleasepool {
+                                var bytes = [UInt8](repeating: 0, count: 64 * 1024)
+                                let count = Darwin.read(handle.fileDescriptor, &bytes, bytes.count)
+                                if count > 0 {
+                                    let data = Data(bytes.prefix(count))
                                     buffer.append(data)
                                     callback?(data)
-                                    return true
+                                } else if count == 0 {
+                                    source.cancel()
+                                } else if errno != EAGAIN && errno != EINTR {
+                                    readFailure.record(POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO))
+                                    source.cancel(); cancel()
                                 }
-                                if !hadData { break }
                             }
                         }
+                        source.setCancelHandler {
+                            try? handle.close()
+                            source.setEventHandler(handler: nil)
+                            source.setCancelHandler(handler: nil)
+                            group.leave()
+                        }
+                        source.resume()
                     }
-                    task.waitUntilExit()
-                    group.wait()
-                    lock.lock(); process = nil; let wasCancelled = cancelled; lock.unlock()
-                    if wasCancelled { continuation.resume(throwing: CancellationError()); return }
-                    continuation.resume(returning: ToolResult(status: task.terminationStatus, stdout: stdout.data, stderr: stderr.data, truncated: stdout.truncated))
+                    group.notify(queue: .global(qos: .userInitiated)) { [self] in
+                        task.terminationHandler = nil
+                        lock.lock(); process = nil; let wasCancelled = cancelled; lock.unlock()
+                        if let error = readFailure.error { continuation.resume(throwing: error); return }
+                        if wasCancelled { continuation.resume(throwing: CancellationError()); return }
+                        continuation.resume(returning: ToolResult(status: task.terminationStatus, stdout: stdout.data, stderr: stderr.data, truncated: stdout.truncated))
+                    }
                 }
             }
         } onCancel: { self.cancel() }
     }
+}
+
+private final class ToolReadFailure: @unchecked Sendable {
+    private let lock = NSLock()
+    private var stored: Error?
+    var error: Error? { lock.withLock { stored } }
+    func record(_ error: Error) { lock.withLock { if stored == nil { stored = error } } }
 }
 
 private final class BoundedBytes: @unchecked Sendable {

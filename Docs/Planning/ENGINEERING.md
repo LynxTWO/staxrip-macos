@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 027 attached native export dialog under D-041 / R-031 after Slice 026 acceptance at f06d431, hosted run 36813735721.
+Next: Slice 028 native output name correction under D-042 / R-032 after Slice 027 acceptance at 70d0ac6, hosted run 36815249560.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -236,3 +236,7 @@ Approved R-030 under D-040: preserve SDR video timestamps through explicit passt
 ## Native export dialog checkpoint, 2026-10-01
 
 Approved R-031 under D-041: attached native export destination selection with captured source/preset and current availability. Gates native-panel-lifecycle, native-panel-export, native-panel-ui and native-panel-regression bind S27-001 through S27-004. Consequence: user_data through the existing protected native export service. No changed encoding, persisted state or audio scope.
+
+## Native output name checkpoint, 2026-10-01
+
+Approved R-032 under D-042: refuse known MP4 name collisions before Replace, with correction, cancellation and retained final publication protection. Gates native-name-validation, native-name-ui, native-name-protection and native-name-regression bind S28-001 through S28-004. Consequence: user_data through existing exclusive output publication. No source mutation, automatic renaming, saved-format or audio change.

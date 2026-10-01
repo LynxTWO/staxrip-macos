@@ -27,7 +27,12 @@ enum ExportSourceFingerprint {
                 #if DEBUG
                 observe?("submitting worker")
                 #endif
-                DispatchQueue.global(qos: workerQoS).async {
+                // Keep blocking file work out of the shared root queue's work
+                // backlog. Each read owns its queue so one stalled filesystem
+                // call cannot serialize independent source checks behind it.
+                let queue = DispatchQueue(label: "StaxRip.source-fingerprint",
+                    qos: DispatchQoS(qosClass: workerQoS, relativePriority: 0))
+                queue.async {
                     #if DEBUG
                     observe?("worker entered")
                     #endif

@@ -7,10 +7,16 @@ enum ExportSourceFingerprint {
     typealias Reader = @Sendable (URL, @escaping @Sendable (Int64, Int64) -> Void) async throws -> SourceFingerprint
     static func read(_ url: URL, progress: @escaping @Sendable (Int64, Int64) -> Void = { _, _ in }) async throws -> SourceFingerprint {
         let cancellation = Cancellation()
+        // A continuation does not promote a utility worker to its awaiting task's
+        // priority. Preserve the request at this boundary without moving I/O onto
+        // the caller's actor or raising background requests to foreground work.
+        let priority = Task.currentPriority
+        let workerQoS: DispatchQoS.QoSClass = priority >= .high ? .userInitiated :
+            priority >= .medium ? .default : priority >= .low ? .utility : .background
         return try await withTaskCancellationHandler {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
-                DispatchQueue.global(qos: .utility).async {
+                DispatchQueue.global(qos: workerQoS).async {
                     // Resume only after the descriptor is closed, including cancellation.
                     continuation.resume(with: Result { try scan(url, cancellation: cancellation, progress: progress) })
                 }

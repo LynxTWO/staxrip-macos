@@ -7,10 +7,19 @@ struct QueueView: View {
     @EnvironmentObject var exporter: ExportController
     @StateObject private var fileAccess = QueueFileAccess()
     @State private var editingJob: QueueJob?
+    private var checks: [UUID: QueueCheck] { batch.reviewMatches(model.jobs) ? batch.queueChecks : [:] }
+    private var overview: QueueOverview {
+        QueueOverview(jobs: model.jobs, statuses: batch.statuses, running: batch.running, reviewing: batch.reviewing,
+                      publicationJobID: batch.publicationJobID, checks: checks)
+    }
     var body: some View {
-        VStack(alignment: .leading, spacing: 24) {
-            HStack {
-                sectionTitle("Ready when you are", subtitle: "Saved configurations for this session.")
+        VStack(alignment: .leading, spacing: 18) {
+            sectionTitle(overview.title, subtitle: overview.message)
+                .accessibilityElement(children: .combine)
+            HStack(spacing: 16) {
+                outcomeCount(overview.completed, title: "Completed", symbol: "checkmark.circle", color: .secondary)
+                outcomeCount(overview.remaining, title: "Remaining", symbol: "clock", color: .secondary)
+                if overview.attention > 0 { outcomeCount(overview.attention, title: "Need attention", symbol: "exclamationmark.triangle", color: .orange) }
                 Spacer()
                 if batch.reviewing {
                     Button("Cancel check", role: .cancel) { batch.cancelReview() }
@@ -42,7 +51,7 @@ struct QueueView: View {
             if let recovery = batch.recovery {
                 HStack {
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("Previous batch available · \(recovery.jobs.count) jobs").font(.headline)
+                        Text("Previous batch available · \(recovery.jobs.count) \(recovery.jobs.count == 1 ? "job" : "jobs")").font(.headline)
                         Text("Restore into an empty queue to review it. Nothing starts automatically. Starting a new batch replaces this recovery record.").font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
@@ -64,66 +73,8 @@ struct QueueView: View {
                 ScrollView {
                     LazyVStack(spacing: 12) {
                         ForEach(model.jobs) { job in
-                            VStack(alignment: .leading, spacing: 14) {
-                                HStack(spacing: 12) {
-                                    Text(String((model.jobs.firstIndex(where: { $0.id == job.id }) ?? 0) + 1))
-                                        .font(.system(size: 16, weight: .medium, design: .monospaced))
-                                        .foregroundStyle(Color.accent).frame(width: 28)
-                                    VStack(alignment: .leading, spacing: 5) {
-                                        Text(URL(fileURLWithPath: job.source).lastPathComponent).font(.system(size: 14, weight: .semibold))
-                                        if let captions = job.configuration.externalSubtitle {
-                                            Text("Additional captions: " + URL(fileURLWithPath: captions.path).lastPathComponent)
-                                                .font(.caption).foregroundStyle(.secondary)
-                                                .accessibilityLabel("Additional SubRip subtitle file, " + URL(fileURLWithPath: captions.path).lastPathComponent)
-                                        }
-                                        Text("\(job.configuration.codec) · \(job.configuration.rateSummary) · \(job.configuration.container) · \(job.configuration.colorMode) · \(job.configuration.audio)")
-                                            .font(.system(size: 11)).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                    Text(job.isDemo ? "DEMO" : (batch.publicationJobID == job.id ? "Finishing" : (batch.statuses[job.id]?.phase ?? "Ready")).uppercased())
-                                        .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
-                                    Button { batch.reset(job.id); model.jobs.removeAll { $0.id == job.id } } label: { Image(systemName: "trash") }
-                                        .buttonStyle(.borderless).disabled(batch.running || audio.running || model.filePanelActive || fileAccess.reviewing).help("Remove configuration").accessibilityLabel("Remove queued configuration for \(URL(fileURLWithPath: job.source).lastPathComponent)")
-                                        .accessibilityHint("Removes this queue entry. Does not delete the source file.")
-                                }
-                                HStack(spacing: 14) {
-                                    Button { editingJob = job } label: { Label("Edit", systemImage: "slider.horizontal.3") }
-                                    Button { model.duplicateJob(job) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }
-                                    Spacer()
-                                    Button { model.moveJob(job.id, by: -1) } label: { Image(systemName: "arrow.up") }
-                                        .disabled(model.jobs.first?.id == job.id).help("Move up").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) earlier in the queue")
-                                    Button { model.moveJob(job.id, by: 1) } label: { Image(systemName: "arrow.down") }
-                                        .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) later in the queue")
-                                }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running || audio.running || model.filePanelActive || fileAccess.reviewing)
-                                HStack {
-                                    Button("Review source access…") { fileAccess.review(job, destination: false) }
-                                    Button("Review destination access…") { fileAccess.review(job, destination: true) }
-                                }.font(.caption).disabled(fileAccess.reviewing || model.filePanelActive || job.isDemo)
-                                    .help("Select the configured location using the native file picker. Queue paths stay unchanged and no encode starts.")
-                                if let result = fileAccess.result, result.jobID == job.id {
-                                    Text(result.message).font(.caption).foregroundStyle(.secondary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                                if batch.reviewMatches(model.jobs), let check = batch.queueChecks[job.id] {
-                                    Text(check.kind.rawValue + ": " + check.detail)
-                                        .font(.caption).foregroundStyle(check.kind == .issue ? .orange : .secondary)
-                                        .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                                        .accessibilityLabel("Queue check: " + AccessibilityLanguage.spokenCodecs(check.kind.rawValue + ". " + check.detail))
-                                }
-                                if let state = batch.statuses[job.id] {
-                                    if batch.publicationJobID != job.id && (state.phase == "Encoding" || (job.configuration.colorMode == "Preserve static HDR10" && ["Inspecting", "Verifying"].contains(state.phase))) {
-                                        ProgressView(value: state.progress)
-                                            .accessibilityLabel(state.phase == "Encoding" ? "Encoding progress" : "H D R ten full frame audit progress")
-                                    }
-                                    Text(state.detail).accessibilityLabel(AccessibilityLanguage.spokenCodecs(state.detail)).font(.system(size: 10)).foregroundStyle(state.phase == "Failed" ? .orange : .secondary).textSelection(.enabled)
-                                    if let result = state.destination {
-                                        Button("Reveal output") { NSWorkspace.shared.activateFileViewerSelecting([result]) }.font(.caption)
-                                    }
-                                }
-                                Divider()
-                                Label(job.destination, systemImage: "folder").font(.system(size: 10, design: .monospaced))
-                                    .foregroundStyle(.secondary).textSelection(.enabled)
-                            }.padding(18).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+                            QueueJobRow(job: job, index: (model.jobs.firstIndex(where: { $0.id == job.id }) ?? 0) + 1,
+                                        check: checks[job.id], fileAccess: fileAccess, edit: { editingJob = job })
                         }
                     }
                 }
@@ -137,5 +88,125 @@ struct QueueView: View {
         }.padding(28)
         .onAppear { if !batch.reviewMatches(model.jobs) { batch.invalidateReview() } }
         .sheet(item: $editingJob) { job in QueueEditor(job: job).environmentObject(model) }
+    }
+    private func outcomeCount(_ count: Int, title: String, symbol: String, color: Color) -> some View {
+        Label { Text("\(count)").monospacedDigit().fontWeight(.semibold) + Text(" " + title) } icon: { Image(systemName: symbol) }
+            .font(.caption).foregroundStyle(color)
+            .accessibilityElement(children: .combine).accessibilityAddTraits(.isStaticText)
+            .accessibilityLabel("\(count) \(title.lowercased())")
+    }
+
+}
+
+
+private struct QueueJobRow: View {
+    @EnvironmentObject var model: WorkspaceModel
+    @EnvironmentObject var audio: AudioController
+    @EnvironmentObject var batch: BatchController
+    let job: QueueJob
+    let index: Int
+    let check: QueueCheck?
+    @ObservedObject var fileAccess: QueueFileAccess
+    let edit: () -> Void
+    @State private var expanded = false
+    private var state: BatchStatus? { batch.statuses[job.id] }
+    private var publishing: Bool { batch.publicationJobID == job.id }
+    private var presentation: QueueJobPresentation { QueueJobPresentation(job: job, status: state, publishing: publishing, check: check) }
+    private var locked: Bool { batch.running || audio.running || model.filePanelActive || fileAccess.reviewing }
+    private var sourceName: String { URL(fileURLWithPath: job.source).lastPathComponent }
+    private var outputName: String { URL(fileURLWithPath: job.destination).lastPathComponent }
+    private var recipe: String { "\(job.configuration.codec) · \(job.configuration.rateSummary) · \(job.configuration.container) · \(job.configuration.colorMode) · \(job.configuration.audio)" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                Text(String(index)).font(.system(.caption, design: .monospaced)).foregroundStyle(.secondary)
+                    .frame(width: 26, height: 26).background(Color.accent.opacity(0.08), in: Circle()).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(outputName).font(.headline).textSelection(.enabled)
+                    Text("From " + sourceName).font(.caption).foregroundStyle(.secondary).lineLimit(1).help(job.source)
+                    Text(recipe).font(.caption).foregroundStyle(.secondary)
+                        .accessibilityLabel(AccessibilityLanguage.spokenCodecs(recipe))
+                    if let captions = job.configuration.externalSubtitle {
+                        Text("Additional captions: " + URL(fileURLWithPath: captions.path).lastPathComponent)
+                            .font(.caption).foregroundStyle(.secondary)
+                            .accessibilityLabel("Additional SubRip subtitle file, " + URL(fileURLWithPath: captions.path).lastPathComponent)
+                    }
+                }
+                Spacer(minLength: 8)
+                Label(presentation.label, systemImage: presentation.symbol).font(.caption.weight(.medium))
+                    .foregroundStyle(presentation.needsAttention ? Color.orange : (presentation.completed ? Color.accent : Color.secondary))
+                    .padding(.horizontal, 10).padding(.vertical, 6)
+                    .background((presentation.needsAttention ? Color.orange : Color.accent).opacity(0.08), in: Capsule())
+                    .accessibilityLabel("Job \(index), \(presentation.label)")
+            }
+            if let state, presentation.showStatusDetail, !state.detail.isEmpty {
+                statusDetail(state)
+            }
+            if let state, !publishing && (state.phase == "Encoding" || (job.configuration.colorMode == "Preserve static HDR10" && ["Inspecting", "Verifying"].contains(state.phase))) {
+                ProgressView(value: state.progress)
+                    .accessibilityLabel(state.phase == "Encoding" ? "Encoding progress" : "H D R ten full frame audit progress")
+            }
+            if let check, check.kind == .issue { checkDetail(check) }
+            HStack(spacing: 14) {
+                if let destination = state?.destination {
+                    Button { NSWorkspace.shared.activateFileViewerSelecting([destination]) } label: { Label("Reveal output", systemImage: "arrow.up.forward.square") }
+                        .help("Reveal the recorded output in Finder.").accessibilityLabel("Reveal output \(outputName)")
+                }
+                Button(action: edit) { Label("Edit", systemImage: "slider.horizontal.3") }.disabled(locked)
+                    .accessibilityLabel("Edit settings for \(outputName)")
+                Button { model.duplicateJob(job) } label: { Label("Duplicate", systemImage: "plus.square.on.square") }.disabled(locked)
+                    .accessibilityLabel("Duplicate configuration for \(outputName)")
+                Spacer()
+                Button { model.moveJob(job.id, by: -1) } label: { Image(systemName: "arrow.up") }
+                    .disabled(locked || model.jobs.first?.id == job.id).help("Move up")
+                    .accessibilityLabel("Move \(outputName) earlier in the queue")
+                Button { model.moveJob(job.id, by: 1) } label: { Image(systemName: "arrow.down") }
+                    .disabled(locked || model.jobs.last?.id == job.id).help("Move down")
+                    .accessibilityLabel("Move \(outputName) later in the queue")
+                Button { batch.reset(job.id); model.jobs.removeAll { $0.id == job.id } } label: { Image(systemName: "trash") }
+                    .disabled(locked).help("Remove configuration")
+                    .accessibilityLabel("Remove queued configuration for \(outputName)")
+                    .accessibilityHint("Removes this queue entry. Does not delete source media or saved outputs.")
+            }.buttonStyle(.borderless).font(.caption)
+            DisclosureGroup(isExpanded: $expanded) {
+                VStack(alignment: .leading, spacing: 9) {
+                    if let state, !presentation.showStatusDetail, !state.detail.isEmpty { statusDetail(state) }
+                    if let check, check.kind != .issue { checkDetail(check) }
+                    filePath("Source", path: job.source)
+                    filePath("Destination", path: job.destination)
+                    HStack {
+                        Button("Review source access…") { fileAccess.review(job, destination: false) }
+                            .accessibilityLabel("Review source access for \(outputName)")
+                        Button("Review destination access…") { fileAccess.review(job, destination: true) }
+                            .accessibilityLabel("Review destination access for \(outputName)")
+                    }.disabled(fileAccess.reviewing || model.filePanelActive || job.isDemo)
+                        .help("Select the configured location using the native file picker. Queue paths stay unchanged and no encode starts.")
+                }.padding(.top, 7)
+            } label: {
+                Text(presentation.completed ? "Verification and file details" : "Checks and file details")
+                    .accessibilityLabel("\(presentation.completed ? "Verification" : "Checks") and file details for \(outputName)")
+            }.font(.caption)
+            if let result = fileAccess.result, result.jobID == job.id {
+                Text(result.message).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }.padding(16).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
+    }
+    private func statusDetail(_ state: BatchStatus) -> some View {
+        Text(state.detail).font(.caption).foregroundStyle(presentation.needsAttention ? Color.orange : Color.secondary)
+            .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel(AccessibilityLanguage.spokenCodecs(state.detail))
+    }
+    private func checkDetail(_ check: QueueCheck) -> some View {
+        Text(check.kind.rawValue + ": " + check.detail).font(.caption)
+            .foregroundStyle(check.kind == .issue ? Color.orange : Color.secondary)
+            .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel("Queue check: " + AccessibilityLanguage.spokenCodecs(check.kind.rawValue + ". " + check.detail))
+    }
+    private func filePath(_ label: String, path: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label).fontWeight(.medium)
+            Text(path).foregroundStyle(.secondary).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+        }
     }
 }

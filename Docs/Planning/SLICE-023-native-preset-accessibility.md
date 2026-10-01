@@ -1,5 +1,5 @@
 # StaxRip Mac Slice 023: Spoken native preset choices
-Version: 0.2. Date: 2026-09-30. Status: Approved for build under D-036 / R-026.
+Version: 0.3. Date: 2026-09-30. Status: Approved for build under D-036 / R-026.
 
 SLICE STATE
 Milestone: Local/native verification passed; hosted regression investigation active.
@@ -66,3 +66,9 @@ Approved for build by: Owner autonomous non-audio delegation under D-036 / R-026
 R-026 permits one bounded, isolated diagnostic of the existing ToolRunner implementation after hosted attempt 1 recorded clustered worker timeouts. Compare 16 and 96 generated child processes with stdout/stderr payloads, exact byte/status outcomes and a 45-second external watchdog per case. Use only ignored scratch files, no private media or repository payloads. Record process state and clean up only the diagnostic's identified live children after a deadline. This tests a worker-contention hypothesis, not a general concurrency guarantee. No application or CI behavior change is authorized by this diagnostic amendment; a demonstrated repair needs a recorded scope decision before implementation. Existing regression assertions and limits stay intact.
 
 Approved for build by: Owner autonomous non-audio delegation under D-036 / R-026, 2026-09-30; bounded hosted-gate diagnosis only.
+
+## Dependency repair amendment under D-037 / R-027
+
+The hosted gate failed twice and an isolated probe independently demonstrated shared-worker starvation in ToolRunner. Before accepting this slice, replace the blocking process/pipe ownership with readiness-driven draining and await exit plus both EOFs. Only ToolRunner and its focused tests join the product scope. Encode commands, output verification, persistence and audio algorithms stay unchanged. Add S23-004 (runner-fanout): 96 generated children return complete stdout/stderr and exit status without starving shared workers. Add S23-005 (runner-lifecycle): cancellation, launch refusal, truncation and final streamed bytes preserve settled-process semantics. Existing full regression, native advanced export/cancel and hosted checks are required after repair. Baseline 16 passed / 96 timed out after 45 seconds is the negative control; it was externally terminated with identified child cleanup.
+
+Approved for build by: Owner autonomous non-audio delegation under D-037 / R-027, 2026-09-30. This extends the active slice for its demonstrated runtime dependency; no new slice is active.

@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-075 / R-049.
 
 SLICE STATE
-Milestone: Approved bounded qualification plan after Slice 038 acceptance.
-Blocked by: None for implementation; actual film checks pending.
-Evidence so far: LISTENING-MANIFEST.md supplies source acquisition/rights; read-only full decode confirms 21,312 frames at 24 fps, 1280 by 544, square pixels, yuv420p, zero start.
+Milestone: Complete final-head film matrix and native walkthrough passed; ordinary regression pending.
+Blocked by: Final ordinary local and hosted regression.
+Evidence so far: FULL-FILM-VIDEO-EVIDENCE.md records the passing complete matrix at 2fe44cf, native independent copy checks, first failed capture and exact compact-format equivalence.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

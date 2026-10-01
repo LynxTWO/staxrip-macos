@@ -1,5 +1,5 @@
 # Licensed full-film video evidence
-Date: 2026-10-01. Status: Local opt-in qualification underway; no acceptance yet.
+Date: 2026-10-01. Status: Complete film matrix and native checks passed; final ordinary regression pending.
 
 ## Need and boundary
 
@@ -19,7 +19,7 @@ The actual queue uses video copy, software H.264 CRF 20 Fast and HEVC CRF 22 Fas
 
 One 15-minute whole-case deadline bounds the sequential run. Each tool's captured output is limited to the existing 4 MiB maximum; subtitles to 1 MiB per track. A result with truncated output or a nonzero tool exit fails. Each output must be smaller than 2 GiB after export; this is not an in-flight disk quota. Per-output receipts record complete frame and caption counts, maximum timing difference, output bytes, pipeline time, tool/system identity and the copied-picture hash where applicable. Pipeline time includes application checks and publication, not just encoder throughput. Error/cancellation joins the owned batch before propagating failure and leaves its artifacts local.
 
-The first compile confirms only that the opt-in test builds and is disabled by default; it is not film acceptance. Actual local matrix, native walkthrough and ordinary full local/hosted regression remain pending. No audio listening/processing, A/V synchronization, visual quality, calibrated HDR, arbitrary player, feature-length live-action or release claim is made.
+The first compile confirms only that the opt-in test builds and is disabled by default; it is not film acceptance. The native walkthrough and complete final local matrix passed as recorded below; ordinary full local/hosted regression remains pending. No audio listening/processing, A/V synchronization, visual quality, calibrated HDR, arbitrary player, feature-length live-action or release claim is made.
 
 
 ## First run and bounded format correction
@@ -29,3 +29,27 @@ The first opt-in matrix at 2783d19 failed after 566.420 seconds. Copy and softwa
 The first ordinary hosted run [36895508537](https://github.com/LynxTWO/staxrip-macos/actions/runs/36895508537) at 2783d19 failed one existing Fresh analysis cancellation assertion: 6.796 seconds against the unchanged five-second limit. It ran 267 tests in 583.784 seconds after a 115.32-second build. The full-film test was disabled as intended. This result is retained; it is not a passed regression gate and no audio code, scheduling or deadlines are changed by D-076.
 
 The native walkthrough used the existing optimized product at 6c471b7 (Sources unchanged). Explicitly reviewed source and both generated captions, selected No audio and Copy original, checked and started the queue into a new owned directory. Completed details reported eight chapters, both three-cue added tracks and 21,312 verified copied packets. Independent output checks found no audio, 12 complete matching caption payloads, 21,312 increasing decoded frames with zero PTS difference, 1280 by 544 yuv420p and the identical full decoded picture hash. Output size was 610,211,035 bytes. Source and generated/session bytes stayed unchanged, owned staging was absent and the prior owner recovery journal was restored after verifying the completed job identity. The app closed normally. Native MKV playback remained visibly unavailable; no playback, listening or subjective picture acceptance is claimed.
+
+
+## Complete final matrix at 2fe44cf
+
+Verified observed_behavior through the existing user_data export path. Explicit opt-in local run passed its one sequential case in 545.545 seconds, within the unchanged 15-minute deadline. Platform: Apple M5, macOS 27.0.1 (26A434), Swift 6.4, FFmpeg 9.0.2. Test source identity is the fixed digest and byte count above; production Sources and hosted workflow are unchanged from 6c471b7. All outputs used a new private run directory and independent recovery journal.
+
+| Output | Decoded frames | Maximum PTS difference | Complete subtitle tracks | Bytes | Application pipeline seconds |
+| --- | --- | --- | --- | --- | --- |
+| Original-video copy | 21,312 | 0 seconds | 12 | 610,211,035 | 3.585 |
+| H.264 CRF 20 Fast | 21,312 | 0 seconds | 12 | 255,512,295 | 111.489 |
+| HEVC CRF 22 Fast | 21,312 | 0 seconds | 12 | 146,197,058 | 203.781 |
+
+Every output has one video stream, no audio, increasing complete frame timestamps, 1280 by 544 yuv420p, ten byte-matching decoded embedded SRTs and two byte-matching generated SRTs. Supported stream order/language/title checks passed. Source fingerprint, generated captions and prior-output sentinel remained unchanged; owned staging was absent after each completed output. Copy additionally matched the complete decoded-picture SHA-256: 42204713f85ebb24aa311e83a0214756313576cc8f9ec7a127e485254aca3aa9.
+
+Pipeline timing starts at actual batch launch and includes application verification/publication. It excludes separate preflight and independent reference decoding; the whole-case time includes those checks. These are single-run observations at different quality settings, not matched-quality throughput or compression superiority evidence. Sizes are postconditions, not quotas. Final source/tool/controller/test changes invalidate the corresponding receipts and require scoped requalification. Other platforms, codecs, files and visual/audio claims remain outside this result.
+
+S39-001 film-input, S39-002 film-video, S39-003 film-captions and S39-004 film-native have scoped passing evidence. S39-005 film-regression is pending ordinary final-head local and hosted results; no slice acceptance yet.
+
+
+## Ordinary regression hold and bounded diagnosis
+
+Ordinary local swift test at 2fe44cf passed 267 reported tests across 62 suites in 206.658 seconds; 25 opt-in tests, including the separately executed film matrix, were skipped. [Hosted run 36897429716](https://github.com/LynxTWO/staxrip-macos/actions/runs/36897429716) failed the same existing Fresh analysis cancellation settlement guard at 6.248 seconds against five. It reported 267 tests in 630.019 seconds after a 96.81-second build. No other issue was reported. This second failure means S39-005 remains unaccepted despite the local and film successes.
+
+D-077 permits one bounded test-only observation using the existing cancellation case and DEBUG process hook. At most 32 path-free labels identify phase notification, cancellation request/return, process worker entry and task settlement; they print after the unchanged checks. All fixtures, comparisons, deadlines, ordinary scheduling and product code remain unchanged. A third failed ordinary hosted run triggers the reframe stop. The purpose is to identify a lifecycle boundary; no sound-processing, listening or normalizer acceptance follows.

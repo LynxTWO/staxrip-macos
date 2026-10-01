@@ -86,6 +86,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-074 | 2026-10-01 | Phase-specific caption cancellation qualification | Confirmed | |
 | D-075 | 2026-10-01 | Licensed full-film video qualification | Confirmed | |
 | D-076 | 2026-10-01 | Preserve complete frame audits with compact JSON | Confirmed | |
+| D-077 | 2026-10-01 | Locate existing cancellation settlement delay | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1182,3 +1183,20 @@ Options considered: enlarge the capture limit; drop selected frame data; change 
 Consequences: Change only the test's frame-query writer argument. Preserve all frame fields, counts, tolerances, truncation refusal, subtitle checks, source protection, default scheduling and 15-minute case limit. Rerun the complete matrix in a new owned directory and ordinary local/hosted regression on the resulting head. Retain the first hosted run's separate existing mastering cancellation failure (6.796 seconds against five); do not relax or modify that audio test as part of this correction. No production or workflow changes.
 
 Revisit when: Compact complete data still exceeds the cap, frame or caption references disagree, or ordinary regression remains failing.
+
+
+## D-077: Locate existing cancellation settlement delay
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Under R-049's ordinary regression obligation and the owner's autonomous maintenance delegation, permit one bounded test-only observation of the unchanged failing cancellation case. Audio DSP, settings, fixtures and listening remain parked. This is lifecycle diagnosis, not an audio feature change.
+
+Need: A cancel request must settle owned media work before the app reports cancellation and leaves unpublished outputs intact. Authority: R-004 cancellation/publication protection, S39-005 ordinary regression, and the owner's autonomous program-completion instruction excluding listening. Worst case: users keep waiting on cancelled work or receive an incomplete settlement claim in the existing media path. Consequence class: user_data. Existing control: retain the current real generated-media cancellation test and ToolRunner DEBUG boundary hook; the gap is that the two hosted failures report elapsed time without the delayed boundary.
+
+Because: Hosted runs 36895508537 and 36897429716 both failed only the existing Fresh analysis five-second settlement assertion, at 6.796 and 6.248 seconds respectively. Final ordinary local regression passed 267 reported tests in 206.658 seconds with 25 opt-in skips. The complete film matrix and native copy also passed. No evidence yet identifies a production cause or implicates the newly disabled-by-default film test.
+
+Options considered: rerun unchanged without new evidence; relax the five-second guard; use existing test and process boundaries to locate notification, cancellation request, worker entry and task settlement. Choose the third.
+
+Consequences: Add at most 32 in-memory timestamp labels for the Fresh analysis case, printed after its checks; observe existing ToolRunner DEBUG events and existing phase notification only. No new fixture, assertion, scheduling, workload, timeout, process-control or DSP change. Keep ordinary hosted swift test as the gate, with one diagnostic run and a 20-minute operational watch cap. This is attempt three after two failed ordinary hosted runs. A third failure triggers the anti-dark-code reframe stop; do not extend the observer or silently revise the contract. Any production repair requires a further evidence-backed decision, and audio algorithm/listening scope remains closed.
+
+Revisit when: The trace cannot identify the delayed boundary, the third run fails, or a repair would require changed DSP or cancellation semantics.

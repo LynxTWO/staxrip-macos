@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 033 queue outcomes under D-059 / R-041, after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
+Last completed: Slice 038 accepted at 2f8cea7; Slice 002 experimental implementation and local listening pack preserved.
+Next: Slice 039 full-film video qualification under D-075/D-076 / R-049; matrix and final regression pending.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 

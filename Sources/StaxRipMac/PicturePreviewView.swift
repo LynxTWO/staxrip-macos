@@ -114,6 +114,8 @@ struct PicturePreviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.displayScale) private var displayScale
     @EnvironmentObject var controller: PicturePreviewController
+    @EnvironmentObject var motion: MotionPreviewController
+    @State private var mode = "Still"
     @State private var time = 0.0
     @State private var actualPixels = false
 
@@ -125,8 +127,15 @@ struct PicturePreviewView: View {
                     Text("Inspect crop, size and deinterlacing before encoding.").foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Done") { controller.close(); dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Done") { controller.close(); motion.close(); dismiss() }.keyboardShortcut(.cancelAction)
             }
+            Picker("Comparison mode", selection: $mode) {
+                Text("Still").tag("Still")
+                Text("Motion").tag("Motion")
+            }.pickerStyle(.segmented).disabled(controller.running || motion.running)
+            if mode == "Motion" {
+                MotionComparisonView(time: $time)
+            } else {
             HStack(alignment: .firstTextBaseline) {
                 Text("Jump to source time (seconds)")
                 TextField("Seconds", value: $time, format: .number).frame(width: 110)
@@ -175,13 +184,15 @@ struct PicturePreviewView: View {
             }
             Text("SDR BT.709 preview only. Rendering reads from the beginning to preserve deinterlacing context and may take time. Images use an sRGB display conversion; this is not a calibrated color or encoded-quality assessment.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .padding(24).frame(width: 900, height: 680)
+        .padding(24).frame(width: 900, height: 720)
         .onAppear { time = model.config.picture.start }
-        .onChange(of: time) { _, _ in controller.invalidate() }
-        .onChange(of: model.config) { _, _ in controller.invalidate() }
-        .onChange(of: model.sourceURL) { _, _ in controller.invalidate() }
-        .onDisappear { controller.close() }
+        .onChange(of: time) { _, _ in controller.invalidate(); motion.invalidate() }
+        .onChange(of: model.config) { _, _ in controller.invalidate(); motion.invalidate() }
+        .onChange(of: model.sourceURL) { _, _ in controller.invalidate(); motion.invalidate() }
+        .onChange(of: mode) { _, _ in controller.close(); motion.close() }
+        .onDisappear { controller.close(); motion.close() }
     }
 
     private func step(_ direction: PreviewStepDirection) {

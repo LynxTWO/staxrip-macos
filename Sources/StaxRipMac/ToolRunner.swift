@@ -36,6 +36,11 @@ final class ToolRunner: @unchecked Sendable {
     }
 
     func run(executable: URL, arguments: [String], stdoutLimit: Int = 4 * 1024 * 1024, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
+        try await runWithStreams(executable: executable, arguments: arguments, stdoutLimit: stdoutLimit, onOutput: onOutput)
+    }
+
+    // A distinct entry point preserves existing trailing-closure stdout binding.
+    func runWithStreams(executable: URL, arguments: [String], stdoutLimit: Int = 4 * 1024 * 1024, onErrorOutput: (@Sendable (Data) -> Void)? = nil, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
         #if DEBUG
         let observe = Self.observeBoundary
         observe?("body entered")
@@ -86,7 +91,7 @@ final class ToolRunner: @unchecked Sendable {
                     let stdout = BoundedBytes(limit: max(0, min(stdoutLimit, 4 * 1024 * 1024)))
                     let stderr = BoundedBytes(limit: 64 * 1024)
                     let readFailure = ToolReadFailure()
-                    for (handle, buffer, callback) in [(output.fileHandleForReading, stdout, onOutput), (errors.fileHandleForReading, stderr, nil)] {
+                    for (handle, buffer, callback) in [(output.fileHandleForReading, stdout, onOutput), (errors.fileHandleForReading, stderr, onErrorOutput)] {
                         let queue = DispatchQueue(label: "StaxRip.tool-pipe", qos: .userInitiated)
                         let source = DispatchSource.makeReadSource(fileDescriptor: handle.fileDescriptor, queue: queue)
                         source.setEventHandler { [self] in

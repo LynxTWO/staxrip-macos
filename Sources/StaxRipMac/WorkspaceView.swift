@@ -329,49 +329,61 @@ struct WorkspaceView: View {
     }
 
     private func outputInspector(openSettings: @escaping (String) -> Void) -> some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    WorkspaceRecipeView(configuration: model.config, selectedTab: model.tab, onSelect: openSettings)
-                    Divider()
-                    sectionTitle("Destination", subtitle: "A new file. Your source stays yours.")
-                    settingPicker("Container", selection: $model.config.container, values: ["MKV", "MP4"])
-                    VStack(alignment: .leading, spacing: 8) {
-                        eyebrow("FILE NAME")
-                        HStack(spacing: 4) {
-                            TextField("Output name", text: $model.outputStem).textFieldStyle(.roundedBorder)
-                                .accessibilityLabel("Output file name")
-                            Text("." + model.config.container.lowercased()).foregroundStyle(.secondary)
-                        }.font(.system(size: 12, design: .monospaced))
-                        if let issue = model.outputIssue {
-                            Text(issue).font(.system(size: 11)).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+        ScrollViewReader { outputScroll in
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 22) {
+                        WorkspaceRecipeView(configuration: model.config, selectedTab: model.tab, onSelect: openSettings)
+                        Divider()
+                        sectionTitle("Destination", subtitle: "A new file. Your source stays yours.").id("recipe-destination")
+                        settingPicker("Container", selection: $model.config.container, values: ["MKV", "MP4"])
+                        VStack(alignment: .leading, spacing: 8) {
+                            eyebrow("FILE NAME")
+                            HStack(spacing: 4) {
+                                TextField("Output name", text: $model.outputStem).textFieldStyle(.roundedBorder)
+                                    .accessibilityLabel("Output file name")
+                                Text("." + model.config.container.lowercased()).foregroundStyle(.secondary)
+                            }.font(.system(size: 12, design: .monospaced))
+                            if let issue = model.outputIssue {
+                                Text(issue).font(.system(size: 11)).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                            }
                         }
-                    }
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            eyebrow("FOLDER")
-                            Spacer()
-                            Button("Choose…") { model.chooseOutput() }.buttonStyle(.link).font(.system(size: 11))
-                                .accessibilityLabel("Choose output folder")
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                eyebrow("FOLDER")
+                                Spacer()
+                                Button("Choose…") { model.chooseOutput() }.buttonStyle(.link).font(.system(size: 11))
+                                    .accessibilityLabel("Choose output folder")
+                            }
+                            Label(model.outputFolder.lastPathComponent, systemImage: "folder")
+                                .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true).help(model.outputFolder.path)
                         }
-                        Label(model.outputFolder.lastPathComponent, systemImage: "folder")
-                            .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true).help(model.outputFolder.path)
-                    }
+                    }.padding(20)
+                }
+                Divider()
+                VStack(alignment: .leading, spacing: 9) {
+                    Button { outputScroll.scrollTo("recipe-destination", anchor: .top) } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "doc")
+                            Text(model.outputName).lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 0)
+                            Image(systemName: "pencil").font(.system(size: 10))
+                        }.font(.system(size: 11, weight: .medium))
+                    }.buttonStyle(.plain)
+                        .accessibilityLabel("Review output destination for \(model.outputName)")
+                        .accessibilityHint("Opens the file name, container and folder controls. Current folder: \(model.outputFolder.lastPathComponent).")
+                    Text(model.isDemo ? "Demo recipe · open a source to encode" : "Adds a job without starting it")
+                        .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    Button { model.addToQueue() } label: {
+                        HStack { Image(systemName: "plus"); Text("Add to queue"); Spacer(); Text("⌘J").opacity(0.6) }
+                            .font(.system(size: 12, weight: .semibold)).padding(13)
+                            .foregroundStyle(Color.ink).background(Color.accent, in: RoundedRectangle(cornerRadius: 9))
+                    }.buttonStyle(.plain).disabled(model.loading || model.outputIssue != nil)
+                    Text(batch.tools == nil ? "FFmpeg required to run jobs" : "FFmpeg engine available · review in Queue")
+                        .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(20)
-            }
-            Divider()
-            VStack(alignment: .leading, spacing: 9) {
-                Text(model.isDemo ? "Demo recipe · open a source to encode" : "Adds a job without starting it")
-                    .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                Button { model.addToQueue() } label: {
-                    HStack { Image(systemName: "plus"); Text("Add to queue"); Spacer(); Text("⌘J").opacity(0.6) }
-                        .font(.system(size: 12, weight: .semibold)).padding(13)
-                        .foregroundStyle(Color.ink).background(Color.accent, in: RoundedRectangle(cornerRadius: 9))
-                }.buttonStyle(.plain).disabled(model.loading || model.outputIssue != nil)
-                Text(batch.tools == nil ? "FFmpeg required to run jobs" : "FFmpeg engine available · review in Queue")
-                    .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            }.padding(20)
-        }.background(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+            }.background(Color(nsColor: .controlBackgroundColor).opacity(0.4))
+        }
     }
 
     private var statusBar: some View {

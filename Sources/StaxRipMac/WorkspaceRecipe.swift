@@ -99,11 +99,10 @@ struct WorkspaceRecipeView: View {
             .contentShape(RoundedRectangle(cornerRadius: 11))
         }
         .buttonStyle(.plain)
-        .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(entry.id) recipe: \(AccessibilityLanguage.spokenCodecs(entry.title))")
         .accessibilityValue(selected ? "Editing" : "Not selected")
         .accessibilityHint(AccessibilityLanguage.spokenCodecs(entry.detail) + " Opens \(entry.id.lowercased()) settings.")
         .accessibilityInputLabels([Text(entry.id), Text(entry.title)])
-        .help("Edit \(entry.id.lowercased()) settings")
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 034: Readable semantic appearance
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-061 / R-043.
+Version: 0.1. Date: 2026-10-01. Status: Done with evidence under D-061 / R-043.
 
 SLICE STATE
-Milestone: Reference and call-site discovery complete; implementation not started.
-Blocked by: None. Slice 033 accepted at 3d14456 with hosted run 36851151827.
-Evidence so far: Fixed accent counterexample, native light-mode observation, AppKit dynamic-color documentation and actual tint call sites.
+Milestone: All four gates accepted at 34d6c0d.
+Blocked by: None within this slice.
+Evidence so far: APPEARANCE-CONTRAST-EVIDENCE.md; final local 244 tests, hosted run 36854310994, optimized build and native walkthrough.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

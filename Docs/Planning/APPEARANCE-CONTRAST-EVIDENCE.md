@@ -1,6 +1,6 @@
 # Semantic appearance evidence
 
-Slice 034 under D-061 / R-043 is approved for build, not yet accepted.
+Slice 034 under D-061 / R-043 has scoped acceptance at product head 34d6c0d, hosted run 36854310994.
 
 The original fixed teal has sRGB contrast 2.396:1 on white and 2.049:1 on a 0.93 neutral surface; on a 0.12 dark surface it has 6.912:1. This makes one constant unsuitable for small active text in both appearances. Candidate reference colors and tint math were evaluated before implementation.
 
@@ -25,3 +25,11 @@ The complete picker build passed in 16.33 seconds. Native review confirmed reada
 Hosted run 36852998775 at fcc1a76 failed 10 palette assertions after 490.719 seconds; the other tests passed. Dark and requested increased-dark appearance pairs measured roughly 6.346 through 6.996:1 on that OS, below the retained 7:1 gate. This is a cross-version color failure, not a dispatch timeout. The later picker changes cannot repair it. The revised dark text uses paler teal and amber, and reference checks now include a conservative 0.22 dark and 0.90 light neutral surface in addition to actual window/control resolution and the original references. No original surface, tint or threshold was removed. Bounded test diagnostics report only requested/effective appearance, static RGB surfaces and minimum contrast. The actual hosted surface will be recorded when observed; its earlier value is not inferred from a screenshot.
 
 The revised focused checks passed in 0.022 seconds. Minimum contrast across the local reference matrix is 7.0147:1 in light and 7.2297:1 in dark, including 12 percent tint. The preceding popup-complete local run at 21b4c02 passed 244 tests / 55 suites in 206.513 seconds, but final-head build/native/local/hosted qualification follows the dark palette correction.
+
+At corrected head 34d6c0d, the optimized ad-hoc build passed in 15.66 seconds. Native dark-mode review of the generated collision confirmed the paler accent/warning text, icon and visible remedy; the separate filled-button and segmented colors remain unchanged. Switching back to Light retained the same accessible attention count and correction text. The app exited normally, and output/recovery-journal hashes remain unchanged. Final local regression passed 244 tests / 55 suites in 208.740 seconds. Hosted qualification remains pending.
+
+Intermediate hosted runs 36853406907 at 5427070 and 36853991385 at 21b4c02 also failed exactly the same 10 palette assertions, with no other reported issues, after 501.988 and 549.884 seconds respectively. These runs predate the corrected dark text colors and are retained as failed evidence.
+
+Final hosted run 36854310994 passed all 244 tests in 505.386 seconds. Its resolved light window background is 0.925490 sRGB and dark window background is 0.196078; control backgrounds are 1.0 and 0.117647. Requested increased-contrast appearances again normalize to their ordinary counterparts. Minimum reference contrast is 7.0147:1 light and 7.2297:1 dark, matching the conservative local reference minimum. The actual hosted surface difference is now observed rather than inferred.
+
+All four gates are accepted within their scope: palette-reference has actual dynamic resolution and the old counterexample; palette-native and palette-actions have the generated light/dark walkthrough and retained keyboard actions; palette-regression has final local/hosted tests and the optimized build. Planning audit and diff hygiene close the documentation checkpoint. No full accessibility, calibrated display, owner listening, release or merge claim is made.

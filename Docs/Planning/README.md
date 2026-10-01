@@ -120,3 +120,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Queue outcome evidence](QUEUE-OUTCOMES-EVIDENCE.md) records truthful compact rows, native outcomes, protected outputs and final local/hosted acceptance after bounded caption dispatch qualification.
 
 44. [Slice 034: readable semantic appearance](SLICE-034-appearance-contrast.md).
+
+[Semantic appearance evidence](APPEARANCE-CONTRAST-EVIDENCE.md) records native light/dark actions, cross-version contrast correction and final local/hosted acceptance.

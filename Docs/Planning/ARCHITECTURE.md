@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 043 accepted at ce27093; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select a bounded Quick Export duration verification slice after accepted track inspection.
+Next: Execute Slice 044 Quick Export duration verification under D-082 / R-054.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -174,3 +174,7 @@ Slice 042 is accepted at ba5ba2c under D-080 / R-052, hosted run 36911094620. CA
 Current approved boundary: SLICE-043-track-role-inspection.md under D-081 / R-053. Shared read-only stream presentation connects MediaInspectorView and TrackRoutingView to existing MediaProbe data. Export, persistence and stream-selection ownership remain unchanged.
 
 Slice 043 is accepted at ce27093 under D-081 / R-053, hosted run 36914015358. TRACK-ROLE-EVIDENCE.md records all four gates, the corrected accessibility-label finding and unchanged source/recovery bytes. No content suitability, heard VoiceOver or player qualification is implied.
+
+Current approved boundary: SLICE-044-native-export-duration.md under D-082 / R-054. NativeExportService records finite source duration, reads staged duration after writer completion and applies the existing strict OutputDurationCheck before publication. A process-local native contract and bounded DEBUG-only fault seam retain existing controller, staging and publication ownership.
+
+Slice 044 is accepted at f385cec under D-082 / R-054, hosted run 36916404356. NATIVE-DURATION-EVIDENCE.md records all four gates, real shortened/extended-output refusal, successful retry, optimized native output and ordinary local/hosted checks. Aggregate duration is narrower than decoded completeness, individual-track timing, A/V sync and source stability.

@@ -98,6 +98,8 @@ struct QuickExportView: View {
                         }
                     }
                 }.padding(22).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 14))
+                Text("Before saving, Quick Export checks for readable video and a total duration difference of less than 250 milliseconds from the source. This does not check every frame or audio/video synchronization.")
+                    .font(.caption).foregroundStyle(.secondary)
                 Text("Native export uses AVFoundation. Format support, frame dimensions, HDR handling and audio conversion follow the selected Apple preset; this is not a precision archival workflow.")
                     .font(.caption).foregroundStyle(.secondary)
             }.padding(30)

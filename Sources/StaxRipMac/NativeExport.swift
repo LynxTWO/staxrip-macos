@@ -28,6 +28,13 @@ enum NativeExportError: LocalizedError {
     var errorDescription: String? { if case .invalid(let message) = self { return message }; return nil }
 }
 
+#if DEBUG
+enum NativeExportTestBoundary {
+    // Generated fault fixtures may replace only the settled writer's owned output.
+    @TaskLocal static var beforeVerification: (@MainActor @Sendable (URL) async throws -> Void)?
+}
+#endif
+
 // Publication uses a same-volume hard link: the completed result becomes visible
 // atomically, and an existing destination (including a symlink) is never replaced.
 struct ExportPublication {
@@ -170,6 +177,7 @@ final class NativeExportService {
         guard !(try await asset.loadTracks(withMediaType: .video)).isEmpty else {
             throw NativeExportError.invalid("The source contains no readable video track.")
         }
+        let duration = try NativeExportDuration(sourceSeconds: await asset.load(.duration).seconds)
         try checkCancellation()
         guard let export = AVAssetExportSession(asset: asset, presetName: preset.avPreset), export.supportedFileTypes.contains(.mp4) else {
             throw NativeExportError.invalid("This video is not compatible with the selected native preset.")
@@ -210,10 +218,15 @@ final class NativeExportService {
             }
             try checkCancellation()
             // Validate the staged media before making it visible at the chosen name.
+            #if DEBUG
+            try await NativeExportTestBoundary.beforeVerification?(staged)
+            #endif
+            try checkCancellation()
             let result = AVURLAsset(url: staged)
             guard !(try await result.loadTracks(withMediaType: .video)).isEmpty else {
                 throw NativeExportError.invalid("The exported file contains no readable video.")
             }
+            try duration.verify(actual: await result.load(.duration).seconds)
             try checkCancellation()
             poll.cancel()
             finishing()

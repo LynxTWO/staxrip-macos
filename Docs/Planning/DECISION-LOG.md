@@ -91,6 +91,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-079 | 2026-10-01 | Scope idle-sleep prevention to active video exports | Confirmed | |
 | D-080 | 2026-10-01 | Verified MKV caption playback choices | Confirmed | |
 | D-081 | 2026-10-01 | Read-only track identity and role inspection | Confirmed | |
+| D-082 | 2026-10-01 | Verify native Quick Export total duration | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1286,3 +1287,22 @@ Consequences: Pure presentation helper and two existing views only, with proport
 Revisit when: Native readability or selection behavior regresses, actual probe fields contradict displayed roles, or broader flag/editing semantics are needed.
 
 D-081 outcome: Slice 043 accepted at ce27093, ordinary hosted run 36914015358. Five declared roles and bounded identity labels passed actual source, native selection and ordinary regression checks. Native inspection caught and corrected inherited accessibility labels before acceptance. Owner files and recovery state stayed unchanged.
+
+
+## D-082: Verify native Quick Export total duration
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 044 / R-054 after Slice 043 acceptance under the owner's autonomous non-audio completion delegation. Delegated to AI recommendation.
+
+Need: avoid reporting a materially shortened or extended Quick Export as complete. Authority: owner native encoder completion direction, Engineering principle 4 and Architecture section 10's native export extension. Worst case: a user relies on a truncated result as a complete export. Consequence class: user_data. This is a justified verification improvement, not a demonstrated AVFoundation truncation defect.
+
+Source fact: the one NativeExport.swift service file checks source and result loadTracks, with zero duration reads. The two loadTracks calls and publishAsync are positive sentinels; this absence claim excludes other modules and the OS. Existing native tests compare duration, but the runtime does not. Apple's asynchronous asset API exposes duration through load(.duration): https://developer.apple.com/documentation/avfoundation/loading-media-data-asynchronously . It is reported aggregate timing, not decoded completeness.
+
+Alternatives: rely on completed export plus readable video; decode every frame with a new audit; capture reported duration and reuse the existing fixed strict allowance. Choose the last. OutputDurationCheck already rejects differences of 0.250 seconds or more; native source duration must additionally be finite and positive before staging.
+
+Consequences: Hold one immutable source duration per export and compare the staged result after writer completion, before finishing/publication. Retain cancellation, idle-sleep lifetime, cleanup and no-overwrite semantics. R-054 explicitly bounds a DEBUG-only pre-verification substitution seam and generated shorter/longer negative controls plus real retry. No source mutation, persisted fields, dependency, DSP, deadline, scheduling, merge or release changes. The historical hosted mastering cancellation recurrence still reopens qualification without blind retries.
+
+Revisit when: Apple's supported preset behavior violates the strict duration rule, source timing is unavailable, cancellation/cleanup changes, or broader track/completeness claims are proposed.
+
+D-082 outcome: Slice 044 is accepted at f385cec under D-082 / R-054, hosted run 36916404356. NATIVE-DURATION-EVIDENCE.md records all four gates, real shortened/extended-output refusal, successful retry, optimized native output and ordinary local/hosted checks. Aggregate duration is narrower than decoded completeness, individual-track timing, A/V sync and source stability.

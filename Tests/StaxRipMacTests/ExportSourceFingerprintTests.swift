@@ -98,10 +98,28 @@ struct ExportSourceFingerprintTests {
         }
     }
     private final class Gate: @unchecked Sendable {
-        let entered = DispatchSemaphore(value: 0), release = DispatchSemaphore(value: 0)
+        let release = DispatchSemaphore(value: 0)
+        private let entered: AsyncStream<Bool>
+        private let entrySignal: AsyncStream<Bool>.Continuation
         let lock = NSLock(); var finished = false
-        func finish() { lock.lock(); finished = true; lock.unlock() }
-        func isFinished() -> Bool { lock.lock(); defer { lock.unlock() }; return finished }
+        init() {
+            let pair = AsyncStream<Bool>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            entered = pair.stream; entrySignal = pair.continuation
+        }
+        func signalEntry() { entrySignal.yield(true); entrySignal.finish() }
+        func waitForEntry(observe: (@Sendable (String) -> Void)? = nil) async -> Bool {
+            observe?("submitting worker")
+            var iterator = entered.makeAsyncIterator()
+            let observed = await iterator.next() ?? false
+            observe?("worker entered")
+            return observed
+        }
+        func finish() {
+            lock.withLock { finished = true }
+            // An unexpected read failure must also release the entry observer.
+            entrySignal.finish()
+        }
+        func isFinished() -> Bool { lock.withLock { finished } }
     }
     @Test(.timeLimit(.minutes(1))) func cancellationAwaitsWorkerAndAlreadyCancelledNeverReads() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
@@ -110,13 +128,12 @@ struct ExportSourceFingerprintTests {
         let task = Task {
             defer { gate.finish() }
             return try await ExportSourceFingerprint.read(file) { count, _ in
-                if count == 0 { gate.entered.signal(); gate.release.wait() }
+                if count == 0 { gate.signalEntry(); gate.release.wait() }
             }
         }
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global().async { gate.entered.wait(); continuation.resume() }
-        }
+        let observed = await gate.waitForEntry()
         task.cancel()
+        #expect(observed)
         #expect(!gate.isFinished())
         gate.release.signal()
         await #expect(throws: CancellationError.self) { try await task.value }
@@ -128,4 +145,24 @@ struct ExportSourceFingerprintTests {
         await #expect(throws: CancellationError.self) { try await cancelled.value }
         #expect(try Data(contentsOf: file) == Data(repeating: 7, count: 2 * 1024 * 1024))
     }
+    #if DEBUG
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["STAXRIP_SOURCE_ENTRY_STRESS"] == "1"), .timeLimit(.minutes(1)))
+    func sourceCancellationEntryObserverStartsDuringBoundedCPUContention() async throws {
+        let count = ProcessInfo.processInfo.activeProcessorCount
+        try #require((2...32).contains(count))
+        let load = WorkerContentionLoad(count: count), gate = Gate()
+        // Isolate the existing observer dispatch; the worker-entry signal is ready.
+        gate.signalEntry()
+        let observed = await gate.waitForEntry(observe: { load.observe($0) })
+        await load.settle()
+        #expect(observed)
+        let timing = load.lock.withLock { (load.ready, load.submitted, load.worker) }
+        try #require(timing.0)
+        let submitted = try #require(timing.1), entered = try #require(timing.2)
+        let delay = submitted.duration(to: entered)
+        print("SOURCE_ENTRY_CONTENTION CPUs=\(count) submitted-to-observer=\(delay)")
+        #expect(delay < .seconds(1))
+    }
+    #endif
+
 }

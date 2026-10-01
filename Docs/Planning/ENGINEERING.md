@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select the next non-audio slice after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
+Next: Slice 033 queue outcomes under D-059 / R-041, after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -268,3 +268,7 @@ Approved R-038 under D-053: preserve requested priority and own final-publicatio
 Approved R-039 under D-055: own regular-source admission dispatch with inherited task priority and a per-ToolRunner initiated control queue for launch/notify/escalation. S31-009 binds bounded actual-operation counterexamples and unchanged source/process lifecycle plus full/native regression.
 
 Approved R-040 under D-057: bounded silent original/filtered motion comparison. S32-001 through S32-006 bind motion-timing, motion-picture, motion-admission, motion-lifecycle, motion-native and motion-regression gates. Consequence: local_only derived media in uniquely owned temporary storage; no publication or changes to user files. Requires parser/sink negative controls, real source/child/player settlement, independent media verification and full local/native/hosted checks.
+
+Approved R-041 under D-059: truthful queue outcome summary and compact review. S33-001 through S33-005 bind queue-outcomes, queue-presentation, queue-actions, queue-ownership and queue-regression. Consequence: user_data through existing execution/publication controls, with a read-only presentation change. No new persistence or automatic execution.
+
+Approved R-042 under D-060: determine whether actual subtitle dispatch and the cancellation test entry waiter are delayed under bounded CPU contention. Need trace: decision is scoped dispatch/event repair versus further investigation; consequence is user_data through existing caption reads plus truthful cancellation evidence. Baseline is failing hosted run 36848579493 and unchanged one-minute gates. Use existing opt-in three-second CPU work, debug-only actual worker observations and test-only entry timing. Accept only meaningful negative/positive evidence with the original assertions and joined fixture lifetime; stop at non-reproduction or a different boundary. No default scheduling, deadlines, source fingerprint algorithm, caption parser or DSP changes. This requirement is part of S33-005, not a separate acceptance bypass.

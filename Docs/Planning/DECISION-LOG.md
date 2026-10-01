@@ -68,6 +68,8 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-056 | 2026-10-01 | Retire temporary hosted dispatch tracing | Confirmed | |
 | D-057 | 2026-10-01 | Silent shared-timeline motion comparison | Confirmed | |
 | D-058 | 2026-10-01 | Comparison-specific native transport | Confirmed | |
+| D-059 | 2026-10-01 | Truthful compact queue outcomes | Confirmed | |
+| D-060 | 2026-10-01 | Qualify subtitle dispatch and cancellation observation | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -896,3 +898,33 @@ Options considered: retain generic skips; depend on the ineffective customizatio
 Consequences: Keep one player and timeline. Frame steps and seeks resolve to the verified rational frame sequence; playback position observation is app-owned and removed before player detach/cleanup. Expose play/pause, previous/next comparison frame, timeline and current frame through native accessible controls. Preserve the ordinary source player's behavior. Test transport bounds/stale observer ownership and repeat native play/pause/seek/frame-step, keyboard/appearance and cleanup checks. No renderer, source admission, DSP or persistent-state change.
 
 Revisit when: Native transport does not track actual playback, seeks differ from verified frames, or close leaves an observer or player item alive.
+
+
+## D-059: Truthful compact queue outcomes
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 033 and R-041 under owner overnight autonomous non-audio and design delegation. Delegated to AI recommendation.
+
+Because: Native multi-job inspection showed a static readiness headline after completion and oversized completed cards. Routine detail competes with current outcomes.
+
+Options considered: cosmetic restyling only; a new queue engine; read-only outcome presentation with progressive detail. Choose the third.
+
+Consequences: Derive counts and headings from current job IDs and actual statuses. Preserve saved output plus cleanup warning as separate facts, including the established legacy detail marker. Compact normal rows but keep errors, cleanup warnings and active progress visible. Retain editing, duplicate/reorder/remove, explicit access review and output reveal under existing guards. No execution, schema, retry or publication policy change. Verify state counterexamples, real cleanup/recovery outcomes, native multi-job success/failure/removal and full regression before acceptance.
+
+Revisit when: Presentation disagrees with controller outcomes, warnings become hidden, keyboard controls regress, or a schema change becomes necessary.
+
+
+## D-060: Qualify subtitle dispatch and cancellation observation
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Extend the active Slice 033 regression boundary with R-042 under owner autonomous non-audio delegation. Delegated to AI recommendation. Hold palette and preview-layout implementation until this gate closes.
+
+Because: Hosted run 36848579493 at e1db5d9 failed the unchanged one-minute source-cancellation and bounded external-subtitle reader tests. Both reported about 77 seconds. The preceding hosted run and final local run passed. Source reading already owns its worker, but the cancellation test waits for entry through a global dispatch queue. ExternalSubtitle.read still dispatches its real bounded read onto the global utility queue. The failure log alone does not establish either boundary as the cause.
+
+Options considered: rerun until green; widen limits or serialize default tests; qualify the two identified shared-dispatch boundaries with bounded negative controls. Choose qualification.
+
+Consequences: Reuse the existing explicit three-second CPU-contention fixture, two through 32 CPUs, sequentially and outside default tests. Add debug-only actual subtitle body/submission/worker observations, and test-only observation of the existing source-cancellation entry waiter. Require actual behavior, unchanged input/output and child settlement; timing at a wrapper is insufficient. If the dispatch delay reproduces, move subtitle I/O to a per-read owned queue preserving requested task priority, and replace the test's blocking global entry waiter with an asynchronous event. Keep the source worker's intentional hold/release assertion, cancellation checks, caption bounds/access/descriptor lifetime, all deadlines and default scheduling. Join every owned load/read before deleting fixtures. Then run focused, full local/hosted and native external-caption checks. No DSP, general scheduler change, kernel-wait claim or broad harness.
+
+Revisit when: Controlled paths do not reproduce the delay, file/cancellation semantics change, or the unchanged full gate identifies another boundary.

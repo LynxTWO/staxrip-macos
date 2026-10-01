@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select the next non-audio slice after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
+Next: Slice 033 queue outcomes under D-059 / R-041, after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -129,3 +129,7 @@ Owner approved D-017 and Slice 004. HDR10Audit supplies an immutable process-loc
 Current approved build boundary: SLICE-031-apfs-capacity.md under D-045 through D-056 / R-035 through R-039. Scope includes a bounded generated APFS fixture, publication recovery wording, owned priority-preserving source/admission/publication workers, owned subprocess control and qualified regression diagnostics. Existing owner volumes and DSP changes are excluded. All nine criteria have scoped acceptance at a940665 and plain hosted run 36840667407.
 
 Latest accepted boundary: SLICE-032-motion-preview.md at 5e9effa, hosted run 36845548454. The bounded renderer and app-owned player/temporary-file lifecycle reuse PicturePlan, source identity, ToolRunner and native AVPlayerView. MOTION-PREVIEW-EVIDENCE.md records the scoped acceptance and limits.
+
+Current approved boundary: SLICE-033-queue-outcomes.md. Add read-only outcome presentation and compact native review to the existing QueueView. Controller, file-access, session and journal contracts remain unchanged.
+
+D-060 / R-042 extends Slice 033 only at actual external-caption I/O dispatch and the cancellation test's entry-observation boundary. Queue presentation qualification remains intact, but full acceptance is held after hosted run 36848579493. Contrast discovery is retained locally and is not active implementation.

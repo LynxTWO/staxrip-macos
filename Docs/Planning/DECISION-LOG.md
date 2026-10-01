@@ -58,6 +58,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-046 | 2026-10-01 | Observe recurring hosted timing failures | Confirmed | |
 | D-047 | 2026-10-01 | Compare isolated hosted video timing | Confirmed | |
 | D-048 | 2026-10-01 | Identify the delayed export boundary | Confirmed | |
+| D-049 | 2026-10-01 | Distinguish source reader entry and worker delay | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -743,3 +744,17 @@ Options considered: promote workers without proof; change test scheduling; inclu
 Consequences: R-035 permits only bounded detail/progress/publication observations for the existing three-job test. No new fixture, injected worker, product code, scheduling, deadline or assertion change. Keep focused and full results separate. Source fingerprints and publication currently use utility dispatch queues while tool workers use userInitiated. Apple documents resource priority differences, but this is not evidence that a particular queue starved: https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/PrioritizeWorkAtTheTaskLevel.html, reviewed 2026-10-01.
 
 Revisit when: The trace identifies a boundary or fails to discriminate. A product repair still requires its own scope and negative/positive evidence.
+
+## D-049: Distinguish source reader entry and worker delay
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Add one bounded forwarding observation to the existing generated destination test under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: D-048 locates a 28.306-second prepublication recheck of a 20 KB source. A concurrent stack sample contains no active fingerprint scan. Worker priority and asynchronous reader entry remain different possible causes.
+
+Options considered: change worker priority speculatively; change the reader executor speculatively; observe entry, first/final progress and completion around the real reader. Choose observation.
+
+Consequences: R-035 permits a test-only forwarding reader for the existing three-job case, at most 32 timing messages, forwarding unchanged callbacks and invoking the production fingerprint implementation. No waits, fake fingerprints, fixture changes, deadlines, test scheduling changes, production or audio changes. Retain focused/local and unchanged full hosted checks separately.
+
+Revisit when: Entry/worker timing identifies a repair boundary, or observation does not discriminate. Further product changes require a recorded scope.

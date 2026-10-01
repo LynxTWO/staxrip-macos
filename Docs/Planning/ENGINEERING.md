@@ -256,3 +256,5 @@ D-046 extends R-035 regression diagnosis with one bounded read-only hosted test-
 D-047 adds one focused hosted comparison under R-035, using unchanged affected non-audio suites before the full test gate. Diagnostic success alone is not acceptance; no product, DSP, fixture, scheduling or deadline changes are included.
 
 D-048 extends R-035 with bounded production-status observations in the existing generated destination test. Every fixture, assertion, time limit and scheduling policy remains unchanged. Worker-priority changes are not yet authorized.
+
+D-049 extends R-035 with at most 32 timing messages around the unchanged production source reader in the existing generated destination test. Forward callbacks without waits or fake results; no executor or worker-priority repair is authorized yet.

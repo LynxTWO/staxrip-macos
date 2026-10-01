@@ -88,6 +88,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-076 | 2026-10-01 | Preserve complete frame audits with compact JSON | Confirmed | |
 | D-077 | 2026-10-01 | Locate existing cancellation settlement delay | Confirmed | |
 | D-078 | 2026-10-01 | Preserve declared ten-bit SDR HEVC during video copy | Confirmed | |
+| D-079 | 2026-10-01 | Scope idle-sleep prevention to active video exports | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1226,3 +1227,22 @@ Consequences: Main 10, yuv420p10le, declared bt709 primaries/transfer/matrix and
 Revisit when: Complete picture/packet metadata differ, color declarations are incomplete, a broader source format is requested, or ordinary regression contradicts acceptance.
 
 D-078 outcome: Slice 040 accepted at 23583c3, ordinary hosted run 36904515988. All six gates passed with strict ten-bit references, actual-controller and native output evidence. Earlier unexplained mastering cancellation delays remain unresolved; no DSP, playback certification, merge or release claim.
+
+
+## D-079: Scope idle-sleep prevention to active video exports
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 041 / R-051 after Slice 040 acceptance under the owner's autonomous non-audio completion delegation. Delegated to AI recommendation.
+
+Need: Long video exports should request uninterrupted processing during ordinary system idleness, then restore normal power policy after all work settles. Authority: owner autonomous encoder completion and overnight-work direction. Consequence: local_only temporary energy use; original export/publication contracts remain user_data controls.
+
+Evidence: BatchController.start owns its task through cleanup and journal settlement; NativeExportService.export owns its callback, staged verification, publication and cleanup. A focused search of these two source files for beginActivity/endActivity has zero matches, with start/export as positive ownership sentinels. Other processes, frameworks and power sources are outside this absence claim. Apple documents beginActivity/endActivity and idleSystemSleepDisabled; actual per-process assertions need M1 confirmation.
+
+Alternatives: rely on external caffeinate, leaving ordinary app users without explicit ownership; change permanent sleep settings, affecting unrelated work; or hold only a temporary Foundation token for the accepted export lifetime. Select the last with only idleSystemSleepDisabled, without QoS, display or termination flags.
+
+Consequences: Five bounded gates cover the real OS request, balanced actual queue/native lifetimes including refusal/cancellation/cleanup, native guidance and unchanged regression. No permanent preferences, lock/display suppression, audio processing, new schema, dependency, forced-sleep test or release. Matching end happens after settlement, never on cancel request alone. The existing hosted mastering cancellation issue remains an independent reopen trigger.
+
+Revisit when: Tokens outlive work, overlapping activities cancel each other, the specific OS flag changes scheduling, existing gates fail, or broader sleep/power behavior is requested.
+
+D-079 outcome: Slice 041 accepted at c54f915, hosted run 36907486989. Temporary idle-sleep requests were independently observed during native queue and Quick Export work and absent after settlement. All five gates passed; no permanent system, display/lock, QoS, DSP or release changes.

@@ -132,11 +132,14 @@ struct ExportStaging {
 final class NativeExportService {
     private let removeStaging: (URL) async throws -> Void
     private let publishOperation: @Sendable (URL, URL) throws -> Void
+    private let beginActivity: ExportActivity.Factory
 
     init(removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) },
-         publishOperation: @escaping @Sendable (URL, URL) throws -> Void = { try ExportPublication.publish(staged: $0, destination: $1) }) {
+         publishOperation: @escaping @Sendable (URL, URL) throws -> Void = { try ExportPublication.publish(staged: $0, destination: $1) },
+         beginActivity: @escaping ExportActivity.Factory = ExportActivity.begin) {
         self.removeStaging = removeStaging
         self.publishOperation = publishOperation
+        self.beginActivity = beginActivity
     }
 
     private var session: AVAssetExportSession?
@@ -152,7 +155,8 @@ final class NativeExportService {
         guard !active else { throw NativeExportError.invalid("An export is already running.") }
         active = true
         cancelled = false
-        defer { active = false; session = nil }
+        let endActivity = beginActivity("StaxRip native video export")
+        defer { endActivity(); active = false; session = nil }
         guard source.isFileURL, destination.isFileURL, destination.pathExtension.lowercased() == "mp4" else {
             throw NativeExportError.invalid("Choose a local video and an MP4 destination.")
         }

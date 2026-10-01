@@ -70,6 +70,8 @@ struct QuickExportView: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         } else { ProgressView(value: exporter.progress) }
                         Text(exporter.sourceName).font(.caption).foregroundStyle(.secondary)
+                        Label(ExportActivity.explanation, systemImage: "moon.zzz")
+                            .font(.caption).foregroundStyle(.secondary).accessibilityElement(children: .combine)
                     }
                     if let error = exporter.failure { Text(error).font(.callout).foregroundStyle(Color.warning).textSelection(.enabled) }
                     if let url = exporter.result {

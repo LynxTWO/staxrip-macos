@@ -52,17 +52,21 @@ struct BatchCleanupTests {
         let source = try Data(contentsOf: URL(fileURLWithPath: job.source))
         let next = second(job), journal = root.appendingPathComponent("journal.json")
         var attempted: [URL] = []
+        let activity = ExportActivityRecorder()
         let batch = BatchController(journalURL: journal, publishOutput: { staged, destination in
+            #expect(activity.active == 1)
             // Reproduce the former helper cutoff without relying on runner scheduling.
             try await Task.sleep(for: .seconds(16))
             try await ExportPublication.publishAsync(staged: staged, destination: destination)
         }, removeStaging: { directory in
+            #expect(activity.active == 1)
             attempted.append(directory)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
-        })
+        }, beginActivity: activity.begin)
         activeBatch = batch
         batch.tools = tools; batch.encoders = ["libx264"]; batch.start([job, next])
         try await finish(batch)
+        activity.expectSettled()
         let status = try #require(batch.statuses[job.id])
         #expect(status.phase == "Completed"); #expect(status.progress == 1)
         #expect(status.destination == URL(fileURLWithPath: job.destination))
@@ -113,7 +117,9 @@ struct BatchCleanupTests {
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
         let next = second(job), journal = root.appendingPathComponent("journal.json")
         var attempted: [URL] = []
+        let activity = ExportActivityRecorder()
         let batch = BatchController(journalURL: journal, removeStaging: { directory in
+            #expect(activity.active == 1)
             attempted.append(directory)
             let pidText = try String(contentsOf: directory.appendingPathComponent("writer.pid"), encoding: .utf8)
             let pid = try #require(Int32(pidText))
@@ -121,7 +127,7 @@ struct BatchCleanupTests {
             #expect(alive == -1, "Writer must settle before cleanup")
             #expect(code == ESRCH)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(EACCES))
-        })
+        }, beginActivity: activity.begin)
         activeBatch = batch
         var probeTool = tools.ffprobe
         if cancel {
@@ -150,8 +156,10 @@ struct BatchCleanupTests {
             try #require(started && batch.running && batch.statuses[job.id]?.phase == "Encoding",
                          "Cancellation requires a live started writer; preflight failure is not cleanup evidence")
             batch.cancel()
+            #expect(activity.active == 1, "Cancel request must retain the activity through writer settlement and cleanup")
         }
         try await finish(batch)
+        activity.expectSettled()
         let status = try #require(batch.statuses[job.id])
         #expect(status.phase == (cancel ? "Cancelled" : "Failed"))
         #expect(status.destination == nil); #expect(status.detail.contains("No output was published"))

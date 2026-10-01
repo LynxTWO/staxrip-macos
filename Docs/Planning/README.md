@@ -140,3 +140,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 49. [Slice 039: licensed full-film video qualification](SLICE-039-full-film-video.md) and [evidence](FULL-FILM-VIDEO-EVIDENCE.md), accepted at 542fde3 under D-075 through D-077 / R-049.
 
 50. [Slice 040: ten-bit SDR HEVC video copy](SLICE-040-ten-bit-video-copy.md) and [evidence](TEN-BIT-COPY-EVIDENCE.md), accepted at 23583c3 under D-078 / R-050.
+
+51. [Slice 041: active export idle-sleep lifetime](SLICE-041-export-sleep-lifetime.md) and [evidence](EXPORT-SLEEP-EVIDENCE.md), accepted at c54f915 under D-079 / R-051.

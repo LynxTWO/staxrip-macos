@@ -135,6 +135,9 @@ struct SubRipCue: Equatable, Sendable {
 }
 
 struct SubRipDocument: Equatable, Sendable {
+    #if DEBUG
+    @TaskLocal static var observeSnapshotBoundary: (@Sendable (String) -> Void)?
+    #endif
     static let inputLimit = 1_048_576
     static let outputLimit = 2_097_152
     static let maximumTime: Int64 = 48 * 60 * 60 * 1000
@@ -267,10 +270,24 @@ struct SubRipDocument: Equatable, Sendable {
     }
 
     func writeSnapshot(to url: URL) async throws {
+        #if DEBUG
+        let observe = Self.observeSnapshotBoundary
+        observe?("body entered")
+        #endif
         try Task.checkCancellation()
         let bytes = canonicalData
+        let priority = Task.currentPriority
+        let qos: DispatchQoS.QoSClass = priority >= .high ? .userInitiated :
+            priority >= .medium ? .default : priority >= .low ? .utility : .background
+        let worker = DispatchQueue(label: "StaxRip.caption-snapshot", qos: DispatchQoS(qosClass: qos, relativePriority: 0))
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .utility).async {
+            #if DEBUG
+            observe?("submitting worker")
+            #endif
+            worker.async {
+                #if DEBUG
+                observe?("worker entered")
+                #endif
                 do {
                     try bytes.write(to: url, options: .withoutOverwriting)
                     continuation.resume()

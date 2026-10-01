@@ -284,3 +284,21 @@ Approved R-046 under D-065: diagnose the existing publication observation timeou
 R-046 / D-066 narrows the repair to actor isolation of one pure-storage stress fixture and its stateless helpers. Preserve the same workload and every guard; add a non-main-thread assertion. Default parallel scheduling and all publication time limits remain fixed. Production publication, validation and audio code are unchanged. Hosted correlated diagnostics must still be examined, and temporary traces removed before ordinary-gate acceptance.
 
 Approved R-047 under D-067: explicit verified original-video copy. S37-001 through S37-006 bind copy-intent, copy-audit, copy-timeline, copy-publication, copy-native and copy-regression. Consequence is a newly exported user file, so immutable captured expectations, complete packet comparison, bounded private staging, settled cancellation and exclusive publication are required. Do not infer whole-file losslessness, arbitrary container semantics or owner listening acceptance. Keep all original transcode guards and schemas.
+
+Approved R-048 under D-068: ordered external SRT tracks with per-track immutable capture and output verification. S38-001 through S38-006 bind caption-list-intent, caption-list-plan, caption-list-export, caption-list-refusal, caption-list-native and caption-list-regression. Consequence is saved user intent and newly exported media; version compatibility, complete list/snapshot pairing, explicit stream ordinals, bounded file lifetimes and exclusive publication are required. Existing embedded routing guards remain unchanged; no full embedded-caption payload claim.
+
+R-048 / D-069 keeps byte-exact caption titles through a private bounded FFmetadata stream-section snapshot rather than normalized process arguments. Source evidence is a minimal Foundation Process byte comparison and actual strict-output refusals. Existing ToolRunner and equality policy remain unchanged; include literal Unicode/delimiter output tests and corrected chapter input indices.
+
+R-048 / D-070 replaces the rejected FFmetadata-section implementation with literal bounded title argument files consumed by FFmpeg's documented slash-prefixed option syntax. No extra demux inputs or source stream metadata remapping remain. Preserve the original chapter input formula and exact added-title/cue comparisons; retain failed delimiter and metadata experiments as evidence.
+
+R-048 / D-071 permits bounded temporary cancellation-entry timestamps and a same-runner focused comparison. Preserve ordinary full-suite failure, scheduling, deadlines and all settlement/publication assertions. This is diagnosis, not acceptance or permission to alter unrelated worker scheduling.
+
+R-048 / D-072 isolates actual SubRip snapshot dispatch under bounded CPU contention. A measured failure permits only the matching owned priority-preserving worker repair; no deadline or ordinary scheduling changes. Original snapshot bytes, exclusive creation and settled cancellation remain mandatory.
+
+R-048 / D-073 extends bounded temporary diagnosis to actual batch preparation/verification entry and return boundaries. No task priority, scheduling, deadline or fixture changes; acceptance remains blocked by the ordinary hosted entry failure.
+
+R-048 remains unaccepted after D-073: actual snapshot writes are prompt, but aggregate preparation/encoding consumes the entry window under hosted load. CAPTION-ENTRY-REFRAME.md records the unresolved owner decision; no further harness or product expansion while this gate is open.
+
+R-048 / D-074: owner approval reopens the phase-specific cancellation qualification. Preserve the two-minute case and data/process assertions; 90 seconds for first-verifier preparation, ten seconds for observed-first-to-second verifier entry, ten seconds for settled cancellation. Shared wait logic must reject a deliberate stalled preparation and always join owned work before cleanup. No production or suite-scheduling changes.
+
+R-048 acceptance: all S38-001 through S38-006 gates passed at 2f8cea7 under D-074, ordinary hosted run 36893266046. Sources/workflow match the optimized/native-qualified 6c471b7 product; full local/hosted runs each report 266 tests. Preserve the superseded startup-guard failures as evidence, without a ten-second aggregate throughput claim.

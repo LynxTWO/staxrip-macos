@@ -149,3 +149,7 @@ Slice 036 now has scoped acceptance at product content e2d1152 / ordinary qualif
 Current approved boundary: SLICE-037-video-copy.md under D-067 / R-047. EncodePlan carries a process-local video-copy contract alongside existing output checks; an owned bounded packet manifest supplies complete source/output comparison before publication. Existing configuration enum values express the operation without a new persisted field. BatchController remains the lifecycle/publication owner.
 
 Slice 037 is accepted at 22dc1ed under D-067 / R-047, with native output/recipe checks, ordinary local 254-test acceptance and hosted run 36868164452. Packet timing tolerance remains at one source/output tick, each at most one millisecond; VFR Matroska conversions that change packet durations are refused. See VIDEO-COPY-EVIDENCE.md.
+
+Current approved boundary: SLICE-038-multiple-captions.md under D-068 / R-048. EncodeConfiguration centralizes a bounded ordered reference list while retaining the existing first-reference field. SessionDocument and BatchJournal provide explicit new-version boundaries. EncodePlan owns added stream ordinals and immutable export snapshots; BatchController remains the sole execution/publication owner.
+
+Slice 038 has scoped acceptance at 2f8cea7 under D-068 through D-074 / R-048, ordinary hosted run 36893266046. D-074 changes test-phase budgets only; production boundaries and owned cancellation/publication remain those of 6c471b7.

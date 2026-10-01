@@ -6,7 +6,9 @@ struct EncodePlan: Sendable {
     let chapterPlan: ChapterPlan
     let outputGeometry: OutputGeometry
     let outputDisplayAspect: OutputDisplayAspect
-    let externalSubtitle: ExternalSubtitleExport?
+    let externalSubtitles: [ExternalSubtitleExport]
+    var externalSubtitle: ExternalSubtitleExport? { externalSubtitles.first }
+    let captionTitles: [Data]
     let videoCopy: VideoCopyContract?
     let expectedCodec: String
     let expectedAudio: String?
@@ -19,18 +21,27 @@ struct EncodePlan: Sendable {
     let summary: String
 
     static func make(job: QueueJob, probe: MediaProbe, encoders: Set<String>, staged: URL, hdr: HDR10Contract? = nil,
-                     externalDocument: SubRipDocument? = nil) throws -> EncodePlan {
+                     externalDocument: SubRipDocument? = nil, externalSnapshots: [ExternalCaptionSnapshot]? = nil) throws -> EncodePlan {
         try SessionDocument.validate(job.configuration)
         guard !job.isDemo else { throw NativeExportError.invalid("Demo configurations cannot be encoded. Open a real source first.") }
         guard let video = probe.video else { throw NativeExportError.invalid("This queue currently requires a video source.") }
         let c = job.configuration
         let copyingVideo = c.copiesVideo
         let videoCopy = copyingVideo ? try VideoCopyContract.make(probe: probe, configuration: c) : nil
-        if c.externalSubtitle != nil {
-            guard let externalDocument else { throw SubRipDocument.failure("A fresh validated caption snapshot is required before planning this job.") }
-            try externalDocument.validateTimeline(probe: probe, configuration: c)
-        } else if externalDocument != nil {
-            throw SubRipDocument.failure("A caption snapshot was supplied without an external track selection.")
+        guard externalDocument == nil || externalSnapshots == nil else {
+            throw SubRipDocument.failure("Conflicting caption snapshot inputs.")
+        }
+        let snapshots = externalSnapshots ?? externalDocument.map { document in
+            c.externalSubtitle.map { [ExternalCaptionSnapshot(reference: $0, document: document)] } ?? []
+        } ?? []
+        guard snapshots.count == c.externalCaptions.count,
+              snapshots.map(\.reference) == c.externalCaptions,
+              externalDocument == nil || c.externalCaptions.count == 1 else {
+            throw SubRipDocument.failure("A fresh matching snapshot is required for every ordered caption reference.")
+        }
+        for (index, snapshot) in snapshots.enumerated() {
+            do { try snapshot.document.validateTimeline(probe: probe, configuration: c) }
+            catch { throw ExternalCaptionSnapshot.failure(error, reference: snapshot.reference, index: index) }
         }
         let picture = c.picture
         let preservingHDR = c.colorMode == "Preserve static HDR10"
@@ -71,9 +82,13 @@ struct EncodePlan: Sendable {
         let audio = try selectedStreams(probe, type: "audio", indices: c.audioTracks)
         let subtitles = try selectedStreams(probe, type: "subtitle", indices: c.subtitleTracks)
         let keepSubtitles = c.subtitleMode == "Keep embedded tracks"
-        let external = try c.externalSubtitle.map {
-            ExternalSubtitleExport(reference: $0, document: try externalDocument!.forExport(probe: probe, configuration: c), ordinal: keepSubtitles ? subtitles.count : 0,
-                                   codec: c.container == "MP4" ? "mov_text" : "subrip")
+        let external = try snapshots.enumerated().map { index, snapshot in
+            do {
+                return ExternalSubtitleExport(reference: snapshot.reference,
+                    document: try snapshot.document.forExport(probe: probe, configuration: c),
+                    ordinal: (keepSubtitles ? subtitles.count : 0) + index,
+                    codec: c.container == "MP4" ? "mov_text" : "subrip")
+            } catch { throw ExternalCaptionSnapshot.failure(error, reference: snapshot.reference, index: index) }
         }
         if c.container == "MP4" {
             if c.audio == "Opus" { throw NativeExportError.invalid("Choose MKV for Opus, or AAC for MP4.") }
@@ -84,13 +99,13 @@ struct EncodePlan: Sendable {
                 throw NativeExportError.invalid("Use MKV to preserve these subtitle formats, or remove subtitles for MP4.")
             }
         }
-        let captionTrim = trimmed && external != nil
+        let captionTrim = trimmed && !external.isEmpty
         let chapterPlan = try ChapterPlan.make(probe: probe, configuration: c,
                                               metadataTimeline: captionTrim ? .output : .source)
         let containerPreservation = try ContainerPreservation.make(probe: probe, configuration: c, chapterPlan: chapterPlan)
         var args = ["-hide_banner", "-loglevel", "error", "-nostdin", "-n", "-progress", "pipe:1", "-stats_period", "0.25", "-protocol_whitelist", "file,pipe"] + orientation.inputArguments(stream: video.index) + ["-i", job.source]
-        if external != nil {
-            args += ["-f", "srt", "-protocol_whitelist", "file,pipe", "-i", staged.deletingLastPathComponent().appendingPathComponent("external.srt").path]
+        for index in external.indices {
+            args += ["-f", "srt", "-protocol_whitelist", "file,pipe", "-i", staged.deletingLastPathComponent().appendingPathComponent(ExternalCaptionSnapshot.filename(index)).path]
         }
         if chapterPlan.metadata != nil {
             args += ["-f", "ffmetadata", "-protocol_whitelist", "file,pipe", "-i", staged.deletingLastPathComponent().appendingPathComponent("chapters.ffmetadata").path]
@@ -150,13 +165,14 @@ struct EncodePlan: Sendable {
             for stream in subtitles { args += ["-map", "0:\(stream.index)"] }
             args += ["-c:s", "copy"]
         }
-        if let external {
-            args += ["-map", "1:0", "-c:s:\(external.ordinal)", external.codec == "mov_text" ? "mov_text" : "copy",
+        for (index, external) in external.enumerated() {
+            args += ["-map", "\(index + 1):0", "-c:s:\(external.ordinal)", external.codec == "mov_text" ? "mov_text" : "copy",
                      "-metadata:s:s:\(external.ordinal)", "language=\(external.reference.language)",
-                     "-metadata:s:s:\(external.ordinal)", "title=\(external.reference.title)"]
-        } else if !keepSubtitles || subtitles.isEmpty { args += ["-sn"] }
+                     "-/metadata:s:s:\(external.ordinal)", staged.deletingLastPathComponent().appendingPathComponent(ExternalCaptionTitles.filename(index)).path]
+        }
+        if external.isEmpty && (!keepSubtitles || subtitles.isEmpty) { args += ["-sn"] }
         if c.container == "MKV", keepSubtitles { args += ["-map", "0:t?", "-c:t", "copy"] }
-        let chapterInput = chapterPlan.metadata != nil ? (external == nil ? "1" : "2") : (chapterPlan.preservesSource ? "0" : "-1")
+        let chapterInput = chapterPlan.metadata != nil ? String(external.count + 1) : (chapterPlan.preservesSource ? "0" : "-1")
         args += ["-map_metadata", "0", "-map_chapters", chapterInput]
         if copyingVideo {
             for (flag, value) in [("-color_range:v", video.color_range), ("-color_primaries:v", video.color_primaries),
@@ -173,12 +189,19 @@ struct EncodePlan: Sendable {
         let videoSummary = copyingVideo
             ? "Copy original \(video.codec_name ?? "") video · no video re-encoding · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · packet verification required"
             : "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")"
-        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitle: external, videoCopy: videoCopy, expectedCodec: copyingVideo ? video.codec_name! : c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264", expectedAudio: expectedAudio,
+        let captionSummary: String = external.map { track in
+            let trimDescription = captionTrim ? ", clipped to trim" : ""
+            return " · additional SRT: \(track.document.cues.count) captured cues" + trimDescription + " (\(track.reference.language))"
+        }.joined()
+        let summary = videoSummary + captionSummary + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary
+        let captionTitles = try ExternalCaptionTitles.make(external.map(\.reference))
+        let expectedCodec = copyingVideo ? video.codec_name! : c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264"
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitles: external, captionTitles: captionTitles, videoCopy: videoCopy, expectedCodec: expectedCodec, expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,
-                          audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: (keepSubtitles ? subtitles.count : 0) + (external == nil ? 0 : 1),
-                          duration: outputDuration, summary: videoSummary + (external.map { " · additional SRT: \($0.document.cues.count) captured cues" + (captionTrim ? ", clipped to trim" : "") } ?? "") + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary)
+                          audioCount: c.audio == "No audio" ? 0 : audio.count, subtitleCount: (keepSubtitles ? subtitles.count : 0) + external.count,
+                          duration: outputDuration, summary: summary)
     }
 
     static func validateHDRSettings(_ c: EncodeConfiguration) throws {

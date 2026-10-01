@@ -272,12 +272,8 @@ final class BatchController: ObservableObject {
             try await HDR10Audit.checkTools(tools)
         }
         let probe = try await MediaProbe.read(source, tools: tools)
-        let externalDocument: SubRipDocument?
-        if let reference = job.configuration.externalSubtitle {
-            statuses[job.id]?.detail = "Reading and validating the external caption file"
-            externalDocument = try await reference.read()
-            try externalDocument?.validateTimeline(probe: probe, configuration: job.configuration)
-        } else { externalDocument = nil }
+        if !job.configuration.externalCaptions.isEmpty { statuses[job.id]?.detail = "Reading and validating external caption files" }
+        let externalSnapshots = try await job.configuration.captureExternalCaptions()
         if preservingHDR {
             statuses[job.id]?.detail = "HDR10: decoding every source frame; checking static metadata and fixed cadence"
             hdr = try await HDR10Audit.read(source, tools: tools, probe: probe) { [weak self] frames, fraction in
@@ -292,12 +288,15 @@ final class BatchController: ObservableObject {
         try Task.checkCancellation()
         let directory = output.deletingLastPathComponent().appendingPathComponent(".staxrip-batch-" + UUID().uuidString)
         let staged = directory.appendingPathComponent("encoded." + job.configuration.container.lowercased())
-        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: staged, hdr: hdr, externalDocument: externalDocument)
+        let plan = try EncodePlan.make(job: job, probe: probe, encoders: encoders, staged: staged, hdr: hdr, externalSnapshots: externalSnapshots)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
         var operationError: Error?
         var publishedOutput: URL?
         do {
-            if let external = plan.externalSubtitle { try await external.document.writeSnapshot(to: directory.appendingPathComponent("external.srt")) }
+            for (index, external) in plan.externalSubtitles.enumerated() {
+                try await external.document.writeSnapshot(to: directory.appendingPathComponent(ExternalCaptionSnapshot.filename(index)))
+            }
+            try await ExternalCaptionTitles.write(plan.captionTitles, to: directory)
             try await plan.chapterPlan.writeMetadata(to: directory)
             let copiedVideo: VideoCopyManifest?
             if let contract = plan.videoCopy {
@@ -361,9 +360,11 @@ final class BatchController: ObservableObject {
             verifiedSummary += " · " + (try plan.outputDisplayAspect.verify(width: actual.video?.width, height: actual.video?.height,
                                                                            sampleAspectRatio: actual.video?.sample_aspect_ratio))
             verifiedSummary += " · " + (try plan.containerPreservation.verify(actual))
-            if let external = plan.externalSubtitle {
-                statuses[job.id]?.detail = "Verifying added caption text and cue timing before publication"
-                verifiedSummary += " · " + (try await external.verify(staged, probe: actual, tools: tools))
+            for (index, external) in plan.externalSubtitles.enumerated() {
+                statuses[job.id]?.detail = "Verifying caption track \(index + 1), \(URL(fileURLWithPath: external.reference.path).lastPathComponent)"
+                do { verifiedSummary += " · Track \(index + 1) (\(external.reference.language)): " + (try await external.verify(staged, probe: actual, tools: tools)) }
+                catch is CancellationError { throw CancellationError() }
+                catch { throw ExternalCaptionSnapshot.failure(error, reference: external.reference, index: index) }
             }
             if let copiedVideo {
                 statuses[job.id]?.detail = "Verifying original video packets and presentation timing before publication"

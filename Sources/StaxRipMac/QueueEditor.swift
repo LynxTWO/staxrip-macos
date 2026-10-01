@@ -62,7 +62,7 @@ struct QueueEditor: View {
                 settingPicker("Bitrate", selection: $draft.configuration.audioBitrate, values: ["128 kb/s", "192 kb/s", "256 kb/s", "320 kb/s"])
                     .disabled(!["AAC", "Opus"].contains(draft.configuration.audio))
             }
-            SubtitleOptionsView(configuration: $draft.configuration, sourceAvailable: !draft.isDemo)
+            SubtitleOptionsView(configuration: $draft.configuration, sourceAvailable: !draft.isDemo, sourceIdentity: draft.isDemo ? nil : draft.source)
             Divider()
             ChapterOptionsView(configuration: $draft.configuration, source: draft.isDemo ? nil : URL(fileURLWithPath: draft.source))
             VStack(alignment: .leading, spacing: 8) {

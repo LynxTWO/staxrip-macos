@@ -132,3 +132,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Trimmed caption evidence](SUBTITLE-TRIM-EVIDENCE.md) records native correction/export, decoded caption/video/audio/chapter timelines and ordinary local/hosted acceptance after scoped test-fixture isolation.
 
 47. [Slice 037: verified original-video copy](SLICE-037-video-copy.md) and [feasibility](VIDEO-COPY-RESEARCH.md). [Evidence](VIDEO-COPY-EVIDENCE.md) records scoped native/local/hosted acceptance at 22dc1ed.
+
+48. [Slice 038: ordered external caption tracks](SLICE-038-multiple-captions.md) and [evidence](MULTIPLE-CAPTIONS-EVIDENCE.md), accepted at 2f8cea7 under D-068 through D-074 / R-048.
+
+[Caption entry reframe](CAPTION-ENTRY-REFRAME.md): The owner approved the phase-specific cancellation gate under D-074 after four hosted entry failures; ordinary hosted run 36893266046 passed.

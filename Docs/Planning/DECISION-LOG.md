@@ -77,6 +77,13 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-065 | 2026-10-01 | Locate publication observation timeout | Confirmed | |
 | D-066 | 2026-10-01 | Keep value-storage stress off the UI actor | Confirmed | |
 | D-067 | 2026-10-01 | Verify original-video copy before publication | Confirmed | |
+| D-068 | 2026-10-01 | Independently verify ordered external caption tracks | Confirmed | |
+| D-069 | 2026-10-01 | Preserve caption title bytes outside command arguments | Superseded | D-070 |
+| D-070 | 2026-10-01 | Use literal title argument files without remapping source metadata | Confirmed | |
+| D-071 | 2026-10-01 | Diagnose second-caption cancellation entry before repair | Confirmed | |
+| D-072 | 2026-10-01 | Qualify caption snapshot worker ownership | Confirmed | |
+| D-073 | 2026-10-01 | Trace remaining caption preparation boundaries | Confirmed | |
+| D-074 | 2026-10-01 | Phase-specific caption cancellation qualification | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1044,3 +1051,102 @@ Options considered: keep transcode-only behavior; expose unchecked FFmpeg copy; 
 Consequences: Use the existing validated Copy original/copy codec pair, with encoding controls visibly inactive and incompatible picture/color requests refused rather than cleared. Limit initial codecs, containers, pixel/display/timing semantics and audit resources as stated in Slice 037. Retain existing track routing, source identity, caption/chapter checks and exclusive publication. Require complete ordered packet payload/count/PTS/duration verification plus relevant stream metadata, actual decoded references and corruption refusal before acceptance. No new persisted fields, DSP/listening, merge or release. Older readers must reject the unknown pair safely.
 
 Revisit when: Container conversion changes the promised bitstream or timing beyond the defined precision, audit bounds cannot be enforced, or existing workflows/ownership contracts change.
+
+
+## D-068: Independently verify ordered external caption tracks
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 038 / R-048 under owner autonomous non-audio completion delegation. Delegated to AI recommendation.
+
+Because: Accepted single-track SRT capture/trim and verified video copy leave a practical gap: bilingual/accessibility caption exports still require repeated external remuxing. The existing immutable snapshot, decoded cue verifier and owned staging can extend to a bounded ordered list while retaining independent evidence for each added stream.
+
+Options considered: leave one track; append paths without a new saved-format boundary; support a bounded ordered list with explicit version compatibility and complete per-track verification. Choose the third.
+
+Consequences: At most eight existing plain UTF-8 SRT inputs, each with its own label/language and unchanged one-MiB/parser limits. Retain the legacy first-reference field and add a bounded optional tail, with canonical accessors and session/recovery version increments. Old valid single-track documents remain readable; old readers reject new documents rather than silently losing tracks. Presets exclude references and preserve current references when applied. Capture snapshots before encoding, map every input/output/chapter ordinal explicitly and verify every added stream before exclusive publication. Native operations identify filename/position and must not let stale selection target a different row. Keep all original one-track tests, deadlines and default scheduling. No audio processing, HDR expansion, embedded payload guarantee, merge or release.
+
+Revisit when: Existing output formats cannot preserve ordered track metadata/cues, native selection identity is ambiguous or the bounded list requires a broader persisted-format redesign.
+
+
+## D-069: Preserve caption title bytes outside command arguments
+Date: 2026-10-01
+Status: Superseded
+
+Decision: Under active R-048, write bounded per-stream caption labels as operation-owned UTF-8 FFmetadata and map each section to its planned added stream. Delegated to AI recommendation under the owner's non-audio completion scope.
+
+Because: Actual multi-track MKV/MP4 exports correctly refused when an NFC cedilla title returned as decomposed bytes. A bounded standalone Foundation Process reproduction confirms input hex 4672616ec3a7616973206669727374 arrives at the child as 4672616e63cca7616973206669727374. This is an argument bridge transformation, not a subtitle order error. Existing caption-body snapshots preserve their UTF-8 bytes.
+
+Options considered: weaken title equality to canonical equivalence; rewrite all subprocess launch mechanics; carry bounded user text in the already-supported metadata file format. Choose the third. FFmpeg's primary format/metadata-mapping documentation describes stream sections and stream-specific maps.
+
+Consequences: One private metadata snapshot, at most eight language/title stream sections and 32 KiB after ASCII delimiter escaping. Map metadata from each section explicitly; keep all output label/text/timing comparisons byte-exact. Chapter input ordinals account for the additional metadata input. Use owned priority-preserving file work and await cancellation settlement. Do not change ToolRunner, normalization policy or older one-track assertions. Add composed/decomposed Unicode and literal delimiter round-trip evidence in both output containers. Remove temporary test-only metadata prints before ordinary qualification.
+
+Revisit when: The metadata file cannot preserve labels exactly or additional fields require a broader metadata contract.
+
+
+## D-070: Use literal title argument files without remapping source metadata
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Supersede D-069's FFmetadata-section mechanism with FFmpeg's documented file-loaded option argument, one bounded title assignment file per added caption track. The requirement to keep user title bytes outside Foundation Process arguments remains. Delegated to AI recommendation within R-048.
+
+Because: Stronger generated tests exposed two FFmetadata costs. An escaped trailing backslash plus newline continued the next section and collapsed eight tracks; direct bounded probes confirmed this. Explicit stream metadata mapping also disabled automatic retained-stream metadata copying. A direct file-loaded metadata option preserved NFC/decomposed text, equals/hash/semicolon and a trailing backslash byte-for-byte without either issue. Separately, a plain FFmpeg MP4-to-MP4 copy drops an embedded subtitle's name tag even without our changes; this preexisting broader embedded-title limitation is outside the added-track guarantee.
+
+Options considered: narrow accepted title text; maintain extra metadata demux inputs and manual maps for every source stream; use the documented slash-prefixed metadata option to read a literal title assignment file. Choose the third.
+
+Consequences: At most eight operation-owned 0600 files, each at most 1030 bytes (title= plus the existing 1024-byte title), no newline/escaping/FFmetadata demux step. Keep ASCII language options, automatic retained-source metadata copying, original chapter input offsets and byte-exact added-title verification. Remove the rejected FFmetadata-section code and temporary source metadata remapping. Cover eight-track output, trailing delimiters/Unicode, retained embedded language/MKV title and baseline MP4 name behavior without claiming broader metadata preservation. Existing process runner, test deadlines and audio stay unchanged.
+
+Revisit when: A supported FFmpeg build cannot load the option argument file or literal added titles fail their unchanged verifier.
+
+
+## D-071: Diagnose second-caption cancellation entry before repair
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Under R-048, permit bounded test-only timing observations and a same-runner focused comparison after the unchanged ordinary hosted test command. Delegated to AI recommendation under owner non-audio completion authority.
+
+Because: Local c386a77 passes 263 tests in 206.244 seconds. Hosted run 36874754310 compiles successfully and fails only the new second-caption cancellation test's existing ten-second entry guard; its post-cancellation message lost the pre-cancel phase. The full run takes 510.084 seconds. This does not establish which preparation, worker or child-process stage delayed entry.
+
+Options considered: raise the guard or serialize/exclude tests; guess at a production scheduling fix; gather bounded correlated entry/phase events and compare the same runner's focused case. Choose the third.
+
+Consequences: Preserve the ten-second entry guard, two-minute test limit, all final settlement/PID/output/next-job assertions and default full-suite scheduling. Record a bounded list of monotonic relative timestamps around current task-local source/caption/tool boundaries and status changes, plus the phase before cancellation. No media payloads, owner paths, credentials or unbounded logs. Ordinary failure remains failure even if the subsequent diagnostic focused case passes. Diagnose before selecting a repair; remove temporary tracing/workflow additions before final plain qualification. No next product slice, audio changes, merge or release.
+
+Revisit when: The correlated trace identifies a bounded correction, or this instrumentation fails to distinguish entry from observation/setup delays.
+
+
+## D-072: Qualify caption snapshot worker ownership
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Under R-048, instrument the existing SubRip snapshot writer and test it under the existing bounded worker-contention harness. If that actual boundary reproduces delayed dispatch, replace only its shared utility dispatch with an operation-owned queue preserving task priority, then rerun the same guard and full qualification. Delegated to AI recommendation.
+
+Because: Hosted diagnostic run 36876558655 repeats the failure. Both caption readers have entered by 9.391 seconds; the ten-second post-start guard expires at 16.445 seconds before encoding, and cancellation settles at 55.395 seconds. Source/caption/tool workers entered promptly at their observed boundaries. The same runner's focused case passes in 0.313 seconds. The intervening snapshot writer still submits to DispatchQueue.global utility and awaits settlement, making dispatch delay a specific testable hypothesis. Title writes already use owned priority-preserving dispatch; this case has no chapter metadata.
+
+Consequences: Retain the complete cancellation test, ten-second entry guard, two-minute limit, all PID/cleanup/publication assertions and default scheduling. Add one opt-in bounded actual snapshot-worker contention probe with a fixed one-second entry expectation and three-second joined competing load. Capture before/after receipts. Preserve snapshot bytes, exclusive creation and cancellation settlement. Do not change unrelated chapter writers, generic ToolRunner, audio processing or test workloads. Remove temporary phase traces and workflow diagnosis before final ordinary checks; the bounded opt-in worker probe may remain as a regression.
+
+Revisit when: The writer boundary does not reproduce dispatch delay, an owned worker does not correct it, or the full hosted guard still fails.
+
+
+## D-073: Trace remaining caption preparation boundaries
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Continue bounded diagnosis inside R-048 before acceptance or another slice. Add temporary DEBUG-only task-local markers around the actual batch preparation and verifier awaits, and include snapshot submission/worker observations in the original cancellation test. Delegated to AI recommendation under owner autonomous non-audio authority.
+
+Because: Plain hosted run 36878448882 at 6c471b7 still fails only the second-caption verifier entry guard; 265 tests complete in 549.259 seconds after a 93.98-second build. Local ordinary tests pass in 212.180 seconds. The D-072 actual-worker before/after probe demonstrates a dispatch improvement but does not explain the remaining full-load failure. Prior status observations were too coarse to separate resumed caption reads, synchronous planning, snapshot/title/chapter writes, journal checkpoint and encoding.
+
+Consequences: Preserve the original ten-second entry guard, two-minute limit, full-suite scheduling, fixtures and all output/PID/cleanup assertions. Record only a bounded monotonic stage/event list with no media bytes, source paths or arguments. Instrument exact entry and return boundaries without changing task priority or executor choice. Restore plain workflow and remove temporary diagnosis before final qualification. A same-runner focused comparison may follow a failed ordinary command, without converting that failure into acceptance. No further production repair is approved until evidence identifies its boundary; do not proceed to the proposed real-film slice yet.
+
+Revisit when: A specific stage explains the remaining delay, or instrumentation cannot distinguish worker time from task resumption and actor contention.
+
+
+## D-074: Phase-specific caption cancellation qualification
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: The owner explicitly approved CAPTION-ENTRY-REFRAME.md in chat: "yep, i approve that approach". Implement its phase-specific lifecycle qualification within R-048. This supersedes D-071 through D-073's aggregate ten-second startup guard; it does not claim that guard passed.
+
+Because: Four hosted failures and the D-073 trace show that aggregate preparation, encoding and first-caption inspection consume the old window under full load. The user-data need is settled cancellation of the actual second verifier with no publication, next-job advance or original/staging damage. The owner approved separating preparation from verifier entry and cancellation settlement after reviewing the failed evidence.
+
+Consequences: Keep the two-minute full-case limit, unchanged complete generated fixture, ordinary parallel suite scheduling and every existing PID/output/next-job/original/staging assertion. Require first-verifier child entry within 90 seconds of batch start, second-verifier entry within ten seconds of observing the first marker, and cancellation settlement within ten seconds. Use a monotonic clock. Early termination, timeout or task cancellation must cancel and join the owned batch before checking/removing its staging. A deterministic deliberate pre-verifier stall uses the same wait logic with a shorter negative-only budget after its own child entry is observed; this tests refusal without spending another 90 seconds. Record the actual PID and require it gone. Keep the fixed snapshot-worker contention regression and all broad output/corruption tests. No production code or scheduling change is required. Restore ordinary local/hosted validation, update evidence, and accept only if all scoped gates pass.
+
+Revisit when: The phase-specific test fails its unchanged per-phase/whole-case requirements or cancellation leaves a live tool or published output.

@@ -294,3 +294,5 @@ R-048 / D-070 replaces the rejected FFmetadata-section implementation with liter
 R-048 / D-071 permits bounded temporary cancellation-entry timestamps and a same-runner focused comparison. Preserve ordinary full-suite failure, scheduling, deadlines and all settlement/publication assertions. This is diagnosis, not acceptance or permission to alter unrelated worker scheduling.
 
 R-048 / D-072 isolates actual SubRip snapshot dispatch under bounded CPU contention. A measured failure permits only the matching owned priority-preserving worker repair; no deadline or ordinary scheduling changes. Original snapshot bytes, exclusive creation and settled cancellation remain mandatory.
+
+R-048 / D-073 extends bounded temporary diagnosis to actual batch preparation/verification entry and return boundaries. No task priority, scheduling, deadline or fixture changes; acceptance remains blocked by the ordinary hosted entry failure.

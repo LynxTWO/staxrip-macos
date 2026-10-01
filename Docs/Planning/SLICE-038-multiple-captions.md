@@ -1,9 +1,9 @@
 # StaxRip Mac Slice 038: Ordered external caption tracks
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-068 / D-069 / D-070 / D-071 / D-072 / R-048.
+Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-068 / D-069 / D-070 / D-071 / D-072 / D-073 / R-048.
 
 SLICE STATE
 Milestone: Ordered capture, mapping, verification and native editor implemented; focused/native checks passed; final regression pending.
-Blocked by: Hosted second-caption cancellation entry needs bounded diagnosis; no acceptance yet.
+Blocked by: Hosted verifier-entry failure remains after snapshot repair; D-073 diagnosis, no acceptance yet.
 Evidence so far: MULTIPLE-CAPTIONS-EVIDENCE.md; generated independent decoding, later-track refusal and native save/reopen/export.
 Last audit: 2026-10-01.
 
@@ -62,4 +62,4 @@ All six gates have scoped final-head evidence. Record failed experiments and rem
 
 A single verified export can carry several language/accessibility caption tracks without repeated video generations or manual command-line remuxing.
 
-Approved for build by: Owner autonomous non-audio completion delegation, 2026-10-01; D-068 / D-069 / D-070 / D-071 / D-072 / R-048.
+Approved for build by: Owner autonomous non-audio completion delegation, 2026-10-01; D-068 / D-069 / D-070 / D-071 / D-072 / D-073 / R-048.

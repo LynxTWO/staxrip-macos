@@ -82,6 +82,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-070 | 2026-10-01 | Use literal title argument files without remapping source metadata | Confirmed | |
 | D-071 | 2026-10-01 | Diagnose second-caption cancellation entry before repair | Confirmed | |
 | D-072 | 2026-10-01 | Qualify caption snapshot worker ownership | Confirmed | |
+| D-073 | 2026-10-01 | Trace remaining caption preparation boundaries | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1122,3 +1123,16 @@ Because: Hosted diagnostic run 36876558655 repeats the failure. Both caption rea
 Consequences: Retain the complete cancellation test, ten-second entry guard, two-minute limit, all PID/cleanup/publication assertions and default scheduling. Add one opt-in bounded actual snapshot-worker contention probe with a fixed one-second entry expectation and three-second joined competing load. Capture before/after receipts. Preserve snapshot bytes, exclusive creation and cancellation settlement. Do not change unrelated chapter writers, generic ToolRunner, audio processing or test workloads. Remove temporary phase traces and workflow diagnosis before final ordinary checks; the bounded opt-in worker probe may remain as a regression.
 
 Revisit when: The writer boundary does not reproduce dispatch delay, an owned worker does not correct it, or the full hosted guard still fails.
+
+
+## D-073: Trace remaining caption preparation boundaries
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Continue bounded diagnosis inside R-048 before acceptance or another slice. Add temporary DEBUG-only task-local markers around the actual batch preparation and verifier awaits, and include snapshot submission/worker observations in the original cancellation test. Delegated to AI recommendation under owner autonomous non-audio authority.
+
+Because: Plain hosted run 36878448882 at 6c471b7 still fails only the second-caption verifier entry guard; 265 tests complete in 549.259 seconds after a 93.98-second build. Local ordinary tests pass in 212.180 seconds. The D-072 actual-worker before/after probe demonstrates a dispatch improvement but does not explain the remaining full-load failure. Prior status observations were too coarse to separate resumed caption reads, synchronous planning, snapshot/title/chapter writes, journal checkpoint and encoding.
+
+Consequences: Preserve the original ten-second entry guard, two-minute limit, full-suite scheduling, fixtures and all output/PID/cleanup assertions. Record only a bounded monotonic stage/event list with no media bytes, source paths or arguments. Instrument exact entry and return boundaries without changing task priority or executor choice. Restore plain workflow and remove temporary diagnosis before final qualification. A same-runner focused comparison may follow a failed ordinary command, without converting that failure into acceptance. No further production repair is approved until evidence identifies its boundary; do not proceed to the proposed real-film slice yet.
+
+Revisit when: A specific stage explains the remaining delay, or instrumentation cannot distinguish worker time from task resumption and actor contention.

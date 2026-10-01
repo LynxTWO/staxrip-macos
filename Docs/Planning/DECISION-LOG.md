@@ -52,6 +52,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-041 | 2026-10-01 | Attach native export destination selection | Confirmed | |
 
 | D-042 | 2026-10-01 | Correct native output name collisions | Confirmed | |
+| D-043 | 2026-10-01 | Review batch destinations before starting | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -653,3 +654,17 @@ Options considered: retain the contradiction; replace the entire destination int
 Consequences: A retained delegate and scoped local MP4 name check, including extensionless names and existing symlink/directory entries. Native testing must establish actual ordering. AppKit documentation and the local SDK place userEnteredFilename before automatic extension append and Replace, and declare delegate ownership weak. No automatic renaming, persistent schema, audio or publication change. Reference: https://developer.apple.com/documentation/appkit/nsopensavepaneldelegate/panel(_:userenteredfilename:confirmed:), reviewed 2026-10-01.
 
 Revisit when: AppKit versions differ in callback ordering/URL availability, network filesystems need nonblocking validation, or broader destination UX is scoped.
+
+## D-043: Review batch destinations before starting
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Build Slice 029 under overnight autonomous non-audio delegation after Slice 028 acceptance. Delegated to AI recommendation.
+
+Because: Native publication has repeated an unresolved filesystem wait. Explicit destination selection before a fresh attempt completed in Slice 026. The present Start queue starts work and replaces recovery state before any destination review.
+
+Options considered: keep per-job review optional only; cache permanent access assumptions; review distinct pending folders before each native start. Choose the third with exact configured-path matching, cancellation and current-intent checks. This is a workflow improvement, not a proven fix for the underlying wait.
+
+Consequences: Reuse attached workspace panels and fresh request ownership per folder; no writes or batch execution until the last matching review. Shared folders appear once, completed jobs are excluded, and final batch checks remain independent. No persistent permission, source relinking, stored schema or audio change.
+
+Revisit when: Native review fails to improve the visible start flow, permission/bookmark handling is scoped, or broader filesystem evidence identifies the actual wait cause.

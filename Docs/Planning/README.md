@@ -100,3 +100,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 38. [Slice 028: native output name correction](SLICE-028-native-export-naming.md).
 
 [Native output name evidence](NATIVE-OUTPUT-NAME-EVIDENCE.md) records correction before replacement, protected bytes and regression.
+
+39. [Slice 029: queue destination review](SLICE-029-queue-destination-review.md).

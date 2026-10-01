@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 028 native output name correction under D-042 / R-032 after Slice 027 acceptance at 70d0ac6, hosted run 36815249560.
+Next: Slice 029 queue destination review under D-043 / R-033 after Slice 028 acceptance at 70c17da, hosted run 36817176434.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -240,3 +240,7 @@ Approved R-031 under D-041: attached native export destination selection with ca
 ## Native output name checkpoint, 2026-10-01
 
 Approved R-032 under D-042: refuse known MP4 name collisions before Replace, with correction, cancellation and retained final publication protection. Gates native-name-validation, native-name-ui, native-name-protection and native-name-regression bind S28-001 through S28-004. Consequence: user_data through existing exclusive output publication. No source mutation, automatic renaming, saved-format or audio change.
+
+## Queue destination review checkpoint, 2026-10-01
+
+Approved R-033 under D-043: native review of distinct pending output folders before batch execution or recovery-record replacement. Gates queue-destination-sequence, queue-destination-protection, queue-destination-native and queue-destination-regression bind S29-001 through S29-004. Consequence: user_data only through existing batch execution after final current matching selection; prior selection is local_only. No persistent permissions, stored-format or audio change.

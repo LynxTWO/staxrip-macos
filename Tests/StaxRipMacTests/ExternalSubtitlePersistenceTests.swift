@@ -31,7 +31,7 @@ struct ExternalSubtitlePersistenceTests {
         var config = EncodeConfiguration(); config.externalSubtitle = reference
         let item = job(config)
         let document = SessionDocument(sourcePath: item.source, configuration: config, outputFolder: "/generated", outputStem: "workspace", jobs: [item])
-        #expect(document.version == 8)
+        #expect(document.version == 9)
         let data = try JSONEncoder().encode(document)
         let decoded = try JSONDecoder().decode(SessionDocument.self, from: data).validated()
         #expect(decoded.configuration.externalSubtitle == reference)
@@ -45,10 +45,10 @@ struct ExternalSubtitlePersistenceTests {
             old.jobs[0].configuration.externalSubtitle = nil
             _ = try JSONDecoder().decode(SessionDocument.self, from: JSONEncoder().encode(old)).validated()
         }
-        var future = document; future.version = 9
+        var future = document; future.version = 10
         #expect(throws: (any Error).self) { try future.validated() }
         var journal = BatchJournal(jobs: [item], statuses: [item.id: BatchStatus(phase: "Verifying")])
-        #expect(journal.version == 7)
+        #expect(journal.version == 8)
         let recovered = try JSONDecoder().decode(BatchJournal.self, from: JSONEncoder().encode(journal)).validated()
         #expect(recovered.jobs[0].configuration.externalSubtitle == reference)
         #expect(recovered.restoredStatuses()[item.id]?.phase == "Interrupted")
@@ -58,7 +58,7 @@ struct ExternalSubtitlePersistenceTests {
             old.jobs[0].configuration.externalSubtitle = nil
             _ = try old.validated()
         }
-        journal.version = 8
+        journal.version = 9
         #expect(throws: (any Error).self) { try journal.validated() }
     }
 

@@ -3,7 +3,7 @@ import Darwin
 
 // Local intent and historical status only. Reading this never starts a process or deletes media.
 struct BatchJournal: Codable {
-    var version = 7
+    var version = 8
     var jobs: [QueueJob]
     var statuses: [UUID: BatchStatus]
     var updated = Date()
@@ -14,7 +14,7 @@ struct BatchJournal: Codable {
     }
 
     func validated() throws -> Self {
-        guard [1, 2, 3, 4, 5, 6, 7].contains(version) else { throw SessionError.invalid("Unsupported batch recovery version.") }
+        guard [1, 2, 3, 4, 5, 6, 7, 8].contains(version) else { throw SessionError.invalid("Unsupported batch recovery version.") }
         guard version >= 5 || jobs.allSatisfy({ $0.configuration.externalSubtitle == nil }) else {
             throw SessionError.invalid("External subtitle references require recovery version 5.")
         }
@@ -23,6 +23,9 @@ struct BatchJournal: Codable {
         }
         guard version >= 7 || jobs.allSatisfy({ $0.configuration.additionalExternalSubtitles == nil }) else {
             throw SessionError.invalid("Multiple external caption tracks require recovery version 7.")
+        }
+        guard version >= 8 || jobs.allSatisfy({ $0.configuration.externalCaptions.allSatisfy { $0.playback == nil } }) else {
+            throw SessionError.invalid("Caption playback choices require recovery version 8.")
         }
         _ = try SessionDocument(configuration: EncodeConfiguration(), outputFolder: "/", outputStem: "recovery", jobs: jobs).validated()
         let ids = Set(jobs.map(\.id))

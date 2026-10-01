@@ -67,6 +67,13 @@ struct SubtitleOptionsView: View {
                     })).textFieldStyle(.roundedBorder).accessibilityLabel("Title for " + label)
                 }
             }
+            Picker("Playback for " + label, selection: Binding<CaptionPlayback?>(get: { reference.playback }, set: { value in
+                update(index, path: reference.path) { $0.playback = value }
+            })) {
+                Text("Automatic").tag(Optional<CaptionPlayback>.none)
+                ForEach(CaptionPlayback.allCases, id: \.self) { choice in Text(choice.label).tag(Optional(choice)) }
+            }.tint(Color.primaryActionFill)
+                .accessibilityHint("MKV playback hints. Default makes this the preferred caption track. Forced requests display even when captions are off. Player settings can override both.")
             HStack {
                 Button("Choose file…") { choose(index) }.disabled(!sourceAvailable)
                     .accessibilityLabel("Choose file for " + label)
@@ -104,6 +111,10 @@ struct SubtitleOptionsView: View {
                  ? "Up to eight plain UTF-8 SRT files, each up to 1 MiB with nonoverlapping cues. Added tracks follow embedded tracks in this order. Every added track's language, title, text and timing is checked before saving. SDR only. Trim clips and shifts each file to the output timeline; use up to three decimal places. A track with no cues in the trim must be removed explicitly. Choose file can also review access to a saved reference."
                  : "Open a source video before choosing additional caption files.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            if !configuration.externalCaptions.isEmpty {
+                Text("Playback choices require MKV. Automatic keeps the usual track defaults. Optional clears default and forced flags. Default makes one added track the sole default caption, including over embedded tracks. Forced asks players to show this track even when captions are off. Players can override these hints; the written flags are checked before saving.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
             if let issue = selectionError ?? metadataIssue { Text(issue).font(.caption).foregroundStyle(Color.warning).fixedSize(horizontal: false, vertical: true) }
         }
         .fileImporter(isPresented: $choosingFile, allowedContentTypes: [UTType(filenameExtension: "srt") ?? .plainText]) { result in

@@ -15,4 +15,8 @@ References: https://ffmpeg.org/ffmpeg.html (disposition incremental updates and 
 
 ## Implementation and remaining gates
 
-M2 and M3 pending. S42-001 passed; S42-002 through S42-006 pending. No acceptance claim yet.
+M2 implemented: optional typed choice, MKV-only validation, version 9 sessions/version 8 recovery, preserved replacement/equality intent, incremental flag plan and pre-publication checks. No new flags or flag contract when all choices are Automatic. Added native picker labels/hints explain selection and player limits.
+
+Focused local run: 19 reported tests in five suites passed in 0.574 seconds, including seven actual-controller cases (embedded copy/encode, removed embedded, trim, optional and two corrupted-output refusals). Copied silent audio decoded hashes remain equal; every caption decodes completely; retained hearing-impaired/forced metadata survives; source/prior/caption bytes and staging are protected. Four typed-contract tests cover legacy, malformed, duplicate/default, MP4, stale picker, reorder/undo and changed/missing output bits. Existing three persistence/list suites remain passing. Log: work/caption-flags/focused.log. Initial test compilation required an inner try inside two require macros; fixed only those expressions, retained focused-compile-error.log. No production repair or weakened test.
+
+S42-001 through S42-004 have scoped local evidence. Native, optimized build and ordinary full local/hosted regression remain pending. No acceptance claim yet.

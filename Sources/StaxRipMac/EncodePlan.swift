@@ -9,6 +9,7 @@ struct EncodePlan: Sendable {
     let externalSubtitles: [ExternalSubtitleExport]
     var externalSubtitle: ExternalSubtitleExport? { externalSubtitles.first }
     let captionTitles: [Data]
+    let captionPlayback: CaptionPlaybackPlan?
     let videoCopy: VideoCopyContract?
     let expectedCodec: String
     let expectedAudio: String?
@@ -101,6 +102,8 @@ struct EncodePlan: Sendable {
                 throw NativeExportError.invalid("Use MKV to preserve these subtitle formats, or remove subtitles for MP4.")
             }
         }
+        let captionPlayback = try CaptionPlaybackPlan.make(video: video, audio: c.audio == "No audio" ? [] : audio,
+                                                           embedded: keepSubtitles ? subtitles : [], configuration: c)
         let captionTrim = trimmed && !external.isEmpty
         let chapterPlan = try ChapterPlan.make(probe: probe, configuration: c,
                                               metadataTimeline: captionTrim ? .output : .source)
@@ -187,18 +190,19 @@ struct EncodePlan: Sendable {
             let explicitColor = copyingVideo && [video.color_range, video.color_primaries, video.color_transfer, video.color_space].contains { $0 != nil }
             args += ["-movflags", explicitColor ? "+faststart+write_colr" : "+faststart"]
         }
+        args += captionPlayback?.arguments ?? []
         args += [staged.path]
         let videoSummary = copyingVideo
             ? "Copy original \(video.codec_name ?? "") video · no video re-encoding · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · packet verification required"
             : "\(encoder) · \(c.rateSummary) · preset \(speed) · \(orientation.summary) · first video · \(c.audio == "No audio" ? 0 : audio.count) audio tracks · \(preservingHDR ? "10-bit static HDR10; verification required" : "8-bit SDR")"
         let captionSummary: String = external.map { track in
             let trimDescription = captionTrim ? ", clipped to trim" : ""
-            return " · additional SRT: \(track.document.cues.count) captured cues" + trimDescription + " (\(track.reference.language))"
+            return " · additional SRT: \(track.document.cues.count) captured cues" + trimDescription + " (\(track.reference.language))" + (track.reference.playback.map { ", " + $0.label } ?? "")
         }.joined()
         let summary = videoSummary + captionSummary + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary
         let captionTitles = try ExternalCaptionTitles.make(external.map(\.reference))
         let expectedCodec = copyingVideo ? video.codec_name! : c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264"
-        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitles: external, captionTitles: captionTitles, videoCopy: videoCopy, expectedCodec: expectedCodec, expectedAudio: expectedAudio,
+        return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitles: external, captionTitles: captionTitles, captionPlayback: captionPlayback, videoCopy: videoCopy, expectedCodec: expectedCodec, expectedAudio: expectedAudio,
                           expectedWidth: c.resolution == "Original" ? width - picture.cropLeft - picture.cropRight : nil,
                           expectedHeight: c.resolution == "Original" ? height - c.cropTop - c.cropBottom : nil,
                           normalizedOrientation: orientation.degrees != 0,

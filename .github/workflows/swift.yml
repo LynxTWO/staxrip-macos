@@ -14,6 +14,9 @@ jobs:
         run: swift --version
       - name: Install encoding test tools
         run: brew install ffmpeg
+      - name: Focused video timing diagnosis (not full acceptance)
+        continue-on-error: true
+        run: swift test --filter 'QueueDestinationReviewTests|PublicationResponsivenessTests|ExportSourceStabilityTests|OutputDisplayAspectIntegrationTests|ChapterPersistenceTests'
       - name: Build and test
         run: |
           swift test &

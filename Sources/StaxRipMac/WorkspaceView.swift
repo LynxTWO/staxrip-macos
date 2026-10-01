@@ -107,7 +107,7 @@ struct WorkspaceView: View {
                     Text("Auto").tag("System")
                     Text("Light").tag("Light")
                     Text("Dark").tag("Dark")
-                }.pickerStyle(.segmented).labelsHidden().help("App appearance")
+                }.pickerStyle(.segmented).tint(Color.primaryActionFill).labelsHidden().help("App appearance")
                 Text("v0.10  /  LOCAL PREVIEW").font(.system(size: 9, design: .monospaced)).foregroundStyle(.tertiary)
             }.padding(.bottom, 24)
         }.padding(.horizontal, 18)
@@ -251,7 +251,7 @@ struct WorkspaceView: View {
         VStack(alignment: .leading, spacing: 18) {
             Picker("Settings", selection: $model.tab) {
                 ForEach(["Picture", "Video", "Audio", "Subtitles", "Chapters"], id: \.self) { Text($0) }
-            }.pickerStyle(.segmented).labelsHidden()
+            }.pickerStyle(.segmented).tint(Color.primaryActionFill).labelsHidden()
             switch model.tab {
             case "Picture": pictureSettings
             case "Audio": audioSettings

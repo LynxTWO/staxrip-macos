@@ -24,7 +24,7 @@ struct MediaInspectorView: View {
                     Text("Tracks (\(ContainerInspection.tracks(probe).count))").tag(0)
                     Text("Chapters (\(probe.chapters?.count ?? 0))").tag(1)
                     Text("Attachments (\(ContainerInspection.attachmentStreams(probe).count))").tag(2)
-                }.pickerStyle(.segmented).labelsHidden()
+                }.pickerStyle(.segmented).tint(Color.primaryActionFill).labelsHidden()
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
                         if section == 0 {

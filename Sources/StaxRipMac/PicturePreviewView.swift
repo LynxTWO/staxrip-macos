@@ -132,7 +132,7 @@ struct PicturePreviewView: View {
             Picker("Comparison mode", selection: $mode) {
                 Text("Still").tag("Still")
                 Text("Motion").tag("Motion")
-            }.pickerStyle(.segmented).disabled(controller.running || motion.running)
+            }.pickerStyle(.segmented).tint(Color.primaryActionFill).disabled(controller.running || motion.running)
             if mode == "Motion" {
                 MotionComparisonView(time: $time)
             } else {

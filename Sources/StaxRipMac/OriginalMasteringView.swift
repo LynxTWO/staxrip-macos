@@ -76,7 +76,7 @@ struct OriginalMasteringView: View {
                     MasterAudioPlayerView(player: audio.masterPlayer).frame(height: 0).clipped().hidden().accessibilityHidden(true)
                     Picker("Listen to",selection: Binding(get: { audio.previewProcessed },set: { audio.selectMasterPreview(processed: $0) })) {
                         Text("Original").tag(false); Text("Processed").tag(true)
-                    }.pickerStyle(.segmented).disabled(busy)
+                    }.pickerStyle(.segmented).tint(Color.primaryActionFill).disabled(busy)
                     Toggle("Level-match this excerpt",isOn: $audio.previewMatched).disabled(busy || audio.previewVolumes.isEmpty)
                         .onChange(of: audio.previewMatched) { _,_ in audio.updateMasterVolume() }
                         .accessibilityHint("Attenuates playback only. Changing the comparison stops playback. Exported audio is unchanged.")

@@ -31,13 +31,14 @@ struct ToolRunnerConcurrencyTests {
 
     @Test(.timeLimit(.minutes(1)))
     func streamedBytesFinishBeforeReturnWhileRetainedTailStaysBounded() async throws {
-        let collector = CollectedBytes()
+        let collector = CollectedBytes(), errors = CollectedBytes()
         let script = "BEGIN { s=\"A\"; for(i=0;i<20;i++) s=s s; printf \"%sEND\",s; s=\"B\"; for(i=0;i<17;i++) s=s s; printf \"%s\",s > \"/dev/stderr\" }"
-        let result = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/awk"), arguments: [script], stdoutLimit: 37, onOutput: { collector.append($0) })
+        let result = try await ToolRunner().runWithStreams(executable: URL(fileURLWithPath: "/usr/bin/awk"), arguments: [script], stdoutLimit: 37, onErrorOutput: { errors.append($0) }, onOutput: { collector.append($0) })
         #expect(result.status == 0 && result.truncated)
         #expect(result.stdout == Data(repeating: 65, count: 34) + Data("END".utf8))
         #expect(result.stderr == Data(repeating: 66, count: 65_536))
         #expect(collector.bytes == Data(repeating: 65, count: 1_048_576) + Data("END".utf8))
+        #expect(errors.bytes == Data(repeating: 66, count: 131_072))
         let empty = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/true"), arguments: [])
         #expect(empty.status == 0 && empty.stdout.isEmpty && empty.stderr.isEmpty && !empty.truncated)
     }

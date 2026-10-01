@@ -161,3 +161,5 @@ Slice 030 is active under D-044 / R-034: author and verify chapter lists with na
 Slice 030 closed within its chapter scope at 0105d5c plus diagnostic-only ded74f6, hosted run 36824096245: 222 tests in 497.428 seconds. Native edit/cancel/apply/session/queue/export passed. An earlier hosted destination-review timeout remains unresolved and instrumented; no deadline or assertion changed. Draft PR 47 remains unmerged. Audio listening stays parked.
 
 Slice 031 is active under D-045 / R-035: bounded APFS full-destination failure and explicit retry. Audio listening stays parked.
+
+Slices 031 and 032 now have scoped acceptance, recorded in APFS-CAPACITY-EVIDENCE.md and MOTION-PREVIEW-EVIDENCE.md. Latest product head 5e9effa passed hosted run 36845548454. The next non-audio slice will be selected separately; listening remains parked.

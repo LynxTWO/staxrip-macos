@@ -229,7 +229,7 @@ struct WorkspaceView: View {
                 Spacer(minLength: 0)
                 if !model.isDemo {
                     Button("Preview picture…") { showingPicturePreview = true }
-                        .accessibilityHint("Compare an original frame with crop, resize and deinterlace settings applied.")
+                        .accessibilityHint("Compare original and filtered pictures as still frames or a short silent motion sample.")
                         .disabled(model.loading || model.sourceNeedsReview)
                 }
                 Image(systemName: "arrow.down.doc").help("Drop a video onto the preview")
@@ -319,7 +319,7 @@ struct WorkspaceView: View {
                 Stepper("Bottom: \(model.config.cropBottom) px", value: $model.config.cropBottom, in: 0...240, step: 2)
             }.font(.system(size: 12))
             PictureOptionsView(options: $model.config.picture)
-            Text("Crop and size apply during queue encoding. Size fits within the selected bounds without stretching; source playback stays unfiltered. Choose Preview picture for a filtered still comparison.")
+            Text("Crop and size apply during queue encoding. Size fits within the selected bounds without stretching; source playback stays unfiltered. Choose Preview picture for a still or silent motion comparison.")
                 .font(.caption).foregroundStyle(.secondary)
         }
     }

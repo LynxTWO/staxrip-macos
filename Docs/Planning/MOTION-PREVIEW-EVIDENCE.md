@@ -15,3 +15,8 @@ Focused current checks passed 11 tests / three suites in 4.287 seconds. Actual C
 Full local/hosted runs, ad-hoc build and native transport/appearance/cleanup walkthrough remain pending. Owner audio listening remains parked. The inherited source admission and arbitrary kernel-wait limitations remain explicit.
 
 Primary reference: [FFmpeg scale documentation](https://ffmpeg.org/ffmpeg-filters.html#scale-1) explains display-aspect preservation through sample-aspect changes. Generated 322 by 182 discovery confirmed non-unit SAR after the existing PicturePlan scale. Motion fitting uses display aspect before square-pixel output, with even-pixel approximation stated in the interface.
+
+
+At 7632f3e, full release passed 232 tests / 49 suites in 39.548 seconds; debug passed 235 / 52 in 211.796 seconds. The ad-hoc build passed in 17.19 seconds. Native light-mode rendering produced 72 matching frames with visible crop differences. Playback advanced to the end; seeking selected 1.5 seconds, play advanced it, and pause held 2.235714 seconds across later observation. Switching to Still removed the owned movie, and existing Next frame selected 0.041667 seconds. Source/session/journal bytes remained unchanged after normal exit.
+
+Native review motivated shorter always-visible proxy guidance with details in a disclosure. A comparison-only AVPlayerView customization disabled full-screen/PiP/frame analysis and requested frame-step controls, but macOS 27 still visibly displayed 15-second skips. D-058 chooses explicit native transport, retaining the existing renderer and ordinary source player. These observations do not claim the attempted frame-step flag worked. Full/native qualification of that refinement remains pending.

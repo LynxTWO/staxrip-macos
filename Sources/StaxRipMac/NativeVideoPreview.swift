@@ -5,12 +5,19 @@ import AVKit
 // during generic class metadata initialization on the local macOS 27 runtime.
 struct NativeVideoPreview: NSViewRepresentable {
     let player: AVPlayer
+    var comparisonControls = false
 
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
         view.controlsStyle = .inline
         view.videoGravity = .resizeAspect
-        view.showsFullScreenToggleButton = true
+        view.showsFullScreenToggleButton = !comparisonControls
+        if comparisonControls {
+            view.showsFrameSteppingButtons = true
+            view.showsSharingServiceButton = false
+            view.allowsPictureInPicturePlayback = false
+            view.allowsVideoFrameAnalysis = false
+        }
         view.player = player
         return view
     }

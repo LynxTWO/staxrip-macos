@@ -84,7 +84,7 @@ final class MotionPreviewController: ObservableObject {
                     if await removeOwned() { status = "Motion preview cancelled. Temporary movie removed." }
                     return
                 }
-                let playback = AVPlayer(url: owned.movie); playback.isMuted = true
+                let playback = AVPlayer(url: owned.movie); playback.isMuted = true; playback.allowsExternalPlayback = false
                 player = playback; result = rendered
                 status = "Motion comparison ready. One shared timeline; no audio."
             } catch {
@@ -119,7 +119,7 @@ struct MotionComparisonView: View {
                 Label("Filtered", systemImage: "slider.horizontal.3").frame(maxWidth: .infinity)
             }.font(.headline)
             if let player = motion.player, let result = motion.result {
-                NativeVideoPreview(player: player).frame(height: 275)
+                NativeVideoPreview(player: player, comparisonControls: true).frame(height: 275)
                     .accessibilityLabel("Silent original and filtered motion comparison")
                 Text(String(format: "%d matching frames · Source %.6f–%.6f s", result.frames.count, result.frames.first!.stamp.seconds, result.frames.last!.stamp.seconds))
                     .font(.caption.monospacedDigit())
@@ -132,10 +132,14 @@ struct MotionComparisonView: View {
                 }.foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 275)
                     .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
             }
-            Text("A source interval of up to 3 seconds and 600 frames (playback may include a final frame tail of up to 250 ms). Both pictures are fitted into a 1280 × 360 H.264 viewing proxy with even-pixel rounding. Use Still for pixel inspection. This is not final compression quality or calibrated color.")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            Text("Rendering reads from the beginning to preserve filter history. A two-minute limit requests cancellation; cleanup waits for the encoder and file operations to finish.")
-                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            Label("Silent viewing proxy · Picture filters only, not final encoding quality", systemImage: "speaker.slash")
+                .font(.caption).foregroundStyle(.secondary)
+            DisclosureGroup("Preview limits and rendering details") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("A source interval of up to 3 seconds and 600 frames. Playback may include a final frame tail of up to 250 ms. Both pictures fit into a 1280 × 360 H.264 proxy with even-pixel rounding. Use Still for pixel inspection. Color is not calibrated.")
+                    Text("Rendering reads from the beginning to preserve filter history. A two-minute limit requests cancellation; cleanup waits for the encoder and file operations to finish.")
+                }.font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }.font(.caption)
         }
     }
 }

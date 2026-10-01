@@ -1,5 +1,5 @@
 # StaxRip Mac Slice 032: Silent motion comparison
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-057 / R-040.
+Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-057 / D-058 / R-040.
 
 SLICE STATE
 Milestone: Generated CFR/VFR timing, fragmented-file bounds and native decoder feasibility only.
@@ -17,7 +17,7 @@ Open generated SDR footage and change crop/deinterlacing. Open Picture compariso
 
 ## 3. In scope, with build order
 
-M1: Establish rational frame-range/output-timestamp and proxy geometry contracts using the current PicturePlan, bounded generated positive/negative controls and a shared-clock composite. M2: Owned temporary render/result/player lifecycle, source identity and cancel/stale/close protection. M3: Native motion mode and truthful status/limits. M4: Native playback/cancel/close, local and hosted regression plus cleanup evidence.
+M1: Establish rational frame-range/output-timestamp and proxy geometry contracts using the current PicturePlan, bounded generated positive/negative controls and a shared-clock composite. M2: Owned temporary render/result/player lifecycle, source identity and cancel/stale/close protection. M3: Native motion mode, explicit SwiftUI transport over the shared AVPlayerView and truthful status/limits. D-058 records the observed inline-control customization failure; frame steps/seeks use verified timestamps and playback observation is removed before cleanup. M4: Native playback/cancel/close, local and hosted regression plus cleanup evidence.
 
 ## 4. Out of scope
 
@@ -62,4 +62,4 @@ All six criteria have scoped evidence at the final tested head. No broader frame
 
 A native way to judge temporal picture settings before a long encode, while keeping exact still inspection available.
 
-Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-057 / R-040.
+Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-057 / D-058 / R-040.

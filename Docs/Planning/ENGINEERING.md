@@ -264,3 +264,5 @@ Approved R-036 under D-050: preserve requested task priority at the source-check
 Approved R-037 under D-052: per-read owned source worker queue preserving requested QoS and existing scan/cancellation behavior. S31-007 uses an opt-in bounded actual-source contention counterexample plus full regression; existing test scheduling/deadlines remain unchanged.
 
 Approved R-038 under D-053: preserve requested priority and own final-publication dispatch. S31-008 requires actual exclusive-publication contention negative/positive checks, unchanged collision/cancellation/cleanup behavior and full local/native/hosted regression.
+
+Approved R-039 under D-055: own regular-source admission dispatch with inherited task priority and a per-ToolRunner initiated control queue for launch/notify/escalation. S31-009 binds bounded actual-operation counterexamples and unchanged source/process lifecycle plus full/native regression.

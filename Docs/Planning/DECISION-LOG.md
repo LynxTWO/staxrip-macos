@@ -64,6 +64,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-052 | 2026-10-01 | Isolate source scanning from shared dispatch contention | Confirmed | |
 | D-053 | 2026-10-01 | Isolate final publication from shared dispatch contention | Confirmed | |
 | D-054 | 2026-10-01 | Observe the actual HDR cancellation test boundary | Confirmed | |
+| D-055 | 2026-10-01 | Own source admission and process control dispatch | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -833,3 +834,17 @@ Options considered: rerun until green; widen deadlines; subscribe to the actual 
 Consequences: Require the emitted state to be Inspecting with real source-audit progress and the batch to be running, then cancel synchronously at that event. Keep the 30-second generated source, 20-second observation bound, five-second cancellation bound, Cancelled/no-output/source-integrity assertions and all later mutation/verification checks. Retain final-state diagnostics if the event is absent. Remove the subscription before later subcases. No product, fixture-size, DSP or default scheduling change. Run focused and full local/hosted regression.
 
 Revisit when: The real progress event is absent, cancellation fails, or published-state reentrancy changes. Do not label the earlier unknown stopped outcome a proven polling race.
+
+## D-055: Own source admission and process control dispatch
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend Slice 031 with R-039 for source-admission and subprocess-control dispatch under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: Both repaired file workers now let the hosted three-job queue finish in 21.370 seconds. Remaining full-suite failures concern source import and ToolRunner cancellation/retry, whose admission and control paths still use shared queues.
+
+Options considered: change test scheduling; increase deadlines; reproduce these actual operations under bounded CPU load and isolate their dispatch domains. Choose the third.
+
+Consequences: Add debug-only opt-in observations and sequential controlled negative/positive checks for actual regular-file admission and a real process launch. Source admission gets a per-call owned queue preserving task priority. Native/fallback reads and cancellation checks remain unchanged. ToolRunner gets one owned user-initiated control queue for launch, completion notification and its existing two-/four-second escalation timers. Keep its existing priority, pipe queues, draining, callbacks, exit/join/retry behavior and signal policy. Preserve default tests and all limits. Verify existing 96-child, cancellation/retry, native/fallback lifecycle and full/native checks. No DSP, callback-discard policy, caption/chapter adapter or test-scheduling change.
+
+Revisit when: Controlled operations do not reproduce delay, lifecycle guarantees fail, or the unchanged full regression identifies a different boundary.

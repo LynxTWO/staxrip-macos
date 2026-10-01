@@ -141,3 +141,5 @@ Slice 025 is active under D-039 / R-029: explicit source review after restoring 
 Slice 025 closed at 42c8c07 with hosted run 36812490982: 197 tests in 479.518 seconds. Native cancellation, mismatch refusal, explicit preview loading and complete saved-session equality passed. Draft PR 42 remains unmerged. Audio listening stays parked.
 
 Slice 026 is active under D-040 / R-030: reproduce and correct SDR encoder time-base quantization with decoded generated-frame evidence. Audio listening stays parked.
+
+Slice 026 closed at f06d431 with hosted run 36813735721: 200 tests in 616.001 seconds. Local hardware/software timestamp matrix and native published output passed; initial native filesystem wait and interrupted staging remain documented in SDR-CADENCE-EVIDENCE.md. Draft PR 43 remains unmerged. Audio listening stays parked.

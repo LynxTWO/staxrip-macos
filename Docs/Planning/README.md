@@ -90,3 +90,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Restored source evidence](RESTORED-SOURCE-EVIDENCE.md) records retained intent, native review and local/hosted regression.
 
 36. [Slice 026: SDR frame timing](SLICE-026-sdr-cadence.md).
+
+[SDR cadence evidence](SDR-CADENCE-EVIDENCE.md) records decoded timestamps, native publication retry and regression.

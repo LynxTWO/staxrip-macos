@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 026: Preserve SDR frame timing
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-040 / R-030.
+Version: 0.2. Date: 2026-10-01. Status: Accepted within evidence limits under D-040 / R-030.
 
 SLICE STATE
-Milestone: Planning complete; reproduce with actual EncodePlan next.
+Milestone: Local/native/hosted checks passed at f06d431; hosted run 36813735721.
 Blocked by: None.
-Evidence so far: Generated discovery retained 24 frames but shifted irregular timestamps by up to 19 milliseconds with default encoder time base. This used traced equivalent arguments, not actual EncodePlan.
+Evidence so far: SDR-CADENCE-EVIDENCE.md records actual-plan negative control, 53 local matrix outputs, native retry and hosted success.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

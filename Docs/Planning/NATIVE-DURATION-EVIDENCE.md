@@ -25,6 +25,10 @@ Optimized build f385cec completed in 18.27 seconds. In the actual app, opened a 
 
 Independent ffprobe decoded-frame counting found 144 H.264 frames, 160 by 96, exactly 6.000 seconds and no audio; output size was 210201 bytes. Whole-file source/prior-output hashes remained unchanged, no owned staging remained, and the owner's recovery journal stayed byte-identical. The app was quit normally. Private receipt: work/native-duration/native/verified.json. This single native fixture does not expand the runtime check into a decoded-completeness guarantee.
 
+## Ordinary regression
+
+Full local swift test at f385cec passed 280 tests across 68 suites in 214.202 seconds, with 25 existing opt-in/tool-dependent skips. Private log: work/native-duration/full-local.log.
+
 ## Pending acceptance
 
-Ordinary full local/hosted regression remains pending. No full slice acceptance, decoded completeness, A/V sync or production-ready claim yet. A repeat of the historical hosted mastering cancellation failure reopens qualification without blind retry or diagnostic expansion.
+Ordinary hosted regression remains pending. No full slice acceptance, decoded completeness, A/V sync or production-ready claim yet. A repeat of the historical hosted mastering cancellation failure reopens qualification without blind retry or diagnostic expansion.

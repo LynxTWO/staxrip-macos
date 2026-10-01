@@ -290,3 +290,5 @@ Approved R-048 under D-068: ordered external SRT tracks with per-track immutable
 R-048 / D-069 keeps byte-exact caption titles through a private bounded FFmetadata stream-section snapshot rather than normalized process arguments. Source evidence is a minimal Foundation Process byte comparison and actual strict-output refusals. Existing ToolRunner and equality policy remain unchanged; include literal Unicode/delimiter output tests and corrected chapter input indices.
 
 R-048 / D-070 replaces the rejected FFmetadata-section implementation with literal bounded title argument files consumed by FFmpeg's documented slash-prefixed option syntax. No extra demux inputs or source stream metadata remapping remain. Preserve the original chapter input formula and exact added-title/cue comparisons; retain failed delimiter and metadata experiments as evidence.
+
+R-048 / D-071 permits bounded temporary cancellation-entry timestamps and a same-runner focused comparison. Preserve ordinary full-suite failure, scheduling, deadlines and all settlement/publication assertions. This is diagnosis, not acceptance or permission to alter unrelated worker scheduling.

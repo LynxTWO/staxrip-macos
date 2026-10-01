@@ -78,8 +78,9 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-066 | 2026-10-01 | Keep value-storage stress off the UI actor | Confirmed | |
 | D-067 | 2026-10-01 | Verify original-video copy before publication | Confirmed | |
 | D-068 | 2026-10-01 | Independently verify ordered external caption tracks | Confirmed | |
-| D-069 | 2026-10-01 | Preserve caption title bytes outside command arguments | Confirmed | |
+| D-069 | 2026-10-01 | Preserve caption title bytes outside command arguments | Superseded | D-070 |
 | D-070 | 2026-10-01 | Use literal title argument files without remapping source metadata | Confirmed | |
+| D-071 | 2026-10-01 | Diagnose second-caption cancellation entry before repair | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1066,7 +1067,7 @@ Revisit when: Existing output formats cannot preserve ordered track metadata/cue
 
 ## D-069: Preserve caption title bytes outside command arguments
 Date: 2026-10-01
-Status: Confirmed
+Status: Superseded
 
 Decision: Under active R-048, write bounded per-stream caption labels as operation-owned UTF-8 FFmetadata and map each section to its planned added stream. Delegated to AI recommendation under the owner's non-audio completion scope.
 
@@ -1092,3 +1093,18 @@ Options considered: narrow accepted title text; maintain extra metadata demux in
 Consequences: At most eight operation-owned 0600 files, each at most 1030 bytes (title= plus the existing 1024-byte title), no newline/escaping/FFmetadata demux step. Keep ASCII language options, automatic retained-source metadata copying, original chapter input offsets and byte-exact added-title verification. Remove the rejected FFmetadata-section code and temporary source metadata remapping. Cover eight-track output, trailing delimiters/Unicode, retained embedded language/MKV title and baseline MP4 name behavior without claiming broader metadata preservation. Existing process runner, test deadlines and audio stay unchanged.
 
 Revisit when: A supported FFmpeg build cannot load the option argument file or literal added titles fail their unchanged verifier.
+
+
+## D-071: Diagnose second-caption cancellation entry before repair
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Under R-048, permit bounded test-only timing observations and a same-runner focused comparison after the unchanged ordinary hosted test command. Delegated to AI recommendation under owner non-audio completion authority.
+
+Because: Local c386a77 passes 263 tests in 206.244 seconds. Hosted run 36874754310 compiles successfully and fails only the new second-caption cancellation test's existing ten-second entry guard; its post-cancellation message lost the pre-cancel phase. The full run takes 510.084 seconds. This does not establish which preparation, worker or child-process stage delayed entry.
+
+Options considered: raise the guard or serialize/exclude tests; guess at a production scheduling fix; gather bounded correlated entry/phase events and compare the same runner's focused case. Choose the third.
+
+Consequences: Preserve the ten-second entry guard, two-minute test limit, all final settlement/PID/output/next-job assertions and default full-suite scheduling. Record a bounded list of monotonic relative timestamps around current task-local source/caption/tool boundaries and status changes, plus the phase before cancellation. No media payloads, owner paths, credentials or unbounded logs. Ordinary failure remains failure even if the subsequent diagnostic focused case passes. Diagnose before selecting a repair; remove temporary tracing/workflow additions before final plain qualification. No next product slice, audio changes, merge or release.
+
+Revisit when: The correlated trace identifies a bounded correction, or this instrumentation fails to distinguish entry from observation/setup delays.

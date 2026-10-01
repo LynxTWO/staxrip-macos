@@ -98,20 +98,28 @@ struct ExportSourceFingerprintTests {
         }
     }
     private final class Gate: @unchecked Sendable {
-        let entered = DispatchSemaphore(value: 0), release = DispatchSemaphore(value: 0)
+        let release = DispatchSemaphore(value: 0)
+        private let entered: AsyncStream<Bool>
+        private let entrySignal: AsyncStream<Bool>.Continuation
         let lock = NSLock(); var finished = false
-        func signalEntry() { entered.signal() }
-        func waitForEntry(observe: (@Sendable (String) -> Void)? = nil) async {
-            observe?("submitting worker")
-            await withCheckedContinuation { continuation in
-                DispatchQueue.global().async {
-                    observe?("worker entered")
-                    self.entered.wait(); continuation.resume()
-                }
-            }
+        init() {
+            let pair = AsyncStream<Bool>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            entered = pair.stream; entrySignal = pair.continuation
         }
-        func finish() { lock.lock(); finished = true; lock.unlock() }
-        func isFinished() -> Bool { lock.lock(); defer { lock.unlock() }; return finished }
+        func signalEntry() { entrySignal.yield(true); entrySignal.finish() }
+        func waitForEntry(observe: (@Sendable (String) -> Void)? = nil) async -> Bool {
+            observe?("submitting worker")
+            var iterator = entered.makeAsyncIterator()
+            let observed = await iterator.next() ?? false
+            observe?("worker entered")
+            return observed
+        }
+        func finish() {
+            lock.withLock { finished = true }
+            // An unexpected read failure must also release the entry observer.
+            entrySignal.finish()
+        }
+        func isFinished() -> Bool { lock.withLock { finished } }
     }
     @Test(.timeLimit(.minutes(1))) func cancellationAwaitsWorkerAndAlreadyCancelledNeverReads() async throws {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
@@ -123,8 +131,9 @@ struct ExportSourceFingerprintTests {
                 if count == 0 { gate.signalEntry(); gate.release.wait() }
             }
         }
-        await gate.waitForEntry()
+        let observed = await gate.waitForEntry()
         task.cancel()
+        #expect(observed)
         #expect(!gate.isFinished())
         gate.release.signal()
         await #expect(throws: CancellationError.self) { try await task.value }
@@ -144,8 +153,9 @@ struct ExportSourceFingerprintTests {
         let load = WorkerContentionLoad(count: count), gate = Gate()
         // Isolate the existing observer dispatch; the worker-entry signal is ready.
         gate.signalEntry()
-        await gate.waitForEntry(observe: { load.observe($0) })
+        let observed = await gate.waitForEntry(observe: { load.observe($0) })
         await load.settle()
+        #expect(observed)
         let timing = load.lock.withLock { (load.ready, load.submitted, load.worker) }
         try #require(timing.0)
         let submitted = try #require(timing.1), entered = try #require(timing.2)

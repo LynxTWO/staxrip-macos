@@ -57,11 +57,19 @@ struct ExternalSubtitle: Codable, Equatable, Sendable {
         try validate()
         try Task.checkCancellation()
         let reference = self
+        let priority = Task.currentPriority
+        let workerQoS: DispatchQoS.QoSClass = priority >= .high ? .userInitiated :
+            priority >= .medium ? .default : priority >= .low ? .utility : .background
         let document: SubRipDocument = try await withCheckedThrowingContinuation { continuation in
             #if DEBUG
             observe?("submitting worker")
             #endif
-            DispatchQueue.global(qos: .utility).async {
+            // A caption read owns its dispatch domain and retains the request's
+            // priority. Descriptor/access lifetime and cancellation settlement
+            // stay inside the original awaited read.
+            let worker = DispatchQueue(label: "StaxRip.external-subtitle",
+                qos: DispatchQoS(qosClass: workerQoS, relativePriority: 0))
+            worker.async {
                 #if DEBUG
                 observe?("worker entered")
                 #endif

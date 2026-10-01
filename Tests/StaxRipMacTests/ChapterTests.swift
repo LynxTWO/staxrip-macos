@@ -126,7 +126,7 @@ struct ChapterTests {
             let directory = root.appendingPathComponent(variant); try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
             let output = directory.appendingPathComponent("output." + container.lowercased())
             var c = configuration(container)
-            c.chapterEdits?.entries[0].title = "  New = #1; \\ [CHAPTER] 日本語  "
+            c.chapterEdits?.entries[0].title = "  New = #1; \\ [CHAPTER] 日本語 #\u{0301};\u{0301}\\\u{0301}  "
             switch variant {
             case "boundary": c.picture.start = 2; c.picture.end = 4
             case "fractional": c.picture.start = 1.125123; c.picture.end = 4.375357

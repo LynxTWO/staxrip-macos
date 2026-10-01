@@ -134,9 +134,11 @@ struct ChapterPlan: Sendable {
         }
     }
     private static func escaped(_ title: String) -> String {
-        title.reduce(into: "") { result, character in
-            if ["\\", "=", ";", "#", " "].contains(character) { result.append("\\") }
-            result.append(character)
+        title.unicodeScalars.reduce(into: "") { result, scalar in
+            // Metadata delimiters are scalars even when a combining mark makes
+            // them part of a larger grapheme cluster in Swift.
+            if [92, 61, 59, 35, 32].contains(scalar.value) { result.append("\\") }
+            result.unicodeScalars.append(scalar)
         }
     }
     func writeMetadata(to directory: URL) async throws {

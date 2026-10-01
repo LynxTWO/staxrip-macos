@@ -41,3 +41,7 @@ The initial focused combined run passed 16 test declarations across five suites 
 Local receipts remain in ignored chapter logs, chapter-discovery and chapter-native directories. No generated media, binary, personal path or credential is committed. Audio listening is parked. Broader player seek behavior, nested editions, nonzero source origins, external chapter files, other machines/OS versions and heard VoiceOver remain outside this evidence. No merge or release is performed.
 
 Final local checkpoint: 222 tests / 46 suites passed in 38.555 seconds after the Unicode repair. The final ad-hoc build reopened successfully; the revised trim guidance was visible, Option-Command-5 selected Chapters, and the dark draft sheet retained readable controls/timeline/footer with source import disabled for demo media. Escape discarded the draft. The original light appearance was restored and the app exited. Hosted acceptance remains pending.
+
+A second serialization negative control attached combining marks to metadata delimiters. Both actual MKV/MP4 tests refused changed output titles under the character-based serializer. Escaping now iterates Unicode scalars, so an ASCII delimiter remains escaped even when Swift groups it with a combining mark. The negative log is retained. Final scalar-repair regression/build/hosted checks supersede the earlier product head.
+
+Final scalar-repair local regression: 222 tests / 46 suites passed in 38.389 seconds, including both actual combining-delimiter outputs. No assertions or tolerances were relaxed.

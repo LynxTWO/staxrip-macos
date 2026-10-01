@@ -17,8 +17,14 @@ At product 7b4494c, the expanded role fields visually showed the correct names a
 
 The same initial native walkthrough confirmed Escape closes the inspector. Both audio indices and the caption began selected; unchecking audio index 1 then Cancel retained all three; applying that subset and reopening retained only audio index 2 and caption index 3. Source metadata showed default/forced/hearing set on caption index 3, with visual/commentary unset. No export was launched.
 
-Full local regression at 7b4494c: 278 tests in 67 suites passed in 210.796 seconds; expected skip count is recorded with final receipts. Optimized build at that head passed in 17.49 seconds. Final UI label correction build/native and hosted qualification remain pending.
+Full local regression at 7b4494c: 278 tests in 67 suites passed in 210.796 seconds; 25 existing opt-in/tool-dependent skips. Optimized build at that head passed in 17.49 seconds. The label-only correction is ce27093; no helper, selection or test code changed. Its optimized build passed in 18.12 seconds.
 
-## Remaining gates
+## Final native walkthrough
 
-Native inspector/routing, optimized build and ordinary full local/hosted runs pending. No acceptance claim yet. Heard VoiceOver, player behavior and other metadata flags remain outside scope.
+At ce27093, opened the prior generated caption output in the optimized app. Its three subtitle titles/languages were Unspecified/Unspecified, French/fra and English/eng. Their default/forced states were 0/1, 1/1 and 0/1; the embedded track retained its hearing-accessibility declaration. Expanding French showed five individually named accessibility fields with correct Set/Not set values and explanatory hints. Native screenshots showed the matching visible labels. The disclosure retained its source-track context without renaming the child fields. Escape dismissed the sheet.
+
+Choose tracks showed the same bounded labels and summaries. Applying an unchecked French track and reopening retained indices 1 and 3. Unchecking index 1 and escaping cancelled the draft; reopening still showed 1 and 3 selected. The app was quit normally. Whole-file SHA-256 checks of both source and prior output matched the pre-walkthrough record, and the owner's recovery journal remained byte-identical. No export, playback, session save or journal restoration was performed in this slice. Private receipt: work/track-roles/native/verified.json. This is native visual/accessibility-tree and keyboard evidence, not a heard VoiceOver result.
+
+## Remaining gate
+
+Ordinary hosted regression is pending. No full acceptance claim yet. Heard VoiceOver, player behavior and other metadata flags remain outside scope.

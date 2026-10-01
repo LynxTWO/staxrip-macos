@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-081 / R-053.
 
 SLICE STATE
-Milestone: M1 and M2 implemented; focused checks passed; native and ordinary regression next.
+Milestone: M1 and M2 implemented; native, focused and local checks passed; hosted regression next.
 Blocked by: None within scope.
-Evidence: TRACK-ROLE-EVIDENCE.md records seven focused checks and actual immutable source metadata. Native/regression pending.
+Evidence: TRACK-ROLE-EVIDENCE.md records the corrected native accessibility finding, preserved source/journal, seven focused checks and 278-test local pass. Hosted pending.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

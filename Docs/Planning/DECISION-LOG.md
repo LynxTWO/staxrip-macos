@@ -62,6 +62,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-050 | 2026-10-01 | Preserve requested source-check worker priority | Confirmed | |
 | D-051 | 2026-10-01 | Observe actual source-read dispatch boundary | Confirmed | |
 | D-052 | 2026-10-01 | Isolate source scanning from shared dispatch contention | Confirmed | |
+| D-053 | 2026-10-01 | Isolate final publication from shared dispatch contention | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -803,3 +804,17 @@ Options considered: raise all requests to high priority; change caller actors; o
 Consequences: Keep existing task-to-QoS mapping, off-main open/hash, cancellation, progress, descriptor lifetime and source checks. Add a debug-only opt-in contention test that loads at most 32 owned CPU queues for three seconds, then checks actual source worker entry within one second. It is separate from default scheduling and does not remove or relax any existing test. Join every generated load worker before fixture cleanup. Reproduce the old shared-worker failure before changing production code. Run unchanged focused/full/local/native/hosted gates afterward. Keep explicit limits: this is not a guarantee against arbitrary OS load or kernel waits.
 
 Revisit when: The actual control does not reproduce, an owned source worker still delays, or unchanged full regressions fail.
+
+## D-053: Isolate final publication from shared dispatch contention
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend Slice 031 with R-038 for the final publication worker under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: The repaired source worker enters promptly on the hosted runner, but the next publication boundary waits from 20.021 seconds through cancellation at 58.531 seconds. Publication still uses shared utility dispatch, the same queue pattern demonstrated by the source contention control.
+
+Options considered: relax full-suite deadlines; change actor isolation; qualify the actual publication operation under controlled CPU load and then give it an owned queue preserving request priority. Choose the third.
+
+Consequences: Reuse the bounded debug-only opt-in CPU fixture with a separate publication opt-in flag. Add actual body/submission/worker observation with no release logging. Reproduce delayed real exclusive publication and priority lowering before repair. Then use one owned serial queue per publication and the source reader's priority mapping. Do not change the link operation, collision checks, cancellation settlement, cleanup or publication outcomes. Verify existing batch/native publication cancellation/collision tests, full suites, both capacity fixtures and native advanced plus Quick Export. No audio, deadlines or ordinary scheduling changes.
+
+Revisit when: The actual control fails to reproduce the suspected dispatch boundary, or existing publication guarantees/regressions fail. Arbitrary kernel latency remains outside this repair.

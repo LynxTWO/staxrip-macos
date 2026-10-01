@@ -262,3 +262,5 @@ D-049 extends R-035 with at most 32 timing messages around the unchanged product
 Approved R-036 under D-050: preserve requested task priority at the source-check Dispatch boundary, without changing hashing, ownership, cancellation, actor isolation or audio. Gate source-worker-priority binds S31-006 with actual worker QoS, pre-repair failure, existing mutation/cancellation checks and full local/hosted/native regression. Snapshot priority is not a promise of later dynamic priority propagation or bounded filesystem latency.
 
 Approved R-037 under D-052: per-read owned source worker queue preserving requested QoS and existing scan/cancellation behavior. S31-007 uses an opt-in bounded actual-source contention counterexample plus full regression; existing test scheduling/deadlines remain unchanged.
+
+Approved R-038 under D-053: preserve requested priority and own final-publication dispatch. S31-008 requires actual exclusive-publication contention negative/positive checks, unchanged collision/cancellation/cleanup behavior and full local/native/hosted regression.

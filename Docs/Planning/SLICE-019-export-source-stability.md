@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-09-30. Status: Active under D-032 / R-022.
 
 SLICE STATE
-Milestone: Plan committed before implementation.
-Blocked by: None; Slice 018 closed at fc1aa88 with hosted run 36792778159.
-Evidence so far: Generated blue/red replacement preserves all current video metadata while changing source bytes; SOURCE-STABILITY-RESEARCH.md.
+Milestone: Focused/local/native acceptance passed; hosted gate pending.
+Blocked by: Hosted macOS acceptance for 1f552e9, run 36795072130.
+Evidence so far: Seven focused functions, negative control, 173 full release tests, native sparse-source progress and verified export; SOURCE-STABILITY-EVIDENCE.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

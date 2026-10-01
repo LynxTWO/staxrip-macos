@@ -89,7 +89,7 @@ final class BatchController: ObservableObject {
     private var journalLease: BatchJournalLease?
     private var journalJobs: [QueueJob] = []
     private var task: Task<Void, Never>?
-    private var sourceCheck: (id: UUID, jobID: UUID)?
+    private var sourceCheck: (id: UUID, jobID: UUID, acceptsProgress: Bool)?
 
     init(journalURL: URL? = nil,
          readSource: @escaping ExportSourceFingerprint.Reader = { try await ExportSourceFingerprint.read($0, progress: $1) },
@@ -211,7 +211,7 @@ final class BatchController: ObservableObject {
             statuses[id]?.detail = "Stop requested. Waiting for the current output to finish publishing; later jobs will not start."
         }
         if let check = sourceCheck {
-            sourceCheck = nil
+            sourceCheck?.acceptsProgress = false
             statuses[check.jobID]?.detail = "Stop requested. Waiting for the source content check to finish."
         }
         task?.cancel()
@@ -219,7 +219,7 @@ final class BatchController: ObservableObject {
 
     private func fingerprint(_ source: URL, jobID: UUID, label: String) async throws -> SourceFingerprint {
         let id = UUID()
-        sourceCheck = (id, jobID)
+        sourceCheck = (id, jobID, true)
         defer { if sourceCheck?.id == id { sourceCheck = nil } }
         statuses[jobID]?.progress = 0
         statuses[jobID]?.detail = label
@@ -231,7 +231,7 @@ final class BatchController: ObservableObject {
     }
 
     private func sourceCheckProgress(id: UUID, jobID: UUID, label: String, bytes: Int64, total: Int64) {
-        guard sourceCheck?.id == id, sourceCheck?.jobID == jobID else { return }
+        guard sourceCheck?.id == id, sourceCheck?.jobID == jobID, sourceCheck?.acceptsProgress == true else { return }
         statuses[jobID]?.progress = Double(bytes) / Double(total)
         statuses[jobID]?.detail = "\(label) · \(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) of \(ByteCountFormatter.string(fromByteCount: total, countStyle: .file))"
     }

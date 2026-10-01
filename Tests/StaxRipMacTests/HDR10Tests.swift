@@ -160,16 +160,17 @@ struct HDR10Tests {
         #expect(collision.statuses[job.id]?.phase == "Failed")
         #expect(try FileManager.default.contentsOfDirectory(atPath: dir.path).allSatisfy { !$0.hasPrefix(".staxrip-batch-") })
     }
-    @Test(.enabled(if: FFmpegTools.discover() != nil))
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(3)))
     func cancellationMutationAndFailedVerificationDoNotPublish() async throws {
         let tools = try #require(FFmpegTools.discover())
-        let dir = try folder(); defer { try? FileManager.default.removeItem(at: dir) }
+        let dir = try folder(); let batch = BatchController()
+        defer { if batch.running { batch.cancel() } else { try? FileManager.default.removeItem(at: dir) } }
         let source = dir.appendingPathComponent("source.mkv")
         try await fixture(source, tools: tools, duration: "30")
         let before = try await SourceFingerprint.read(source)
         var c = config(); c.speed = "Thorough"
         let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: dir.appendingPathComponent("result.mkv").path, configuration: c, created: Date())
-        let batch = BatchController(); await batch.discover(); batch.start([job])
+        await batch.discover(); batch.start([job])
         let deadline = Date().addingTimeInterval(20)
         while batch.running && batch.statuses[job.id]?.detail.contains("source audit ·") != true && Date() < deadline { try await Task.sleep(for: .milliseconds(1)) }
         try #require(batch.running && batch.statuses[job.id]?.phase == "Inspecting")
@@ -180,16 +181,20 @@ struct HDR10Tests {
         #expect(!FileManager.default.fileExists(atPath: job.destination))
         #expect(try await SourceFingerprint.read(source) == before)
         print("HDR cancellation seconds=\(Date().timeIntervalSince(cancelled))")
-        // Modify the actual source after its audit and while the encoder owns an
-        // open file. Container still decodes, but its byte identity has changed.
+        // Mutate the audited source after the real encoder settles and before
+        // BatchController can verify/publish. This gate does not depend on catching
+        // a short-lived UI phase or finishing preflight within a fixed delay.
+        let mutationWrapper = dir.appendingPathComponent("mutating-encoder")
+        func quote(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
+        let mutationScript = "#!/bin/zsh\n" + quote(tools.ffmpeg.path) + " \"$@\"\nresult=$?\nif (( result == 0 )) && [[ \"${argv[-1]}\" == */encoded.mkv ]]; then /usr/bin/printf '\\0' >> " + quote(source.path) + "; fi\nexit $result\n"
+        try mutationScript.write(to: mutationWrapper, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: mutationWrapper.path)
+        batch.tools = FFmpegTools(ffmpeg: mutationWrapper, ffprobe: tools.ffprobe)
         batch.start([job])
-        let encodeDeadline = Date().addingTimeInterval(20)
-        while batch.running && batch.statuses[job.id]?.phase != "Encoding" && Date() < encodeDeadline { try await Task.sleep(for: .milliseconds(1)) }
-        try #require(batch.running && batch.statuses[job.id]?.phase == "Encoding")
-        let handle = try FileHandle(forWritingTo: source); try handle.seekToEnd(); try handle.write(contentsOf: Data([0])); try handle.close()
         while batch.running { try await Task.sleep(for: .milliseconds(10)) }
         #expect(batch.statuses[job.id]?.phase == "Failed")
         #expect(batch.statuses[job.id]?.detail.contains("Source changed") == true)
+        #expect(try await SourceFingerprint.read(source).byteCount == before.byteCount + 1)
         #expect(!FileManager.default.fileExists(atPath: job.destination))
         // A local probe wrapper injects a wrong output declaration, after a real
         // encode. Production never uses this fixture executable.

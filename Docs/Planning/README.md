@@ -63,4 +63,4 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 29. [Slice 019: advanced export source stability](SLICE-019-export-source-stability.md) and [research](SOURCE-STABILITY-RESEARCH.md).
 
-[Source stability evidence](SOURCE-STABILITY-EVIDENCE.md) records focused checks and the negative control; remaining gates are pending.
+[Source stability evidence](SOURCE-STABILITY-EVIDENCE.md) records local/native checks and the negative control; hosted acceptance is pending.

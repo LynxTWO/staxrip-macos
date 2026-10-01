@@ -136,3 +136,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 48. [Slice 038: ordered external caption tracks](SLICE-038-multiple-captions.md) and [evidence](MULTIPLE-CAPTIONS-EVIDENCE.md), accepted at 2f8cea7 under D-068 through D-074 / R-048.
 
 [Caption entry reframe](CAPTION-ENTRY-REFRAME.md): The owner approved the phase-specific cancellation gate under D-074 after four hosted entry failures; ordinary hosted run 36893266046 passed.
+
+49. [Slice 039: licensed full-film video qualification](SLICE-039-full-film-video.md), approved under D-075 / R-049 after Slice 038 acceptance.

@@ -153,3 +153,5 @@ Slice 037 is accepted at 22dc1ed under D-067 / R-047, with native output/recipe 
 Current approved boundary: SLICE-038-multiple-captions.md under D-068 / R-048. EncodeConfiguration centralizes a bounded ordered reference list while retaining the existing first-reference field. SessionDocument and BatchJournal provide explicit new-version boundaries. EncodePlan owns added stream ordinals and immutable export snapshots; BatchController remains the sole execution/publication owner.
 
 Slice 038 has scoped acceptance at 2f8cea7 under D-068 through D-074 / R-048, ordinary hosted run 36893266046. D-074 changes test-phase budgets only; production boundaries and owned cancellation/publication remain those of 6c471b7.
+
+Current approved boundary: SLICE-039-full-film-video.md under D-075 / R-049. A bounded opt-in test exercises the existing export owner and independent FFmpeg/ffprobe references; production architecture remains unchanged. Fixed reviewed media identity and per-run owned journals/output roots keep qualification separate from owner state.

@@ -84,6 +84,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-072 | 2026-10-01 | Qualify caption snapshot worker ownership | Confirmed | |
 | D-073 | 2026-10-01 | Trace remaining caption preparation boundaries | Confirmed | |
 | D-074 | 2026-10-01 | Phase-specific caption cancellation qualification | Confirmed | |
+| D-075 | 2026-10-01 | Licensed full-film video qualification | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1150,3 +1151,18 @@ Because: Four hosted failures and the D-073 trace show that aggregate preparatio
 Consequences: Keep the two-minute full-case limit, unchanged complete generated fixture, ordinary parallel suite scheduling and every existing PID/output/next-job/original/staging assertion. Require first-verifier child entry within 90 seconds of batch start, second-verifier entry within ten seconds of observing the first marker, and cancellation settlement within ten seconds. Use a monotonic clock. Early termination, timeout or task cancellation must cancel and join the owned batch before checking/removing its staging. A deterministic deliberate pre-verifier stall uses the same wait logic with a shorter negative-only budget after its own child entry is observed; this tests refusal without spending another 90 seconds. Record the actual PID and require it gone. Keep the fixed snapshot-worker contention regression and all broad output/corruption tests. No production code or scheduling change is required. Restore ordinary local/hosted validation, update evidence, and accept only if all scoped gates pass.
 
 Revisit when: The phase-specific test fails its unchanged per-phase/whole-case requirements or cancellation leaves a live tool or published output.
+
+
+## D-075: Licensed full-film video qualification
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 039 / R-049 under the owner's standing autonomous non-audio completion delegation, after accepted Slice 038. Delegated to AI recommendation.
+
+Need: establish whether actual video-copy and software export/caption paths preserve a complete licensed film, beyond short generated cases. Authority: owner program-completion request and RELEASE-SCOPE.md's real-film/evaluation gaps. Worst case: a supposedly successful user export loses video frames/timing or captions. Consequence class: user_data through the existing export path.
+
+Existing control: retain generated integration and pre-publication checks. Their gap is the short source duration and synthetic content. Use a bounded opt-in local test through existing controllers rather than a new runtime, service or production verifier. Three sequential silent MKV exports reuse the fixed Sintel source already acquired under CC BY 3.0; preserve attribution and label derivatives modified. Independent complete frame/PTS and subtitle decoding, copied pixel hash, original-byte protection and one native real-copy walkthrough provide scoped observations, not a universal guarantee.
+
+Consequences: Fixed source digest/size, no media or owner paths in Git/hosted CI, actual No audio selection, no audio tests/listening changes, no product code changes, no new downloads required. Respect the explicit resource/capture/time bounds and refusal conditions in Slice 039. Any product defect found needs a further evidence-backed decision before repair; no merge or release.
+
+Revisit when: The source no longer matches its reviewed identity, an existing guard refuses the film, independent complete references disagree, or the bounded matrix cannot complete.

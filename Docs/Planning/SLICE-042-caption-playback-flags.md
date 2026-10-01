@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 042: Caption playback choices
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-080 / R-052.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within scope at ba5ba2c under D-080 / R-052.
 
 SLICE STATE
-Milestone: M1, M2 and local/native M3 complete; final hosted regression pending.
+Milestone: M1, M2 and M3 complete; all six scoped gates passed.
 Blocked by: None within delegated scope.
-Evidence: CAPTION-FLAGS-EVIDENCE.md records focused/full local, final native output and restored owner state; hosted run 36911094620 pending.
+Evidence: CAPTION-FLAGS-EVIDENCE.md records focused/full local, final native output, restored owner state and passing hosted run 36911094620.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

@@ -32,4 +32,11 @@ Local native receipts: work/caption-flags/native/verify.py, verify.log and verif
 
 Ordinary local swift test at 8cbda9a passed 275 reported tests in 66 suites in 212.177 seconds, with 25 existing opt-in skips (work/caption-flags/full-local.log). Final ba5ba2c differs only in the native picker label/accessibility modifier; all algorithms, saved data, tests and workflow match that full run. Optimized builds passed: 18.28 seconds at 8cbda9a and 18.04 at ba5ba2c (build-release.log and build-final.log). The preview is ad-hoc signed, not a distribution candidate.
 
-S42-005 passed within the observed native boundary. Final-head ordinary hosted run 36911094620 remains pending. Earlier run 36910605965 also remains in progress on the pre-label head; neither is acceptance evidence yet. The unresolved historical mastering cancellation delays remain a reopen trigger.
+S42-005 passed within the observed native boundary. Final-head ordinary hosted run 36911094620 passed at ba5ba2c: 275 reported tests in 462.787 seconds, 72.02-second build, 25 existing opt-in skips. The earlier pre-label run 36910605965 also passed at 8cbda9a: 275 tests in 476.547 seconds, 71.77-second build, 25 skips. Logs: hosted-final.log and hosted-before-label.log. The unresolved historical mastering cancellation delays remain a reopen trigger.
+
+
+## Acceptance and limits
+
+All six S42 gates passed within scope at ba5ba2ce078d671a2d68682be3b60c08b43bba6c; draft PR 59. Selected planning audit: zero findings across 45 documents; diff whitespace check passed. This is not a clean global historical audit. Hosted compilation retains existing Swift 6 language-mode warnings for AVAssetExportSession capture and the ChapterPersistenceTests thread check; this package uses Swift language mode 5. These files' warned behavior was not introduced here.
+
+No audio DSP, deadline or ordinary test-scheduling changes. Historical mastering cancellation delays remain unexplained and a recurrence reopens qualification. Explicit MP4 flags, independent embedded flag editing, heard VoiceOver, player certification, broader platforms, merge and release remain excluded. A written flag check establishes file metadata, not what any player will choose.

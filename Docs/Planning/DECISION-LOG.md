@@ -1264,3 +1264,5 @@ Source facts: FFmpeg's disposition options disable its automatic default assignm
 Consequences: Session 9 and recovery 8 carry only optional typed caption intent; older formats reject new intent rather than discarding it. No audio DSP, scheduling, deadline, dependency, merge or release change. Keep actual mapped audio/video baseline defaults and verify default/forced bits before publication. M1 bounds, actual generated integration/refusal and native checks are explicitly part of R-052.
 
 Revisit when: M1 cannot preserve unrelated defaults, container flags differ, an older decoder loses intent, or ordinary regression contradicts acceptance.
+
+D-080 outcome: Slice 042 accepted at ba5ba2c, ordinary hosted run 36911094620. Typed MKV playback choices, protected legacy defaults, full caption checks and native save/reopen/export passed. Owner recovery state restored. No player interoperability, audio algorithm, merge or release claim.

@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 041 accepted at c54f915; Slice 002 experimental implementation and local listening pack preserved.
-Next: Execute Slice 042 caption playback choices under D-080 / R-052; M1 before implementation.
+Last completed: Slice 042 accepted at ba5ba2c; Slice 002 experimental implementation and local listening pack preserved.
+Next: Select a bounded track-metadata inspection improvement after Slice 042 acceptance.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -168,3 +168,5 @@ Slice 041 is accepted at c54f915 under D-079 / R-051, hosted run 36907486989. EX
 
 
 Current approved boundary: SLICE-042-caption-playback-flags.md under D-080 / R-052. A typed optional caption choice feeds an immutable flag plan in EncodePlan and verified output in BatchController. Sessions/recovery have explicit version boundaries; captions keep their current source and snapshot ownership.
+
+Slice 042 is accepted at ba5ba2c under D-080 / R-052, hosted run 36911094620. CAPTION-FLAGS-EVIDENCE.md binds all six gates to generated flag/text/default coexistence, refusal, saved intent, native output and ordinary local/hosted checks. Player behavior, MP4 explicit flags and heard accessibility remain outside scope.

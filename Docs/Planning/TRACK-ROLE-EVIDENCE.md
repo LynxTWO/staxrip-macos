@@ -25,6 +25,10 @@ At ce27093, opened the prior generated caption output in the optimized app. Its 
 
 Choose tracks showed the same bounded labels and summaries. Applying an unchecked French track and reopening retained indices 1 and 3. Unchecking index 1 and escaping cancelled the draft; reopening still showed 1 and 3 selected. The app was quit normally. Whole-file SHA-256 checks of both source and prior output matched the pre-walkthrough record, and the owner's recovery journal remained byte-identical. No export, playback, session save or journal restoration was performed in this slice. Private receipt: work/track-roles/native/verified.json. This is native visual/accessibility-tree and keyboard evidence, not a heard VoiceOver result.
 
-## Remaining gate
+## Ordinary regression and acceptance
 
-Ordinary hosted regression is pending. No full acceptance claim yet. Heard VoiceOver, player behavior and other metadata flags remain outside scope.
+Hosted pre-label run 36913229041 at 7b4494c passed all 278 tests in 556.936 seconds, build 88.86 seconds. Final ordinary hosted run 36914015358 at ce27093 passed all 278 tests in 606.103 seconds, build 92.17 seconds. Each has 25 existing opt-in/tool-dependent skips. Local full regression at 7b4494c passed 278 tests across 67 suites in 210.796 seconds, with the same 25 skips; no repeated full local run was needed for the single label-placement correction, which was rebuilt and directly verified in the native app. Hosted macOS 15 arm64/Swift 6.1.2 and local macOS 27.0.1/Swift 6.4 use Swift language mode 5. Existing NativeExport Sendable and ChapterPersistenceTests asynchronous Thread.isMainThread warnings remain, without a warning-free claim.
+
+All four gates are accepted at product ce27093 under D-081 / R-053: typed/source, native and ordinary regression checks match their scope. Selected planning audit: zero findings across 46 documents; git diff check passed. Private hosted logs are work/track-roles/hosted-before-label.log and hosted-final.log. The earlier hosted mastering cancellation issue did not recur in either run; its cause remains unresolved. No merge or release occurred.
+
+Heard VoiceOver, player behavior, other metadata flags and broader platform coverage remain outside scope. This presentation change does not verify accessibility content or add codec support.

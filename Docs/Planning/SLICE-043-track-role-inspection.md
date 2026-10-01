@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 043: Inspect track identity and declared roles
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-081 / R-053.
+Version: 0.1. Date: 2026-10-01. Status: Done with evidence under D-081 / R-053.
 
 SLICE STATE
-Milestone: M1 and M2 implemented; native, focused and local checks passed; hosted regression next.
+Milestone: All four scoped gates accepted at ce27093.
 Blocked by: None within scope.
-Evidence: TRACK-ROLE-EVIDENCE.md records the corrected native accessibility finding, preserved source/journal, seven focused checks and 278-test local pass. Hosted pending.
+Evidence: TRACK-ROLE-EVIDENCE.md records the corrected native finding, preserved source/journal, focused/local checks and final hosted run 36914015358.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

@@ -1284,3 +1284,5 @@ Source fact: FFmpeg defines default, forced, hearing-impaired, visual-impaired a
 Consequences: Pure presentation helper and two existing views only, with proportionate generated probe/native checks. No parser, schema, encoder, DSP, timing, merge or release changes. Incomplete and invalid flags stay visible. Reuse existing sanitation and label bounds; retain selection by original stream index.
 
 Revisit when: Native readability or selection behavior regresses, actual probe fields contradict displayed roles, or broader flag/editing semantics are needed.
+
+D-081 outcome: Slice 043 accepted at ce27093, ordinary hosted run 36914015358. Five declared roles and bounded identity labels passed actual source, native selection and ordinary regression checks. Native inspection caught and corrected inherited accessibility labels before acceptance. Owner files and recovery state stayed unchanged.

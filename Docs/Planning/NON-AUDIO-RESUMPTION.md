@@ -122,3 +122,5 @@ Slice 021 closed at 3c56caa with hosted run 36801364346: 186 tests in 403.950 se
 Slice 022 is active under D-035/R-025 after Slice 021 closure: reproduce and remove percentage growth from declared output-duration verification. Audio stays parked.
 
 Slice 022 closed at f52bade with hosted run 36802839483: 189 tests in 468.757 seconds, 9m01s job. Real shortened/extended-output refusal, two-hour low-rate export, fractional trim and native duration result passed within metadata-only limits. Draft PR 39 remains unmerged. Audio stays parked.
+
+Slice 023 is active under D-036/R-026 after Slice 022 closure: native preset spoken names, selection and optional hints. Audio mastering/listening remains parked.

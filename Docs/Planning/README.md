@@ -76,3 +76,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 32. [Slice 022: bounded output duration](SLICE-022-output-duration.md).
 
 [Output duration evidence](OUTPUT-DURATION-EVIDENCE.md) records Slice 022 scoped local/native/hosted acceptance and the original-policy regression.
+
+33. [Slice 023: spoken native preset choices](SLICE-023-native-preset-accessibility.md).

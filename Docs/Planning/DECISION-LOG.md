@@ -42,6 +42,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-033 | 2026-09-30 | Own and cancel source imports | Confirmed | |
 | D-034 | 2026-09-30 | Responsive native final publication | Confirmed | |
 | D-035 | 2026-09-30 | Bound declared output duration tolerance | Confirmed | |
+| D-036 | 2026-09-30 | Clarify native preset accessibility | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -540,3 +541,17 @@ Options considered: keep proportional tolerance; require mathematically identica
 Consequences: Known duration mismatches refuse before publication with useful measurements. Unknown source duration remains explicitly unverified. No encoding arguments, decoded timing, audio mastering, schema, merge or release changes.
 
 Revisit when: Legitimate muxing exceeds this allowance, selected-track duration planning is expanded, or decoded audiovisual timing is scoped.
+
+## D-036: Clarify native preset accessibility
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 023 under autonomous non-audio delegation after Slice 022 hosted closure.
+
+Because: Native Quick Export still exposes H.264 as raw combined card text, unlike the workspace's owner-approved digit-by-digit codec label.
+
+Options considered: leave the default combined text; replace visible codec names; keep visible names and supply short spoken names, explicit selection and optional hints. Choose the third using the shared pronunciation helper.
+
+Consequences: Accessible native preset labels and selection values, visible-name input aliases and clearer optional Apple-preset hints. No encoder behavior, system preferences, persistence, audio, merge or distribution changes.
+
+Revisit when: Owner spoken feedback or broader keyboard/platform qualification requires changes.

@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select the next reversible non-audio slice. Slice 022 closed at f52bade with hosted run 36802839483.
+Next: Slice 023 native preset accessibility under D-036. Slice 022 closed at f52bade with hosted run 36802839483.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -210,3 +210,7 @@ Approved R-024 under delegated Slice 021: reuse awaited background publication f
 ## Slice 022 duration checkpoint
 
 Approved R-025 under delegated Slice 022: retain a strict 250-millisecond container-duration allowance without percentage growth, explicit unknown source duration and finite-value checks. Gates duration-policy, duration-refusal, duration-compatibility and duration-regression bind S22-001 through S22-004. A shortened real encode that passes because the programme is long is the counterexample. Only current staged outputs are examined; no cadence, source, audio mastering or persistent-format changes.
+
+## Slice 023 native preset accessibility checkpoint
+
+Approved R-026 under delegated Slice 023: clear native preset labels using the accepted pronunciation helper, selected-state values and optional hints. Gates native-preset-labels, native-preset-selection and native-preset-regression bind S23-001 through S23-003. Visible names and native encoding choices stay unchanged; native accessibility inspection is evidence for exported semantics, not spoken VoiceOver acceptance. No new tests mirroring text literals are required.

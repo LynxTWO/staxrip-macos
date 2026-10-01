@@ -163,3 +163,6 @@ Slice 030 closed within its chapter scope at 0105d5c plus diagnostic-only ded74f
 Slice 031 is active under D-045 / R-035: bounded APFS full-destination failure and explicit retry. Audio listening stays parked.
 
 Slices 031 and 032 now have scoped acceptance, recorded in APFS-CAPACITY-EVIDENCE.md and MOTION-PREVIEW-EVIDENCE.md. Latest product head 5e9effa passed hosted run 36845548454. The next non-audio slice will be selected separately; listening remains parked.
+
+
+Slices 033 through 039 now have scoped acceptance linked from the planning index. Latest ordinary qualification head 542fde3 passed hosted run 36901339753. The licensed full-film video matrix and native copy passed; historical hosted cancellation timing failures remain unexplained. Audio listening and the existing normalizer acceptance remain parked. Draft PRs remain unmerged and no release is published.

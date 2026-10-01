@@ -84,6 +84,9 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-072 | 2026-10-01 | Qualify caption snapshot worker ownership | Confirmed | |
 | D-073 | 2026-10-01 | Trace remaining caption preparation boundaries | Confirmed | |
 | D-074 | 2026-10-01 | Phase-specific caption cancellation qualification | Confirmed | |
+| D-075 | 2026-10-01 | Licensed full-film video qualification | Confirmed | |
+| D-076 | 2026-10-01 | Preserve complete frame audits with compact JSON | Confirmed | |
+| D-077 | 2026-10-01 | Locate existing cancellation settlement delay | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1150,3 +1153,56 @@ Because: Four hosted failures and the D-073 trace show that aggregate preparatio
 Consequences: Keep the two-minute full-case limit, unchanged complete generated fixture, ordinary parallel suite scheduling and every existing PID/output/next-job/original/staging assertion. Require first-verifier child entry within 90 seconds of batch start, second-verifier entry within ten seconds of observing the first marker, and cancellation settlement within ten seconds. Use a monotonic clock. Early termination, timeout or task cancellation must cancel and join the owned batch before checking/removing its staging. A deterministic deliberate pre-verifier stall uses the same wait logic with a shorter negative-only budget after its own child entry is observed; this tests refusal without spending another 90 seconds. Record the actual PID and require it gone. Keep the fixed snapshot-worker contention regression and all broad output/corruption tests. No production code or scheduling change is required. Restore ordinary local/hosted validation, update evidence, and accept only if all scoped gates pass.
 
 Revisit when: The phase-specific test fails its unchanged per-phase/whole-case requirements or cancellation leaves a live tool or published output.
+
+
+## D-075: Licensed full-film video qualification
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 039 / R-049 under the owner's standing autonomous non-audio completion delegation, after accepted Slice 038. Delegated to AI recommendation.
+
+Need: establish whether actual video-copy and software export/caption paths preserve a complete licensed film, beyond short generated cases. Authority: owner program-completion request and RELEASE-SCOPE.md's real-film/evaluation gaps. Worst case: a supposedly successful user export loses video frames/timing or captions. Consequence class: user_data through the existing export path.
+
+Existing control: retain generated integration and pre-publication checks. Their gap is the short source duration and synthetic content. Use a bounded opt-in local test through existing controllers rather than a new runtime, service or production verifier. Three sequential silent MKV exports reuse the fixed Sintel source already acquired under CC BY 3.0; preserve attribution and label derivatives modified. Independent complete frame/PTS and subtitle decoding, copied pixel hash, original-byte protection and one native real-copy walkthrough provide scoped observations, not a universal guarantee.
+
+Consequences: Fixed source digest/size, no media or owner paths in Git/hosted CI, actual No audio selection, no audio tests/listening changes, no product code changes, no new downloads required. Respect the explicit resource/capture/time bounds and refusal conditions in Slice 039. Any product defect found needs a further evidence-backed decision before repair; no merge or release.
+
+Revisit when: The source no longer matches its reviewed identity, an existing guard refuses the film, independent complete references disagree, or the bounded matrix cannot complete.
+
+
+## D-076: Preserve complete frame audits with compact JSON
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Within R-049, use the documented compact JSON writer for the independent full-film frame query. Delegated to AI recommendation under the owner's non-audio qualification scope.
+
+Because: The first actual matrix at 2783d19 failed after 566.420 seconds when HEVC frame data exceeded the unchanged 4 MiB ToolRunner capture. The same complete query written to local diagnostic files produced 5,282,761 bytes with default formatting and 3,748,297 bytes with compact formatting. Parsed JSON equality proves every field and all 21,312 records match, including empty side-data sections. Copy and H.264 receipts from the failed matrix remain partial evidence only.
+
+Options considered: enlarge the capture limit; drop selected frame data; change only JSON whitespace through FFprobe's documented compact writer. Choose the third. Reference: https://ffmpeg.org/ffprobe.html#json .
+
+Consequences: Change only the test's frame-query writer argument. Preserve all frame fields, counts, tolerances, truncation refusal, subtitle checks, source protection, default scheduling and 15-minute case limit. Rerun the complete matrix in a new owned directory and ordinary local/hosted regression on the resulting head. Retain the first hosted run's separate existing mastering cancellation failure (6.796 seconds against five); do not relax or modify that audio test as part of this correction. No production or workflow changes.
+
+Revisit when: Compact complete data still exceeds the cap, frame or caption references disagree, or ordinary regression remains failing.
+
+
+## D-077: Locate existing cancellation settlement delay
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Under R-049's ordinary regression obligation and the owner's autonomous maintenance delegation, permit one bounded test-only observation of the unchanged failing cancellation case. Audio DSP, settings, fixtures and listening remain parked. This is lifecycle diagnosis, not an audio feature change.
+
+Need: A cancel request must settle owned media work before the app reports cancellation and leaves unpublished outputs intact. Authority: R-004 cancellation/publication protection, S39-005 ordinary regression, and the owner's autonomous program-completion instruction excluding listening. Worst case: users keep waiting on cancelled work or receive an incomplete settlement claim in the existing media path. Consequence class: user_data. Existing control: retain the current real generated-media cancellation test and ToolRunner DEBUG boundary hook; the gap is that the two hosted failures report elapsed time without the delayed boundary.
+
+Because: Hosted runs 36895508537 and 36897429716 both failed only the existing Fresh analysis five-second settlement assertion, at 6.796 and 6.248 seconds respectively. Final ordinary local regression passed 267 reported tests in 206.658 seconds with 25 opt-in skips. The complete film matrix and native copy also passed. No evidence yet identifies a production cause or implicates the newly disabled-by-default film test.
+
+Options considered: rerun unchanged without new evidence; relax the five-second guard; use existing test and process boundaries to locate notification, cancellation request, worker entry and task settlement. Choose the third.
+
+Consequences: Add at most 32 in-memory timestamp labels for the Fresh analysis case, printed after its checks; observe existing ToolRunner DEBUG events and existing phase notification only. No new fixture, assertion, scheduling, workload, timeout, process-control or DSP change. Keep ordinary hosted swift test as the gate, with one diagnostic run and a 20-minute operational watch cap. This is attempt three after two failed ordinary hosted runs. A third failure triggers the anti-dark-code reframe stop; do not extend the observer or silently revise the contract. Any production repair requires a further evidence-backed decision, and audio algorithm/listening scope remains closed.
+
+Revisit when: The trace cannot identify the delayed boundary, the third run fails, or a repair would require changed DSP or cancellation semantics.
+
+
+D-077 outcome: diagnostic hosted run 36899766961 at aa7f5bd passed all 267 reported tests in 509.548 seconds after a 78.10-second build. Cancel request at trace time 9.544638 returned at 9.544699; task exit was 9.588910 and result observation 9.589003. The prior over-five-second delay did not reproduce. Retire the temporary test-only observer, restore the original cancellation test byte-for-byte, and require ordinary final-head hosted regression. This is not a production repair or an explanation of the earlier failures. No additional diagnostic surface is authorized; another ordinary failure would be the third failed hosted run and invokes the recorded reframe stop.
+
+
+D-077 ordinary closure: restored uninstrumented head 542fde3 passed hosted run 36901339753, 267 reported tests in 527.517 seconds. Sources, Tests, Package.swift and workflow match the already tested ordinary head 2fe44cf. No production cancellation patch was made. Slice 039 accepts its observed film and regression results while retaining the unresolved historical timing failures; a recurrence reopens qualification rather than authorizing a relaxed guard or another diagnostic expansion.

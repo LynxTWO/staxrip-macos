@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 033 queue outcomes under D-059 / R-041, after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
+Last completed: Slice 039 accepted at 542fde3; Slice 002 experimental implementation and local listening pack preserved.
+Next: Select the next bounded non-audio capability after the full-film qualification closure; no new slice is active.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -302,3 +302,11 @@ R-048 remains unaccepted after D-073: actual snapshot writes are prompt, but agg
 R-048 / D-074: owner approval reopens the phase-specific cancellation qualification. Preserve the two-minute case and data/process assertions; 90 seconds for first-verifier preparation, ten seconds for observed-first-to-second verifier entry, ten seconds for settled cancellation. Shared wait logic must reject a deliberate stalled preparation and always join owned work before cleanup. No production or suite-scheduling changes.
 
 R-048 acceptance: all S38-001 through S38-006 gates passed at 2f8cea7 under D-074, ordinary hosted run 36893266046. Sources/workflow match the optimized/native-qualified 6c471b7 product; full local/hosted runs each report 266 tests. Preserve the superseded startup-guard failures as evidence, without a ten-second aggregate throughput claim.
+
+Approved R-049 under D-075: local opt-in licensed full-film video qualification. S39-001 through S39-005 bind film-input, film-video, film-captions, film-native and film-regression. Actual BatchController exports are compared with complete independent frame/PTS and subtitle data. Source/owner recovery state stay protected; no production behavior change or hosted media acquisition.
+
+R-049 / D-076 permits compact JSON formatting after exact complete-field equality showed the original HEVC frame audit exceeded its fixed capture bound. Rerun the entire matrix; retain the first failed matrix and unrelated ordinary hosted cancellation result. No production, audio, cap or time-limit changes.
+
+R-049 / D-077 permits one bounded observation of the existing Fresh analysis cancellation case and existing DEBUG ToolRunner events, with unchanged fixtures, assertions, five-second guard and ordinary scheduling. After two hosted failures, a third failure stops for a reframe; no audio/DSP implementation change is authorized.
+
+Slice 039 is accepted at ordinary qualification head 542fde3, hosted run 36901339753, with byte-equivalent film/local tests at 2fe44cf and unchanged native product Sources at 6c471b7. FULL-FILM-VIDEO-EVIDENCE.md retains the two unexplained earlier hosted cancellation failures and all single-film limits. No cancellation repair, audio acceptance or production completion is claimed.

@@ -117,6 +117,12 @@ Queue output verification now checks resized raster fit before publication and r
 
 Advanced queue publication runs off the UI thread. During Finishing, Stop after current publication waits for the current result and preserves successful output before stopping later jobs. Per-job Review source/destination access opens native pickers without relinking or starting work. See [scope and evidence](Docs/Planning/PUBLICATION-RESPONSIVENESS-EVIDENCE.md).
 
+## Copy supported original video
+
+Choose **Copy original** in the workspace video controls to change supported track or container choices without re-encoding the video. Encoding quality, speed and bitrate controls become inactive. Select audio and caption handling independently, choose a new output, then add the job to the queue.
+
+This mode currently accepts progressive upright square-pixel 8-bit SDR H.264/HEVC with a known zero-start timeline, up to 48 hours, from MP4/QuickTime or Matroska. Crop, resize, trim, deinterlacing and HDR conversion are incompatible and must be corrected explicitly. The app compares complete bounded compressed-picture packets, timestamps, durations and relevant codec configuration before publication. Some variable-rate container conversions cannot preserve packet durations and are refused. This is video-payload preservation, not whole-file byte identity. Quick Export uses its own Apple presets. See [copy scope and evidence](Docs/Planning/VIDEO-COPY-EVIDENCE.md).
+
 ## Add external caption tracks
 
 1. Open your video in **Workspace** and select **Subtitles**.

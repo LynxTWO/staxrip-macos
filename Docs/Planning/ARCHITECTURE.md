@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 033 queue outcomes under D-059 / R-041, after Slice 032 acceptance at 5e9effa, hosted run 36845548454.
+Last completed: Slice 039 accepted at 542fde3; Slice 002 experimental implementation and local listening pack preserved.
+Next: Select the next bounded non-audio capability after the full-film qualification closure; no new slice is active.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -153,3 +153,7 @@ Slice 037 is accepted at 22dc1ed under D-067 / R-047, with native output/recipe 
 Current approved boundary: SLICE-038-multiple-captions.md under D-068 / R-048. EncodeConfiguration centralizes a bounded ordered reference list while retaining the existing first-reference field. SessionDocument and BatchJournal provide explicit new-version boundaries. EncodePlan owns added stream ordinals and immutable export snapshots; BatchController remains the sole execution/publication owner.
 
 Slice 038 has scoped acceptance at 2f8cea7 under D-068 through D-074 / R-048, ordinary hosted run 36893266046. D-074 changes test-phase budgets only; production boundaries and owned cancellation/publication remain those of 6c471b7.
+
+Current approved boundary: SLICE-039-full-film-video.md under D-075 / R-049. A bounded opt-in test exercises the existing export owner and independent FFmpeg/ffprobe references; production architecture remains unchanged. Fixed reviewed media identity and per-run owned journals/output roots keep qualification separate from owner state.
+
+Slice 039 is accepted at ordinary qualification head 542fde3, hosted run 36901339753, with byte-equivalent film/local tests at 2fe44cf and unchanged native product Sources at 6c471b7. FULL-FILM-VIDEO-EVIDENCE.md retains the two unexplained earlier hosted cancellation failures and all single-film limits. No cancellation repair, audio acceptance or production completion is claimed.

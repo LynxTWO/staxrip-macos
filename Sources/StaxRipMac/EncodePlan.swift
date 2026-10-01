@@ -104,6 +104,11 @@ struct EncodePlan: Sendable {
         if preservingHDR {
             args += ["-profile:v", "main10", "-fps_mode", "passthrough", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-chroma_sample_location", "left"]
         }
+        if !preservingHDR {
+            // Nominal frame-rate time bases quantize genuine VFR intervals even
+            // with passthrough. Preserve the filter timeline for video only.
+            args += ["-fps_mode:v", "passthrough", "-enc_time_base:v", "filter"]
+        }
         let picturePlan = PicturePlan(c)
         let filters = orientation.filters + picturePlan.filters
         if !filters.isEmpty { args += ["-vf", filters.joined(separator: ",")] }

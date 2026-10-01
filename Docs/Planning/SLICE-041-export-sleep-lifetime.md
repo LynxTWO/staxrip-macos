@@ -59,7 +59,7 @@ Use only idleSystemSleepDisabled; do not add latency/QoS, display, termination, 
 
 ## 11. Definition of done
 
-All five gates have scoped evidence and owner state is restored. Document the exact supported automatic-sleep boundary; no always-awake, cancellation repair, audio, platform-wide or production-completion claim.
+All five gates have scoped evidence and owner state is restored. Document the supported automatic-sleep boundary; no always-awake, cancellation repair, audio, platform-wide or production-completion claim.
 
 ## 12. What this unlocks
 

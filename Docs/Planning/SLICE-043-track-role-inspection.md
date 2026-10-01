@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-081 / R-053.
 
 SLICE STATE
-Milestone: M1 presentation helper and focused checks next.
+Milestone: M1 and M2 implemented; focused checks passed; native and ordinary regression next.
 Blocked by: None within scope.
-Evidence: MediaInspectorView, TrackRoutingView and ContainerInspection inspected at e8c583b. Current views omit playback/accessibility flags; the inspector omits track titles.
+Evidence: TRACK-ROLE-EVIDENCE.md records seven focused checks and actual immutable source metadata. Native/regression pending.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves
@@ -54,7 +54,7 @@ R-053 authorizes bounded generated tests through existing read-only probe seams 
 
 ## 10. Guardrails
 
-Never label missing/invalid flags as absent. Flags describe source declarations, not measured content or guaranteed player selection. Do not change saved indices, source files, permissions or conversion defaults. No generic metadata parser or new runtime. If the historical hosted mastering cancellation failure recurs, reopen qualification without another blind retry or diagnostic expansion.
+Never label missing/invalid flags as Not set. Flags describe source declarations, not measured content or guaranteed player selection. Do not change saved indices, source files, permissions or conversion defaults. No generic metadata parser or new runtime. If the historical hosted mastering cancellation failure recurs, reopen qualification without another blind retry or diagnostic expansion.
 
 ## 11. Definition of done
 

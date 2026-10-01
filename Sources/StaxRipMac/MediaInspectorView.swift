@@ -64,6 +64,7 @@ struct MediaInspectorView: View {
                 Text("Reported metadata only. Chapter positions and attachment contents are not verified. Long labels are shortened and control characters are replaced for display. Nothing is extracted or opened.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if section == 0 {
+                    Text(TrackInspection.explanation).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Text("Source tags do not verify HDR preservation or frame-by-frame timing. Missing color tags do not prove SDR. Preserve static HDR10 requires its separate full-frame source and output audits; HLG remains unsupported.")
                         .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }
@@ -80,6 +81,14 @@ struct MediaInspectorView: View {
                 Spacer()
                 Text(ContainerInspection.text(stream.codec_name, fallback: "unknown")).monospaced()
             }
+            field("Reported title", value: TrackInspection.title(stream), help: "A title or track name from the source metadata. It has not been inferred from the track's content.")
+            field("Reported language", value: TrackInspection.language(stream), help: "The language label declared by the source. No language detection has been performed.")
+            DisclosureGroup("Declared track roles") {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(TrackInspection.roles(stream)) { role in field(role.label, value: role.state.rawValue, help: role.help) }
+                }.padding(.top, 8)
+            }.accessibilityLabel("Declared roles for source track \(stream.index)")
+            Text(TrackInspection.summary(stream)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let width = stream.width, let height = stream.height { Text("\(width) × \(height) · \(ContainerInspection.text(stream.pix_fmt, fallback: "unknown pixel format"))") }
             if let channels = stream.channels { Text("\(channels) channels · \(ContainerInspection.text(stream.channel_layout, fallback: "layout unspecified")) · \(ContainerInspection.text(stream.sample_rate, fallback: "?")) Hz") }
             if stream.codec_type == "video" {
@@ -87,7 +96,6 @@ struct MediaInspectorView: View {
                 details("Declared color", rows: VideoInspection.color(stream))
                 details("Timing and geometry", rows: VideoInspection.timing(stream))
             }
-            if let language = stream.tags?["language"] { Text("Language: \(ContainerInspection.text(language))") }
         }
     }
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

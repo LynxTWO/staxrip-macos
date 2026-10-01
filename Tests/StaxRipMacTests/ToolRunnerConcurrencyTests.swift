@@ -46,11 +46,25 @@ struct ToolRunnerConcurrencyTests {
     func cancellationEscalatesAndWaitsForExitAndLaunchFailureAllowsRetry() async throws {
         let runner = ToolRunner(), collector = CollectedBytes()
         // A direct shell child ignores gentle signals, so cancellation must await escalation.
-        await #expect(throws: CancellationError.self) {
-            try await runner.run(executable: URL(fileURLWithPath: "/bin/zsh"), arguments: ["-c", "trap '' INT TERM; print -r -- $$; while true; do :; done"], onOutput: {
-                collector.append($0); runner.cancel()
+        let (stream, ready) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let child = Task {
+            defer { ready.finish() }
+            return try await runner.run(executable: URL(fileURLWithPath: "/bin/zsh"), arguments: ["-c", "trap '' INT TERM; print -r -- $$; while true; do :; done"], onOutput: {
+                collector.append($0); ready.yield(())
             })
         }
+        defer { child.cancel(); ready.finish() }
+        var started = false
+        for await _ in stream { started = true; break }
+        try #require(started)
+        do {
+            _ = try await runner.run(executable: URL(fileURLWithPath: "/usr/bin/true"), arguments: [])
+            Issue.record("An active runner accepted a second process")
+        } catch {
+            #expect(error.localizedDescription.contains("already owns an active process"))
+        }
+        child.cancel()
+        await #expect(throws: CancellationError.self) { try await child.value }
         let pid = try #require(Int32(String(decoding: collector.bytes, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)))
         #expect(kill(pid, 0) == -1 && errno == ESRCH)
         let retry = ToolRunner()

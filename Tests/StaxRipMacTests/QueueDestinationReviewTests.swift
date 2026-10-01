@@ -137,11 +137,15 @@ struct QueueDestinationReviewTests {
 
     @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(1)))
     func matchingFoldersStartOneRealBatchAndSkipCompletedDestinations() async throws {
+        let started = ContinuousClock.now
+        func trace(_ stage: String) { print("DESTINATION_REVIEW \(started.duration(to: .now)) \(stage)") }
+        trace("fixture start")
         let f = try fixture()
         defer { if f.batch.running { f.batch.cancel() } else { try? FileManager.default.removeItem(at: f.root) } }
         let tools = try #require(FFmpegTools.discover()), source = f.root.appendingPathComponent("source.mp4")
         let generated = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-v", "error", "-n", "-f", "lavfi", "-i", "testsrc2=size=160x96:rate=24:duration=0.5", "-c:v", "libx264", "-preset", "ultrafast", source.path])
         try #require(generated.status == 0)
+        trace("generated source ready")
         let original = try Data(contentsOf: source)
         let prior = f.root.appendingPathComponent("prior.mkv"); try Data("Existing completed output".utf8).write(to: prior)
         let completed = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: prior.path,
@@ -158,11 +162,20 @@ struct QueueDestinationReviewTests {
         f.panels.selections[0].1(f.first); f.panels.selections[1].1(f.second)
         f.model.chooseQueueStart(using: f.batch)
         #expect(f.panels.selections.count == 2)
-        do { while f.batch.running { try await Task.sleep(for: .milliseconds(10)) } }
-        catch { f.batch.cancel(); throw error }
+        trace("review complete; batch started")
+        var lastPhases = ""
+        do {
+            while f.batch.running {
+                let phases = f.model.jobs.dropFirst().map { f.batch.statuses[$0.id]?.phase ?? "No status" }.joined(separator: ",")
+                if phases != lastPhases { trace(phases); lastPhases = phases }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+        } catch { trace("cancelled while batch active: " + lastPhases); f.batch.cancel(); throw error }
+        trace("batch settled")
         for job in f.model.jobs.dropFirst() {
             try #require(f.batch.statuses[job.id]?.phase == "Completed", Comment(rawValue: f.batch.statuses[job.id]?.detail ?? "No status"))
             let probe = try await MediaProbe.read(URL(fileURLWithPath: job.destination), tools: tools)
+            trace("independent probe finished: " + URL(fileURLWithPath: job.destination).lastPathComponent)
             #expect(probe.video?.codec_name == "h264" && abs(probe.seconds - 0.5) < 0.01)
         }
         #expect(try Data(contentsOf: source) == original)
@@ -173,5 +186,6 @@ struct QueueDestinationReviewTests {
         #expect(saved.jobs == f.model.jobs && saved.statuses.values.allSatisfy { $0.phase == "Completed" })
         f.model.chooseQueueStart(using: f.batch)
         #expect(f.panels.selections.count == 2 && !f.batch.running)
+        trace("all assertions finished")
     }
 }

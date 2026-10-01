@@ -149,10 +149,19 @@ struct HDR10Tests {
         try #require(pixels.status == 0 && !pixels.truncated)
         #expect(Set(stride(from: 0, to: pixels.stdout.count, by: 2).map { pixels.stdout[$0] & 3 }) == [0,1,2,3])
         var production = job; production.destination = dir.appendingPathComponent("production.mkv").path
+        if cll {
+            production.configuration.chapterEdits = .init(mode: .custom, entries: [
+                .init(startMilliseconds: 0, endMilliseconds: 1000, title: "HDR opening"),
+                .init(startMilliseconds: 1000, endMilliseconds: 2000, title: "HDR continuation")])
+        }
         let batch = BatchController(); await batch.discover(); batch.start([production])
         while batch.running { try await Task.sleep(for: .milliseconds(10)) }
         let state = try #require(batch.statuses[job.id]); #expect(state.phase == "Completed", Comment(rawValue: state.detail))
         #expect(state.detail.contains("Verified 48 frames"))
+        if cll {
+            let chapterProbe = try await MediaProbe.read(URL(fileURLWithPath: production.destination), tools: tools)
+            #expect(try ContainerPreservation.readChapters(chapterProbe).map(\.title) == ["HDR opening", "HDR continuation"])
+        }
         #expect(try await SourceFingerprint.read(source) == fingerprint)
         // Retry a completed destination under a fresh controller: exclusive publication.
         let collision = BatchController(); await collision.discover(); collision.start([production])

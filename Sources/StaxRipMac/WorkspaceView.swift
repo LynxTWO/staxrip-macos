@@ -250,12 +250,18 @@ struct WorkspaceView: View {
     private var settings: some View {
         VStack(alignment: .leading, spacing: 18) {
             Picker("Settings", selection: $model.tab) {
-                ForEach(["Picture", "Video", "Audio", "Subtitles"], id: \.self) { Text($0) }
+                ForEach(["Picture", "Video", "Audio", "Subtitles", "Chapters"], id: \.self) { Text($0) }
             }.pickerStyle(.segmented).labelsHidden()
             switch model.tab {
             case "Picture": pictureSettings
             case "Audio": audioSettings
             case "Subtitles": subtitleSettings
+            case "Chapters":
+                VStack(alignment: .leading, spacing: 17) {
+                    sectionTitle("Chapters", subtitle: "Give every part of the story a place.")
+                    ChapterOptionsView(configuration: $model.config,
+                                       source: model.loading || model.sourceUnavailable || model.sourceNeedsReview ? nil : model.sourceURL)
+                }
             default: videoSettings
             }
         }

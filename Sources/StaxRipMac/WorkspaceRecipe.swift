@@ -14,7 +14,7 @@ struct WorkspaceRecipe {
         let p = c.picture
         let trimmed = p.start > 0 || p.end > 0
         let range = trimmed
-            ? "From \(Self.seconds(p.start)) to \(p.end > 0 ? Self.seconds(p.end) : "source end"). Chapters omitted."
+            ? "From \(Self.seconds(p.start)) to \(p.end > 0 ? Self.seconds(p.end) : "source end"). " + (c.chapterEdits?.mode == .custom ? "Custom chapters clipped and shifted to output time." : "Chapters omitted.")
             : "Full source duration."
         let picture = Entry(id: "Picture", symbol: "crop", title: c.resolution == "Original" ? "Keep original scale" : "Fit within \(c.resolution)",
                             detail: PicturePlan(c).summary + ". " + range)
@@ -35,7 +35,20 @@ struct WorkspaceRecipe {
                               title: embedded ? "Keep embedded captions" : (c.externalSubtitle == nil ? "No subtitles" : "External captions only"),
                               detail: (embedded ? Self.tracks(c.subtitleTracks, kind: "subtitle") + "." : "Embedded subtitles omitted.")
                                 + (c.externalSubtitle.map { " Add \(URL(fileURLWithPath: $0.path).lastPathComponent) (\($0.language))." } ?? ""))
-        entries = [picture, video, audio, subtitles]
+        let chapterTitle: String
+        let chapterDetail: String
+        switch c.chapterEdits?.mode {
+        case .custom:
+            chapterTitle = "\(c.chapterEdits?.entries.count ?? 0) custom chapters"
+            chapterDetail = "Source-timeline ranges. Trim clips and shifts the list; output titles and times are verified."
+        case .remove:
+            chapterTitle = "No chapters"; chapterDetail = "Omit chapters from the output. Source media stays unchanged."
+        case nil:
+            chapterTitle = trimmed ? "Source chapters omitted" : "Preserve source chapters"
+            chapterDetail = trimmed ? "Create a custom list to retain chapters through a trim." : "Retain supported source titles and ranges. Source compatibility is checked before encoding."
+        }
+        let chapters = Entry(id: "Chapters", symbol: "list.number", title: chapterTitle, detail: chapterDetail)
+        entries = [picture, video, audio, subtitles, chapters]
     }
 
     private static func tracks(_ indices: [Int]?, kind: String) -> String {
@@ -62,7 +75,7 @@ struct WorkspaceRecipeView: View {
             }
             Text("Shape the next version.")
                 .font(.system(size: 12)).foregroundStyle(.secondary).padding(.top, 4)
-            Text("Jump to a section: ⌥⌘1–4")
+            Text("Jump to a section: ⌥⌘1–5")
                 .font(.system(size: 10)).foregroundStyle(.secondary).padding(.top, 6).padding(.bottom, 18)
             ForEach(Array(WorkspaceRecipe(configuration).entries.enumerated()), id: \.element.id) { index, entry in
                 recipeRow(entry, number: index + 1)

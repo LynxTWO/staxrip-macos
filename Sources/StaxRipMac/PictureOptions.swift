@@ -36,7 +36,7 @@ struct PictureOptionsView: View {
                         .accessibilityLabel("Trim end seconds")
                 }
             }.textFieldStyle(.roundedBorder)
-            Text("Trim re-encodes from the selected time. Choose AAC, Opus or No audio and remove subtitles. Chapters are omitted for trimmed outputs. Source preview shows the original.")
+            Text("Trim re-encodes from the selected time. Choose AAC, Opus or No audio and remove subtitles. Source chapters are omitted unless you create a custom list in Chapters; custom ranges are clipped and shifted to output time. Source preview shows the original.")
                 .font(.caption).foregroundStyle(.secondary)
         }.font(.system(size: 12))
     }

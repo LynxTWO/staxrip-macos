@@ -298,6 +298,7 @@ final class BatchController: ObservableObject {
         var publishedOutput: URL?
         do {
             if let externalDocument { try await externalDocument.writeSnapshot(to: directory.appendingPathComponent("external.srt")) }
+            try await plan.chapterPlan.writeMetadata(to: directory)
             statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
             try checkpoint()
             let parser = ProgressParser(duration: plan.duration) { [weak self] fraction in

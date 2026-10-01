@@ -315,11 +315,10 @@ final class BatchController: ObservableObject {
                   actual.streams.filter({ $0.codec_type == "audio" }).count == plan.audioCount,
                   actual.streams.filter({ $0.codec_type == "subtitle" }).count == plan.subtitleCount,
                   plan.expectedWidth == nil || actual.video?.width == plan.expectedWidth,
-                  plan.expectedHeight == nil || actual.video?.height == plan.expectedHeight,
-                  actual.seconds > 0,
-                  plan.duration <= 0 || abs(actual.seconds - plan.duration) < max(0.25, plan.duration * 0.01) else {
-                throw NativeExportError.invalid("The output did not match the expected codec, dimensions, tracks or duration.")
+                  plan.expectedHeight == nil || actual.video?.height == plan.expectedHeight else {
+                throw NativeExportError.invalid("The output did not match the expected codec, dimensions or tracks.")
             }
+            let durationSummary = try OutputDurationCheck.verify(expected: plan.duration, actual: actual.seconds)
             if plan.normalizedOrientation {
                 guard let video = actual.video, try SourceOrientation.read(video) == .identity,
                       video.sample_aspect_ratio == "1:1" else {
@@ -343,6 +342,7 @@ final class BatchController: ObservableObject {
                 verifiedSummary = hdr.summary + " · source/output timestamp bound ≤ \(hdr.timeBase.value + verified.timeBase.value) s"
             }
             try Task.checkCancellation()
+            verifiedSummary += " · " + durationSummary
             verifiedSummary += " · " + (try plan.outputGeometry.verify(width: actual.video?.width, height: actual.video?.height))
             verifiedSummary += " · " + (try plan.outputDisplayAspect.verify(width: actual.video?.width, height: actual.video?.height,
                                                                            sampleAspectRatio: actual.video?.sample_aspect_ratio))

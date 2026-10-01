@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-064 / R-045.
 
 SLICE STATE
-Milestone: Generated feasibility complete; implementation not started.
-Blocked by: None within this scope.
-Evidence so far: SUBTITLE-TRIM-RESEARCH.md; rejected direct output seek and decoded filtered results.
+Milestone: Implemented at e2d1152; native/local gates passed, final-head hosted gate held after one existing publication observation timeout.
+Blocked by: S36-005 investigation under D-065 / R-046; no owner action required.
+Evidence so far: SUBTITLE-TRIM-RESEARCH.md and SUBTITLE-TRIM-EVIDENCE.md; actual caption/video/audio/chapter timelines, native correction/export and local 247 tests.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves
@@ -25,7 +25,7 @@ Embedded subtitle retiming, styled or overlapping cues, multiple external tracks
 
 ## 5. Stubs and debts
 
-No new stub. Broad real-film, discontinuous audio, long-film sync and cross-player qualification remain open. A generated reference is narrower than arbitrary media support.
+D-065 adds test-only boundary diagnostics before choosing a publication observation repair. No new stub. Broad real-film, discontinuous audio, long-film sync and cross-player qualification remain open. A generated reference is narrower than arbitrary media support.
 
 ## 6. Modules touched
 

@@ -141,3 +141,5 @@ Current approved boundary: SLICE-035-compact-preview.md under D-062 / R-044. Wor
 Slice 035 is accepted at 24e8f2b with hosted run 36856655748. COMPACT-PREVIEW-EVIDENCE.md records the native continuity proof and rejected border experiment.
 
 Current approved boundary: SLICE-036-trimmed-captions.md under D-064 / R-045. ExternalSubtitle owns cue intersection, EncodePlan owns this combination's timing filters, ChapterPlan selects source/output metadata time explicitly, and BatchController writes the plan-owned caption snapshot. Existing verifier and exclusive publication remain the final authority.
+
+D-065 / R-046 holds Slice 036 acceptance after an existing hosted publication observation timeout. Diagnostic changes remain in the test gate and existing DEBUG task-local hooks; no publication or audio implementation change is approved yet. Video-copy discovery is retained locally, not an active implementation slice.

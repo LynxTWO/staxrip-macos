@@ -74,6 +74,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-062 | 2026-10-01 | Resize source preview without replacing playback | Confirmed | |
 | D-063 | 2026-10-01 | Qualify preview border hit testing | Confirmed | |
 | D-064 | 2026-10-01 | Clip external captions to the selected timeline | Confirmed | |
+| D-065 | 2026-10-01 | Locate publication observation timeout | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -994,3 +995,18 @@ Options considered: retain refusal; add a second full remux pass; use a captured
 Consequences: Retain known zero-start SDR source bounds, plain nonoverlapping SRT limits, no copied audio or retained embedded subtitles on trim, and fresh caption capture per attempt. Require explicit trim boundaries on millisecond precision; do not silently round owner intent. Intersect cues with the requested interval, shift once and refuse an empty result with correction guidance. For this path only, filter video/audio to the source interval and subtract the common start instead of global output seek. Feed custom chapters in verified output time. Existing untrimmed and non-caption trim paths remain unchanged. Independently decode actual captions, frame timestamps, audio timing and combined chapters before acceptance; runtime exact caption verification, source protection, staging and publication guards remain intact. No original mastering, new session fields, merge or release.
 
 Revisit when: Timestamp precision, audio delay, VFR frame selection, custom chapters or captured-snapshot verification disagree with the intended interval.
+
+
+## D-065: Locate the publication observation timeout before repair
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Extend Slice 036 regression qualification under R-046 with bounded test-only publication boundary diagnostics. Delegated to AI recommendation under the owner's autonomous non-audio authorization.
+
+Because: Final-head hosted run 36859104083 failed one existing mainActorRunsWhileFilesystemWorkerWaits test with its unchanged twenty-second gate timeout. All 247 tests ran; the earlier product head passed hosted 247 and final local passed 247. Many unrelated main-actor tests report about 26 seconds together. This does not establish whether the app main queue, task continuation or filesystem dispatch was delayed.
+
+Options considered: rerun until green; relax or serialize the test; trace the existing worker and observation boundaries before choosing any repair. Choose the third.
+
+Consequences: Keep existing assertions, twenty-second gate, one-minute test limit and default scheduling. Add bounded test-only monotonic events for actual publication body/submission/worker entry, gate entry, main-queue canary, polling continuation, release and completion. Use the existing DEBUG task-local hook; no product implementation change. Hold Slice 036 acceptance and video-copy implementation. Preserve the failed receipt. A causal repair needs evidence and a further decision.
+
+Revisit when: The hosted diagnostic identifies the delay, or a reproduction requires a separate controlled experiment.

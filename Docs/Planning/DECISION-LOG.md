@@ -55,6 +55,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-043 | 2026-10-01 | Review batch destinations before starting | Confirmed | |
 | D-044 | 2026-10-01 | Author and verify chapter lists | Confirmed | |
 | D-045 | 2026-10-01 | Qualify APFS full-destination recovery | Confirmed | |
+| D-046 | 2026-10-01 | Observe recurring hosted timing failures | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -698,3 +699,17 @@ Options considered: rely on HFS+ evidence; fill an existing volume; qualify a ne
 Consequences: Opt-in generated fixture only, actual ENOSPC, failed first job and later pending jobs, source/prior-output protection, cleanup and explicit successful retry. Native checks preserve the prior recovery journal. No existing volume, audio, shared-container quota, network or source/journal-full claim. Primary references: https://support.apple.com/guide/disk-utility/create-a-disk-image-dskutl11888/mac and https://support.apple.com/guide/disk-utility/add-delete-or-erase-apfs-volumes-dskua9e6a110/mac, reviewed 2026-10-01.
 
 Revisit when: Fixture ownership cannot be proven, APFS exhaustion occurs in a different phase, detach fails, or broader storage behavior is requested.
+
+## D-046: Observe recurring hosted timing failures
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend active Slice 031 regression diagnosis under owner autonomous non-audio delegation. Delegated to AI recommendation. This is a bounded observation, not permission to weaken a gate or alter parked audio.
+
+Because: Hosted runs 36825820502 and 36826611045 failed existing timing checks despite passing local release/debug and native capacity work. The second destination trace stalled at Verifying, while the first stalled at Inspecting; existing audio cancellation also exceeded its bound on the second run. No single product cause is established.
+
+Options considered: retry unchanged until green; increase deadlines or reduce parallel work; observe the unchanged full command on the ephemeral hosted runner. Choose the third.
+
+Consequences: R-035 gains one read-only observer, bounded to five minutes of test-process discovery and one one-second sample about thirty seconds into that process. Record CPU count, selected descendant CPU/RSS/state and test-process stacks only. No environment/argument dumps, secrets, owner media, arbitrary process sampling, test exclusions, scheduling/deadline/assertion changes or DSP edits. Preserve the original test exit status, stop the observer with the test and record observation overhead. Only generated CI test execution is observed.
+
+Revisit when: The observation identifies a repairable cause, fails to discriminate or materially perturbs timing. Any product repair outside APFS publication requires a separately recorded scope decision.

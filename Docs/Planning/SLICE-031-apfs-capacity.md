@@ -1,8 +1,8 @@
 # StaxRip Mac Slice 031: APFS full-destination qualification
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / R-035.
+Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / D-046 / R-035.
 
 SLICE STATE
-Milestone: Local full regression/build and native failure/retry complete; direct publication remedy and final hosted checks in progress.
+Milestone: Local/native capacity qualification complete. Recurrent existing hosted timing failures require bounded runtime observation under D-046.
 Blocked by: None.
 Evidence so far: APFS-CAPACITY-EVIDENCE.md records actual ENOSPC, protected bytes, native retry and detach, including an unrelated source-open interruption.
 Last audit: 2026-10-01.
@@ -17,7 +17,7 @@ Create a new bounded APFS image with unique fixture identity. Fill only its owne
 
 ## 3. In scope, with build order
 
-M1: Owned APFS fixture helper and filesystem/device/marker validation. M2: Actual production batch failure/retry with source, prior-output, staging and later-job assertions. Reuse the existing strict capacity test where its phase matches; otherwise add a separately scoped APFS test while retaining HFS+ assertions unchanged. M3: Native failure/retry, ordinary regression/hosted check and detached-fixture evidence. Fix product code only for a demonstrated defect within this boundary.
+M1: Owned APFS fixture helper and filesystem/device/marker validation. M2: Actual production batch failure/retry with source, prior-output, staging and later-job assertions. Reuse the existing strict capacity test where its phase matches; otherwise add a separately scoped APFS test while retaining HFS+ assertions unchanged. M3: Native failure/retry, ordinary regression/hosted check and detached-fixture evidence. D-046 adds bounded read-only observation of the unchanged hosted command after two failed runs. Fix product code only for a demonstrated defect within this boundary.
 
 ## 4. Out of scope
 
@@ -51,7 +51,7 @@ Record exact filesystem/device/capacity, actual write/fsync ENOSPC, app failure 
 
 ## 10. Guardrails
 
-No existing disk is erased, reformatted or filled. Validate mount identity before filler writes; cap all writes. Never enlarge the fixture to make a failure disappear. Detach failure retains the fixture and reports its location; it must not trigger deletion of mounted contents. No weakened assertions, timing thresholds or ordinary-test exclusions to force acceptance.
+No existing disk is erased, reformatted or filled. Validate mount identity before filler writes; cap all writes. Never enlarge the fixture to make a failure disappear. Detach failure retains the fixture and reports its location; it must not trigger deletion of mounted contents. No weakened assertions, timing thresholds, scheduling changes or ordinary-test exclusions to force acceptance. The D-046 observer does not dump environment variables, arguments or arbitrary process state and preserves the test command exit status.
 
 ## 11. Definition of done
 
@@ -61,4 +61,4 @@ All five criteria have scoped local/native evidence and ordinary hosted acceptan
 
 A second filesystem qualification for the default Mac storage family and a reusable bounded fixture for separately scoped future failure tests.
 
-Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-045 / R-035.
+Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-045 / D-046 / R-035.

@@ -132,3 +132,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Trimmed caption evidence](SUBTITLE-TRIM-EVIDENCE.md) records native correction/export, decoded caption/video/audio/chapter timelines and ordinary local/hosted acceptance after scoped test-fixture isolation.
 
 47. [Slice 037: verified original-video copy](SLICE-037-video-copy.md) and [feasibility](VIDEO-COPY-RESEARCH.md). [Evidence](VIDEO-COPY-EVIDENCE.md) records scoped native/local/hosted acceptance at 22dc1ed.
+
+48. [Slice 038: ordered external caption tracks](SLICE-038-multiple-captions.md), approved under D-068 / R-048 after Slice 037 acceptance.

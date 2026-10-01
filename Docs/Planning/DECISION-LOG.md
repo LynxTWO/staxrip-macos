@@ -1044,3 +1044,18 @@ Options considered: keep transcode-only behavior; expose unchecked FFmpeg copy; 
 Consequences: Use the existing validated Copy original/copy codec pair, with encoding controls visibly inactive and incompatible picture/color requests refused rather than cleared. Limit initial codecs, containers, pixel/display/timing semantics and audit resources as stated in Slice 037. Retain existing track routing, source identity, caption/chapter checks and exclusive publication. Require complete ordered packet payload/count/PTS/duration verification plus relevant stream metadata, actual decoded references and corruption refusal before acceptance. No new persisted fields, DSP/listening, merge or release. Older readers must reject the unknown pair safely.
 
 Revisit when: Container conversion changes the promised bitstream or timing beyond the defined precision, audit bounds cannot be enforced, or existing workflows/ownership contracts change.
+
+
+## D-068: Independently verify ordered external caption tracks
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 038 / R-048 under owner autonomous non-audio completion delegation. Delegated to AI recommendation.
+
+Because: Accepted single-track SRT capture/trim and verified video copy leave a practical gap: bilingual/accessibility caption exports still require repeated external remuxing. The existing immutable snapshot, decoded cue verifier and owned staging can extend to a bounded ordered list while retaining independent evidence for each added stream.
+
+Options considered: leave one track; append paths without a new saved-format boundary; support a bounded ordered list with explicit version compatibility and complete per-track verification. Choose the third.
+
+Consequences: At most eight existing plain UTF-8 SRT inputs, each with its own label/language and unchanged one-MiB/parser limits. Retain the legacy first-reference field and add a bounded optional tail, with canonical accessors and session/recovery version increments. Old valid single-track documents remain readable; old readers reject new documents rather than silently losing tracks. Presets exclude references and preserve current references when applied. Capture snapshots before encoding, map every input/output/chapter ordinal explicitly and verify every added stream before exclusive publication. Native operations identify filename/position and must not let stale selection target a different row. Keep all original one-track tests, deadlines and default scheduling. No audio processing, HDR expansion, embedded payload guarantee, merge or release.
+
+Revisit when: Existing output formats cannot preserve ordered track metadata/cues, native selection identity is ambiguous or the bounded list requires a broader persisted-format redesign.

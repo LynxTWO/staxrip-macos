@@ -232,6 +232,20 @@ private final class MasterCancellation: @unchecked Sendable {
     private let lock = NSLock()
     private var task: Task<MasterCandidate,Error>?
     private var requested = false
+    private let tracing: Bool
+    private let origin = ProcessInfo.processInfo.systemUptime
+    private var events: [String] = []
+    init(tracing: Bool) { self.tracing = tracing }
+    func record(_ label: String) {
+        guard tracing else { return }
+        let elapsed = ProcessInfo.processInfo.systemUptime - origin
+        lock.lock(); defer { lock.unlock() }
+        if events.count < 32 { events.append(String(format: "%.6f %@", elapsed, label)) }
+    }
+    func report() {
+        lock.lock(); let saved = events; lock.unlock()
+        for event in saved { print("MASTER_CANCEL_TRACE " + event) }
+    }
     func install(_ task: Task<MasterCandidate,Error>) {
         lock.lock(); self.task = task; let cancel = requested; lock.unlock()
         if cancel { task.cancel() }
@@ -252,22 +266,40 @@ struct MasteringRecoveryTests {
         let source = folder.appendingPathComponent("source.flac"), destination = folder.appendingPathComponent("output.flac")
         try await MasteringEngine.runTool(tools,["-f","lavfi","-i","aevalsrc=0.1*sin(2*PI*1000*t):s=48000:d=30","-c:a","flac",source.path])
         let fingerprint = try await SourceFingerprint.read(source)
-        let cancellation = MasterCancellation()
+        let cancellation = MasterCancellation(tracing: phase == "Fresh analysis")
+        defer { cancellation.report() }
         let notified = AsyncStream<Date>.makeStream()
         let task = Task {
-            defer { notified.continuation.finish() }
-            return try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { status,_ in
-                if status.hasPrefix(phase) {
-                    DispatchQueue.global().asyncAfter(deadline: .now()+0.02) {
-                        notified.continuation.yield(Date()); notified.continuation.finish(); cancellation.cancel()
+            cancellation.record("task entered")
+            defer { cancellation.record("task leaving"); notified.continuation.finish() }
+            let operation: @Sendable () async throws -> MasterCandidate = {
+                try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { status,_ in
+                    if status.hasPrefix(phase) {
+                        cancellation.record("target phase observed")
+                        DispatchQueue.global().asyncAfter(deadline: .now()+0.02) {
+                            cancellation.record("notification callback entered")
+                            notified.continuation.yield(Date()); notified.continuation.finish()
+                            cancellation.record("cancel requested")
+                            cancellation.cancel()
+                            cancellation.record("cancel returned")
+                        }
                     }
                 }
             }
+            #if DEBUG
+            return try await ToolRunner.$observeBoundary.withValue({ cancellation.record("tool " + $0) }) {
+                try await operation()
+            }
+            #else
+            return try await operation()
+            #endif
         }
         cancellation.install(task)
         var iterator = notified.stream.makeAsyncIterator()
         let start = try #require(await iterator.next())
+        cancellation.record("notification consumed")
         await #expect(throws: CancellationError.self) { try await task.value }
+        cancellation.record("task result consumed")
         #expect(Date().timeIntervalSince(start) < 5)
         #expect(try await SourceFingerprint.read(source) == fingerprint)
         #expect(!FileManager.default.fileExists(atPath: destination.path))

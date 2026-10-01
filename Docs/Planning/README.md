@@ -96,3 +96,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 37. [Slice 027: attached native export dialog](SLICE-027-native-export-panel.md).
 
 [Native export dialog evidence](NATIVE-EXPORT-PANEL-EVIDENCE.md) records attached selection, retained results and regression.
+
+38. [Slice 028: native output name correction](SLICE-028-native-export-naming.md).
+
+[Native output name evidence](NATIVE-OUTPUT-NAME-EVIDENCE.md) records correction before replacement, protected bytes and regression.

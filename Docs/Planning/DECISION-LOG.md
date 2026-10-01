@@ -51,6 +51,8 @@ Version: 0.1 Draft. Date: 2026-09-28.
 
 | D-041 | 2026-10-01 | Attach native export destination selection | Confirmed | |
 
+| D-042 | 2026-10-01 | Correct native output name collisions | Confirmed | |
+
 ## D-001: Native offline product
 Date: 2026-09-28
 Status: Confirmed
@@ -637,3 +639,17 @@ Options considered: keep the nested modal panel; add a separate controller-speci
 Consequences: Attached destination selection and guarded export initiation only. The current preset must match the captured choice, and source/availability must remain current. Keep NativeExportService, no-overwrite publication and encoding unchanged. Existing-file system Replace wording and arbitrary filesystem access remain separate debts.
 
 Revisit when: Native sheet evidence fails, a source-independent export workflow needs its own lifecycle, or collision-panel behavior is scoped.
+
+## D-042: Correct native output name collisions
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Build Slice 028 under autonomous non-audio delegation after Slice 027 acceptance. Delegated to AI recommendation.
+
+Because: The native save sheet offers Replace for an existing output, contradicting the exporter's established refusal. Discovery cancelled the prompt and verified unchanged source/output hashes.
+
+Options considered: retain the contradiction; replace the entire destination interface; use the documented pre-replacement filename callback to retain the sheet with a correction. Choose the third, preserving the user's name and final exclusive publication check.
+
+Consequences: A retained delegate and scoped local MP4 name check, including extensionless names and existing symlink/directory entries. Native testing must establish actual ordering. AppKit documentation and the local SDK place userEnteredFilename before automatic extension append and Replace, and declare delegate ownership weak. No automatic renaming, persistent schema, audio or publication change. Reference: https://developer.apple.com/documentation/appkit/nsopensavepaneldelegate/panel(_:userenteredfilename:confirmed:), reviewed 2026-10-01.
+
+Revisit when: AppKit versions differ in callback ordering/URL availability, network filesystems need nonblocking validation, or broader destination UX is scoped.

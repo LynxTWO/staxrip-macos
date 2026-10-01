@@ -147,3 +147,7 @@ Slice 026 closed at f06d431 with hosted run 36813735721: 200 tests in 616.001 se
 Slice 027 is active under D-041 / R-031: route Quick Export destination selection through attached workspace dialog ownership and captured intent. Audio listening stays parked.
 
 Slice 027 closed at 70d0ac6 with hosted run 36815249560: 203 tests in 440.625 seconds. Native attached sheet, disabled competing file commands, cancelled selection and real export passed. Draft PR 44 remains unmerged. Audio listening stays parked.
+
+Slice 028 is active under D-042 / R-032: correct known native output name collisions before the system Replace prompt. Audio listening stays parked.
+
+Slice 028 closed at 70c17da with hosted run 36817176434: 205 tests in 467.993 seconds. Native explicit/extensionless/case-varied collisions stayed in the sheet; correction exported with unchanged source/prior-output bytes. Draft PR 45 remains unmerged. Audio listening stays parked.

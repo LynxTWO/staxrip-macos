@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 029: Review batch destinations before starting
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-043 / R-033.
+Version: 0.2. Date: 2026-10-01. Status: Accepted within evidence limits under D-043 / R-033.
 
 SLICE STATE
-Milestone: Planning complete; implementation next.
+Milestone: Local/native/hosted checks passed at 485ea85; hosted run 36818937608.
 Blocked by: None.
-Evidence so far: Slice 026 repeated a native filesystem publication wait; a fresh attempt after explicit destination selection completed. The cause remains unproven.
+Evidence so far: QUEUE-DESTINATION-REVIEW-EVIDENCE.md records ordered review, protected cancellation, actual/native batches and regression. Earlier filesystem waits remain unresolved.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

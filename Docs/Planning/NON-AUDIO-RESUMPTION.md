@@ -153,3 +153,5 @@ Slice 028 is active under D-042 / R-032: correct known native output name collis
 Slice 028 closed at 70c17da with hosted run 36817176434: 205 tests in 467.993 seconds. Native explicit/extensionless/case-varied collisions stayed in the sheet; correction exported with unchanged source/prior-output bytes. Draft PR 45 remains unmerged. Audio listening stays parked.
 
 Slice 029 is active under D-043 / R-033: review distinct pending destinations before native batch start. Audio listening stays parked.
+
+Slice 029 closed at 485ea85 with hosted run 36818937608: 210 tests in 506.050 seconds. Native second-folder cancellation preserved the prior journal; retry completed three jobs through two folder reviews. Draft PR 46 remains unmerged. Audio listening stays parked.

@@ -1,5 +1,5 @@
 # Ordered external caption evidence
-Version: 0.1. Date: 2026-10-01. Status: Native/focused verification passed; final regression pending.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within recorded scope at 2f8cea7 under D-068 through D-074 / R-048.
 
 ## Scope
 
@@ -44,3 +44,19 @@ The final 6c471b7 native build repeated saved-session access review and a real s
 ## D-073 outcome and stop
 
 Hosted 36880463923 at 37726d5 failed only the same entry guard (265 tests, 517.715 seconds; build 87.39 seconds). The exact trace reaches first-caption verification at 20.740 seconds, then cancels at 21.244 after batch start at 11.041. Snapshot/title writes are prompt; no new causal production repair is established. The same runner's focused case passed in 0.387 seconds, and the ordinary local diagnostic run passed in 204.942 seconds. Temporary tracing and the extra workflow step were restored exactly to 6c471b7. [Owner reframe packet](CAPTION-ENTRY-REFRAME.md) records four hosted entry failures, the proposed phase-specific contract and the unresolved decision. Slice 038 is not accepted; no unchanged hosted rerun is offered as progress.
+
+
+## Owner-approved phase-specific qualification
+
+D-074 records the owner's explicit approval after the four failed aggregate-entry runs. At 2f8cea7, the actual second-verifier cancellation case requires first-verifier entry within 90 seconds of batch start, second-verifier entry within ten seconds of observing the first marker, and settled cancellation within ten seconds. The two-minute whole-case limit, complete generated fixture, ordinary scheduling and all original data/process checks remain. Marker files publish complete PIDs. A cancellation-independent join keeps staging alive until the batch and its tools settle, including failed waits or cancellation of the test task.
+
+A new two-case negative blocks the actual encoder or first subtitle decoder. The preparation case tests the same wait with a 100-millisecond negative-only budget after its child is observed; the first-decoder case retains the full ten-second second-entry limit. Both must report the expected timeout, terminate the recorded child, keep the next job Pending, leave no output, preserve all originals and remove owned staging. Eleven new ordinary caption tests plus the opt-in snapshot probe are present; the runner reports 12 caption-group tests in two suites passing in 10.532 seconds. The ordinary full local run reports 266 tests in 61 suites passing in 206.456 seconds.
+
+Sources and the ordinary workflow remain byte-identical to 6c471b7, so its optimized/native export evidence remains applicable. Ordinary hosted run [36893266046](https://github.com/LynxTWO/staxrip-macos/actions/runs/36893266046) at 2f8cea7 passed all 266 tests in 513.644 seconds after a 75.13-second Swift 6.1.2 build. The actual second-verifier cancellation case passed in 28.189 seconds; the two-case deliberate stall test passed in 36.915 seconds. The former aggregate ten-second requirement was explicitly replaced, never retroactively passed. No audio/listening changes, broader scheduling changes or new production repair are included.
+
+
+## Scoped acceptance
+
+All six Slice 038 gates are accepted at product/test head 2f8cea7 with the owner's D-074 contract approval. Local full regression passed 266 tests in 206.456 seconds; ordinary hosted regression passed the same count in 513.644 seconds. Sources and workflow are unchanged from 6c471b7, whose optimized build and independent native two-track/72-packet output checks remain applicable. The final planning audit has zero findings across 41 selected documents. Eleven new ordinary tests and one opt-in diagnostic comprise this slice's two caption suites. The separate snapshot contention probe is not enabled in ordinary runs.
+
+This acceptance covers bounded plain external SRT references, labels, snapshots, mapped streams, complete added-cue verification and the approved cancellation lifecycle. It does not assert the superseded aggregate ten-second startup bound, broad real-film/player behavior, heard VoiceOver, audio listening, merge or release. The original failed receipts and causal limits remain above.

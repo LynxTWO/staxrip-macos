@@ -1,5 +1,5 @@
 # Caption cancellation entry: owner decision packet
-Date: 2026-10-01. Status: Owner approved the recommended approach under D-074; implementation/qualification pending.
+Date: 2026-10-01. Status: Owner approved under D-074; implemented and qualified at 2f8cea7, hosted run 36893266046.
 
 ## Need and authority
 
@@ -28,7 +28,7 @@ At 37726d5, fixture creation took 11.040 seconds, outside the guard. Batch start
 
 The D-072 writer repair has separate bounded before/after dispatch evidence and remains. Plain 6c471b7 local regression passed 265 tests in 212.180 seconds; optimized/native independent output checks passed. Instrumented local 37726d5 passed 265 tests in 204.942 seconds. Temporary D-073 observers and workflow diagnosis are now restored exactly to 6c471b7. No new passing hosted result is claimed.
 
-## Approved decision (qualification pending)
+## Approved and qualified decision
 
 Recommend making this a cancellation-lifecycle test with explicit phase budgets, rather than a ten-second total-throughput test:
 
@@ -45,3 +45,5 @@ This deliberately replaces the old aggregate ten-second startup assertion; it is
 The owner approved the recommended phase-specific approach in chat on 2026-10-01: "yep, i approve that approach". D-074 records exact execution and negative-test bounds. The previous failed runs remain evidence; approval does not turn them into passes.
 
 No merge, release, audio listening or next product slice is authorized by this packet. The full-film qualification proposal remains inactive. The checkpoint intentionally avoids another unchanged hosted attempt; failed receipts remain authoritative.
+
+Closure: ordinary local 266 tests passed in 206.456 seconds; hosted 36893266046 passed 266 tests in 513.644 seconds. MULTIPLE-CAPTIONS-EVIDENCE.md preserves the complete scoped result and prior failures.

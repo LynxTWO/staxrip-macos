@@ -70,6 +70,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-058 | 2026-10-01 | Comparison-specific native transport | Confirmed | |
 | D-059 | 2026-10-01 | Truthful compact queue outcomes | Confirmed | |
 | D-060 | 2026-10-01 | Qualify subtitle dispatch and cancellation observation | Confirmed | |
+| D-061 | 2026-10-01 | Adapt semantic accent and warning contrast | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -928,3 +929,18 @@ Options considered: rerun until green; widen limits or serialize default tests; 
 Consequences: Reuse the existing explicit three-second CPU-contention fixture, two through 32 CPUs, sequentially and outside default tests. Add debug-only actual subtitle body/submission/worker observations, and test-only observation of the existing source-cancellation entry waiter. Require actual behavior, unchanged input/output and child settlement; timing at a wrapper is insufficient. If the dispatch delay reproduces, move subtitle I/O to a per-read owned queue preserving requested task priority, and replace the test's blocking global entry waiter with an asynchronous event. Keep the source worker's intentional hold/release assertion, cancellation checks, caption bounds/access/descriptor lifetime, all deadlines and default scheduling. Join every owned load/read before deleting fixtures. Then run focused, full local/hosted and native external-caption checks. No DSP, general scheduler change, kernel-wait claim or broad harness.
 
 Revisit when: Controlled paths do not reproduce the delay, file/cancellation semantics change, or the unchanged full gate identifies another boundary.
+
+
+## D-061: Adapt semantic accent and warning contrast
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 034 and R-043 under owner overnight non-audio and creative design delegation. Delegated to AI recommendation.
+
+Because: The fixed teal used for small active labels has only 2.396:1 contrast on white and 2.049:1 on a light neutral reference surface. Native light-mode review exposed faint control text. Slice 033 is accepted at 3d14456 with final hosted success.
+
+Options considered: one darker constant; system blue throughout; appearance-aware teal and amber semantics with separate primary-action fill/label. Choose the third to keep the visual identity while matching the surface.
+
+Consequences: Use AppKit dynamic colors for light, dark and increased-contrast appearances. Target at least 4.5:1 for active app-owned accent/warning text on documented opaque reference surfaces and actual used tints, with 7:1 for increased-contrast variants. Separate the white-label primary-action pair from text accent. Preserve native prominent button behavior and action guards. System secondary/disabled colors and chart-series colors remain separate. Qualify actual resolved colors, the old counterexample, native light/dark control and warning views, keyboard actions, optimized build and full regression. No DSP, file access, session schema, layout redesign, release or broad accessibility conformance claim.
+
+Revisit when: Native resolution disagrees with tested appearance, a label/background pair loses contrast, or material compositing requires an explicitly different surface.

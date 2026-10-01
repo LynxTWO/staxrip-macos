@@ -118,3 +118,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 43. [Slice 033: queue outcomes and compact review](SLICE-033-queue-outcomes.md).
 
 [Queue outcome evidence](QUEUE-OUTCOMES-EVIDENCE.md) records truthful compact rows, native outcomes, protected outputs and final local/hosted acceptance after bounded caption dispatch qualification.
+
+44. [Slice 034: readable semantic appearance](SLICE-034-appearance-contrast.md).

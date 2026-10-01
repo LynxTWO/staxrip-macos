@@ -79,6 +79,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-067 | 2026-10-01 | Verify original-video copy before publication | Confirmed | |
 | D-068 | 2026-10-01 | Independently verify ordered external caption tracks | Confirmed | |
 | D-069 | 2026-10-01 | Preserve caption title bytes outside command arguments | Confirmed | |
+| D-070 | 2026-10-01 | Use literal title argument files without remapping source metadata | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1076,3 +1077,18 @@ Options considered: weaken title equality to canonical equivalence; rewrite all 
 Consequences: One private metadata snapshot, at most eight language/title stream sections and 32 KiB after ASCII delimiter escaping. Map metadata from each section explicitly; keep all output label/text/timing comparisons byte-exact. Chapter input ordinals account for the additional metadata input. Use owned priority-preserving file work and await cancellation settlement. Do not change ToolRunner, normalization policy or older one-track assertions. Add composed/decomposed Unicode and literal delimiter round-trip evidence in both output containers. Remove temporary test-only metadata prints before ordinary qualification.
 
 Revisit when: The metadata file cannot preserve labels exactly or additional fields require a broader metadata contract.
+
+
+## D-070: Use literal title argument files without remapping source metadata
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Supersede D-069's FFmetadata-section mechanism with FFmpeg's documented file-loaded option argument, one bounded title assignment file per added caption track. The requirement to keep user title bytes outside Foundation Process arguments remains. Delegated to AI recommendation within R-048.
+
+Because: Stronger generated tests exposed two FFmetadata costs. An escaped trailing backslash plus newline continued the next section and collapsed eight tracks; direct bounded probes confirmed this. Explicit stream metadata mapping also disabled automatic retained-stream metadata copying. A direct file-loaded metadata option preserved NFC/decomposed text, equals/hash/semicolon and a trailing backslash byte-for-byte without either issue. Separately, a plain FFmpeg MP4-to-MP4 copy drops an embedded subtitle's name tag even without our changes; this preexisting broader embedded-title limitation is outside the added-track guarantee.
+
+Options considered: narrow accepted title text; maintain extra metadata demux inputs and manual maps for every source stream; use the documented slash-prefixed metadata option to read a literal title assignment file. Choose the third.
+
+Consequences: At most eight operation-owned 0600 files, each at most 1030 bytes (title= plus the existing 1024-byte title), no newline/escaping/FFmetadata demux step. Keep ASCII language options, automatic retained-source metadata copying, original chapter input offsets and byte-exact added-title verification. Remove the rejected FFmetadata-section code and temporary source metadata remapping. Cover eight-track output, trailing delimiters/Unicode, retained embedded language/MKV title and baseline MP4 name behavior without claiming broader metadata preservation. Existing process runner, test deadlines and audio stay unchanged.
+
+Revisit when: A supported FFmpeg build cannot load the option argument file or literal added titles fail their unchanged verifier.

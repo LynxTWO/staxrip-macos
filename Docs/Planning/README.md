@@ -78,3 +78,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Output duration evidence](OUTPUT-DURATION-EVIDENCE.md) records Slice 022 scoped local/native/hosted acceptance and the original-policy regression.
 
 33. [Slice 023: spoken native preset choices](SLICE-023-native-preset-accessibility.md).
+
+[Native preset and subprocess evidence](NATIVE-PRESET-ACCESSIBILITY-EVIDENCE.md) records Slice 023 scoped acceptance, final hosted success and retained diagnostic limits.

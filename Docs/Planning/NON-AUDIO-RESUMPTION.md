@@ -124,3 +124,10 @@ Slice 022 is active under D-035/R-025 after Slice 021 closure: reproduce and rem
 Slice 022 closed at f52bade with hosted run 36802839483: 189 tests in 468.757 seconds, 9m01s job. Real shortened/extended-output refusal, two-hour low-rate export, fractional trim and native duration result passed within metadata-only limits. Draft PR 39 remains unmerged. Audio stays parked.
 
 Slice 023 is active under D-036/R-026 after Slice 022 closure: native preset spoken names, selection and optional hints. Audio mastering/listening remains parked.
+
+
+Slice 023 closed at 543b991 with hosted run 36808673370: 192 tests in 439.807 seconds. Native preset semantics and the reproduced subprocess starvation repair have scoped acceptance; earlier hosted failures and restored-source native I/O waits remain documented. Draft PR 40 is unmerged.
+
+## Owner design direction, 2026-09-30
+
+The owner explicitly invites creative visual and interaction design, with no expectation of matching Windows StaxRip or taking the easiest conventional path. Explore a distinctive native workspace that makes source preparation, intended changes, comparison and verified results understandable. This is design latitude, not a mandate for decorative effects or hidden advanced controls. Preserve native keyboard and accessibility semantics, independent Quick Export behavior and explicit source/output protection. Audio listening remains parked. Next work begins with current-interface inspection and a bounded design brief; no new product slice is active yet.

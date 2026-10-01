@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 023: Spoken native preset choices
-Version: 0.3. Date: 2026-09-30. Status: Approved for build under D-036 / R-026.
+Version: 0.4. Date: 2026-09-30. Status: Accepted within evidence limits under D-036 / R-026 and D-037 / R-027.
 
 SLICE STATE
-Milestone: Local/native verification passed; hosted regression investigation active.
-Blocked by: Hosted regression has not passed; attempt 1 recorded clustered timeouts.
-Evidence so far: NATIVE-PRESET-ACCESSIBILITY-EVIDENCE.md records local release/debug and native success plus the failed hosted attempt.
+Milestone: Local/native/hosted verification passed at 543b991.
+Blocked by: None for this scoped slice; broader release gaps remain separate.
+Evidence so far: NATIVE-PRESET-ACCESSIBILITY-EVIDENCE.md records local release/debug, native success, final hosted run 36808673370 and retained earlier failures.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves
@@ -29,7 +29,7 @@ Exported accessibility text can be inspected automatically; the owner's spoken V
 
 ## 6. Modules touched
 
-AccessibilityLanguage, QuickExportView and scoped evidence only.
+AccessibilityLanguage, QuickExportView, ToolRunner, three focused process tests, bounded diagnostics in the existing display matrix and scoped evidence.
 
 ## 7. Data subset
 
@@ -43,6 +43,9 @@ Derived accessible labels, selected-state value, input aliases and optional hint
 | S23-002 | Exactly one preset exposes Selected after each activation; hints distinguish native behavior | Native activation and accessibility inspection | native-preset-selection |
 | S23-003 | Visible names and existing encode behavior remain intact | Visible layout, existing regression/build and hosted checks | native-preset-regression |
 
+| S23-004 | 96 generated children return complete output and status without worker starvation | Focused real-process test and isolated negative control | runner-fanout |
+| S23-005 | Cancellation, launch refusal, retained bounds and callbacks settle correctly | Focused lifecycle and native cancel/retry checks | runner-lifecycle |
+
 ## 9. Verification evidence required
 
 Inspect all three choices and selection transitions in the rebuilt app. Retain visible names and input aliases. Run the existing regression suite and build; no implementation-mirroring test is needed for this reversible text/semantics change. Spoken VoiceOver remains an owner check.
@@ -53,7 +56,7 @@ Keep short names separate from optional explanations. Do not use a label that pr
 
 ## 11. Definition of done
 
-S23-001 through S23-003 have scoped local/native/hosted evidence and the planning audit passes. Spoken qualification remains explicit.
+S23-001 through S23-005 have scoped local/native/hosted evidence and the planning audit passes. Spoken qualification remains explicit.
 
 ## 12. What this unlocks
 

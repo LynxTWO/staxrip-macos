@@ -45,6 +45,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-036 | 2026-09-30 | Clarify native preset accessibility | Confirmed | |
 | D-037 | 2026-09-30 | Remove demonstrated subprocess worker starvation | Confirmed | |
 | D-038 | 2026-09-30 | Review and navigate a live workspace recipe | Confirmed | |
+| D-039 | 2026-09-30 | Explicit review before reading restored media | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -589,3 +590,18 @@ Options considered: cosmetic restyling alone; a broad workspace replacement; an 
 Consequences: A distinctive numbered recipe, direct navigation to Picture/Video/Audio/Subtitles, explicit settings-only status, complete relevant configuration summaries, scrollable output details and a pinned queue action. All summaries derive from current configuration, not simulated measurements. Actual source compatibility remains in queue review. No model persistence, encode command, audio processing, merge or release change.
 
 Revisit when: Native width/height checks fail, owner feedback changes the visual direction, or a source-aware validated plan can replace settings-only intent.
+
+
+## D-039: Explicit review before reading restored media
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 025 under the owner's overnight autonomous non-audio delegation after Slice 024 acceptance. Delegated to AI recommendation.
+
+Because: Restoring a session starts a native source read from a saved path, and prior native evidence recorded a regular-file read waiting inside CoreMedia until quit. The later source-picker route succeeded. This does not establish a permission root cause. The current Locate source route also resets saved track selections and output naming.
+
+Options considered: keep automatic reads and add another timeout; persist security-scoped bookmarks; make restored source review explicit and preserve saved intent for a matching path. Choose the third. A timeout cannot guarantee native read settlement, and durable bookmarks add a different access lifecycle.
+
+Consequences: Restoring a session does not inspect or load its media path. A visible matching-source picker starts preview loading, retaining configuration, captions, output name and queue. Cancel, wrong path, stale callbacks and read failure preserve restored intent. Standard Open source remains a separate replacement path. No saved format, encoder, audio algorithm, durable-access or arbitrary-I/O cancellation guarantee.
+
+Revisit when: Durable file access or deliberate relocation of a moved source is scoped, or platform evidence shows another native read failure after explicit selection.

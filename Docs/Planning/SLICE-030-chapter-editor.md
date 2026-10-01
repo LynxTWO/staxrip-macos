@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 030: Author and verify chapter lists
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-044 / R-034.
+Version: 0.1. Date: 2026-10-01. Status: Accepted within recorded scope under D-044 / R-034.
 
 SLICE STATE
-Milestone: Implementation, focused/full local checks and generated native export complete; final Unicode/title-edge release regression passed; native rebuild passed; investigating the hosted destination-review timeout with phase diagnostics.
-Blocked by: None.
-Evidence so far: CHAPTER-EDITING-RESEARCH.md plus local generated native session/queue/export receipts; hosted acceptance pending.
+Milestone: Local/native and final hosted acceptance complete at 0105d5c plus diagnostic-only ded74f6.
+Blocked by: None within this slice.
+Evidence so far: CHAPTER-EDITOR-EVIDENCE.md; hosted run 36824096245 passed 222 tests. Earlier destination-review timeout remains explicit reliability debt.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

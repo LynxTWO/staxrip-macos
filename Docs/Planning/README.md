@@ -106,3 +106,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Queue destination review evidence](QUEUE-DESTINATION-REVIEW-EVIDENCE.md) records cancellation before recovery writes, native completion and regression.
 
 40. [Slice 030: chapter editor](SLICE-030-chapter-editor.md) and [metadata discovery](CHAPTER-EDITING-RESEARCH.md).
+
+[Chapter editor evidence](CHAPTER-EDITOR-EVIDENCE.md) records native authoring, literal title verification, persistence, regression and retained timing uncertainty.

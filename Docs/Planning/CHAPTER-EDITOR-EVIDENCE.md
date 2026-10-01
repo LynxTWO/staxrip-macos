@@ -1,6 +1,6 @@
 # Chapter editor evidence
 
-Date: 2026-10-01. Slice 030 under D-044 / R-034. Local/native evidence recorded below; final release regression passed 222 tests / 46 suites in 38.555 seconds; final native rebuild passed; hosted run 36823007963 failed the existing destination-review 60-second gate, so acceptance remains open.
+Date: 2026-10-01. Slice 030 under D-044 / R-034. Scoped acceptance complete at product head 0105d5c plus diagnostic-only ded74f6. Final release regression passed 222 tests / 46 suites in 38.389 seconds; native rebuild/walkthrough passed; final hosted run 36824096245 passed. The earlier intermittent destination-review timeout remains a recorded reliability debt, not a claimed repair.
 
 ## S30-001 through S30-003: bounded authoring and actual exports
 
@@ -51,3 +51,11 @@ Hosted interim checkpoint: run 36822641744 passed at e6b6f82 on Swift 6.1.2, 222
 The final 0105d5c bundle reopened natively. A draft title with surrounding spaces, accented text, punctuation carrying combining marks and Japanese text applied and reopened visibly intact. This checks final native input/state retention; actual serialized MKV/MP4 byte verification is supplied by the final regression. The app then exited.
 
 Final hosted failure: run 36823007963 at 0105d5c passed chapter tests but failed matchingFoldersStartOneRealBatchAndSkipCompletedDestinations at its unchanged 60-second limit. The whole run reported 222 tests with one issue in 442.969 seconds. The failing log lacked destination phase timing, so no stuck phase or root cause is established. A diagnostic-only follow-up adds elapsed fixture, batch phase and independent-probe timestamps without changing scheduling, assertions, fixtures or deadlines. A focused local debug oversized-document test passed in 0.279 seconds; that does not explain hosted timing. Full local debug destination trace finished all assertions 4.733 seconds after entering its body (6.098 seconds reported by Testing), with all three jobs completed. Final full debug and hosted diagnostic results remain pending.
+
+The full local diagnostic debug run passed all 222 tests / 46 suites in 200.628 seconds. Destination-review assertions and the one-minute bound stayed unchanged. Hosted diagnostic run 36824096245 at ded74f6 is still required; the earlier hosted timeout is not called fixed by this local pass.
+
+## Closure and retained timing uncertainty
+
+Hosted diagnostic run [36824096245](https://github.com/LynxTWO/staxrip-macos/actions/runs/36824096245) at ded74f6 passed all 222 tests in 497.428 seconds on Swift 6.1.2. Destination review passed in 54.314 seconds. Its monotonic trace entered the body at zero, completed source creation at 10.503 seconds, started the batch at 10.505, finished the first job by 19.347, reached the second encode at 47.193, settled the batch at 52.717 and finished all independent probes/assertions at 52.986. The largest observed interval was the second inspection, but the failed prior run had no trace; this does not establish its cause. Buffered hosted log timestamps are not phase timing.
+
+Classification: verified observed behavior for S30-001 through S30-008 on the recorded generated local/native/hosted paths; user_data consequence applies to saved intent and derived outputs. Source identity is 0105d5c with unchanged product code at ded74f6. The existing test remains enabled with its original one-minute deadline, assertions and fixture. The intermittent hosted timeout is unresolved; one later pass does not prove it fixed. Reopen if it recurs, using the retained phase diagnostics. Broader performance and scheduling guarantees are excluded from chapter acceptance. No merge or release occurred.

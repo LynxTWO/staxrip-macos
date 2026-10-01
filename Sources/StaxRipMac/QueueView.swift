@@ -21,10 +21,11 @@ struct QueueView: View {
                 }
                 if batch.running {
                     Button(batch.publicationJobID == nil ? "Cancel batch" : "Stop after current publication", role: .cancel) { batch.cancel() }
-                        .help(batch.publicationJobID == nil ? "Cancel the current job and stop the batch." : "Wait for this publication to finish, preserve any successful output, and stop before the next job.")
+                        .help(batch.publicationJobID == nil ? "Cancel the current job and stop the batch. An active source content check waits for filesystem reads to return before cleanup." : "Wait for this publication to finish, preserve any successful output, and stop before the next job.")
                 } else {
                     Button { batch.start(model.jobs) } label: { Label("Start queue", systemImage: "play.fill") }
                         .buttonStyle(.borderedProminent).disabled(model.jobs.isEmpty || batch.tools == nil || batch.reviewing || exporter.running || audio.running)
+                        .help("Encode queued jobs. Each source is read in full before inspection and again before publication to check for content changes; large or slow sources take longer.")
                 }
                 Button { model.exportQueue() } label: { Label("Export JSON…", systemImage: "square.and.arrow.up") }
                     .disabled(model.jobs.isEmpty)

@@ -82,16 +82,20 @@ final class BatchController: ObservableObject {
         }
     }
 
+    private let readSource: ExportSourceFingerprint.Reader
     private let publishOutput: (URL, URL) async throws -> Void
     private let removeStaging: (URL) async throws -> Void
     private let journalURL: URL?
     private var journalLease: BatchJournalLease?
     private var journalJobs: [QueueJob] = []
     private var task: Task<Void, Never>?
+    private var sourceCheck: (id: UUID, jobID: UUID, acceptsProgress: Bool)?
 
     init(journalURL: URL? = nil,
+         readSource: @escaping ExportSourceFingerprint.Reader = { try await ExportSourceFingerprint.read($0, progress: $1) },
          publishOutput: @escaping (URL, URL) async throws -> Void = { try await ExportPublication.publishAsync(staged: $0, destination: $1) },
          removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) }) {
+        self.readSource = readSource
         self.publishOutput = publishOutput
         self.removeStaging = removeStaging
         self.journalURL = journalURL
@@ -206,7 +210,30 @@ final class BatchController: ObservableObject {
         if let id = publicationJobID {
             statuses[id]?.detail = "Stop requested. Waiting for the current output to finish publishing; later jobs will not start."
         }
+        if let check = sourceCheck {
+            sourceCheck?.acceptsProgress = false
+            statuses[check.jobID]?.detail = "Stop requested. Waiting for the source content check to finish."
+        }
         task?.cancel()
+    }
+
+    private func fingerprint(_ source: URL, jobID: UUID, label: String) async throws -> SourceFingerprint {
+        let id = UUID()
+        sourceCheck = (id, jobID, true)
+        defer { if sourceCheck?.id == id { sourceCheck = nil } }
+        statuses[jobID]?.progress = 0
+        statuses[jobID]?.detail = label
+        return try await readSource(source) { [weak self] bytes, total in
+            Task { @MainActor in
+                self?.sourceCheckProgress(id: id, jobID: jobID, label: label, bytes: bytes, total: total)
+            }
+        }
+    }
+
+    private func sourceCheckProgress(id: UUID, jobID: UUID, label: String, bytes: Int64, total: Int64) {
+        guard sourceCheck?.id == id, sourceCheck?.jobID == jobID, sourceCheck?.acceptsProgress == true else { return }
+        statuses[jobID]?.progress = Double(bytes) / Double(total)
+        statuses[jobID]?.detail = "\(label) · \(ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)) of \(ByteCountFormatter.string(fromByteCount: total, countStyle: .file))"
     }
 
     private func publish(_ staged: URL, to output: URL, jobID: UUID) async throws {
@@ -230,13 +257,15 @@ final class BatchController: ObservableObject {
         try SessionDocument.validate(job.configuration)
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         if preservingHDR { try EncodePlan.validateHDRSettings(job.configuration) }
-        var fingerprint: SourceFingerprint?
+        let fingerprint = try await fingerprint(source, jobID: job.id, label: "Checking source content before inspection")
+        try Task.checkCancellation()
+        statuses[job.id]?.progress = 0
+        statuses[job.id]?.detail = "Inspecting source metadata"
         var hdr: HDR10Contract?
         if preservingHDR {
             statuses[job.id] = BatchStatus(phase: "Inspecting", detail: "HDR10: checking tool coverage and source identity before full-frame audit")
             try checkpoint()
             try await HDR10Audit.checkTools(tools)
-            fingerprint = try await SourceFingerprint.read(source)
         }
         let probe = try await MediaProbe.read(source, tools: tools)
         let externalDocument: SubRipDocument?
@@ -249,12 +278,12 @@ final class BatchController: ObservableObject {
             statuses[job.id]?.detail = "HDR10: decoding every source frame; checking static metadata and fixed cadence"
             hdr = try await HDR10Audit.read(source, tools: tools, probe: probe) { [weak self] frames, fraction in
                 Task { @MainActor in
-                    guard self?.statuses[job.id]?.phase == "Inspecting" else { return }
+                    guard self?.statuses[job.id]?.phase == "Inspecting", self?.sourceCheck == nil else { return }
                     self?.statuses[job.id]?.progress = fraction
                     self?.statuses[job.id]?.detail = "HDR10: source audit · \(frames) decoded frames · static metadata and cadence"
                 }
             }
-            guard try await SourceFingerprint.read(source) == fingerprint else { throw HDR10Audit.failure("Source changed during preflight. Nothing published.") }
+            guard try await self.fingerprint(source, jobID: job.id, label: "Rechecking source content after HDR10 preflight") == fingerprint else { throw HDR10Audit.failure("Source changed during preflight. Nothing published.") }
         }
         try Task.checkCancellation()
         let directory = output.deletingLastPathComponent().appendingPathComponent(".staxrip-batch-" + UUID().uuidString)
@@ -305,14 +334,12 @@ final class BatchController: ObservableObject {
                 statuses[job.id]?.detail = "HDR10: decoding every staged output frame before publication"
                 let verified = try await HDR10Audit.read(staged, tools: tools, probe: actual, expectedRate: hdr.rate) { [weak self] frames, fraction in
                     Task { @MainActor in
-                        guard self?.statuses[job.id]?.phase == "Verifying", self?.publicationJobID != job.id else { return }
+                        guard self?.statuses[job.id]?.phase == "Verifying", self?.publicationJobID != job.id, self?.sourceCheck == nil else { return }
                         self?.statuses[job.id]?.progress = fraction
                         self?.statuses[job.id]?.detail = "HDR10: output audit · \(frames) decoded frames · checking against source"
                     }
                 }
                 try hdr.verify(verified)
-                statuses[job.id]?.detail = "HDR10: rechecking source identity before publication"
-                guard try await SourceFingerprint.read(source) == fingerprint else { throw HDR10Audit.failure("Source changed during export. Nothing published.") }
                 verifiedSummary = hdr.summary + " · source/output timestamp bound ≤ \(hdr.timeBase.value + verified.timeBase.value) s"
             }
             try Task.checkCancellation()
@@ -325,6 +352,11 @@ final class BatchController: ObservableObject {
                 verifiedSummary += " · " + (try await external.verify(staged, probe: actual, tools: tools))
             }
             try Task.checkCancellation()
+            guard try await self.fingerprint(source, jobID: job.id, label: "Rechecking source content before publication") == fingerprint else {
+                throw NativeExportError.invalid("Source changed during export: content fingerprint differs. Nothing published.")
+            }
+            try Task.checkCancellation()
+            verifiedSummary += " · Source content fingerprint unchanged"
             try await publish(staged, to: output, jobID: job.id)
             if Task.isCancelled { verifiedSummary += " · Batch stopped after this output." }
             publishedOutput = output

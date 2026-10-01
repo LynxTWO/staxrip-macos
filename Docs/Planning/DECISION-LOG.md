@@ -37,6 +37,8 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-030 | 2026-09-30 | Verify declared display proportions | Confirmed | |
 | D-031 | 2026-09-30 | Step filtered previews by decoded timestamp | Confirmed | |
 
+| D-032 | 2026-09-30 | Check advanced export source content | Confirmed | |
+
 ## D-001: Native offline product
 Date: 2026-09-28
 Status: Confirmed
@@ -478,3 +480,17 @@ Options considered: fixed frame-rate offsets; native player stepping disconnecte
 Consequences: Previous/next preview controls, bounded streaming neighbor discovery, source identity and rational result checks, explicit trim boundaries and stale/cancel/failure behavior. No motion playback, accelerated seeking, new encoding behavior, audio, saved-schema change or distribution action.
 
 Revisit when: Motion preview, durable indexes, broader picture formats or long-source performance are scoped.
+
+## D-032: Check advanced export source content
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 019 under autonomous non-audio delegation after Slice 018 hosted closure.
+
+Because: Generated source replacements can change pictures while preserving all currently verified stream metadata. Ordinary SDR jobs do not yet compare source content before publication.
+
+Options considered: metadata-only checks; copy every source; compare bounded regular-file fingerprints before inspection and before publication. Choose boundary content checks, making their additional I/O and snapshot limitations explicit.
+
+Consequences: Export-only utility-queue SHA-256 reader, cooperative cancellation, generation-bound progress and common prepublication refusal. Preserve HDR audits and owned staging. No audio reader changes, Quick Export changes, source copies, persistent schema, merge or distribution action.
+
+Revisit when: Immutable input snapshots, network I/O guarantees or broader persistent identity policies are scoped.

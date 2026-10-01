@@ -27,3 +27,5 @@ The repository became public on 2026-09-28 and the previously blocked hosted mac
 [Scaffold Kit v0.4 planning index](Planning/README.md) records the proposed slices, SignalForge reuse assessment, acceptance gates and owner signing setup. These documents are proposals, not evidence that outstanding features are implemented.
 
 Advanced batch publication responsiveness and per-job native access review have scoped local/native/hosted evidence in [PUBLICATION-RESPONSIVENESS-EVIDENCE.md](Planning/PUBLICATION-RESPONSIVENESS-EVIDENCE.md). Other synchronous I/O, persistent access and broader filesystem qualification remain open.
+
+Advanced export source stability now has scoped local/native/hosted acceptance: whole-source fingerprint observations before inspection and before publication, regular-file/change checks, cancellable utility work and byte progress. See [source stability evidence](Planning/SOURCE-STABILITY-EVIDENCE.md). This adds source I/O and does not create immutable snapshots or guarantee network-filesystem cancellation latency. Native Quick Export remains outside this check.

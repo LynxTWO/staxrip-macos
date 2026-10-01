@@ -102,3 +102,11 @@ Slice 018 is active under D-031/R-021 after Slice 017 closure. Scope is decoded-
 Slice 018 local/native frame stepping passed: 166 release tests, separate 4K resource check, exact VFR transitions and trim boundaries in the native comparison. Hosted regression pending. See FRAME-STEPPING-EVIDENCE.md.
 
 Slice 018 closed with hosted success at fc1aa88, run 36792778159: 166 tests in 507.195 seconds, 9m53s job. Draft PR 35 remains unmerged; audio listening stays parked.
+
+Slice 019 is active under D-032/R-022 after Slice 018 closure: export-only source byte fingerprints, regular-file checks, cooperative cancellation and protected progress. Audio stays parked.
+
+Slice 019 local/native source stability passed: 173 release tests, before/after replacement negative control, held cancellation and a 4 GiB sparse native source export with byte progress and unchanged source receipt. Hosted run 36795072130 is pending at 1f552e9.
+
+Slice 019 final local follow-up passed 173 tests in 36.657 seconds and native scan cancellation/retry. Initial hosted run exposed an HDR-test phase deadline; the replacement test now gates on real encoder completion. Final hosted run 36796194802 is pending at 5ede61e.
+
+Slice 019 closed at 5ede61e with hosted run 36796194802: 173 tests in 452.617 seconds, 8m53s job. Native content-scan cancellation and explicit retry passed with unchanged source/prior output. Draft PR 36 remains unmerged; audio stays parked.

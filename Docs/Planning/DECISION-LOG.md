@@ -39,6 +39,8 @@ Version: 0.1 Draft. Date: 2026-09-28.
 
 | D-032 | 2026-09-30 | Check advanced export source content | Confirmed | |
 
+| D-033 | 2026-09-30 | Own and cancel source imports | Confirmed | |
+
 ## D-001: Native offline product
 Date: 2026-09-28
 Status: Confirmed
@@ -494,3 +496,17 @@ Options considered: metadata-only checks; copy every source; compare bounded reg
 Consequences: Export-only utility-queue SHA-256 reader, cooperative cancellation, generation-bound progress and common prepublication refusal. Preserve HDR audits and owned staging. No audio reader changes, Quick Export changes, source copies, persistent schema, merge or distribution action.
 
 Revisit when: Immutable input snapshots, network I/O guarantees or broader persistent identity policies are scoped.
+
+## D-033: Own and cancel source imports
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 020 under autonomous non-audio delegation after Slice 019 hosted closure.
+
+Because: Source import suppresses stale results but does not retain/cancel the underlying task or native asset. A held-resource spike settles with AVAsset.cancelLoading, while Task.cancel alone remains pending. Users need a clear cancellation path that preserves prior work.
+
+Options considered: retain display-only invalidation; cancel and start overlapping replacements; own one current worker and one latest pending request. Choose the third, with supported native cancellation and existing fallback-process ownership. It adds a small source-inspection service and lifecycle tests without a saved-data migration.
+
+Consequences: Explicit Cancel source loading and truthful waiting state; latest-only replacement after settlement; prior source/settings retained on cancellation; demo reset also cancels. Preserve existing file-panel intent guards. No durable permission, arbitrary I/O deadline, audio, merge or distribution claim.
+
+Revisit when: Durable bookmarks, source snapshots or broader import progress are scoped.

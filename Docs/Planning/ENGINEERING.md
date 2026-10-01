@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 019 export source stability under D-032. Slice 018 closed at fc1aa88 with hosted run 36792778159.
+Next: Slice 020 owned source import cancellation under D-033. Slice 019 closed at 5ede61e with hosted run 36796194802.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -198,3 +198,7 @@ Approved R-021 under delegated Slice 018: discover decoded source-frame neighbor
 ## Slice 019 source stability checkpoint
 
 Approved R-022 under delegated Slice 019: compare observed source bytes before inspection and before publication using a regular-file utility reader. Gates source-content-reader, source-content-refusal, source-content-lifecycle and source-content-export bind S19-001 through S19-004. Two additional reads for ordinary SDR; no snapshot or arbitrary filesystem latency guarantee. Audio stays parked.
+
+## Slice 020 source import checkpoint
+
+Approved R-023 under delegated Slice 020: one owned native/fallback source inspector and one latest pending replacement, with explicit cancellation and settled-worker lifecycle. Gates import-native-cancel, import-lifecycle, import-compatibility and import-ui bind S20-001 through S20-004. The user journey is open source, wait or cancel, retain prior work on cancellation, and retry; the authoritative state is the current request identity and worker outcome. A stalled old read returning after a newer source request is the counterexample. Generated local media only; no writes to source data or persistent-format change. Audio and durable permission handling remain separate.

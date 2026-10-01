@@ -64,3 +64,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 29. [Slice 019: advanced export source stability](SLICE-019-export-source-stability.md) and [research](SOURCE-STABILITY-RESEARCH.md).
 
 [Source stability evidence](SOURCE-STABILITY-EVIDENCE.md) records scoped local/native/hosted acceptance and the negative control.
+
+30. [Slice 020: owned source import cancellation](SLICE-020-source-import-cancellation.md) and [research](SOURCE-IMPORT-RESEARCH.md).

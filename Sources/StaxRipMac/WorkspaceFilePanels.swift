@@ -9,6 +9,7 @@ enum WorkspaceFileRequest: Equatable {
     case saveSession
     case exportQueue
     case nativeExport(URL)
+    case reviewQueueDestination(URL, position: Int, total: Int)
 }
 
 @MainActor
@@ -53,6 +54,15 @@ final class WorkspaceFilePanels: WorkspacePanelPresenting {
             picker.canChooseFiles = false; picker.canChooseDirectories = true
             picker.canCreateDirectories = true; picker.allowsMultipleSelection = false
             picker.directoryURL = folder
+            panel = picker
+        case .reviewQueueDestination(let folder, let position, let total):
+            let picker = NSOpenPanel()
+            picker.title = "Review output folder \(position) of \(total)"
+            picker.message = "Select the configured folder: \(folder.path)\nThe queue starts after the last folder review. Cancel starts nothing. Selection does not guarantee filesystem access."
+            picker.prompt = position == total ? "Start queue" : "Continue"
+            picker.canChooseFiles = false; picker.canChooseDirectories = true
+            picker.canCreateDirectories = false; picker.allowsMultipleSelection = false
+            picker.directoryURL = folder.deletingLastPathComponent()
             panel = picker
         case .openSession:
             let picker = NSOpenPanel()

@@ -16,19 +16,19 @@ struct QueueView: View {
                     Button("Cancel check", role: .cancel) { batch.cancelReview() }
                 } else {
                     Button("Check queue") { batch.review(model.jobs) }
-                        .disabled(model.jobs.isEmpty || batch.tools == nil || batch.running || exporter.running || audio.running)
+                        .disabled(model.jobs.isEmpty || batch.tools == nil || batch.running || exporter.running || audio.running || model.filePanelActive || fileAccess.reviewing)
                         .help("Read source metadata and check settings and destinations without encoding or writing files.")
                 }
                 if batch.running {
                     Button(batch.publicationJobID == nil ? "Cancel batch" : "Stop after current publication", role: .cancel) { batch.cancel() }
                         .help(batch.publicationJobID == nil ? "Cancel the current job and stop the batch. An active source content check waits for filesystem reads to return before cleanup." : "Wait for this publication to finish, preserve any successful output, and stop before the next job.")
                 } else {
-                    Button { batch.start(model.jobs) } label: { Label("Start queue", systemImage: "play.fill") }
-                        .buttonStyle(.borderedProminent).disabled(model.jobs.isEmpty || batch.tools == nil || batch.reviewing || exporter.running || audio.running)
-                        .help("Encode queued jobs. Each source is read in full before inspection and again before publication to check for content changes; large or slow sources take longer.")
+                    Button { model.chooseQueueStart(using: batch) { !exporter.running && !audio.running && !fileAccess.reviewing } } label: { Label("Start queue…", systemImage: "play.fill") }
+                        .buttonStyle(.borderedProminent).disabled(batch.pendingJobs(in: model.jobs).isEmpty || batch.tools == nil || batch.reviewing || exporter.running || audio.running || model.filePanelActive || fileAccess.reviewing)
+                        .help("Review each configured output folder before starting. Cancel starts nothing. Each job then performs independent checks, including reading its source in full before inspection and publication.")
                 }
                 Button { model.exportQueue() } label: { Label("Export JSON…", systemImage: "square.and.arrow.up") }
-                    .disabled(model.jobs.isEmpty)
+                    .disabled(model.jobs.isEmpty || model.filePanelActive || fileAccess.reviewing)
             }
             Text(batch.toolDescription).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).lineLimit(2)
             if !batch.reviewStatus.isEmpty {
@@ -48,7 +48,7 @@ struct QueueView: View {
                     Spacer()
                     Button("Restore previous queue") {
                         if let jobs = batch.restoreQueue() { model.jobs = jobs }
-                    }.disabled(!model.jobs.isEmpty || batch.running || exporter.running || audio.running)
+                    }.disabled(!model.jobs.isEmpty || batch.running || exporter.running || audio.running || model.filePanelActive || fileAccess.reviewing)
                 }.padding(16).background(Color.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
             }
             if let error = batch.recoveryError { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
@@ -83,7 +83,7 @@ struct QueueView: View {
                                     Text(job.isDemo ? "DEMO" : (batch.publicationJobID == job.id ? "Finishing" : (batch.statuses[job.id]?.phase ?? "Ready")).uppercased())
                                         .font(.system(size: 9, weight: .semibold)).foregroundStyle(.secondary)
                                     Button { batch.reset(job.id); model.jobs.removeAll { $0.id == job.id } } label: { Image(systemName: "trash") }
-                                        .buttonStyle(.borderless).disabled(batch.running || audio.running).help("Remove configuration").accessibilityLabel("Remove queued configuration for \(URL(fileURLWithPath: job.source).lastPathComponent)")
+                                        .buttonStyle(.borderless).disabled(batch.running || audio.running || model.filePanelActive || fileAccess.reviewing).help("Remove configuration").accessibilityLabel("Remove queued configuration for \(URL(fileURLWithPath: job.source).lastPathComponent)")
                                         .accessibilityHint("Removes this queue entry. Does not delete the source file.")
                                 }
                                 HStack(spacing: 14) {
@@ -94,11 +94,11 @@ struct QueueView: View {
                                         .disabled(model.jobs.first?.id == job.id).help("Move up").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) earlier in the queue")
                                     Button { model.moveJob(job.id, by: 1) } label: { Image(systemName: "arrow.down") }
                                         .disabled(model.jobs.last?.id == job.id).help("Move down").accessibilityLabel("Move \(URL(fileURLWithPath: job.source).lastPathComponent) later in the queue")
-                                }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running || audio.running)
+                                }.buttonStyle(.borderless).font(.system(size: 11)).disabled(batch.running || audio.running || model.filePanelActive || fileAccess.reviewing)
                                 HStack {
                                     Button("Review source access…") { fileAccess.review(job, destination: false) }
                                     Button("Review destination access…") { fileAccess.review(job, destination: true) }
-                                }.font(.caption).disabled(fileAccess.reviewing || job.isDemo)
+                                }.font(.caption).disabled(fileAccess.reviewing || model.filePanelActive || job.isDemo)
                                     .help("Select the configured location using the native file picker. Queue paths stay unchanged and no encode starts.")
                                 if let result = fileAccess.result, result.jobID == job.id {
                                     Text(result.message).font(.caption).foregroundStyle(.secondary)

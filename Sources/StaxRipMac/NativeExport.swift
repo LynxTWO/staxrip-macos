@@ -31,15 +31,35 @@ enum NativeExportError: LocalizedError {
 // Publication uses a same-volume hard link: the completed result becomes visible
 // atomically, and an existing destination (including a symlink) is never replaced.
 struct ExportPublication {
+    #if DEBUG
+    @TaskLocal static var observeBoundary: (@Sendable (String) -> Void)?
+    #endif
     // Once dispatched, await the actual filesystem result even if the caller is
     // cancelled. Returning early could race staging cleanup against publication.
     static func publishAsync(staged: URL, destination: URL,
                              operation: @escaping @Sendable (URL, URL) throws -> Void = {
                                  try publish(staged: $0, destination: $1)
                              }) async throws {
+        #if DEBUG
+        let observe = observeBoundary
+        observe?("body entered")
+        #endif
         try Task.checkCancellation()
+        let priority = Task.currentPriority
+        let workerQoS: DispatchQoS.QoSClass = priority >= .high ? .userInitiated :
+            priority >= .medium ? .default : priority >= .low ? .utility : .background
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .utility).async {
+            #if DEBUG
+            observe?("submitting worker")
+            #endif
+            // A separate queue keeps a verified output from waiting behind
+            // unrelated shared work. Cancellation still awaits the real result.
+            let queue = DispatchQueue(label: "StaxRip.publication",
+                qos: DispatchQoS(qosClass: workerQoS, relativePriority: 0))
+            queue.async {
+                #if DEBUG
+                observe?("worker entered")
+                #endif
                 do { try operation(staged, destination); continuation.resume() }
                 catch { continuation.resume(throwing: error) }
             }

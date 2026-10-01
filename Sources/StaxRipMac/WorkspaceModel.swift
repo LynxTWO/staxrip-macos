@@ -238,6 +238,61 @@ final class WorkspaceModel: ObservableObject {
         }
     }
 
+    private struct QueueStartIntent {
+        let snapshot: SessionDocument
+        let pendingIDs: [UUID]
+        let folders: [URL]
+    }
+
+    func chooseQueueStart(using batch: BatchController,
+                          canStart: @escaping @MainActor () -> Bool = { true }) {
+        guard !filePanelActive, !batch.running, !batch.reviewing, batch.tools != nil, canStart() else { return }
+        let pending = batch.pendingJobs(in: jobs)
+        guard !pending.isEmpty else { notice = "No pending jobs to start."; return }
+        var seen = Set<String>()
+        let folders = pending.compactMap { job -> URL? in
+            let folder = URL(fileURLWithPath: job.destination).deletingLastPathComponent().standardizedFileURL
+            return seen.insert(folder.path).inserted ? folder : nil
+        }
+        let request = QueueStartIntent(snapshot: sessionSnapshot, pendingIDs: pending.map(\.id), folders: folders)
+        reviewQueueDestination(request, index: 0, using: batch, canStart: canStart)
+    }
+
+    private func reviewQueueDestination(_ request: QueueStartIntent, index: Int, using batch: BatchController,
+                                        canStart: @escaping @MainActor () -> Bool) {
+        guard !batch.running, !batch.reviewing, batch.tools != nil, canStart() else {
+            notice = "Available operations changed. Choose Start queue again when ready."
+            return
+        }
+        guard sessionSnapshot == request.snapshot, batch.pendingJobs(in: jobs).map(\.id) == request.pendingIDs else {
+            notice = "The queue or workspace changed. Choose Start queue again to review current destinations."
+            return
+        }
+        guard index < request.folders.count else {
+            batch.start(request.snapshot.jobs)
+            if batch.running { notice = "Queue started after destination review. Each job still performs independent file checks." }
+            return
+        }
+        guard let intent = beginFileRequest() else { return }
+        let expected = request.folders[index]
+        selectFile(.reviewQueueDestination(expected, position: index + 1, total: request.folders.count), intent: intent) { [weak self] selected in
+            guard let self, self.consumeSelection(intent) else { return }
+            guard let selected else {
+                self.finishFileRequest(intent)
+                self.notice = "Destination review cancelled. No batch started; the recovery record is unchanged."
+                return
+            }
+            guard self.intentIsCurrent(intent), self.finishFileRequest(intent) else { return }
+            guard selected.isFileURL, selected.standardizedFileURL.path == expected.path else {
+                self.notice = "A different folder was selected. No batch started; queue paths are unchanged. Choose Start queue again and select the configured folder."
+                return
+            }
+            // The next sheet gets a fresh identity. An old completion cannot
+            // consume its selection or advance the sequence more than once.
+            self.reviewQueueDestination(request, index: index + 1, using: batch, canStart: canStart)
+        }
+    }
+
     func chooseNativeExport(using exporter: ExportController,
                             canStart: @escaping @MainActor () -> Bool = { true }) {
         guard !loading, !sourceUnavailable, !sourceNeedsReview, !exporter.running,

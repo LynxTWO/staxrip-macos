@@ -158,9 +158,13 @@ final class BatchController: ObservableObject {
         }
     }
 
+    func pendingJobs(in jobs: [QueueJob]) -> [QueueJob] {
+        jobs.filter { statuses[$0.id]?.phase != "Completed" }
+    }
+
     func start(_ jobs: [QueueJob]) {
         guard !running, !reviewing, let tools else { return }
-        let selected = jobs.filter { statuses[$0.id]?.phase != "Completed" }
+        let selected = pendingJobs(in: jobs)
         guard !selected.isEmpty else { return }
         invalidateReview()
         journalJobs = jobs

@@ -2,9 +2,9 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-080 / R-052.
 
 SLICE STATE
-Milestone: M1 feasibility pending; implementation has not started.
-Blocked by: None within delegated scope. M1 must pass before M2.
-Evidence: Existing caption-list and output verification map inspected at 22b4dea.
+Milestone: M1 passed; M2 implementation next.
+Blocked by: None within delegated scope.
+Evidence: CAPTION-FLAGS-EVIDENCE.md records M1; no product code yet.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

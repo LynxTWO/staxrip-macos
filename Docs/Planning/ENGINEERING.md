@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select the next reversible non-audio slice. Slice 020 closed at 1933bee with hosted run 36799453765.
+Next: Select the next reversible non-audio slice. Slice 021 closed at 3c56caa with hosted run 36801364346.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -202,3 +202,7 @@ Approved R-022 under delegated Slice 019: compare observed source bytes before i
 ## Slice 020 source import checkpoint
 
 Approved R-023 under delegated Slice 020: one owned native/fallback source inspector and one latest pending replacement, with explicit cancellation and settled-worker lifecycle. Gates import-native-cancel, import-lifecycle, import-compatibility and import-ui bind S20-001 through S20-004. The user journey is open source, wait or cancel, retain prior work on cancellation, and retry; the authoritative state is the current request identity and worker outcome. A stalled old read returning after a newer source request is the counterexample. Generated local media only; no writes to source data or persistent-format change. Audio and durable permission handling remain separate.
+
+## Slice 021 native publication checkpoint
+
+Approved R-024 under delegated Slice 021: reuse awaited background publication for native Quick Export, preserve true filesystem outcomes under cancellation, and expose finishing status. Gates native-publication-responsive, native-publication-outcome, native-publication-ui and native-publication-regression bind S21-001 through S21-004. The user's authoritative result is the completed filesystem operation, not a late cancellation request. Only current-operation staging is cleaned after settlement; source and existing outputs remain protected. Other native I/O, audio and release remain outside scope.

@@ -40,6 +40,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-032 | 2026-09-30 | Check advanced export source content | Confirmed | |
 
 | D-033 | 2026-09-30 | Own and cancel source imports | Confirmed | |
+| D-034 | 2026-09-30 | Responsive native final publication | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -510,3 +511,17 @@ Options considered: retain display-only invalidation; cancel and start overlappi
 Consequences: Explicit Cancel source loading and truthful waiting state; latest-only replacement after settlement; prior source/settings retained on cancellation; demo reset also cancels. Preserve existing file-panel intent guards. No durable permission, arbitrary I/O deadline, audio, merge or distribution claim.
 
 Revisit when: Durable bookmarks, source snapshots or broader import progress are scoped.
+
+## D-034: Keep native final publication responsive
+Date: 2026-09-30
+Status: Confirmed
+
+Decision: Build Slice 021 under autonomous non-audio delegation after Slice 020 hosted closure.
+
+Because: NativeExportService still invokes the final hard-link publication on MainActor. The shared asynchronous helper already preserves filesystem ownership for advanced batch exports.
+
+Options considered: retain synchronous publication; abandon slow publication with a timeout; reuse the awaited utility worker and expose a final-save state. Choose the third without changing native preset semantics.
+
+Consequences: Quick Export final-save status, cancellation/outcome protection, held-worker native export tests and normal native walkthrough. No source preparation, saved-schema, audio, merge or distribution changes.
+
+Revisit when: Broader native source validation, persistent access, filesystem deadlines or save-panel lifecycle are scoped.

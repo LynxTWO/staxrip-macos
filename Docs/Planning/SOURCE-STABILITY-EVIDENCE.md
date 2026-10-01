@@ -1,6 +1,6 @@
 # Advanced export source stability evidence
 
-Date: 2026-09-30. Slice 019, D-032 / R-022. Status: focused, full local regression and native acceptance passed; hosted gate pending.
+Date: 2026-09-30. Slice 019, D-032 / R-022. Status: scoped local, native and hosted acceptance passed.
 
 ## Scope and implementation
 
@@ -42,3 +42,5 @@ Normal SDR exports add two full source reads. The reader holds a fixed chunk, no
 A cancelled source check now retains its active identity until the reader returns, but disables progress acceptance immediately. Keeping the active identity also keeps delayed HDR-audit callbacks from overwriting the waiting message. The held initial/final check tests exercise cancellation and late content callbacks. No saved-format change is involved.
 
 Final release regression after the lifecycle correction and deterministic HDR mutation passed 173 tests / 34 suites in 36.657 seconds.
+
+Final build 5ede61e completed in 13.56 seconds. Native follow-up loaded a generated one-job session after correcting its fixture-only date encoding to ISO 8601 (the malformed version was refused without replacing the workspace). Cancelling the initial content scan at 816.8 MB of 4.29 GB returned CANCELLED / No output published; the output was absent and no staging remained. Explicit retry completed with the unchanged fingerprint message. Independent readback confirmed unchanged source SHA-256, unchanged prior output bytes, matching retry codec/raster/SAR/duration and no staging. Final hosted run 36796194802 passed at 5ede61e on macOS 15 with Swift 6.1.2: 173 tests in 452.617 seconds; job 110160082152 ran 8m53s. The deterministic HDR cancellation/mutation/verification case passed in 61.652 seconds. Draft PR 36 remains unmerged.

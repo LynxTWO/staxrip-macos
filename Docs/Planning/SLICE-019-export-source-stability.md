@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 019: Advanced export source stability
-Version: 0.1. Date: 2026-09-30. Status: Active under D-032 / R-022.
+Version: 0.1. Date: 2026-09-30. Status: Scoped acceptance passed under D-032 / R-022.
 
 SLICE STATE
-Milestone: Focused/local/native acceptance passed; hosted gate pending.
-Blocked by: Hosted macOS acceptance for 1f552e9, run 36795072130.
-Evidence so far: Seven focused functions, negative control, 173 full release tests, native sparse-source progress and verified export; SOURCE-STABILITY-EVIDENCE.md.
+Milestone: S19-001 through S19-004 passed within documented scope.
+Blocked by: None for this slice; production and audio gates remain separate.
+Evidence so far: Seven focused functions, negative control, 173 full release tests, native sparse-source progress/cancel/retry and hosted run 36796194802; SOURCE-STABILITY-EVIDENCE.md.
 Last audit: 2026-09-30.
 
 ## 1. What the slice proves

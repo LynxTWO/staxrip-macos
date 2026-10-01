@@ -1,11 +1,11 @@
 # StaxRip Mac Slice 025: Review restored source access
-Version: 0.1. Date: 2026-09-30. Status: Approved for build under D-039 / R-029.
+Version: 0.2. Date: 2026-10-01. Status: Accepted within evidence limits under D-039 / R-029.
 
 SLICE STATE
-Milestone: Planning complete; implementation next.
+Milestone: Local/native/hosted acceptance passed at 42c8c07; hosted run 36812490982.
 Blocked by: None.
-Evidence so far: Prior native wait in NATIVE-PRESET-ACCESSIBILITY-EVIDENCE.md; source trace at 0b2cb70.
-Last audit: 2026-09-30.
+Evidence so far: RESTORED-SOURCE-EVIDENCE.md, including complete native session round-trip equality.
+Last audit: 2026-10-01.
 
 ## 1. What the slice proves
 

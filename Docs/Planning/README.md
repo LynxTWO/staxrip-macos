@@ -84,3 +84,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 34. [Slice 024: live workspace recipe](SLICE-024-workspace-recipe.md).
 
 [Workspace recipe evidence](WORKSPACE-RECIPE-EVIDENCE.md) records local/native checks and the hosted gate.
+
+35. [Slice 025: restored source review](SLICE-025-restored-source-review.md).
+
+[Restored source evidence](RESTORED-SOURCE-EVIDENCE.md) records retained intent, native review and local/hosted regression.

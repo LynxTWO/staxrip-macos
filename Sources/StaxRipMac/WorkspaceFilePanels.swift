@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 enum WorkspaceFileRequest: Equatable {
     case source
+    case reviewSource(URL)
     case destination(URL)
     case openSession
     case saveSession
@@ -33,11 +34,16 @@ final class WorkspaceFilePanels: WorkspacePanelPresenting {
         guard let window = window() else { return false }
         let panel: NSSavePanel
         switch request {
-        case .source:
+        case .source, .reviewSource:
             let picker = NSOpenPanel()
             picker.title = "Open a source video"
             picker.allowedContentTypes = [.movie, .video, .mpeg4Movie, .quickTimeMovie, UTType(filenameExtension: "mkv") ?? .movie]
             picker.allowsMultipleSelection = false
+            if case .reviewSource(let source) = request {
+                picker.title = "Review saved source"
+                picker.message = "Select \(source.lastPathComponent) at its saved location. Your saved settings and output name will be kept."
+                picker.directoryURL = source.deletingLastPathComponent()
+            }
             panel = picker
         case .destination(let folder):
             let picker = NSOpenPanel()

@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Select the restored-source review slice after Slice 024 closure at daf27e6, hosted run 36811284038. No next product slice is active.
+Next: Slice 025 restored-source review under D-039 / R-029 after Slice 024 closure at daf27e6, hosted run 36811284038.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -223,3 +223,8 @@ Approved R-027 under D-037: remove the reproduced subprocess shared-worker starv
 ## Workspace recipe checkpoint, 2026-09-30
 
 Approved R-028 under D-038: settings-only recipe and direct correction in the existing workspace. Gates recipe-intent, recipe-correction, recipe-native and recipe-regression bind S24-001 through S24-004. Consequence: local_only presentation and tab navigation. No encoding, source I/O or persisted state changes. Native inspection covers visible/accessibility behavior; owner design feedback and spoken qualification remain separate.
+
+
+## Restored-source review checkpoint, 2026-09-30
+
+Approved R-029 under D-039: defer restored media reads until explicit matching-source review, preserving saved recipe/name/queue. Gates restored-source-idle, restored-source-review, restored-source-native and restored-source-regression bind S25-001 through S25-004. Consequence: local_only media-read initiation and process-local session presentation. No persisted format or export policy change.

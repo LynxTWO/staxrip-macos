@@ -39,3 +39,5 @@ Advanced declared output-duration verification now uses a fixed strict 250-milli
 Native Quick Export preset accessibility and readiness-driven subprocess output draining have scoped [local/native/hosted evidence](Planning/NATIVE-PRESET-ACCESSIBILITY-EVIDENCE.md). The 96-child starvation reproduction now passes; arbitrary callback, descendant-pipe and filesystem latency guarantees remain outside this proof.
 
 The workspace now has a live settings-only recipe with direct correction, keyboard section shortcuts and persistent destination/queue actions. [Recipe evidence](Planning/WORKSPACE-RECIPE-EVIDENCE.md) records local/native/hosted acceptance. This is requested intent, not a source compatibility or measured-output claim.
+
+Restoring a session now defers media reads until explicit matching-source review, preserving its recipe and output name. [Restored source evidence](Planning/RESTORED-SOURCE-EVIDENCE.md) records complete native session round-trip equality and local/hosted acceptance. Matching paths do not establish unchanged bytes or durable access.

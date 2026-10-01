@@ -135,3 +135,7 @@ The owner explicitly invites creative visual and interaction design, with no exp
 Slice 024 is active under D-038 / R-028 after renewed overnight delegation: native settings-only recipe, direct correction and readable output details. Audio listening remains parked. A new 12-hour caffeinate assertion prevents idle display/system sleep; it does not disable manual or managed lock policy.
 
 Slice 024 closed at daf27e6 with hosted run 36811284038: 195 tests in 469.903 seconds. Recipe navigation, keyboard shortcuts, live corrections, light/dark minimum-window layout and generated-source queue review passed within WORKSPACE-RECIPE-EVIDENCE.md limits. Draft PR 41 remains unmerged. Audio listening stays parked.
+
+Slice 025 is active under D-039 / R-029: explicit source review after restoring a session, with saved recipe and name retention. Audio listening remains parked.
+
+Slice 025 closed at 42c8c07 with hosted run 36812490982: 197 tests in 479.518 seconds. Native cancellation, mismatch refusal, explicit preview loading and complete saved-session equality passed. Draft PR 42 remains unmerged. Audio listening stays parked.

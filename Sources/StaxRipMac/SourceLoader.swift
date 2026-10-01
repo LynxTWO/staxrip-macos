@@ -9,6 +9,9 @@ struct LoadedSource: Sendable {
 
 /// Owns native property reads and propagates cancellation before trying fallback.
 enum SourceLoader {
+    #if DEBUG
+    @TaskLocal static var observeBoundary: (@Sendable (String) -> Void)?
+    #endif
     typealias Reader = @Sendable (URL) async throws -> LoadedSource
 
     static func read(_ url: URL, tools: FFmpegTools? = FFmpegTools.discover(),
@@ -46,8 +49,23 @@ enum SourceLoader {
     private static func requireRegularSource(_ url: URL) async throws {
         // Inspect the path without opening it: native open on a FIFO can remain
         // blocked even after asset cancellation. This is not an input snapshot.
+        #if DEBUG
+        let observe = observeBoundary
+        observe?("body entered")
+        #endif
+        let priority = Task.currentPriority
+        let workerQoS: DispatchQoS.QoSClass = priority >= .high ? .userInitiated :
+            priority >= .medium ? .default : priority >= .low ? .utility : .background
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            DispatchQueue.global(qos: .utility).async {
+            #if DEBUG
+            observe?("submitting worker")
+            #endif
+            let queue = DispatchQueue(label: "StaxRip.source-admission",
+                qos: DispatchQoS(qosClass: workerQoS, relativePriority: 0))
+            queue.async {
+                #if DEBUG
+                observe?("worker entered")
+                #endif
                 var info = stat()
                 guard fstatat(AT_FDCWD, url.path, &info, 0) == 0 else {
                     continuation.resume(throwing: NativeExportError.invalid("Could not inspect the source file (system error \(errno)). Choose the source again."))

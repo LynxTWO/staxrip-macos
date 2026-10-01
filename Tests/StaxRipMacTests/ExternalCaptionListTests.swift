@@ -133,4 +133,81 @@ struct ExternalCaptionListTests {
         await #expect(throws: CancellationError.self) { try await cancelled.value }
     }
 
+    #if DEBUG
+    @Test(.timeLimit(.minutes(1)))
+    func cancelledSnapshotRetainsOwnershipUntilItsWriterSettles() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("caption-snapshot-cancel-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let data = Data("1\n00:00:00,000 --> 00:00:01,000\nOwned write\n\n".utf8)
+        let document = try SubRipDocument(data: data), output = root.appendingPathComponent("snapshot.srt")
+        let gate = CaptionSnapshotGate()
+        let task = Task {
+            defer { gate.markFinished() }
+            try await SubRipDocument.$observeSnapshotBoundary.withValue({ gate.observe($0) }) {
+                try await document.writeSnapshot(to: output)
+            }
+        }
+        await gate.waitForEntry()
+        task.cancel()
+        #expect(!gate.finished)
+        gate.release.signal()
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(gate.finished)
+        #expect(try Data(contentsOf: output) == data)
+        let absent = root.appendingPathComponent("absent.srt")
+        let cancelled = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            try await document.writeSnapshot(to: absent)
+        }
+        await #expect(throws: CancellationError.self) { try await cancelled.value }
+        #expect(!FileManager.default.fileExists(atPath: absent.path))
+    }
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["STAXRIP_CAPTION_SNAPSHOT_STRESS"] == "1"), .timeLimit(.minutes(1)))
+    func actualCaptionSnapshotStartsDuringBoundedCPUContention() async throws {
+        let count = ProcessInfo.processInfo.activeProcessorCount
+        try #require((2...32).contains(count))
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("caption-snapshot-worker-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let data = Data("1\n00:00:00,000 --> 00:00:01,000\nBounded writer\n\n".utf8)
+        let document = try SubRipDocument(data: data), output = root.appendingPathComponent("snapshot.srt")
+        let load = WorkerContentionLoad(count: count)
+        do {
+            try await SubRipDocument.$observeSnapshotBoundary.withValue({ load.observe($0) }) {
+                try await document.writeSnapshot(to: output)
+            }
+        } catch { await load.settle(); throw error }
+        await load.settle()
+        let timing = load.lock.withLock { (load.ready, load.submitted, load.worker) }
+        try #require(timing.0)
+        let submitted = try #require(timing.1), entered = try #require(timing.2)
+        let delay = submitted.duration(to: entered)
+        print("CAPTION_SNAPSHOT_CONTENTION CPUs=\(count) submitted-to-worker=\(delay)")
+        #expect(delay < .seconds(1))
+        #expect(try Data(contentsOf: output) == data)
+        await #expect(throws: (any Error).self) { try await document.writeSnapshot(to: output) }
+        #expect(try Data(contentsOf: output) == data)
+    }
+    #endif
+
 }
+
+#if DEBUG
+private final class CaptionSnapshotGate: @unchecked Sendable {
+    private let entry = DispatchGroup(), lock = NSLock()
+    let release = DispatchSemaphore(value: 0)
+    private var didFinish = false
+    init() { entry.enter() }
+    var finished: Bool { lock.withLock { didFinish } }
+    func markFinished() { lock.withLock { didFinish = true } }
+    func observe(_ event: String) {
+        if event == "worker entered" { entry.leave(); release.wait() }
+    }
+    func waitForEntry() async {
+        await withCheckedContinuation { continuation in
+            entry.notify(queue: DispatchQueue(label: "StaxRip.test-caption-snapshot-entry")) { continuation.resume() }
+        }
+    }
+}
+#endif

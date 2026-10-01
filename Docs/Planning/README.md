@@ -62,3 +62,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 [Frame stepping evidence](FRAME-STEPPING-EVIDENCE.md) records Slice 018 scoped local/native/hosted acceptance.
 
 29. [Slice 019: advanced export source stability](SLICE-019-export-source-stability.md) and [research](SOURCE-STABILITY-RESEARCH.md).
+
+[Source stability evidence](SOURCE-STABILITY-EVIDENCE.md) records focused checks and the negative control; remaining gates are pending.

@@ -61,7 +61,7 @@ struct SubtitleOptionsView: View {
                 }
             }
             Text(sourceAvailable
-                 ? "One plain UTF-8 SRT, up to 1 MiB, with nonoverlapping cues. Supports untrimmed SDR video. Check queue validates captions before encoding. A restored session may need the file selected again."
+                 ? "One plain UTF-8 SRT, up to 1 MiB, with nonoverlapping cues. Supports SDR video. Trim times use up to three decimal places; overlapping cues are clipped to that range and shifted to the output timeline. Check queue validates captions before encoding. A restored session may need the file selected again."
                  : "Open a source video before choosing an additional caption file.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if let issue = selectionError ?? metadataIssue { Text(issue).font(.caption).foregroundStyle(Color.warning) }

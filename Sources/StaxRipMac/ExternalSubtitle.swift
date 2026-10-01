@@ -44,9 +44,11 @@ struct ExternalSubtitle: Codable, Equatable, Sendable {
     }
 
     static func validateWorkflow(_ configuration: EncodeConfiguration) throws {
-        guard configuration.colorMode == "SDR", configuration.picture.start == 0, configuration.picture.end == 0 else {
-            throw SubRipDocument.failure("External captions currently require SDR and no trim. Remove the external reference or adjust these settings explicitly.")
+        guard configuration.colorMode == "SDR" else {
+            throw SubRipDocument.failure("External captions require SDR. Remove the external reference or change the color workflow explicitly.")
         }
+        _ = try SubRipDocument.trimMilliseconds(configuration.picture.start)
+        _ = try SubRipDocument.trimMilliseconds(configuration.picture.end)
     }
 
     func read() async throws -> SubRipDocument {
@@ -138,6 +140,45 @@ struct SubRipDocument: Equatable, Sendable {
     static let maximumTime: Int64 = 48 * 60 * 60 * 1000
     let cues: [SubRipCue]
 
+    private init(cues: [SubRipCue]) { self.cues = cues }
+
+    static func trimMilliseconds(_ seconds: Double) throws -> Int64 {
+        let scaled = seconds * 1000
+        guard seconds.isFinite, seconds >= 0, scaled <= Double(maximumTime),
+              abs(scaled - scaled.rounded()) <= 0.000001 else {
+            throw failure("With external captions, use trim times within 48 hours and at most three decimal places, such as 12.345 seconds.")
+        }
+        return Int64(scaled.rounded())
+    }
+
+    func clipped(start: Int64, end: Int64) throws -> Self {
+        guard start >= 0, end > start, end <= Self.maximumTime else {
+            throw Self.failure("Choose a nonempty trim interval within the source duration.")
+        }
+        let selected = cues.compactMap { cue -> SubRipCue? in
+            let a = max(cue.start, start), b = min(cue.end, end)
+            guard b > a else { return nil }
+            return SubRipCue(start: a - start, end: b - start, text: cue.text)
+        }
+        guard !selected.isEmpty else {
+            throw Self.failure("No external caption cues overlap this trim. Adjust the range or remove the external reference explicitly.")
+        }
+        return Self(cues: selected)
+    }
+
+    func forExport(probe: MediaProbe, configuration: EncodeConfiguration) throws -> Self {
+        try validateTimeline(probe: probe, configuration: configuration)
+        let p = configuration.picture
+        guard p.start > 0 || p.end > 0 else { return self }
+        guard p.start < probe.seconds, p.end == 0 || p.end <= probe.seconds else {
+            throw Self.failure("The trim range must lie within the source duration.")
+        }
+        let start = try Self.trimMilliseconds(p.start)
+        // Captions are millisecond-based and already bounded by this floor.
+        let end = p.end == 0 ? Int64(floor(probe.seconds * 1000)) : try Self.trimMilliseconds(p.end)
+        return try clipped(start: start, end: end)
+    }
+
     static func failure(_ message: String) -> NativeExportError {
         .invalid("External subtitles: " + message)
     }
@@ -221,7 +262,7 @@ struct SubRipDocument: Equatable, Sendable {
             throw Self.failure("External captions require a known zero-start video timeline with a duration of at most 48 hours.")
         }
         guard let last = cues.last, last.end <= Int64(floor(probe.seconds * 1000)) else {
-            throw Self.failure("A caption ends after the source duration. Subtitle retiming is not supported yet.")
+            throw Self.failure("A caption ends after the source duration. Correct the caption file before exporting.")
         }
     }
 

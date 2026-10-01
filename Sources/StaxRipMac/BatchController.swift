@@ -297,7 +297,7 @@ final class BatchController: ObservableObject {
         var operationError: Error?
         var publishedOutput: URL?
         do {
-            if let externalDocument { try await externalDocument.writeSnapshot(to: directory.appendingPathComponent("external.srt")) }
+            if let external = plan.externalSubtitle { try await external.document.writeSnapshot(to: directory.appendingPathComponent("external.srt")) }
             try await plan.chapterPlan.writeMetadata(to: directory)
             statuses[job.id] = BatchStatus(phase: "Encoding", detail: plan.summary)
             try checkpoint()

@@ -109,7 +109,7 @@ struct ExternalSubtitleIntegrationTests {
         try protected(f)
     }
 
-    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)), arguments: ["text", "timing", "unicode", "missing", "extra", "oversized extraction"])
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)), arguments: ["text", "timing", "trimmed timing", "unicode", "missing", "extra", "oversized extraction"])
     func changedCaptionsCannotPublishEvenWithSuccessfulEncoding(change: String) async throws {
         let f = try await fixture()
         var batch: BatchController?
@@ -118,6 +118,7 @@ struct ExternalSubtitleIntegrationTests {
         let text: String
         switch change {
         case "timing": text = plain.replacingOccurrences(of: "00:00:00,083", with: "00:00:00,084")
+        case "trimmed timing": text = "1\n00:00:00,001 --> 00:00:00,317\nCafé — 起点\nPlain & text\n\n2\n00:00:00,525 --> 00:00:00,700\nSecond cue\n\n"
         case "unicode": text = plain.replacingOccurrences(of: "Café", with: "Cafe\u{301}")
         case "missing": text = String(plain.components(separatedBy: "\n\n")[0]) + "\n\n"
         case "extra": text = plain + "3\n00:00:00,975 --> 00:00:00,999\nExtra\n\n"
@@ -128,7 +129,9 @@ struct ExternalSubtitleIntegrationTests {
             ? "for target do :; done\nif [ \"$target\" = \"pipe:1\" ]; then exec /usr/bin/head -c 2097153 /dev/zero; fi"
             : "for arg do\ncase \"$arg\" in */external.srt) /bin/cp " + quote(altered.path) + " \"$arg\";; esac\ndone"
         let wrapped = try wrapper(f, body: body)
-        let item = job(f), next = job(f, name: "next")
+        var item = job(f)
+        if change == "trimmed timing" { item.configuration.picture.start = 0.1; item.configuration.picture.end = 0.8 }
+        let next = job(f, name: "next")
         let controller = BatchController(journalURL: f.root.appendingPathComponent("journal.json")); batch = controller
         controller.tools = wrapped; controller.encoders = ["libx264"]; controller.start([item, next]); try await finish(controller)
         let status = try #require(controller.statuses[item.id])
@@ -139,8 +142,8 @@ struct ExternalSubtitleIntegrationTests {
         try protected(f)
     }
 
-    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
-    func capturedFileDrivesCurrentEncodeAndNextAttemptReadsFreshBytes() async throws {
+    @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)), arguments: [false, true])
+    func capturedFileDrivesCurrentEncodeAndNextAttemptReadsFreshBytes(trimmed: Bool) async throws {
         let f = try await fixture()
         var batch: BatchController?
         defer { cleanup(f, batch: batch) }
@@ -148,8 +151,13 @@ struct ExternalSubtitleIntegrationTests {
         let replacement = f.root.appendingPathComponent("replacement.srt"); try changed.write(to: replacement)
         let tools = try wrapper(f, body: "for arg do\nif [ \"$arg\" = \"-progress\" ]; then /bin/cp " + quote(replacement.path) + " " + quote(f.captions.path) + "; fi\ndone")
         let controller = BatchController(); batch = controller; controller.tools = tools; controller.encoders = ["libx264"]
-        for (index, expected) in [f.captionBytes, changed].enumerated() {
-            let item = job(f, name: "attempt-\(index)")
+        let expectedFiles = trimmed ? [
+            Data("1\n00:00:00,000 --> 00:00:00,317\nCafé — 起点\nPlain & text\n\n2\n00:00:00,525 --> 00:00:00,700\nSecond cue\n\n".utf8),
+            Data("1\n00:00:00,000 --> 00:00:00,700\nFresh next attempt\n\n".utf8)
+        ] : [f.captionBytes, changed]
+        for (index, expected) in expectedFiles.enumerated() {
+            var item = job(f, name: "attempt-\(index)")
+            if trimmed { item.configuration.picture.start = 0.1; item.configuration.picture.end = 0.8 }
             controller.start([item]); try await finish(controller)
             try #require(controller.statuses[item.id]?.phase == "Completed", Comment(rawValue: controller.statuses[item.id]?.detail ?? "Missing status"))
             let decoded = try await run(["-i", item.destination, "-map", "0:s:0", "-c:s", "srt", "-f", "srt", "pipe:1"], tools: f.tools)

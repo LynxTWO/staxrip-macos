@@ -67,12 +67,13 @@ struct SubtitleOptionsView: View {
                     })).textFieldStyle(.roundedBorder).accessibilityLabel("Title for " + label)
                 }
             }
-            Picker("Playback for " + label, selection: Binding<CaptionPlayback?>(get: { reference.playback }, set: { value in
+            Picker("Playback", selection: Binding<CaptionPlayback?>(get: { reference.playback }, set: { value in
                 update(index, path: reference.path) { $0.playback = value }
             })) {
                 Text("Automatic").tag(Optional<CaptionPlayback>.none)
                 ForEach(CaptionPlayback.allCases, id: \.self) { choice in Text(choice.label).tag(Optional(choice)) }
             }.tint(Color.primaryActionFill)
+                .accessibilityLabel("Playback for " + label)
                 .accessibilityHint("MKV playback hints. Default makes this the preferred caption track. Forced requests display even when captions are off. Player settings can override both.")
             HStack {
                 Button("Choose file…") { choose(index) }.disabled(!sourceAvailable)

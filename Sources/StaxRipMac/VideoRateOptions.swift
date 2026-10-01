@@ -31,9 +31,9 @@ struct VideoRateOptionsView: View {
                 Text("Copy the original encoded picture without another video encoding pass. Audio and subtitle choices still apply; AAC and Opus still re-encode audio.")
                     .font(.caption).fixedSize(horizontal: false, vertical: true)
                 if let copyIssue { Text(copyIssue).font(.caption).foregroundStyle(Color.warning).fixedSize(horizontal: false, vertical: true) }
-                Text("First video only: upright, progressive, square-pixel 8-bit SDR H.264 or HEVC in MP4/QuickTime or Matroska. Requires original size and no picture filters or trim.")
+                Text("Supports 8-bit SDR H.264/HEVC, or 10-bit HEVC Main 10 with declared BT.709 limited-range SDR. First video only: upright, progressive and square-pixel in MP4/QuickTime or Matroska. Requires original size and no picture filters or trim.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityLabel("First video only: upright, progressive, square-pixel, eight-bit standard dynamic range H two six four or H E V C in M P four, QuickTime or Matroska. Requires original size and no picture filters or trim.")
+                    .accessibilityLabel("Supports eight-bit standard dynamic range H two six four or H E V C, or ten-bit H E V C Main ten with declared B T seven zero nine, limited-range standard dynamic range. First video only: upright, progressive and square-pixel in M P four, QuickTime or Matroska. Requires original size and no picture filters or trim.")
                 Text("Video packets and presentation timing are checked before saving. This adds source/output scans and up to 128 MiB of temporary audit storage, limited to two million video packets. Conversions that cannot preserve packet timing are refused, including some variable-frame-rate Matroska sources. Stored video quality, speed and engine settings are inactive.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else {

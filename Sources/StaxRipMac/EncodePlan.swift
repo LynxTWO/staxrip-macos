@@ -63,7 +63,9 @@ struct EncodePlan: Sendable {
         let hardware = !copyingVideo && c.rate.backend == "Apple hardware"
         let encoder = copyingVideo ? "copy" : hardware ? (c.codec == "HEVC" ? "hevc_videotoolbox" : "h264_videotoolbox") : c.codec == "AV1" ? "libsvtav1" : c.codec == "HEVC" ? "libx265" : "libx264"
         guard copyingVideo || encoders.contains(encoder) else { throw NativeExportError.invalid("The installed FFmpeg does not provide \(encoder).") }
-        guard preservingHDR || (!["smpte2084", "arib-std-b67"].contains(video.color_transfer ?? "") &&
+        // The copy contract above has already validated its own picture formats;
+        // this restriction belongs to decoding and re-encoding the SDR picture.
+        guard copyingVideo || preservingHDR || (!["smpte2084", "arib-std-b67"].contains(video.color_transfer ?? "") &&
               ["yuv420p", "nv12"].contains(video.pix_fmt ?? "")) else {
             throw NativeExportError.invalid("This first advanced pipeline supports 8-bit SDR 4:2:0 sources. HDR, high bit depth and other pixel formats need an explicit color workflow before encoding.")
         }

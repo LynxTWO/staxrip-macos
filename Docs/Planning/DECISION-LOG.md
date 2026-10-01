@@ -87,6 +87,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-075 | 2026-10-01 | Licensed full-film video qualification | Confirmed | |
 | D-076 | 2026-10-01 | Preserve complete frame audits with compact JSON | Confirmed | |
 | D-077 | 2026-10-01 | Locate existing cancellation settlement delay | Confirmed | |
+| D-078 | 2026-10-01 | Preserve declared ten-bit SDR HEVC during video copy | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1206,3 +1207,22 @@ D-077 outcome: diagnostic hosted run 36899766961 at aa7f5bd passed all 267 repor
 
 
 D-077 ordinary closure: restored uninstrumented head 542fde3 passed hosted run 36901339753, 267 reported tests in 527.517 seconds. Sources, Tests, Package.swift and workflow match the already tested ordinary head 2fe44cf. No production cancellation patch was made. Slice 039 accepts its observed film and regression results while retaining the unresolved historical timing failures; a recurrence reopens qualification rather than authorizing a relaxed guard or another diagnostic expansion.
+
+
+## D-078: Preserve declared ten-bit SDR HEVC during video copy
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 040 / R-050 after Slice 039 acceptance under the owner's autonomous non-audio development delegation. Delegated to AI recommendation.
+
+Need: Change supported track/container choices for declared ten-bit SDR HEVC without a lossy video re-encode. Authority: owner native encoder completion direction, release-ledger broader copy gap and Architecture section 10's video-plan extension. Worst case: unsupported conversion silently changes source precision or wrongly claims preservation. Consequence class: user_data through existing export publication.
+
+Existing control: verified packet copy already compares complete bounded payload/timing and exact pixel/profile/color/configuration metadata. Its gap is explicit eight-bit admission in both VideoCopyContract and EncodePlan. Reuse that path instead of building another engine. FFmpeg's primary streamcopy documentation describes direct packet transfer and warns that target-container requirements can still cause failure: https://ffmpeg.org/ffmpeg.html#Streamcopy . Read-only installed encoder help lists yuv420p10le, which supports a generated fixture but does not prove application compatibility.
+
+Options considered: keep the blanket ten-bit refusal; enable arbitrary bit depths/HDR; admit one explicit ten-bit SDR HEVC format through the existing contract after bounded real feasibility. Choose the third.
+
+Consequences: Main 10, yuv420p10le, declared bt709 primaries/transfer/matrix and tv range only, retaining existing geometry/time/resource/unknown-side-data constraints. M1 must establish complete real ten-bit picture and packet preservation before code changes. No schema/dependency or general transcode change. Keep captions/chapters on their existing verified path and improve visible/spoken guidance. Preserve all older assertions/deadlines and parked DSP/listening. A repeat of the unresolved hosted cancellation failure reopens qualification without blind retries. No merge or release.
+
+Revisit when: Complete picture/packet metadata differ, color declarations are incomplete, a broader source format is requested, or ordinary regression contradicts acceptance.
+
+D-078 outcome: Slice 040 accepted at 23583c3, ordinary hosted run 36904515988. All six gates passed with strict ten-bit references, actual-controller and native output evidence. Earlier unexplained mastering cancellation delays remain unresolved; no DSP, playback certification, merge or release claim.

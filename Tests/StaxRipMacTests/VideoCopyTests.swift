@@ -76,6 +76,39 @@ struct VideoCopyTests {
         }
     }
 
+    @Test func declaredTenBitHEVCCopyRequiresCompleteSDRDescription() throws {
+        let declared: [String: Any] = ["codec_name": "hevc", "profile": "Main 10", "pix_fmt": "yuv420p10le",
+            "color_primaries": "bt709", "color_transfer": "bt709", "color_space": "bt709", "color_range": "tv"]
+        let source = try probe(declared)
+        let contract = try VideoCopyContract.make(probe: source, configuration: configuration)
+        _ = try contract.verifyMetadata(source)
+        let job = QueueJob(id: UUID(), source: "/generated/ten-bit.mp4", isDemo: false,
+            destination: "/generated/copied.mkv", configuration: configuration, created: Date())
+        let staged = URL(fileURLWithPath: "/generated/staged.mkv")
+        let plan = try EncodePlan.make(job: job, probe: source, encoders: [], staged: staged)
+        #expect(plan.videoCopy != nil && plan.expectedCodec == "hevc")
+        for flag in ["-pix_fmt", "-vf", "-crf", "-b:v", "-fps_mode:v", "-enc_time_base:v"] {
+            #expect(!plan.arguments.contains(flag))
+        }
+        for field in ["color_primaries", "color_transfer", "color_space", "color_range"] {
+            var incomplete = declared; incomplete.removeValue(forKey: field)
+            #expect(throws: (any Error).self) { try VideoCopyContract.make(probe: probe(incomplete), configuration: configuration) }
+        }
+        for (field, value) in [("codec_name", "h264"), ("profile", "Main"), ("pix_fmt", "yuv422p10le"),
+                               ("pix_fmt", "yuv420p12le"), ("color_primaries", "bt2020"), ("color_transfer", "smpte2084"),
+                               ("color_transfer", "arib-std-b67"), ("color_space", "bt2020nc"), ("color_range", "pc")] {
+            var unsupported = declared; unsupported[field] = value
+            #expect(throws: (any Error).self) { try VideoCopyContract.make(probe: probe(unsupported), configuration: configuration) }
+            #expect(throws: (any Error).self) { try contract.verifyMetadata(probe(unsupported)) }
+        }
+        var reduced = declared; reduced["pix_fmt"] = "yuv420p"
+        #expect(throws: (any Error).self) { try contract.verifyMetadata(probe(reduced)) }
+        var dynamic = declared; dynamic["side_data_list"] = [["side_data_type": "DOVI configuration record"]]
+        #expect(throws: (any Error).self) { try VideoCopyContract.make(probe: probe(dynamic), configuration: configuration) }
+        var transcode = job; transcode.configuration.selectCodec("HEVC")
+        #expect(throws: (any Error).self) { try EncodePlan.make(job: transcode, probe: source, encoders: ["libx265"], staged: staged) }
+    }
+
     @Test func packetFramingBoundsAndBinaryRecordsAreStrict() throws {
         let input = Data((line() + line(pts: 2000)).utf8)
         for width in [1, 2, 7, 55, 56, 57, 4096] {

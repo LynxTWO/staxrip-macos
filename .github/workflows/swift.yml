@@ -15,4 +15,21 @@ jobs:
       - name: Install encoding test tools
         run: brew install ffmpeg
       - name: Build and test
-        run: swift test
+        run: |
+          swift test &
+          test_pid=$!
+          python3 scripts/observe-swift-tests.py "$test_pid" "$RUNNER_TEMP/staxrip-timing" &
+          observer_pid=$!
+          trap 'kill "$observer_pid" 2>/dev/null || true' EXIT
+          if wait "$test_pid"; then test_result=0; else test_result=$?; fi
+          kill "$observer_pid" 2>/dev/null || true
+          wait "$observer_pid" 2>/dev/null || true
+          exit "$test_result"
+      - name: Retain bounded timing observation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-test-timing
+          path: ${{ runner.temp }}/staxrip-timing/
+          if-no-files-found: ignore
+          retention-days: 7

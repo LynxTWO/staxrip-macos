@@ -9,11 +9,10 @@ struct NativeVideoPreview: NSViewRepresentable {
 
     func makeNSView(context: Context) -> AVPlayerView {
         let view = AVPlayerView()
-        view.controlsStyle = .inline
+        view.controlsStyle = comparisonControls ? .none : .inline
         view.videoGravity = .resizeAspect
         view.showsFullScreenToggleButton = !comparisonControls
         if comparisonControls {
-            view.showsFrameSteppingButtons = true
             view.showsSharingServiceButton = false
             view.allowsPictureInPicturePlayback = false
             view.allowsVideoFrameAnalysis = false

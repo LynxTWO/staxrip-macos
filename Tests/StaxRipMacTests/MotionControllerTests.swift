@@ -13,9 +13,10 @@ struct MotionControllerTests {
             return try await withCheckedThrowingContinuation { pending = $0 }
         }
         func release() throws {
-            let stamp = PreviewStamp(pts: 0, base: try HDRFraction("1/24"))
+            let base = try HDRFraction("1/24"), aspect = try HDRFraction("1/1")
+            let frames = [Int64(0), 1, 3].map { MotionFrame(stamp: PreviewStamp(pts: $0, base: base), width: 640, height: 360, aspect: aspect, format: "yuv420p", color: "generated") }
             pending?.resume(returning: MotionComparison(requested: 0, end: 3,
-                frames: [MotionFrame(stamp: stamp, width: 640, height: 360, aspect: try HDRFraction("1/1"), format: "yuv420p", color: "generated")],
+                frames: frames,
                 sourceIdentity: SourceFingerprint(sha256: "generated", byteCount: 3), operations: "Generated lifecycle fixture", bytes: 3))
             pending = nil
         }
@@ -56,9 +57,14 @@ struct MotionControllerTests {
         controller.render(source: URL(fileURLWithPath: "/generated/one"), configuration: EncodeConfiguration(), time: 0, tools: tools)
         try await started(gate); try await gate.release(); try await wait(controller)
         let player = try #require(controller.player), directory = try #require(controller.workspace?.directory)
-        #expect(controller.result != nil)
+        #expect(controller.result != nil && controller.timeObserver != nil)
+        #expect(controller.frameTimes == [0, 1.0 / 24, 0.125])
+        #expect(!controller.canStepBack && controller.canStepForward)
+        controller.seek(seconds: 100); #expect(controller.playhead == 0.125)
+        controller.seek(seconds: -100); #expect(controller.playhead == 0)
+        controller.seek(seconds: .nan); #expect(controller.playhead == 0)
         controller.close(); try await wait(controller)
-        #expect(player.currentItem == nil && player.rate == 0)
+        #expect(player.currentItem == nil && player.rate == 0 && controller.timeObserver == nil)
         #expect(controller.cleanupFailed && controller.workspace != nil && controller.result == nil)
         #expect(FileManager.default.fileExists(atPath: directory.path))
         controller.render(source: URL(fileURLWithPath: "/generated/two"), configuration: EncodeConfiguration(), time: 0, tools: tools)

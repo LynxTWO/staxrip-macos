@@ -1,10 +1,10 @@
 # StaxRip Mac Slice 028: Correct native output name collisions
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-042 / R-032.
+Version: 0.2. Date: 2026-10-01. Status: Accepted within evidence limits under D-042 / R-032.
 
 SLICE STATE
-Milestone: Planning complete; implementation next.
+Milestone: Local/native/hosted checks passed at 70c17da; hosted run 36817176434.
 Blocked by: None.
-Evidence so far: Native Slice 027 discovery showed a system Replace prompt for an existing generated output, then safely cancelled it with unchanged hashes.
+Evidence so far: NATIVE-OUTPUT-NAME-EVIDENCE.md records corrected names, no Replace prompt, retained output protection and regression.
 Last audit: 2026-10-01.
 
 ## 1. What the slice proves

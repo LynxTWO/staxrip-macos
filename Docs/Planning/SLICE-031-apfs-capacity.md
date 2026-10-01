@@ -1,5 +1,5 @@
 # StaxRip Mac Slice 031: APFS full-destination qualification
-Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / R-035 / R-036.
+Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / D-052 / R-035 / R-036 / R-037.
 
 SLICE STATE
 Milestone: Local/native capacity qualification complete. Recurrent existing hosted timing failures require bounded runtime observation under D-046.
@@ -17,7 +17,7 @@ Create a new bounded APFS image with unique fixture identity. Fill only its owne
 
 ## 3. In scope, with build order
 
-M1: Owned APFS fixture helper and filesystem/device/marker validation. M2: Actual production batch failure/retry with source, prior-output, staging and later-job assertions. Reuse the existing strict capacity test where its phase matches; otherwise add a separately scoped APFS test while retaining HFS+ assertions unchanged. M3: Native failure/retry, ordinary regression/hosted check and detached-fixture evidence. D-046 adds bounded read-only observation of the unchanged hosted command after two failed runs. D-047 adds a separately reported focused hosted comparison before the unchanged full gate. Focused success never substitutes for full acceptance. D-048 adds bounded existing status detail/progress/publication tracing to the generated destination test to discriminate its stalled boundary. D-049 adds a bounded test-only forwarding observation around the real source reader. D-050 adds preservation of requested source-check worker priority under R-036, with a pre-repair real-worker counterexample and full/native regression evidence. D-051 adds debug-only actual reader body/submission/worker observation to correct the forwarding-entry ambiguity. Other product repairs remain outside this boundary.
+M1: Owned APFS fixture helper and filesystem/device/marker validation. M2: Actual production batch failure/retry with source, prior-output, staging and later-job assertions. Reuse the existing strict capacity test where its phase matches; otherwise add a separately scoped APFS test while retaining HFS+ assertions unchanged. M3: Native failure/retry, ordinary regression/hosted check and detached-fixture evidence. D-046 adds bounded read-only observation of the unchanged hosted command after two failed runs. D-047 adds a separately reported focused hosted comparison before the unchanged full gate. Focused success never substitutes for full acceptance. D-048 adds bounded existing status detail/progress/publication tracing to the generated destination test to discriminate its stalled boundary. D-049 adds a bounded test-only forwarding observation around the real source reader. D-050 adds preservation of requested source-check worker priority under R-036, with a pre-repair real-worker counterexample and full/native regression evidence. D-051 adds debug-only actual reader body/submission/worker observation to correct the forwarding-entry ambiguity. D-052 adds a per-read owned source queue with actual bounded contention negative/positive evidence. Other product repairs remain outside this boundary.
 
 ## 4. Out of scope
 
@@ -46,6 +46,8 @@ Generated short H.264 video, sentinel output and filler only. A new fixed 64 MiB
 | S31-005 | Fixture detaches; existing regression behavior remains | Detach receipt, local/hosted suite and unchanged HFS+ contract | apfs-regression |
 | S31-006 | The source-check bridge honors foreground task priority while reading off main and preserving source/cancellation contracts | Real worker QoS negative/positive checks, unchanged source tests, full suites and native export | source-worker-priority |
 
+| S31-007 | Source scan submission avoids the demonstrated shared-worker contention while retaining priority and ownership | Actual bounded contention negative/positive control and full regression | source-worker-contention |
+
 ## 9. Verification evidence required
 
 Record exact filesystem/device/capacity, actual write/fsync ENOSPC, app failure phase and error, source/sentinel hashes, final-file absence, next-job status, cleanup and readable retry output. Record an admission-stage failure honestly if APFS metadata exhaustion precedes FFmpeg; do not relabel it as active-encoding failure. If required, a separately documented small preallocated reservation can be released before execution to exercise actual encoder failure without altering bounds or existing HFS+ expectations.
@@ -56,10 +58,10 @@ No existing disk is erased, reformatted or filled. Validate mount identity befor
 
 ## 11. Definition of done
 
-All six criteria have scoped local/native evidence and ordinary hosted acceptance, the fixture is detached, and the release ledger states remaining storage limitations.
+All seven criteria have scoped local/native evidence and ordinary hosted acceptance, the fixture is detached, and the release ledger states remaining storage limitations.
 
 ## 12. What this unlocks
 
 A second filesystem qualification for the default Mac storage family and a reusable bounded fixture for separately scoped future failure tests.
 
-Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / R-035 / R-036.
+Approved for build by: Owner overnight autonomous non-audio delegation, 2026-10-01; D-045 / D-046 / D-047 / D-048 / D-049 / D-050 / D-051 / D-052 / R-035 / R-036 / R-037.

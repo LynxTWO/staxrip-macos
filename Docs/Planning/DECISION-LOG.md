@@ -61,6 +61,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-049 | 2026-10-01 | Distinguish source reader entry and worker delay | Confirmed | |
 | D-050 | 2026-10-01 | Preserve requested source-check worker priority | Confirmed | |
 | D-051 | 2026-10-01 | Observe actual source-read dispatch boundary | Confirmed | |
+| D-052 | 2026-10-01 | Isolate source scanning from shared dispatch contention | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -788,3 +789,17 @@ Options considered: change worker queue or actor inheritance speculatively; obse
 Consequences: Compile the optional observer only in DEBUG, capture it before dispatch and invoke it synchronously at body entry, before submission and worker entry. The existing generated destination test installs it with TaskLocal and retains bounded messages. No new waits, source reads, scheduling override, time-limit changes, audio changes or release-build logging. Existing callbacks and source checks remain unchanged. Focused success remains diagnostic only.
 
 Revisit when: The full hosted trace discriminates the delayed boundary. Any repair requires scoped evidence before acceptance.
+
+## D-052: Isolate source scanning from shared dispatch contention
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Amend Slice 031 with R-037 for a per-read owned source Dispatch queue under owner autonomous non-audio delegation. Delegated to AI recommendation.
+
+Because: D-051 directly measures a 25.276-second gap between submission and actual worker entry, followed by about 1.7 ms of source open/hash work. A local sustained-CPU comparison delays shared default work for 2.990 seconds while owned default-queue work begins in 0.231 ms.
+
+Options considered: raise all requests to high priority; change caller actors; own the blocking file-work execution domain while preserving requested priority. Choose the owned per-read serial queue. A shared serial source queue could allow one blocked file to prevent independent reads, so each read owns its queue.
+
+Consequences: Keep existing task-to-QoS mapping, off-main open/hash, cancellation, progress, descriptor lifetime and source checks. Add a debug-only opt-in contention test that loads at most 32 owned CPU queues for three seconds, then checks actual source worker entry within one second. It is separate from default scheduling and does not remove or relax any existing test. Join every generated load worker before fixture cleanup. Reproduce the old shared-worker failure before changing production code. Run unchanged focused/full/local/native/hosted gates afterward. Keep explicit limits: this is not a guarantee against arbitrary OS load or kernel waits.
+
+Revisit when: The actual control does not reproduce, an owned source worker still delays, or unchanged full regressions fail.

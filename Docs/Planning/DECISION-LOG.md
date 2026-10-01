@@ -53,6 +53,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 
 | D-042 | 2026-10-01 | Correct native output name collisions | Confirmed | |
 | D-043 | 2026-10-01 | Review batch destinations before starting | Confirmed | |
+| D-044 | 2026-10-01 | Author and verify chapter lists | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -668,3 +669,17 @@ Options considered: keep per-job review optional only; cache permanent access as
 Consequences: Reuse attached workspace panels and fresh request ownership per folder; no writes or batch execution until the last matching review. Shared folders appear once, completed jobs are excluded, and final batch checks remain independent. No persistent permission, source relinking, stored schema or audio change.
 
 Revisit when: Native review fails to improve the visible start flow, permission/bookmark handling is scoped, or broader filesystem evidence identifies the actual wait cause.
+
+## D-044: Author and verify chapter lists
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Build Slice 030 under autonomous non-audio delegation after Slice 029 acceptance. Delegated to AI recommendation.
+
+Because: The release ledger requires chapter editing; the current app can only inspect and preserve a bounded source list. Generated discovery demonstrates title/trim support and counterexamples requiring explicit admission and output checks.
+
+Options considered: raw editable FFmpeg metadata; title-only overrides; typed source-timeline lists with literal serialization and verified output. Choose typed lists so users can author ranges without exposing command syntax and unsafe metadata sections.
+
+Consequences: Millisecond authoring, explicit import rounding, custom trim intersection/offset, MP4 continuity checks, bounded owned metadata staging and retained output audits. Add native draft editing, operation ownership, session v7/recovery v6 and source-specific preset/reset rules. Default source chapter behavior stays compatible. See CHAPTER-EDITING-RESEARCH.md for current evidence and limits.
+
+Revisit when: Actual chapter outputs disagree, nonzero/unknown timelines or nested editions are needed, or player compatibility expands beyond metadata verification.

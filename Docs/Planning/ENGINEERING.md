@@ -3,7 +3,7 @@ Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
 Last completed: Slice 001 accepted; Slice 002 experimental implementation and local listening pack preserved.
-Next: Slice 029 queue destination review under D-043 / R-033 after Slice 028 acceptance at 70c17da, hosted run 36817176434.
+Next: Slice 030 chapter editing under D-044 / R-034 after Slice 029 acceptance at 485ea85, hosted run 36818937608.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -244,3 +244,7 @@ Approved R-032 under D-042: refuse known MP4 name collisions before Replace, wit
 ## Queue destination review checkpoint, 2026-10-01
 
 Approved R-033 under D-043: native review of distinct pending output folders before batch execution or recovery-record replacement. Gates queue-destination-sequence, queue-destination-protection, queue-destination-native and queue-destination-regression bind S29-001 through S29-004. Consequence: user_data only through existing batch execution after final current matching selection; prior selection is local_only. No persistent permissions, stored-format or audio change.
+
+## Chapter editor checkpoint, 2026-10-01
+
+Approved R-034 under D-044: typed chapter authoring/removal, native draft editing and owned source import, source-specific persistence and actual output verification. Gates chapter-validation, chapter-export, chapter-timing, chapter-persistence, chapter-editor-lifecycle, chapter-native, chapter-coexistence and chapter-regression bind S30-001 through S30-008. Consequence: user_data in saved intent and newly published exports; source bytes remain immutable. No audio/DSP, remux or new HDR transform scope.

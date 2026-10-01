@@ -104,3 +104,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 39. [Slice 029: queue destination review](SLICE-029-queue-destination-review.md).
 
 [Queue destination review evidence](QUEUE-DESTINATION-REVIEW-EVIDENCE.md) records cancellation before recovery writes, native completion and regression.
+
+40. [Slice 030: chapter editor](SLICE-030-chapter-editor.md) and [metadata discovery](CHAPTER-EDITING-RESEARCH.md).

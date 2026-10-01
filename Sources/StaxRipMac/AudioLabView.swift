@@ -24,7 +24,7 @@ struct AudioLabView: View {
                     Spacer()
                     Button("Open audio or video…") { chooseSource() }.disabled(busy || batch.tools == nil)
                 }.padding(20).background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
-                if batch.tools == nil { Text(batch.toolDescription).font(.caption).foregroundStyle(.orange) }
+                if batch.tools == nil { Text(batch.toolDescription).font(.caption).foregroundStyle(Color.warning) }
                 if !audio.tracks.isEmpty {
                     AudioPanel("Source track") {
                         Picker("Track", selection: $audio.track) {
@@ -119,7 +119,7 @@ struct AudioLabView: View {
                         if audio.running { Button("Cancel audio operation", role: .cancel) { audio.cancel() } }
                         if let output = audio.output { Button("Reveal audio output") { NSWorkspace.shared.activateFileViewerSelecting([output]) } }
                         Spacer()
-                        Button("Export legacy audio…") { chooseDestination() }.buttonStyle(.borderedProminent).disabled(busy || audio.source == nil || batch.tools == nil)
+                        Button("Export legacy audio…") { chooseDestination() }.primaryAction().disabled(busy || audio.source == nil || batch.tools == nil)
                     }
                 }.padding(20).background(Color.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
                 Text("Audio Lab has its own source and settings; these are not saved in video sessions. Exports support mono and stereo sources. Channel conversion uses FFmpeg’s default mix; artwork, chapters and source tags are omitted. FLAC/WAV avoid further lossy coding, but cannot restore detail lost in a source. Existing files are never replaced.")

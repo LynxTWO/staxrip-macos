@@ -19,7 +19,7 @@ struct QueueView: View {
             HStack(spacing: 16) {
                 outcomeCount(overview.completed, title: "Completed", symbol: "checkmark.circle", color: .secondary)
                 outcomeCount(overview.remaining, title: "Remaining", symbol: "clock", color: .secondary)
-                if overview.attention > 0 { outcomeCount(overview.attention, title: overview.attention == 1 ? "Needs attention" : "Need attention", symbol: "exclamationmark.triangle", color: .orange) }
+                if overview.attention > 0 { outcomeCount(overview.attention, title: overview.attention == 1 ? "Needs attention" : "Need attention", symbol: "exclamationmark.triangle", color: .warning) }
                 Spacer()
                 if batch.reviewing {
                     Button("Cancel check", role: .cancel) { batch.cancelReview() }
@@ -33,7 +33,7 @@ struct QueueView: View {
                         .help(batch.publicationJobID == nil ? "Cancel the current job and stop the batch. An active source content check waits for filesystem reads to return before cleanup." : "Wait for this publication to finish, preserve any successful output, and stop before the next job.")
                 } else {
                     Button { model.chooseQueueStart(using: batch) { !exporter.running && !audio.running && !fileAccess.reviewing } } label: { Label("Start queue…", systemImage: "play.fill") }
-                        .buttonStyle(.borderedProminent).disabled(batch.pendingJobs(in: model.jobs).isEmpty || batch.tools == nil || batch.reviewing || exporter.running || audio.running || model.filePanelActive || fileAccess.reviewing)
+                        .primaryAction().disabled(batch.pendingJobs(in: model.jobs).isEmpty || batch.tools == nil || batch.reviewing || exporter.running || audio.running || model.filePanelActive || fileAccess.reviewing)
                         .help("Review each configured output folder before starting. Cancel starts nothing. Each job then performs independent checks, including reading its source in full before inspection and publication.")
                 }
                 Button { model.exportQueue() } label: { Label("Export JSON…", systemImage: "square.and.arrow.up") }
@@ -60,7 +60,7 @@ struct QueueView: View {
                     }.disabled(!model.jobs.isEmpty || batch.running || exporter.running || audio.running || model.filePanelActive || fileAccess.reviewing)
                 }.padding(16).background(Color.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
             }
-            if let error = batch.recoveryError { Text(error).font(.caption).foregroundStyle(.orange).textSelection(.enabled) }
+            if let error = batch.recoveryError { Text(error).font(.caption).foregroundStyle(Color.warning).textSelection(.enabled) }
             if model.jobs.isEmpty {
                 VStack(spacing: 15) {
                     Image(systemName: "square.stack.3d.up").font(.system(size: 42, weight: .ultraLight)).foregroundStyle(Color.accent)
@@ -135,9 +135,9 @@ private struct QueueJobRow: View {
                 }
                 Spacer(minLength: 8)
                 Label(presentation.label, systemImage: presentation.symbol).font(.caption.weight(.medium))
-                    .foregroundStyle(presentation.needsAttention ? Color.orange : (presentation.completed ? Color.accent : Color.secondary))
+                    .foregroundStyle(presentation.needsAttention ? Color.warning : (presentation.completed ? Color.accent : Color.secondary))
                     .padding(.horizontal, 10).padding(.vertical, 6)
-                    .background((presentation.needsAttention ? Color.orange : Color.accent).opacity(0.08), in: Capsule())
+                    .background((presentation.needsAttention ? Color.warning : Color.accent).opacity(0.08), in: Capsule())
                     .accessibilityLabel("Job \(index), \(presentation.label)")
             }
             if let state, presentation.showStatusDetail, !state.detail.isEmpty {
@@ -193,13 +193,13 @@ private struct QueueJobRow: View {
         }.padding(16).background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 12))
     }
     private func statusDetail(_ state: BatchStatus) -> some View {
-        Text(state.detail).font(.caption).foregroundStyle(presentation.needsAttention ? Color.orange : Color.secondary)
+        Text(state.detail).font(.caption).foregroundStyle(presentation.needsAttention ? Color.warning : Color.secondary)
             .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             .accessibilityLabel(AccessibilityLanguage.spokenCodecs(state.detail))
     }
     private func checkDetail(_ check: QueueCheck) -> some View {
         Text(check.kind.rawValue + ": " + check.detail).font(.caption)
-            .foregroundStyle(check.kind == .issue ? Color.orange : Color.secondary)
+            .foregroundStyle(check.kind == .issue ? Color.warning : Color.secondary)
             .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
             .accessibilityLabel("Queue check: " + AccessibilityLanguage.spokenCodecs(check.kind.rawValue + ". " + check.detail))
     }

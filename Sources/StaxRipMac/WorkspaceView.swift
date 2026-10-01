@@ -364,7 +364,7 @@ struct WorkspaceView: View {
                                 Text("." + model.config.container.lowercased()).foregroundStyle(.secondary)
                             }.font(.system(size: 12, design: .monospaced))
                             if let issue = model.outputIssue {
-                                Text(issue).font(.system(size: 11)).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                                Text(issue).font(.system(size: 11)).foregroundStyle(Color.warning).fixedSize(horizontal: false, vertical: true)
                             }
                         }
                         VStack(alignment: .leading, spacing: 8) {
@@ -394,9 +394,9 @@ struct WorkspaceView: View {
                     Text(model.isDemo ? "Demo recipe · open a source to encode" : "Adds a job without starting it")
                         .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Button { model.addToQueue() } label: {
-                        HStack { Image(systemName: "plus"); Text("Add to queue"); Spacer(); Text("⌘J").opacity(0.6) }
+                        HStack { Image(systemName: "plus"); Text("Add to queue"); Spacer(); Text("⌘J").opacity(0.85) }
                             .font(.system(size: 12, weight: .semibold)).padding(13)
-                            .foregroundStyle(Color.ink).background(Color.accent, in: RoundedRectangle(cornerRadius: 9))
+                            .foregroundStyle(.white).background(Color.primaryActionFill, in: RoundedRectangle(cornerRadius: 9))
                     }.buttonStyle(.plain).disabled(model.loading || model.outputIssue != nil)
                     Text(batch.tools == nil ? "FFmpeg required to run jobs" : "FFmpeg engine available · review in Queue")
                         .font(.system(size: 10)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

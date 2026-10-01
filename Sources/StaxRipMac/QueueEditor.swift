@@ -71,7 +71,7 @@ struct QueueEditor: View {
                 }
                 Text(URL(fileURLWithPath: draft.destination).deletingLastPathComponent().path)
                     .font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                if let issue { Text(issue).font(.caption).foregroundStyle(.orange) }
+                if let issue { Text(issue).font(.caption).foregroundStyle(Color.warning) }
             }
             Divider()
             HStack {
@@ -83,7 +83,7 @@ struct QueueEditor: View {
                     model.updateJob(draft)
                     batch.reset(draft.id)
                     dismiss()
-                }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).disabled(issue != nil)
+                }.keyboardShortcut(.defaultAction).primaryAction().disabled(issue != nil)
             }
         }.padding(28)
         }.frame(width: 600, height: 720)

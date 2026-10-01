@@ -31,7 +31,7 @@ struct PresetLibraryView: View {
                 }.disabled(library.problem != nil)
             }
             if let problem = library.problem {
-                Text(problem).foregroundStyle(.orange).textSelection(.enabled)
+                Text(problem).foregroundStyle(Color.warning).textSelection(.enabled)
             }
             List(selection: $selection) {
                 ForEach(library.presets) { preset in

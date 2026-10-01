@@ -56,11 +56,6 @@ struct StaxRipMacApp: App {
     }
 }
 
-extension Color {
-    static let accent = Color(red: 0.24, green: 0.73, blue: 0.64)
-    static let ink = Color(red: 0.07, green: 0.12, blue: 0.15)
-}
-
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var exporter: ExportController?

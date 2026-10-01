@@ -164,7 +164,7 @@ struct PicturePreviewView: View {
             }
             if controller.stale {
                 Label("Out of date. Render again for the current source and settings.", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange).font(.headline)
+                    .foregroundStyle(Color.warning).font(.headline)
             }
             if let result = controller.result {
                 HStack(alignment: .top, spacing: 16) {

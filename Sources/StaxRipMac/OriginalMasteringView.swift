@@ -94,7 +94,7 @@ struct OriginalMasteringView: View {
                         Button("Reveal saved audio") { NSWorkspace.shared.activateFileViewerSelecting([saved]) }
                         Button("Save processing report…") { chooseReport() }.disabled(busy)
                     } else {
-                        Button("Save verified audio") { audio.publishMaster() }.buttonStyle(.borderedProminent).disabled(busy)
+                        Button("Save verified audio") { audio.publishMaster() }.primaryAction().disabled(busy)
                     }
                 }
             }

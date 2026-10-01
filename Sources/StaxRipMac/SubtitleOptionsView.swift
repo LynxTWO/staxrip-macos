@@ -64,7 +64,7 @@ struct SubtitleOptionsView: View {
                  ? "One plain UTF-8 SRT, up to 1 MiB, with nonoverlapping cues. Supports untrimmed SDR video. Check queue validates captions before encoding. A restored session may need the file selected again."
                  : "Open a source video before choosing an additional caption file.")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            if let issue = selectionError ?? metadataIssue { Text(issue).font(.caption).foregroundStyle(.orange) }
+            if let issue = selectionError ?? metadataIssue { Text(issue).font(.caption).foregroundStyle(Color.warning) }
         }
         .fileImporter(isPresented: $choosingFile, allowedContentTypes: [UTType(filenameExtension: "srt") ?? .plainText]) { result in
             do {

@@ -17,7 +17,7 @@ struct VideoRateOptionsView: View {
             settingPicker("Color workflow", selection: $configuration.colorMode, values: ["SDR", "Preserve static HDR10"])
                 .accessibilityHint("Choose standard dynamic range or verified static H D R ten preservation. This does not change your other settings.")
             if configuration.colorMode == "Preserve static HDR10" {
-                if let hdrIssue { Text(hdrIssue).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true) }
+                if let hdrIssue { Text(hdrIssue).font(.caption).foregroundStyle(Color.warning).fixedSize(horizontal: false, vertical: true) }
                 Text("Requires software HEVC, MKV and original picture settings. Every source and output frame is decoded for verification, adding two full scans plus source identity checks. FFmpeg 9.0.x only.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Text("Static PQ / BT.2020 metadata only. Recognized dynamic or unknown side data is refused. Proprietary data hidden in unregistered SEI cannot be certified; calibrated HDR playback is not verified.")

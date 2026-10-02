@@ -2,7 +2,7 @@
 Version: 0.1. Date: 2026-10-01. Status: Approved for build under D-083 / R-055.
 
 SLICE STATE
-Milestone: Layered source, native default/dark/mono previews and modern compilation are implemented after owner license approval. Final bundle/regression receipts are in progress; visible Dock qualification remains open.
+Milestone: Layered source, native default/dark/mono previews and modern compilation are implemented after owner license approval. Product 6b549ae has final modern bundle and local/hosted regression receipts; visible Dock qualification remains open.
 Blocked by: Visible Dock badge/menu and closed-window navigation cannot be inspected by the current native automation surface. Icon Composer license approval was given explicitly and accepted.
 Evidence: DYNAMIC-ICON-EVIDENCE.md records original fallback artwork, corrected native Light/Dark sidebar and Finder icon, real export, ten focused checks and 285-test local/hosted regression. Native layered compilation and Composer variants now pass; visual Dock checks remain open.
 Last audit: 2026-10-01.

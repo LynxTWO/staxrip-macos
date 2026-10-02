@@ -149,4 +149,4 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 
 54. [Slice 044: verify Quick Export duration](SLICE-044-native-export-duration.md), accepted at f385cec under D-082 / R-054; [evidence](NATIVE-DURATION-EVIDENCE.md).
 
-55. [Slice 045: native identity and live Dock status](SLICE-045-dynamic-app-icons.md), active under D-083 / R-055; [partial evidence and license hold](DYNAMIC-ICON-EVIDENCE.md).
+55. [Slice 045: native identity and live Dock status](SLICE-045-dynamic-app-icons.md), active under D-083 / R-055; [evidence and remaining native walkthrough](DYNAMIC-ICON-EVIDENCE.md).

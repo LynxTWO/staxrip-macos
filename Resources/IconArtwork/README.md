@@ -9,3 +9,5 @@ The clapperboard motif references the official [StaxRip project](https://github.
 With a macOS 26 or newer SDK, the shared helper compiles the project using actool, installs Assets.car and sets CFBundleIconName. Compilation errors fail the build. Older SDKs install the multi-resolution ICNS without advertising a missing catalog. The full ten-resolution fallback is retained even in modern bundles; sidebar light/dark PNGs are separate app resources. Generated dark/mono PNG previews are design references, not the native system appearances. Dock badges use AppKit and leave the system icon intact.
 
 Regenerate privately with `swift scripts/IconArtwork.swift .build/icon-review`, or build the ordinary app with `./build.command`.
+
+Keep CFBundleIconFile and CFBundleIconName equal to the extensionless name `StaxRip`, as emitted by actool. In the qualified macOS 27 build, using `StaxRip.icns` for the former caused Finder to use the flat fallback even with a valid native catalog. The extensionless key resolves the same ICNS on older systems.

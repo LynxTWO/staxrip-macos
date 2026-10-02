@@ -32,6 +32,14 @@ struct StaxRipMacApp: App {
                 .preferredColorScheme(appearance == "Dark" ? .dark : appearance == "Light" ? .light : nil)
                 .frame(minWidth: 1120, minHeight: 750)
                 .tint(Color.accent)
+                .modifier(DockWindowBinding { openWindow in
+                    delegate.dockStatus.bind(model: model, exporter: exporter, batch: batch, audio: audio,
+                        picture: picturePreview, motion: motionPreview, chapters: chapters) { section in
+                        model.section = section
+                        openWindow(id: "main")
+                        NSApplication.shared.activate(ignoringOtherApps: true)
+                    }
+                })
                 .onAppear {
                     delegate.exporter = exporter
                     delegate.batch = batch
@@ -58,6 +66,8 @@ struct StaxRipMacApp: App {
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    let dockStatus = DockStatusController()
+    func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { dockStatus.menu() }
     weak var exporter: ExportController?
     weak var batch: BatchController?
     weak var audio: AudioController?
@@ -84,5 +94,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.addButton(withTitle: "Keep open")
         alert.runModal()
         return .terminateCancel
+    }
+}
+
+// Read the action inside the main window's view environment, then retain the
+// action in the Dock navigation closure so a closed window can be shown again.
+private struct DockWindowBinding: ViewModifier {
+    @Environment(\.openWindow) private var openWindow
+    let bind: (OpenWindowAction) -> Void
+    func body(content: Content) -> some View {
+        content.onAppear { bind(openWindow) }
     }
 }

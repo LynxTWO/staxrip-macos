@@ -92,6 +92,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-080 | 2026-10-01 | Verified MKV caption playback choices | Confirmed | |
 | D-081 | 2026-10-01 | Read-only track identity and role inspection | Confirmed | |
 | D-082 | 2026-10-01 | Verify native Quick Export total duration | Confirmed | |
+| D-083 | 2026-10-01 | Original native icon and truthful Dock status | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1306,3 +1307,21 @@ Consequences: Hold one immutable source duration per export and compare the stag
 Revisit when: Apple's supported preset behavior violates the strict duration rule, source timing is unavailable, cancellation/cleanup changes, or broader track/completeness claims are proposed.
 
 D-082 outcome: Slice 044 is accepted at f385cec under D-082 / R-054, hosted run 36916404356. NATIVE-DURATION-EVIDENCE.md records all four gates, real shortened/extended-output refusal, successful retry, optimized native output and ordinary local/hosted checks. Aggregate duration is narrower than decoded completeness, individual-track timing, A/V sync and source stability.
+
+## D-083: Build original native icon artwork and truthful Dock status
+Date: 2026-10-01
+Status: Confirmed
+
+Decision: Approve Slice 045 / R-055 after Slice 044 acceptance under the owner's explicit dynamic-icon request and autonomous design delegation. Delegated to AI recommendation.
+
+Need: recognizable app identity and trustworthy progress/attention while encoding in the background. Consequence class: local_only presentation. Existing control: controllers already publish actual state; system Dock owns icon appearance/badges. Gap: the current bundle has no icon resource/key and the sidebar uses a generic symbol.
+
+Reference: official StaxRip at 2283bfd0a892542feecdbb813b1fcda144f7d610 uses clapperboard artwork and carries an MIT License.txt, copyright 2002-2026 StaxRip Authors. Use that motif for new independently drawn vector artwork, without copying a bitmap. This does not decide D-008's software license. Apple's Icon Composer supports default, dark and mono variants (https://developer.apple.com/icon-composer/); NSDockTile provides native badges and menus retain normal AppKit navigation (https://developer.apple.com/documentation/appkit/nsdocktile).
+
+Alternatives: a static generic symbol; a flattened animated Dock tile that loses native material/appearance; original layered artwork with complete older-system fallback and native status badges. Select the third, subject to M1's actual compiler and rendering feasibility. Preserve editable sources and generate binary resources during build.
+
+Consequences: Add build resources and read-only presentation around existing controllers. Known active progress is clamped below completion until settlement; unknown, preparation, verification and saving remain indeterminate. Multiple owners receive no invented aggregate percent. Failures and cleanup warnings receive explicit text in the Dock menu. Navigation does not execute, cancel or modify media. No schema, dependency, DSP, animation timer, security-policy, deadline, merge or release changes. The historical hosted cancellation recurrence remains a reopen trigger.
+
+Revisit when: Icon compilation cannot support the existing build platforms, native status contradicts actual state, small-size legibility fails, or a richer animation/theme requires new runtime ownership.
+
+D-083 partial outcome: Slice 045 checkpoint: product 260f5fd and hosted run 36921033338 qualified the initial fallback bundle and read-only Dock state/API. The owner subsequently explicitly approved Icon Composer agreement EA1954 (April 16, 2025), which was accepted. Native layered source, three Composer appearance previews and actual compilation are now implemented; an extensionless compiler-matched icon key fixes Finder choosing the flat fallback. Updated bundle and regression receipts are in DYNAMIC-ICON-EVIDENCE.md. Visible Dock/menu, closed-window navigation and heard VoiceOver remain open; no full slice acceptance, merge or release.

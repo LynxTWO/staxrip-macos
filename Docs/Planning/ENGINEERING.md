@@ -2,8 +2,8 @@
 Version: 0.1 Draft. Date: 2026-09-28. Status: In interview.
 
 INTERVIEW STATE
-Last completed: Slice 043 accepted at ce27093; Slice 002 experimental implementation and local listening pack preserved.
-Next: Execute Slice 044 Quick Export duration verification under D-082 / R-054.
+Last completed: Slice 044 accepted at f385cec; Slice 002 experimental implementation and local listening pack preserved.
+Next: Execute Slice 045 native identity and live Dock status under D-083 / R-055.
 Open questions: Software license, platform matrix, audio listening and algorithm acceptance.
 Statuses pending: Slice 002 paused by owner on 2026-09-29, not accepted. See NON-AUDIO-RESUMPTION.md.
 
@@ -331,3 +331,7 @@ Slice 043 is accepted at ce27093 under D-081 / R-053, hosted run 36914015358. TR
 Approved R-054 under D-082: Quick Export total-duration verification. S44-001 through S44-004 bind strict native timing policy, actual shorter/longer staged refusal and retry, native walkthrough and ordinary regression. Consequence: user_data. One DEBUG-only pre-verification generated-file substitution seam is authorized; no decoded-frame, A/V sync, DSP or broader runtime observer scope.
 
 Slice 044 is accepted at f385cec under D-082 / R-054, hosted run 36916404356. NATIVE-DURATION-EVIDENCE.md records all four gates, real shortened/extended-output refusal, successful retry, optimized native output and ordinary local/hosted checks. Aggregate duration is narrower than decoded completeness, individual-track timing, A/V sync and source stability.
+
+Approved R-055 under D-083: original layered native icon plus generated older-system fallback, shared branding and truthful read-only Dock status/navigation. S45-001 through S45-004 bind artwork, bundle, status and ordinary regression. Consequence: local_only. Bounded actual native render/export evidence and state checks; no pixel-mirror tests, new observers, DSP or lifecycle changes.
+
+Slice 045 checkpoint: product 260f5fd and hosted run 36921033338 qualified the initial fallback bundle and read-only Dock state/API. The owner subsequently explicitly approved Icon Composer agreement EA1954 (April 16, 2025), which was accepted. Native layered source, three Composer appearance previews and actual compilation are now implemented; an extensionless compiler-matched icon key fixes Finder choosing the flat fallback. Updated bundle and regression receipts are in DYNAMIC-ICON-EVIDENCE.md. Visible Dock/menu, closed-window navigation and heard VoiceOver remain open; no full slice acceptance, merge or release.

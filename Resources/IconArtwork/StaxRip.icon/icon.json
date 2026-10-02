@@ -1,0 +1,104 @@
+{
+  "fill-specializations": [
+    {
+      "value": {
+        "automatic-gradient": "extended-srgb:0.09020,0.29020,0.36471,1.00000"
+      }
+    },
+    {
+      "appearance": "dark",
+      "value": "system-dark"
+    }
+  ],
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "05-Stripe-2.svg",
+          "name": "05-Stripe-2"
+        },
+        {
+          "image-name": "05-Stripe-1.svg",
+          "name": "05-Stripe-1"
+        },
+        {
+          "image-name": "05-Stripe-0.svg",
+          "name": "05-Stripe-0"
+        },
+        {
+          "image-name": "04-Clapper.svg",
+          "name": "04-Clapper"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      },
+      "name": "Clapper"
+    },
+    {
+      "layers": [
+        {
+          "image-name": "06-Frame-ribbon.svg",
+          "name": "06-Frame-ribbon"
+        },
+        {
+          "image-name": "03-Slate.svg",
+          "name": "03-Slate"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      },
+      "name": "Slate and ribbon"
+    },
+    {
+      "layers": [
+        {
+          "image-name": "02-Middle-frame.svg",
+          "name": "02-Middle-frame"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      },
+      "name": "Middle frame"
+    },
+    {
+      "layers": [
+        {
+          "image-name": "01-Rear-frame.svg",
+          "name": "01-Rear-frame"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.5
+      },
+      "translucency": {
+        "enabled": true,
+        "value": 0.3
+      },
+      "name": "Rear frame"
+    }
+  ],
+  "supported-platforms": {
+    "squares": [
+      "macOS"
+    ]
+  }
+}

@@ -28,6 +28,24 @@ struct Contour {
             }
         }.joined(separator: " ")
     }
+    // Flatten SVG rotations: Composer and Core Graphics then receive the same geometry.
+    func rotated(_ degrees: Double) -> Self {
+        let angle = degrees * .pi / 180
+        func point(_ x: Double, _ y: Double) -> (Double, Double) {
+            let dx = x - 188, dy = y - 408
+            return (188 + dx*cos(angle) - dy*sin(angle), 408 + dx*sin(angle) + dy*cos(angle))
+        }
+        return Self(commands: commands.map { command in
+            switch command {
+            case .move(let x, let y): let p = point(x,y); return .move(p.0,p.1)
+            case .line(let x, let y): let p = point(x,y); return .line(p.0,p.1)
+            case .curve(let a, let b, let c, let d, let e, let f):
+                let p = point(a,b), q = point(c,d), r = point(e,f)
+                return .curve(p.0,p.1,q.0,q.1,r.0,r.1)
+            case .close: return .close
+            }
+        })
+    }
     static func rounded(_ x: Double, _ y: Double, _ w: Double, _ h: Double, _ r: Double) -> Self {
         let k = r * 0.5522847498
         return Self(commands: [.move(x+r,y), .line(x+w-r,y), .curve(x+w-r+k,y,x+w,y+r-k,x+w,y+r),
@@ -43,7 +61,6 @@ struct Layer {
     let contour: Contour
     let top: String
     let bottom: String
-    var clip: Contour? = nil
     var rotation: Double = 0
     var shadow = true
 }
@@ -62,9 +79,9 @@ func layers(_ appearance: String) -> [Layer] {
         Layer(name: "04-Clapper", contour: clap, top: mono ? "F7F7F7" : "F4FFFB", bottom: mono ? "C6C6C6" : "AFE5DF", rotation: -12)
     ]
     // Three broad diagonal cuts read as a clapperboard even at small Dock sizes.
-    for (i, x) in [240.0, 438.0, 636.0].enumerated() {
+    for (i, x) in [240.0, 438.0, 618.0].enumerated() {
         result.append(Layer(name: "05-Stripe-\(i)", contour: .polygon([(x,300),(x+98,300),(x+170,408),(x+72,408)]),
-            top: mono ? "343434" : "154756", bottom: mono ? "191919" : "0A2B38", clip: clap, rotation: -12, shadow: false))
+            top: mono ? "343434" : "154756", bottom: mono ? "191919" : "0A2B38", rotation: -12, shadow: false))
     }
     // A continuous ribbon of frames forms the S; broad geometry avoids tiny lettering.
     let ribbon = Contour(commands: [.move(658,474), .line(407,474), .curve(329,474,320,586,400,597),
@@ -86,7 +103,6 @@ func render(_ appearance: String, size: Int) throws {
         if layer.rotation != 0 {
             context.translateBy(x: 188, y: 408); context.rotate(by: layer.rotation * .pi/180); context.translateBy(x: -188, y: -408)
         }
-        if let clip = layer.clip { context.addPath(clip.path); context.clip() }
         if layer.shadow {
             context.saveGState()
             context.setShadow(offset: CGSize(width: 0, height: 12), blur: 20, color: CGColor(gray: 0, alpha: 0.25))
@@ -110,12 +126,10 @@ for appearance in ["default", "dark", "mono"] {
     let folder = output.appendingPathComponent(appearance, isDirectory: true)
     try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
     for layer in layers(appearance) {
-        let clip = layer.clip.map { "<clipPath id=\"clip\"><path d=\"\($0.svg)\"/></clipPath>" } ?? ""
-        let clipAttribute = layer.clip == nil ? "" : " clip-path=\"url(#clip)\""
         let svg = """
         <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-        <defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#\(layer.top)"/><stop offset="1" stop-color="#\(layer.bottom)"/></linearGradient>\(clip)</defs>
-        <g transform="rotate(\(layer.rotation) 188 408)"\(clipAttribute)><path d="\(layer.contour.svg)" fill="url(#fill)"/></g>
+        <defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#\(layer.top)"/><stop offset="1" stop-color="#\(layer.bottom)"/></linearGradient></defs>
+        <path d="\(layer.contour.rotated(layer.rotation).svg)" fill="url(#fill)"/>
         </svg>
         """
         try svg.write(to: folder.appendingPathComponent(layer.name + ".svg"), atomically: true, encoding: .utf8)

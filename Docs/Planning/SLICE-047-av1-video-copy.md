@@ -1,5 +1,6 @@
 # Slice 047: Preserve AV1 video across MP4 and MKV
-Date: 2026-10-03. Status: native reviewed copy, local matrix/build passed; final ordinary regression open under D-086/D-087 after retained hosted state/timeout failures.
+Version: 0.1.
+Date: 2026-10-03. Status: accepted at 356337b1de32860a8fcc60c5135c332cf01d7060 under D-085/D-086/D-087; all five scoped gates passed, final hosted run 37113569693.
 
 ## Outcome and walkthrough
 

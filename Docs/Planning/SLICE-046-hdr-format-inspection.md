@@ -1,4 +1,5 @@
 # Slice 046: Inspect HDR and spatial audio before choosing conversion
+Version: 0.1.
 Date: 2026-10-03. Status: Approved for build under D-084 / R-056.
 
 ## Outcome and walkthrough

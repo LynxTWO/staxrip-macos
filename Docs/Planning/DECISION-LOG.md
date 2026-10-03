@@ -93,6 +93,11 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-081 | 2026-10-01 | Read-only track identity and role inspection | Confirmed | |
 | D-082 | 2026-10-01 | Verify native Quick Export total duration | Confirmed | |
 | D-083 | 2026-10-01 | Original native icon and truthful Dock status | Confirmed | |
+| D-084 | 2026-10-03 | Explain HDR and spatial-audio declarations | Confirmed | |
+| D-085 | 2026-10-03 | Preserve declared SDR AV1 Main | Confirmed | |
+| D-086 | 2026-10-03 | Qualify inspector completion ownership | Confirmed | |
+| D-087 | 2026-10-03 | Keep independent AV1 checks off MainActor | Confirmed | |
+| D-088 | 2026-10-03 | Retain the last-window workspace process | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1346,7 +1351,8 @@ Extend the existing copy contract to AV1 Main 8/10-bit 4:2:0 with complete BT.70
 
 ## D-086: Qualify inspector replacement at its completion boundary
 Date: 2026-10-03
-Status: Confirmed under standing autonomous repair authority
+Status: Confirmed
+Authority: Standing autonomous repair delegation.
 
 Slice 047 hosted run 37111085056 failed once at the existing inspection test's five-second shell-start marker for the newer source. The eight-case AV1 controller matrix and ToolRunner process/cancellation suite passed in that same run; no original-mastering cancellation deadline recurrence occurred. Preserve the hosted failure. This test checked stale state ownership, not a published process-start latency requirement, but tied that check to external shell scheduling and did not join cancelled tasks on failure.
 
@@ -1356,10 +1362,24 @@ Focused repaired state and actual process tests passed seven tests in two suites
 
 ## D-087: Keep independent AV1 validation off the main actor
 Date: 2026-10-03
-Status: Confirmed under standing autonomous repair authority
+Status: Confirmed
+Authority: Standing autonomous repair delegation.
 
 Hosted repair run 37111867733 at f39918e passed the deterministic inspector cases but exceeded the AV1 eight-case matrix's unchanged 120-second test limit, finishing cancellation after 126.646 seconds. Preserve this failed ordinary run. The first hosted matrix had passed in 95.723 seconds, and isolated local execution took seconds; that contrast does not itself prove a hosted scheduling cause. No mastering cancellation recurrence occurred.
 
 The matrix was main-actor isolated despite generated-file preparation and independent FFmpeg/reference/byte validation having no UI requirement. Make only these test helpers and the matrix nonisolated, assert non-main-thread entry, and cross to MainActor solely for actual BatchController creation, state and starts/stops. Retain all eight exports, 72-frame and exact packet/picture/color/caption/chapter/source/prior-output assertions, source-stability/publication behavior, failure joining/retention, the same two-minute test bound and default suite parallel execution. No skipping, broad serialization, observer expansion, new executor/admission policy or deadline inflation. This is an isolation correction; improved hosted performance remains unknown until observed.
 
 Focused final tests passed eight tests/three suites in 4.301 seconds; the actual AV1 matrix took 2.780 seconds. Fresh ordinary local/hosted checks are required. If the same unchanged bound fails again, retain the failure and stop acceptance for a concrete reframe rather than retrying or raising it. Separately, the optimized native app completed a reviewed generated ten-bit AV1 copy with captions/chapters; all 24 packets/pictures were independently verified and owner recovery bytes restored.
+
+D-085/D-086/D-087 final outcome: Slice 047 accepted at 356337b1de32860a8fcc60c5135c332cf01d7060. Final ordinary local regression passed 291 tests/72 suites in 205.284 seconds; hosted run 37113569693 passed all 291 in 560.623 seconds, including the unchanged eight-case AV1 matrix in 111.546 seconds and three superseded-inspector completions. Native reviewed AV1 export and independent output/owner recovery checks passed. AV1-COPY-EVIDENCE.md preserves both prior hosted failures and the precise scope/remaining limits.
+
+## D-088: Retain the workspace process after the last window closes
+Date: 2026-10-03
+Status: Confirmed
+Authority: Standing autonomous repair delegation.
+
+Restored Accessibility permission enabled actual Dock navigation. Closing the sole workspace using native File → Close terminated the unmodified app, contradicting Slice 045's closed-window Dock reopening journey. No active operation was involved and no new crash report appeared. Add applicationShouldTerminateAfterLastWindowClosed returning false to the existing AppDelegate. Apple's documented delegate policy keeps the event loop running; the existing single SwiftUI Window and captured OpenWindowAction remain. This smaller repair retains single-workspace semantics without a WindowGroup/new-window migration.
+
+Closing a workspace must preserve process-owned state; Dock navigation must reopen exactly one workspace at the requested destination and launch no operation. Explicit Quit retains its existing running-operation and cleanup checks. No media/session/processing/termination-guard policy, security preference, dependency, timer, merge or release change. Native close/reopen checks, original recovery protection, optimized build and ordinary regression qualify this repair; rendered badges and heard VoiceOver remain distinct open checks.
+
+D-088 local outcome: optimized build and native idle Dock/menu navigation passed all four destinations, each after observed zero-window closure. Ordinary local regression passed 291 tests/72 suites in 205.218 seconds, including actual Dock API/status tests. Recovery bytes stayed unchanged. Hosted regression remains pending; rendered badges/appearances and heard VoiceOver remain open independently.

@@ -68,6 +68,7 @@ struct StaxRipMacApp: App {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let dockStatus = DockStatusController()
     func applicationDockMenu(_ sender: NSApplication) -> NSMenu? { dockStatus.menu() }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     weak var exporter: ExportController?
     weak var batch: BatchController?
     weak var audio: AudioController?

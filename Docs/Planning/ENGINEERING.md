@@ -343,3 +343,5 @@ Approved R-057 under D-085: Slice 047 AV1 Main 8/10-bit declared BT.709 limited-
 D-086 narrows the hosted Slice 047 repair to deterministic inspector completion ownership. The production reader remains the default; actual process/metadata coverage is retained. No latency, mastering, admission or executor policy change; final repair qualification remains required.
 
 D-087 moves only independent AV1 test fixture/reference work off MainActor, retaining real controller actor boundaries and the unchanged two-minute matrix bound. Native reviewed export is verified; final ordinary regression remains required. No product policy or test deadline change.
+
+Slice 047 accepted at 356337b under D-085/D-086/D-087: all five gates, native export and final ordinary hosted run 37113569693 passed. Prior failures remain in AV1-COPY-EVIDENCE.md. D-088 repairs the observed last-window termination within Slice 045 / R-055, preserving the single workspace and existing explicit-Quit guards; native/regression receipts remain required.

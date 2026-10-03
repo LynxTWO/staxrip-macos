@@ -99,6 +99,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-087 | 2026-10-03 | Keep independent AV1 checks off MainActor | Confirmed | |
 | D-088 | 2026-10-03 | Retain the last-window workspace process | Confirmed | |
 | D-089 | 2026-10-03 | Read complete native HDR container configuration | Confirmed | |
+| D-090 | 2026-10-03 | Observe bounded hosted lifecycle settlement | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1396,3 +1397,18 @@ Capture actual MP4 sample-entry boxes and Matroska CodecPrivate/BlockAdditionMap
 D-077/D-087/D-088 recurrence: hosted 37115174217 at c435e6d failed Fresh analysis cancellation (5.450 seconds against five) and the unchanged AV1 matrix bound (135.628 seconds). Native/local lifecycle success remains, hosted acceptance reopens. HOSTED-QUALIFICATION-REFRAME.md records the recurrence stop and concrete bounded investigation proposal; no new observation/rerun or relaxed guard has been executed.
 
 D-089 checkpoint: native reader and eight focused checks/optimized build passed; full-file native configuration equality verified. Initial combined element-budget failure is retained; measured long-movie cluster headers now traverse under a distinct bounded streaming budget while metadata/payload/read limits remain. HDR-CONTAINER-CONFIGURATION-EVIDENCE.md records the narrower result. Ordinary regression is pending the D-077/D-087 reframe; no M1 completion or runtime HDR admission.
+
+## D-090: Observe the approved cancellation and AV1 lifecycle boundaries
+Date: 2026-10-03
+Status: Confirmed
+
+The owner explicitly approved HOSTED-QUALIFICATION-REFRAME.md's single bounded investigation and continued autonomous work. Need: correctly settle cancellation and completely verify original video without weakening requirements. Consequence: user_data in the production path; generated trace fixtures are local_only. Existing cancellation/publication checks remain the control; missing request/process/reader/task/result and per-case phase timing prevents distinguishing production settlement from observation delay.
+
+Bind one hosted run to the ordinary 291-test workload from c435e6d. Keep all cases, frames, source/output assertions, five-second cancellation requirement, two-minute AV1 limit and default parallel scheduling. Existing DEBUG hooks emit static labels only; test records have a 32-event cap each and print after settlement. No filesystem observer, sample service, path/argument/payload capture, extra process workload, broad serialization, DSP/listening or product scheduling change. A temporary owned caffeinate assertion keeps the Mac awake during today's authorized work, capped at 12 hours and stopped on work completion; no persistent lock/security preference change.
+
+The isolated source/header branch stays outside this diagnosis so its added tests do not alter the failed workload. Focused local compile/trace checks are preparation, not hosted acceptance. Watch the single hosted observation for no more than 20 minutes; retain failures. Retire instrumentation afterward. If it cannot locate a repair, stop for reframe rather than add observations or reruns. Any identified defect gets a separately justified focused repair; no automatic contract relaxation, merge or release.
+
+D-090 local preparation: two affected tests passed in 24.719 seconds, including all three cancellation phases; AV1 matrix 2.738 seconds. Trace-cap review found four routine tool events omitted, so redundant async-entry/submission labels are excluded before the sole hosted attempt, retaining request/worker/child/reader/join/task/result boundaries. The observer remains bounded to 32 records, with no new phase surface or deadline change.
+
+
+D-090 final outcome: the single approved hosted observation at `0ab9d28ba73126106001be98cc1ed2c792c9169c`, run 37126143385, passed 291 tests in 450.956 seconds and built the preview/fallback bundle. Existing 25 opt-in declarations were skipped. Fresh-analysis request-to-result settlement was 0.322058 seconds (28 retained events, zero omitted); AV1 body 111.244890 seconds, reported test 115.182 seconds (32 retained events, zero omitted). Earlier failures did not reproduce, so their cause remains unknown. No supported product repair, ordinary acceptance or performance guarantee follows. Temporary tracing is retired locally to byte-identical c435e6d product/tests; no second hosted attempt. HOSTED-QUALIFICATION-REFRAME.md version 0.2 records the remaining environment/qualification decision. The unpublished retirement checkpoint avoids a PR synchronization starting another workflow run.

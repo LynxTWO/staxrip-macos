@@ -1,5 +1,5 @@
 # Hosted qualification reframe
-Version: 0.1. Date: 2026-10-03. Status: existing recurrence stop reached; proposed focused investigation only.
+Version: 0.2. Date: 2026-10-03. Status: D-090 investigation completed; cause remains unknown and broader hosted qualification stays open.
 
 Need: cancelling owned media work must settle promptly, preserve source/existing output and avoid publishing an unfinished candidate; generated preservation checks must complete at their existing bound.
 Authority: owner's autonomous program-completion request excluding listening, R-004 cancellation/publication protection, D-077's recorded recurrence rule, and Slice 047's D-087 unchanged matrix bound.
@@ -13,7 +13,7 @@ Worst case: users wait on cancelled work or receive a premature settlement claim
 - At 356337b, local 291 tests/72 suites passed in 205.284 seconds; native reviewed AV1 output was independently verified; hosted 37113569693 passed 291 in 560.623 seconds, matrix 111.546 seconds. This passing receipt remains scoped to its source/head.
 - Last-window product repair c435e6dd470ee27f37776bf06b6afbbf523678ee passed native four-destination close/reopen and normal Quit, and 291 local tests in 205.218 seconds. Hosted [37115174217](https://github.com/LynxTWO/staxrip-macos/actions/runs/37115174217) failed in 608.097 seconds with two issues: Fresh analysis cancellation 5.450137972831726 seconds versus five; AV1 matrix 135.628 seconds after its two-minute time limit. The fallback build was skipped. No DSP, mastering/copy executor, fixture/assertion/deadline or suite scheduling changed in this repair.
 
-AV1 and last-window hosted qualification are reopened. Do not classify the cancellation as fixed or dismiss it as runner load. Native/local success does not erase the failures. No further ordinary rerun, new observer or inflated guard has been executed after this recurrence.
+AV1 and last-window hosted qualification are reopened. Do not classify the cancellation as fixed or dismiss it as runner load. Native/local success does not erase the failures. The owner subsequently approved exactly one bounded observation under D-090. Its result below does not erase this failed ordinary qualification.
 
 ## Existing control and missing evidence
 
@@ -28,3 +28,30 @@ With owner decision, perform one bounded investigation of these existing lifecyc
 Owner question: approve this single bounded lifecycle investigation while keeping all current assertions and timing requirements?
 
 Independent read-only container configuration work may finish its focused/native/build receipts; its ordinary qualification and original-signal admission remain pending. No merge or release.
+
+## Owner approval and exact execution binding
+
+The owner explicitly answered yes to this proposal and requested autonomous logical decisions. D-090 authorizes one hosted observation against the unchanged 291-test workload at c435e6d, with generated fixtures, all assertions/time limits/default scheduling retained. At most 32 generic monotonic records per affected case; cancellation reserves 12 slots for task/request/result markers. The existing DEBUG ToolRunner hook observes cancel-handler entry/return, child launch/exit and reader close/join, without process IDs, arguments, paths or payloads. AV1 records fixture/reference readiness and prepare/publication/independent-verification stages for all eight unchanged cases. No DSP/listening or persistent security setting changes.
+
+Local focused compilation/trace checks precede one hosted ordinary swift test run, watched for at most 20 minutes. Source/header implementation at 889a4c0 stays on its separate local branch, so the investigation does not add those tests to the failed hosted workload. After observation, retire the temporary trace and decide from evidence; success alone is not a diagnosed repair. A result without a located cause returns to this reframe instead of an extra attempt.
+
+Local preparation passed the actual two affected tests/three cancellation cases in 24.719 seconds; AV1 matrix 2.738 seconds. Its cancellation trace retained all task/request/result markers but omitted four routine tool events at the reserved ordinary-slot cap. Before the single hosted attempt, omit redundant tool async-entry/submission labels and bind the hook only in Fresh analysis; this retains child/reader/join events within the same 32-event cap, without changing assertions or workload. The single hosted observation is completed below.
+
+
+## D-090 result and retirement
+
+Verified observed behavior, scoped to diagnostic head `0ab9d28ba73126106001be98cc1ed2c792c9169c`: [hosted run 37126143385](https://github.com/LynxTWO/staxrip-macos/actions/runs/37126143385) exited successfully. Swift Testing reported 291 tests in 450.956 seconds; the existing 25 opt-in test declarations were skipped. All three mastering cancellation phases and all eight AV1 export cases passed without changed assertions, deadlines or suite scheduling. Preview/fallback build succeeded. The full hosted log and exact-head watch receipt are retained privately; the maximum 20-minute watch completed in 367.534 seconds.
+
+Fresh-analysis trace recorded 28 events, none omitted. Cancellation request at 10.462034 seconds reached the existing handler at 10.462043 and returned at 10.462071. Both readers closed by 10.467487; child exit and process/pipe join completed by 10.635190; task exit was 10.781824 and result observation 10.784092. Observed request-to-result settlement was 0.322058 seconds. This locates prompt settlement in this run; it does not reproduce or explain the earlier 5.450-second violation.
+
+AV1 trace recorded all 32 planned events, none omitted. The matrix body took 111.244890 seconds and the test reported 115.182 seconds against its unchanged 120-second limit. Prepare-to-publication intervals varied from 0.274386 to 32.851701 seconds; independent post-publication checks varied from 0.139608 to 1.482360 seconds. Longest observed intervals precede publication, but these intentionally coarse boundaries cannot attribute the time to process scheduling, execution, controller observation or source/output verification. No production fault or causal scheduling repair is established.
+
+Confidence: **verified** for these exact-run timings and passed checks; **unknown** for the cause of earlier failures and reliable hosted completion at the unchanged bounds. Repeated green/failed contrast is not a causal diagnosis. Do not classify this as a cancellation fix, AV1 performance guarantee or ordinary uninstrumented qualification.
+
+The temporary helper and all trace calls are retired locally. ToolRunner and both affected tests are byte-identical to `c435e6d`; only planning/evidence documents differ. No second hosted attempt or ordinary rerun is initiated by retirement. PR 66 remains a draft investigation record, not a merge candidate; its observed head is retained remotely to bind the receipt. The local retirement checkpoint is deliberately not pushed, because a PR synchronization would start an unauthorized second hosted attempt under the current workflow.
+
+## Concrete remaining decision
+
+The existing full-workload hosted gate remains open. The next proposal must choose a qualification environment and state what it proves before another run: retain the current shared hosted environment with an explicitly bounded new discriminating question, or use an owned Mac runner for unchanged real process/cancellation/preservation checks and keep shared-hosted timing reliability separately unqualified. Neither option silently weakens the five-second settlement or two-minute matrix requirements, nor claims that local success repairs the prior hosted failure. A new observer or rerun is outside D-090's completed single-attempt scope and requires a new owner decision.
+
+Independent container-header results remain usable at their exact source identity; integration, ordinary qualification and original HDR admission are still pending. Listening, rendered Dock appearance, broader player/platform validation, merge and release are excluded. Owner media/recovery state remains protected.

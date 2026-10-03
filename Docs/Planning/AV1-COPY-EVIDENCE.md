@@ -1,5 +1,5 @@
 # AV1 original-video copy evidence
-Date: 2026-10-03. Scope: Slice 047 / D-085 / R-057. Status: scoped gates passed at 356337b1de32860a8fcc60c5135c332cf01d7060; subsequent ordinary hosted recurrence reopens regression qualification.
+Date: 2026-10-03. Scope: Slice 047 / D-085 / R-057. Status: accepted at 356337b, then ordinary hosted qualification reopened by run 37115174217; D-090 passed without locating the recurrence cause.
 
 The existing copy workflow now admits AV1 Main 8/10-bit yuv420p/yuv420p10le only with complete BT.709 primaries, transfer, matrix and limited-range declarations. Original geometry, upright/progressive/square-pixel, zero-origin, bounded duration/timebase, complete encoded packet/configuration and timing verification remain required. HDR, unknown/dynamic metadata, unsupported profiles/pixels and picture transforms still refuse. This preserves video; audio and subtitle settings retain their existing separate consequences.
 
@@ -35,6 +35,7 @@ At 356337b1de32860a8fcc60c5135c332cf01d7060, ordinary local regression passed 29
 
 All five Slice 047 gates are accepted for declared SDR AV1 Main 8/10-bit only. Both earlier hosted failures and the native/fixture/comparison failures above remain recorded. No further test relaxation was made. Owner media and recovery protection, player/HDR/platform limits, parked listening, and no-merge/no-release boundaries remain.
 
-## Subsequent regression recurrence
 
-Hosted 37115174217 at the one-line last-window repair c435e6d failed the unchanged AV1 matrix bound (135.628 seconds) and historical Fresh analysis cancellation requirement (5.450 seconds). The earlier passing 356337b receipt is retained, but current ordinary qualification reopens; no inferred scheduling explanation, retry or limit change. HOSTED-QUALIFICATION-REFRAME.md records the evidence and proposed next discriminating investigation.
+## Reopened qualification and completed investigation
+
+Subsequent ordinary hosted run 37115174217 at c435e6d exceeded the unchanged AV1 limit (135.628 seconds) and failed Fresh-analysis cancellation (5.450 seconds versus five). Earlier scoped success remains valid evidence for its head; the current ordinary gate is reopened. The owner approved D-090's single bounded observation. Run 37126143385 at 0ab9d28 passed the unchanged eight-case matrix in 115.182 seconds and the full 291-test workload in 450.956 seconds. All 32 planned matrix records were retained. No cause of the prior delay was located; a passing diagnostic run does not restore ordinary qualification. Temporary tracing is retired locally, and no further attempt is authorized by this result. HOSTED-QUALIFICATION-REFRAME.md contains the complete result, scope and remaining decision.

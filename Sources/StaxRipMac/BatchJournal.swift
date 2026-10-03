@@ -3,7 +3,7 @@ import Darwin
 
 // Local intent and historical status only. Reading this never starts a process or deletes media.
 struct BatchJournal: Codable {
-    var version = 8
+    var version = 9
     var jobs: [QueueJob]
     var statuses: [UUID: BatchStatus]
     var updated = Date()
@@ -14,7 +14,10 @@ struct BatchJournal: Codable {
     }
 
     func validated() throws -> Self {
-        guard [1, 2, 3, 4, 5, 6, 7, 8].contains(version) else { throw SessionError.invalid("Unsupported batch recovery version.") }
+        guard (1...9).contains(version) else { throw SessionError.invalid("Unsupported batch recovery version.") }
+        guard version >= 9 || jobs.allSatisfy({ $0.configuration.hevcBufferLimits == nil }) else {
+            throw SessionError.invalid("HEVC buffer limits require recovery version 9.")
+        }
         guard version >= 5 || jobs.allSatisfy({ $0.configuration.externalSubtitle == nil }) else {
             throw SessionError.invalid("External subtitle references require recovery version 5.")
         }

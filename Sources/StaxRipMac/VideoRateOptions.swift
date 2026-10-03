@@ -8,6 +8,7 @@ struct VideoRateOptions: Codable, Equatable {
 
 struct VideoRateOptionsView: View {
     @Binding var configuration: EncodeConfiguration
+    var source: URL? = nil
     private var hdrIssue: String? {
         do { try EncodePlan.validateHDRSettings(configuration); return nil }
         catch { return error.localizedDescription }
@@ -59,5 +60,7 @@ struct VideoRateOptionsView: View {
                 }
             }
         }.font(.system(size: 12))
+        HEVCBufferLimitsView(configuration: $configuration, source: source)
+            .font(.system(size: 12))
     }
 }

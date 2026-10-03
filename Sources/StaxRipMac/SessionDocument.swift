@@ -2,7 +2,7 @@ import Foundation
 
 struct SessionDocument: Codable, Equatable {
     var format = "staxrip-mac-session"
-    var version = 9
+    var version = 10
     var sourcePath: String?
     var configuration: EncodeConfiguration
     var outputFolder: String
@@ -10,7 +10,7 @@ struct SessionDocument: Codable, Equatable {
     var jobs: [QueueJob]
 
     func validated() throws -> SessionDocument {
-        guard format == "staxrip-mac-session", [1, 2, 3, 4, 5, 6, 7, 8, 9].contains(version) else {
+        guard format == "staxrip-mac-session", (1...10).contains(version) else {
             throw SessionError.invalid("This session version is not supported.")
         }
         guard jobs.count <= 1000 else { throw SessionError.invalid("This session contains too many queue items.") }
@@ -25,6 +25,9 @@ struct SessionDocument: Codable, Equatable {
         }
         guard version >= 9 || ([configuration] + jobs.map(\.configuration)).allSatisfy({ $0.externalCaptions.allSatisfy { $0.playback == nil } }) else {
             throw SessionError.invalid("Caption playback choices require session version 9.")
+        }
+        guard version >= 10 || ([configuration] + jobs.map(\.configuration)).allSatisfy({ $0.hevcBufferLimits == nil }) else {
+            throw SessionError.invalid("HEVC buffer limits require session version 10.")
         }
         let chapterCount = (configuration.chapterEdits?.entries.count ?? 0) + jobs.reduce(0) { $0 + ($1.configuration.chapterEdits?.entries.count ?? 0) }
         guard chapterCount <= 10000 else { throw SessionError.invalid("A session can store at most 10000 authored chapter entries across its workspace and queue.") }
@@ -62,6 +65,15 @@ struct SessionDocument: Codable, Equatable {
     static func validate(_ config: EncodeConfiguration) throws {
         try config.validateExternalCaptions()
         try config.chapterEdits?.validate()
+        if let limits = config.hevcBufferLimits {
+            try limits.validate()
+            guard config.codec == "HEVC", config.encoder == "x265", config.rate.backend == "Software" else {
+                throw SessionError.invalid("HEVC buffer limits require software HEVC. Turn them off before changing codec or engine.")
+            }
+            guard limits.mode != "Custom" || config.rate.mode != "Target bitrate" || config.rate.bitrate <= limits.maxrate else {
+                throw SessionError.invalid("Target bitrate exceeds the custom HEVC peak limit.")
+            }
+        }
         guard ["SDR", "Preserve static HDR10"].contains(config.colorMode) else {
             throw SessionError.invalid("Unknown video color intent.")
         }

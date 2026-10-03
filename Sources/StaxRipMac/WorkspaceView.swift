@@ -308,7 +308,7 @@ struct WorkspaceView: View {
                         .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
                 }
             }
-            VideoRateOptionsView(configuration: $model.config)
+            VideoRateOptionsView(configuration: $model.config, source: model.loading || model.sourceNeedsReview ? nil : model.sourceURL)
             if !model.config.copiesVideo && model.config.rate.mode == "Constant quality" {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {

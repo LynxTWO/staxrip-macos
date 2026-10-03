@@ -345,3 +345,15 @@ D-086 narrows the hosted Slice 047 repair to deterministic inspector completion 
 D-087 moves only independent AV1 test fixture/reference work off MainActor, retaining real controller actor boundaries and the unchanged two-minute matrix bound. Native reviewed export is verified; final ordinary regression remains required. No product policy or test deadline change.
 
 Slice 047 accepted at 356337b under D-085/D-086/D-087: all five gates, native export and final ordinary hosted run 37113569693 passed. Prior failures remain in AV1-COPY-EVIDENCE.md. D-088 repairs the observed last-window termination within Slice 045 / R-055, preserving the single workspace and existing explicit-Quit guards; native/regression receipts remain required.
+
+R-058 under D-089 binds Slice 048 M1's read-only native container configuration capture: header-structure, header-native, header-protection and header-regression. Local-only internal prerequisite, no runtime HDR admission or saved-format change. Strict structural/resource bounds and opaque-byte/identity comparisons close the typed-probe gap before original-signal export work.
+
+Hosted 37115174217 recurred at the historical cancellation and unchanged AV1 matrix bounds; D-077/D-087 stop applies and hosted acceptance reopens. HOSTED-QUALIFICATION-REFRAME.md contains the concrete owner decision. Slice 048 M1 separately passed eight focused parser checks, native full-file configuration comparisons and optimized build; ordinary regression remains pending, so neither M1 nor HDR preservation is accepted yet.
+
+
+D-090 investigation completed at diagnostic head 0ab9d28: hosted 37126143385 passed the original 291-test workload and preview build. Existing opt-in skips remain. Cancellation settled in 0.322058 seconds; AV1 reported 115.182 seconds within its unchanged bound. Neither earlier failure reproduced, and no cause is established. Temporary tracing is retired to byte-identical c435e6d product/tests. AV1/last-window ordinary qualification remains reopened; HOSTED-QUALIFICATION-REFRAME.md records the next environment/qualification decision. No additional observation/rerun, assertion change, merge or release.
+
+
+R-059 / D-091 prioritizes Slice 049 dynamic HDR conversion: complete RPU source classification, actual native enhancement/encoder feasibility, explicit conversion intent and loss disclosure before admission. Preserve the existing generic refusal until a qualified contract exists. No timing investigation expansion, owner media identity, parked listening, merge or release.
+
+D-092 extends the R-059 prerequisite with editable HEVC VBV suggestions, explicit saved-intent versions and actual encoder signaling checks. Companion archival must retain original RPU/EL plus matching signal identity and frame/timing association; crop/scale require qualified metadata/statistics treatment. HEVC-BUFFER-LIMITS-EVIDENCE.md and DYNAMIC-HDR-FEASIBILITY-EVIDENCE.md keep product controls separate from bounded research and unknown rendering/archival admission.

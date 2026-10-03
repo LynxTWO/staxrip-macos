@@ -24,13 +24,19 @@ struct EncodeConfiguration: Codable, Equatable {
         set { videoRateOptions = newValue }
     }
     var copiesVideo: Bool { codec == "Copy original" }
-    var rateSummary: String { copiesVideo ? "No video re-encoding" : rate.mode == "Constant quality" ? "CRF \(Int(quality))" : "\(rate.bitrate) kb/s" }
+    var rateSummary: String {
+        let base = copiesVideo ? "No video re-encoding" : rate.mode == "Constant quality" ? "CRF \(Int(quality))" : "\(rate.bitrate) kb/s"
+        guard let limits = hevcBufferLimits else { return base }
+        let detail = limits.mode == "Suggested" ? "VBV suggested, \(limits.tier) tier" : "VBV peak \(limits.maxrate) kb/s, buffer \(limits.bufsize) kbit, \(limits.tier) tier"
+        return base + " · " + detail
+    }
     var activeEncoder: String { copiesVideo ? "No video encoder" : rate.backend == "Software" ? encoder : "VideoToolbox" }
     var audioTracks: [Int]?
     var subtitleTracks: [Int]?
     var externalSubtitle: ExternalSubtitle?
     var additionalExternalSubtitles: [ExternalSubtitle]?
     var chapterEdits: ChapterEdits?
+    var hevcBufferLimits: HEVCBufferLimits?
     private var pictureOptions: PictureOptions?
     var picture: PictureOptions {
         get { pictureOptions ?? PictureOptions() }

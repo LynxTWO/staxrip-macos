@@ -341,3 +341,5 @@ Approved R-056 under D-084: Slice 046 exposes bounded Dolby Vision/chroma/audio-
 Approved R-057 under D-085: Slice 047 AV1 Main 8/10-bit declared BT.709 limited-range SDR copying through the existing strict contract/controller. Gates: feasibility, plan, complete actual output, native and ordinary regression. Retain full packet/configuration, independent complete-picture/PTS/caption/chapter comparisons, source/prior-output protection and original timing/resource bounds. No generic HDR or unknown metadata admission.
 
 D-086 narrows the hosted Slice 047 repair to deterministic inspector completion ownership. The production reader remains the default; actual process/metadata coverage is retained. No latency, mastering, admission or executor policy change; final repair qualification remains required.
+
+D-087 moves only independent AV1 test fixture/reference work off MainActor, retaining real controller actor boundaries and the unchanged two-minute matrix bound. Native reviewed export is verified; final ordinary regression remains required. No product policy or test deadline change.

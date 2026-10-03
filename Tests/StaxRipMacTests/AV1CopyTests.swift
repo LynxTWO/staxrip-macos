@@ -10,15 +10,15 @@ struct AV1CopyTests {
         let pix_fmt: String
     }
     private struct Frames: Decodable { let frames: [Frame] }
-    private func run(_ tool: URL, _ args: [String]) async throws -> Data {
+    nonisolated private func run(_ tool: URL, _ args: [String]) async throws -> Data {
         let result = try await ToolRunner().run(executable: tool, arguments: args, stdoutLimit: 1_048_576)
         try #require(result.status == 0 && !result.truncated, Comment(rawValue: String(decoding: result.stderr, as: UTF8.self)))
         return result.stdout
     }
-    private func encode(_ args: [String], tools: FFmpegTools) async throws -> Data {
+    nonisolated private func encode(_ args: [String], tools: FFmpegTools) async throws -> Data {
         try await run(tools.ffmpeg, ["-v", "error", "-nostdin", "-n"] + args)
     }
-    private func frames(_ file: URL, pixel: String, tools: FFmpegTools) async throws -> [Double] {
+    nonisolated private func frames(_ file: URL, pixel: String, tools: FFmpegTools) async throws -> [Double] {
         let data = try await run(tools.ffprobe, ["-v", "error", "-select_streams", "v:0", "-show_frames",
             "-show_entries", "frame=best_effort_timestamp_time,width,height,pix_fmt:frame_side_data=", "-of", "json=compact=1", file.path])
         let frames = try JSONDecoder().decode(Frames.self, from: data).frames
@@ -30,26 +30,27 @@ struct AV1CopyTests {
             previous = time; return time
         }
     }
-    private func pictureHash(_ file: URL, pixel: String, tools: FFmpegTools) async throws -> Data {
+    nonisolated private func pictureHash(_ file: URL, pixel: String, tools: FFmpegTools) async throws -> Data {
         try await encode(["-i", file.path, "-map", "0:v:0", "-fps_mode", "passthrough", "-c:v", "rawvideo",
             "-pix_fmt", pixel, "-f", "hash", "-hash", "sha256", "pipe:1"], tools: tools)
     }
 
     @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
-    func actualQueuePreservesEightAndTenBitAV1AcrossMP4AndMatroska() async throws {
+    nonisolated func actualQueuePreservesEightAndTenBitAV1AcrossMP4AndMatroska() async throws {
+        #expect(!Thread.isMainThread)
         let tools = try #require(FFmpegTools.discover())
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("av1-copy-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
-        let batch = BatchController(journalURL: root.appendingPathComponent("journal.json"))
+        let batch = await MainActor.run { BatchController(journalURL: root.appendingPathComponent("journal.json")) }
         var passed = false
-        defer { if passed && !batch.running { try? FileManager.default.removeItem(at: root) } }
+        defer { if passed { try? FileManager.default.removeItem(at: root) } }
         do {
             let caption = root.appendingPathComponent("captions.srt"), prior = root.appendingPathComponent("prior.mkv")
             let text = Data("1\n00:00:00,250 --> 00:00:02,750\nGenerated caption\n\n".utf8)
             let sentinel = Data("Preserve existing output".utf8)
             try text.write(to: caption, options: .withoutOverwriting)
             try sentinel.write(to: prior, options: .withoutOverwriting)
-            batch.tools = tools; batch.encoders = []
+            await MainActor.run { batch.tools = tools; batch.encoders = [] }
             for bits in [8, 10] {
                 let pixel = bits == 8 ? "yuv420p" : "yuv420p10le"
                 let mp4 = root.appendingPathComponent("source-\(bits).mp4"), mkv = root.appendingPathComponent("source-\(bits).mkv")
@@ -87,9 +88,9 @@ struct AV1CopyTests {
                         let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: output.path, configuration: c, created: Date())
                         let preflight = try await QueuePreflight.inspect(job, tools: tools, encoders: [])
                         try #require(preflight.kind == .deferred && preflight.detail.contains("packet verification"))
-                        batch.start([job])
-                        while batch.running { try await Task.sleep(for: .milliseconds(10)) }
-                        let status = try #require(batch.statuses[job.id])
+                        await batch.start([job])
+                        while await batch.running { try await Task.sleep(for: .milliseconds(10)) }
+                        let status = try #require(await batch.statuses[job.id])
                         try #require(status.phase == "Completed", Comment(rawValue: status.detail))
                         #expect(status.detail.contains("Verified copied video: 72 encoded packets"))
                         #expect(try await pictureHash(output, pixel: pixel, tools: tools) == referenceHash)
@@ -116,7 +117,7 @@ struct AV1CopyTests {
             }
             passed = true
         } catch {
-            if batch.running { batch.cancel() }
+            if await batch.running { await batch.cancel() }
             await Task { @MainActor in
                 while batch.running { try? await Task.sleep(for: .milliseconds(10)) }
             }.value

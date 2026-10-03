@@ -80,7 +80,12 @@ final class ToolRunner: @unchecked Sendable {
                     // Completion joins process exit and both fully drained, closed readers.
                     // No shared worker waits for a child or another dispatch block.
                     for _ in 0..<3 { group.enter() }
-                    task.terminationHandler = { _ in group.leave() }
+                    task.terminationHandler = { _ in
+                        #if DEBUG
+                        observe?("child exited")
+                        #endif
+                        group.leave()
+                    }
                     process = task
                     do { try task.run() } catch {
                         process = nil; lock.unlock(); task.terminationHandler = nil
@@ -88,6 +93,9 @@ final class ToolRunner: @unchecked Sendable {
                         continuation.resume(throwing: error); return
                     }
                     lock.unlock()
+                    #if DEBUG
+                    observe?("child launched")
+                    #endif
                     let stdout = BoundedBytes(limit: max(0, min(stdoutLimit, 4 * 1024 * 1024)))
                     let stderr = BoundedBytes(limit: 64 * 1024)
                     let readFailure = ToolReadFailure()
@@ -114,11 +122,17 @@ final class ToolRunner: @unchecked Sendable {
                             try? handle.close()
                             source.setEventHandler(handler: nil)
                             source.setCancelHandler(handler: nil)
+                            #if DEBUG
+                            observe?(buffer === stdout ? "stdout reader closed" : "stderr reader closed")
+                            #endif
                             group.leave()
                         }
                         source.resume()
                     }
                     group.notify(queue: controlQueue) { [self] in
+                        #if DEBUG
+                        observe?("process and pipes joined")
+                        #endif
                         task.terminationHandler = nil
                         lock.lock(); process = nil; let wasCancelled = cancelled; lock.unlock()
                         if let error = readFailure.error { continuation.resume(throwing: error); return }
@@ -127,7 +141,15 @@ final class ToolRunner: @unchecked Sendable {
                     }
                 }
             }
-        } onCancel: { self.cancel() }
+        } onCancel: {
+            #if DEBUG
+            observe?("cancel handler entered")
+            #endif
+            self.cancel()
+            #if DEBUG
+            observe?("cancel handler returned")
+            #endif
+        }
     }
 }
 

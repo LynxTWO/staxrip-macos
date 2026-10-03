@@ -98,6 +98,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-086 | 2026-10-03 | Qualify inspector completion ownership | Confirmed | |
 | D-087 | 2026-10-03 | Keep independent AV1 checks off MainActor | Confirmed | |
 | D-088 | 2026-10-03 | Retain the last-window workspace process | Confirmed | |
+| D-090 | 2026-10-03 | Bounded cancellation and AV1 lifecycle investigation | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1383,3 +1384,15 @@ Restored Accessibility permission enabled actual Dock navigation. Closing the so
 Closing a workspace must preserve process-owned state; Dock navigation must reopen exactly one workspace at the requested destination and launch no operation. Explicit Quit retains its existing running-operation and cleanup checks. No media/session/processing/termination-guard policy, security preference, dependency, timer, merge or release change. Native close/reopen checks, original recovery protection, optimized build and ordinary regression qualify this repair; rendered badges and heard VoiceOver remain distinct open checks.
 
 D-088 local outcome: optimized build and native idle Dock/menu navigation passed all four destinations, each after observed zero-window closure. Ordinary local regression passed 291 tests/72 suites in 205.218 seconds, including actual Dock API/status tests. Recovery bytes stayed unchanged. Hosted regression remains pending; rendered badges/appearances and heard VoiceOver remain open independently.
+
+## D-090: Observe the approved cancellation and AV1 lifecycle boundaries
+Date: 2026-10-03
+Status: Confirmed
+
+The owner explicitly approved HOSTED-QUALIFICATION-REFRAME.md's single bounded investigation and continued autonomous work. Need: correctly settle cancellation and completely verify original video without weakening requirements. Consequence: user_data in the production path; generated trace fixtures are local_only. Existing cancellation/publication checks remain the control; missing request/process/reader/task/result and per-case phase timing prevents distinguishing production settlement from observation delay.
+
+Bind one hosted run to the ordinary 291-test workload from c435e6d. Keep all cases, frames, source/output assertions, five-second cancellation requirement, two-minute AV1 limit and default parallel scheduling. Existing DEBUG hooks emit static labels only; test records have a 32-event cap each and print after settlement. No filesystem observer, sample service, path/argument/payload capture, extra process workload, broad serialization, DSP/listening or product scheduling change. A temporary owned caffeinate assertion keeps the Mac awake during today's authorized work, capped at 12 hours and stopped on work completion; no persistent lock/security preference change.
+
+The isolated source/header branch stays outside this diagnosis so its added tests do not alter the failed workload. Focused local compile/trace checks are preparation, not hosted acceptance. Watch the single hosted observation for no more than 20 minutes; retain failures. Retire instrumentation afterward. If it cannot locate a repair, stop for reframe rather than add observations or reruns. Any identified defect gets a separately justified focused repair; no automatic contract relaxation, merge or release.
+
+D-090 local preparation: two affected tests passed in 24.719 seconds, including all three cancellation phases; AV1 matrix 2.738 seconds. Trace-cap review found four routine tool events omitted, so redundant async-entry/submission labels are excluded before the sole hosted attempt, retaining request/worker/child/reader/join/task/result boundaries. The observer remains bounded to 32 records, with no new phase surface or deadline change.

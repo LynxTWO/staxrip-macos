@@ -1,0 +1,16 @@
+[package]
+name = "staxrip-dolby-metadata-audit"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "MIT"
+publish = false
+
+[dependencies]
+dolby_vision = { git = "https://github.com/quietvoid/dovi_tool", rev = "82384bc7652c6f88cb63f7f11e0315b624003fc3", features = ["serde"] }
+serde_json = "=1.0.149"
+sha2 = "=0.10.9"
+libc = "=0.2.190"
+
+[dev-dependencies]
+bitvec_helpers = { version = "=4.0.2", default-features = false, features = ["bitstream-io"] }

@@ -37,7 +37,7 @@ struct QueueEditor: View {
                 }), values: ["AV1", "HEVC", "H.264", "Copy original"])
                 settingPicker("Container", selection: $draft.configuration.container, values: ["MKV", "MP4"])
             }
-            VideoRateOptionsView(configuration: $draft.configuration)
+            VideoRateOptionsView(configuration: $draft.configuration, source: draft.isDemo ? nil : URL(fileURLWithPath: draft.source))
             if !draft.configuration.copiesVideo && draft.configuration.rate.mode == "Constant quality" {
             HStack {
                 Text("Constant quality")

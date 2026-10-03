@@ -1,5 +1,5 @@
 # Native container configuration evidence
-Version: 0.2. Date: 2026-10-03. Scope: Slice 048 M1 / D-089 / R-058. Status: focused native/parser/build checks passed; ordinary regression pending the recorded hosted reframe. No new HDR copy admission.
+Version: 0.3. Date: 2026-10-03. Scope: Slice 048 M1 / D-089 / R-058. Status: focused native/parser/build checks passed; ordinary local regression passed; hosted qualification remains separately open. No new HDR copy admission.
 
 ## Representation and bounds
 
@@ -35,3 +35,5 @@ Read-only full-video inventory with FFmpeg 9.0.2 found no packet-side-data recor
 Complete independent TrueHD decoding of original and full Matroska candidate produced identical SHA256 digests over signed 32-bit little-endian PCM channel samples at the decoded original rate/layout. Each complete decode took approximately 52 seconds. The FFmpeg codec defaults were unchanged; no normalization, filter, speech processing, listening or Atmos object rendering was performed. Private receipt: work/format-assessment/dovi-copy-feasibility/truehd-pcm-comparison.json. Recovery bytes and original descriptor identity/size/modification time remained unchanged. This decoded equality supplements the earlier complete compressed-payload equality; it does not erase the retained one-millisecond container timestamp changes or establish player A/V synchronization.
 
 D-090's one approved hosted investigation passed the original 291-test workload at 0ab9d28, but did not reproduce or locate the earlier cancellation/matrix delay. Instrumentation is retired on its own local checkpoint; no second attempt. This reader's eight extra tests were deliberately excluded, so that result does not satisfy M1 ordinary regression. The unresolved qualification decision remains in HOSTED-QUALIFICATION-REFRAME.md. No new runtime admission, merge or release.
+
+Local ordinary checkpoint at the subsequent HEVC-buffer implementation: all 303 tests in 74 suites passed in 204.256 seconds, including this utility's eight parser tests. Existing 25 opt-in skipped declarations are unchanged. No extra hosted timing observation or rerun was performed; local success does not resolve D-090's open hosted reliability decision.

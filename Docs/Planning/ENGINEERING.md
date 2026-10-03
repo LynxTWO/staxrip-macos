@@ -352,3 +352,8 @@ Hosted 37115174217 recurred at the historical cancellation and unchanged AV1 mat
 
 
 D-090 investigation completed at diagnostic head 0ab9d28: hosted 37126143385 passed the original 291-test workload and preview build. Existing opt-in skips remain. Cancellation settled in 0.322058 seconds; AV1 reported 115.182 seconds within its unchanged bound. Neither earlier failure reproduced, and no cause is established. Temporary tracing is retired to byte-identical c435e6d product/tests. AV1/last-window ordinary qualification remains reopened; HOSTED-QUALIFICATION-REFRAME.md records the next environment/qualification decision. No additional observation/rerun, assertion change, merge or release.
+
+
+R-059 / D-091 prioritizes Slice 049 dynamic HDR conversion: complete RPU source classification, actual native enhancement/encoder feasibility, explicit conversion intent and loss disclosure before admission. Preserve the existing generic refusal until a qualified contract exists. No timing investigation expansion, owner media identity, parked listening, merge or release.
+
+D-092 extends the R-059 prerequisite with editable HEVC VBV suggestions, explicit saved-intent versions and actual encoder signaling checks. Companion archival must retain original RPU/EL plus matching signal identity and frame/timing association; crop/scale require qualified metadata/statistics treatment. HEVC-BUFFER-LIMITS-EVIDENCE.md and DYNAMIC-HDR-FEASIBILITY-EVIDENCE.md keep product controls separate from bounded research and unknown rendering/archival admission.

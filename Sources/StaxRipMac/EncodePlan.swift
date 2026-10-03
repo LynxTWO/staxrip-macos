@@ -27,6 +27,7 @@ struct EncodePlan: Sendable {
         guard !job.isDemo else { throw NativeExportError.invalid("Demo configurations cannot be encoded. Open a real source first.") }
         guard let video = probe.video else { throw NativeExportError.invalid("This queue currently requires a video source.") }
         let c = job.configuration
+        let bufferLimits = try HEVCBufferPlanner.resolve(c, video: video)
         let copyingVideo = c.copiesVideo
         let videoCopy = copyingVideo ? try VideoCopyContract.make(probe: probe, configuration: c) : nil
         if !copyingVideo { try HDRInspection.requireQualifiedTranscode(video) }
@@ -134,7 +135,11 @@ struct EncodePlan: Sendable {
                 args += ["-svtav1-params", "lp=4"]
             } else { speed = c.speed == "Thorough" ? "slow" : c.speed == "Fast" ? "fast" : "medium" }
             if !hardware { args += ["-preset", speed] }
-            if c.codec == "HEVC", !hardware { args += ["-x265-params", preservingHDR ? hdr!.x265Parameters : "pools=4:frame-threads=2"] }
+            if c.codec == "HEVC", !hardware {
+                let parameters = (preservingHDR ? hdr!.x265Parameters : "pools=4:frame-threads=2") +
+                    (bufferLimits.map { ":" + $0.parameters } ?? "")
+                args += ["-x265-params", parameters]
+            }
             if preservingHDR {
                 args += ["-profile:v", "main10", "-fps_mode", "passthrough", "-color_range", "tv", "-color_primaries", "bt2020", "-color_trc", "smpte2084", "-colorspace", "bt2020nc", "-chroma_sample_location", "left"]
             }
@@ -200,7 +205,7 @@ struct EncodePlan: Sendable {
             let trimDescription = captionTrim ? ", clipped to trim" : ""
             return " · additional SRT: \(track.document.cues.count) captured cues" + trimDescription + " (\(track.reference.language))" + (track.reference.playback.map { ", " + $0.label } ?? "")
         }.joined()
-        let summary = videoSummary + TrackInspection.conversionSummary(audio, audio: c.audio) + captionSummary + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary
+        let summary = videoSummary + (bufferLimits.map { " · " + $0.summary } ?? "") + TrackInspection.conversionSummary(audio, audio: c.audio) + captionSummary + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary
         let captionTitles = try ExternalCaptionTitles.make(external.map(\.reference))
         let expectedCodec = copyingVideo ? video.codec_name! : c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264"
         return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitles: external, captionTitles: captionTitles, captionPlayback: captionPlayback, videoCopy: videoCopy, expectedCodec: expectedCodec, expectedAudio: expectedAudio,

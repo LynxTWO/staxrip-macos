@@ -100,6 +100,8 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-088 | 2026-10-03 | Retain the last-window workspace process | Confirmed | |
 | D-089 | 2026-10-03 | Read complete native HDR container configuration | Confirmed | |
 | D-090 | 2026-10-03 | Observe bounded hosted lifecycle settlement | Confirmed | |
+| D-092 | 2026-10-03 | Editable HEVC VBV suggestions and companion archive requirements | Confirmed | |
+| D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1412,3 +1414,21 @@ D-090 local preparation: two affected tests passed in 24.719 seconds, including 
 
 
 D-090 final outcome: the single approved hosted observation at `0ab9d28ba73126106001be98cc1ed2c792c9169c`, run 37126143385, passed 291 tests in 450.956 seconds and built the preview/fallback bundle. Existing 25 opt-in declarations were skipped. Fresh-analysis request-to-result settlement was 0.322058 seconds (28 retained events, zero omitted); AV1 body 111.244890 seconds, reported test 115.182 seconds (32 retained events, zero omitted). Earlier failures did not reproduce, so their cause remains unknown. No supported product repair, ordinary acceptance or performance guarantee follows. Temporary tracing is retired locally to byte-identical c435e6d product/tests; no second hosted attempt. HOSTED-QUALIFICATION-REFRAME.md version 0.2 records the remaining environment/qualification decision. The unpublished retirement checkpoint avoids a PR synchronization starting another workflow run.
+
+
+## D-091: Prioritize measured dynamic HDR conversion
+Date: 2026-10-03
+Status: Confirmed
+
+Owner explicitly asks to prioritize proper handling of the Dolby Vision transcode refusal, under standing autonomous implementation/tool-install authority. R-059 / Slice 049 binds complete private RPU analysis and dependency/license/capability feasibility before admitting a re-encode. The declared Profile 7 source must be measured for MEL/FEL and sequence consistency; no automatic enhancement discard, metadata retagging or unqualified conversion. Evaluate native macOS enhancement reconstruction and x265 metadata integration with full frame association/precision evidence. A port's README is a hypothesis, not accepted rendering behavior.
+
+Keep source/journal/prior output immutable and private, owned research outputs separate, existing refusal/publication/cancellation contracts intact. dovi_tool is an announced MIT local development tool; third-party reconstruction code is read/pinned/license-reviewed before building or executing. No new bundled dependency, owner queue execution or full-film encode, listening, merge or release. D-090 remains completed/parked; no new timing observer/rerun. Local/generated/new HDR qualification does not repair unexplained hosted timing. Revisit the conversion contract for unsupported profile, FEL reconstruction/reference mismatch, missing sequence data or resulting-picture metadata validity.
+
+
+## D-092: Editable HEVC buffering limits and archival intent
+Date: 2026-10-03
+Status: Confirmed
+
+Owner explicitly requests automatically suggested, prefilled VBV/HRD limits with manual overrides; additionally requests original Dolby Vision companion data alongside unsupported output formats and inclusion of crop/resize effects. Standing autonomous authorization permits scoped implementation and generated/local checks. Software HEVC suggestions are a prerequisite within R-059; they do not grant Dolby Vision admission. Suggested Main/High tier limits derive from bounded output raster and matching declared cadence; manual values stay fixed, are validated and applied explicitly. Existing unrestricted recipes remain unrestricted. Session 10, recovery 9 and preset library 2 retain the new intent and reject mislabelled legacy payloads. No silent codec/engine fallback, altered cancellation deadlines, owner queue execution, persistent security changes, audio listening, merge or release. Companion archive and picture-edit qualification remain separate future acceptance gates; Slice 049 records their required semantics.
+
+D-092 local prerequisite outcome: final ordinary regression passed all 303 tests/74 suites in 204.256 seconds, optimized build passed, and native suggestions/manual prefill/edit/session reopen passed on generated Matroska. The native-preview availability gate finding was reproduced and corrected. HEVC-BUFFER-LIMITS-EVIDENCE.md retains the scope and failed automation receipts. Dolby Vision admission, companion publication, picture edits, calibrated rendering and hosted timing qualification remain open independently.

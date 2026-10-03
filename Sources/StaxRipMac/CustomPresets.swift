@@ -47,13 +47,16 @@ struct CustomPreset: Codable, Equatable, Identifiable {
 
 struct PresetDocument: Codable {
     var format = "staxrip-mac-preset-library"
-    var version = 1
+    var version = 2
     var presets: [CustomPreset]
     func validated() throws -> Self {
-        guard format == "staxrip-mac-preset-library", version == 1, presets.count <= 100 else {
+        guard format == "staxrip-mac-preset-library", [1, 2].contains(version), presets.count <= 100 else {
             throw SessionError.invalid("Unsupported preset library version or more than 100 presets.")
         }
         var names = Set<String>(), ids = Set<UUID>()
+        guard version >= 2 || presets.allSatisfy({ $0.configuration.hevcBufferLimits == nil }) else {
+            throw SessionError.invalid("HEVC buffer limits require preset library version 2.")
+        }
         for p in presets {
             try p.validate()
             guard names.insert(p.key).inserted, ids.insert(p.id).inserted else { throw SessionError.invalid("Preset names and identifiers must be unique.") }

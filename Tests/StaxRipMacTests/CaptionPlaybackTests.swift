@@ -17,7 +17,7 @@ struct CaptionPlaybackTests {
         let c = configuration(), item = job(c)
         var session = SessionDocument(configuration: c, outputFolder: "/generated", outputStem: "result", jobs: [item])
         let restored = try JSONDecoder().decode(SessionDocument.self, from: JSONEncoder().encode(session)).validated()
-        #expect(restored.version == 9 && restored == session)
+        #expect(restored.version == 10 && restored == session)
         let journal = BatchJournal(jobs: [item], statuses: [:])
         #expect(try JSONDecoder().decode(BatchJournal.self, from: JSONEncoder().encode(journal)).validated().jobs == [item])
         for version in 6...8 {

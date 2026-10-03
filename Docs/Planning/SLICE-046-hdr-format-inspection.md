@@ -27,3 +27,5 @@ M3: Typed boundary and adversarial planner checks, native inspector/routing insp
 This slice does not implement Dolby Vision, HDR10+, HLG, AV1 preservation or any new re-encoding path. Header declarations are not full-frame measurements. Existing copying checks do not yet certify complete audio or embedded subtitle payloads. Audio listening remains parked. Slice 045's visible Dock qualification remains open independently.
 
 Approved by: Owner explicit preservation/conversion request and autonomous implementation delegation, 2026-10-03. Verification uses generated data and existing local native seams. No new dependency, model, observer, deadline, merge or release.
+
+Checkpoint: declarations/refusal checks, optimized bundle and native accessible field/profile/notice inspection pass. Ordinary local regression passed 289 tests; hosted initial 37108911207 passed 289 tests. Native inspection led to a shared static-text role/combined-label repair. Hosted qualification of that repair remains open; no acceptance of broader format preservation, heard VoiceOver or release follows.

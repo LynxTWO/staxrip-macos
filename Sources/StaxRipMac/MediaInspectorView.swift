@@ -118,7 +118,8 @@ struct MediaInspectorView: View {
         HStack(alignment: .top, spacing: 12) {
             Text(label).foregroundStyle(.secondary).frame(width: 165, alignment: .leading)
             Text(value).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
-        }.accessibilityElement(children: .ignore).accessibilityLabel(label).accessibilityValue(value).accessibilityHint(help).help(help)
+        }.accessibilityElement(children: .ignore).accessibilityLabel(label + ": " + value)
+            .accessibilityAddTraits(.isStaticText).accessibilityHint(help).help(help)
     }
     private func details(_ title: String, rows: [VideoInspection.Row]) -> some View {
         VStack(alignment: .leading, spacing: 8) {

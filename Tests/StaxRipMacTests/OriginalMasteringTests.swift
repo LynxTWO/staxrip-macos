@@ -253,21 +253,45 @@ struct MasteringRecoveryTests {
         try await MasteringEngine.runTool(tools,["-f","lavfi","-i","aevalsrc=0.1*sin(2*PI*1000*t):s=48000:d=30","-c:a","flac",source.path])
         let fingerprint = try await SourceFingerprint.read(source)
         let cancellation = MasterCancellation()
+        let trace = BoundedLifecycleTrace(enabled: phase == "Fresh analysis", reservedCritical: 12)
+        defer { trace.report("MASTER_CANCEL_TRACE") }
         let notified = AsyncStream<Date>.makeStream()
         let task = Task {
-            defer { notified.continuation.finish() }
-            return try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { status,_ in
-                if status.hasPrefix(phase) {
-                    DispatchQueue.global().asyncAfter(deadline: .now()+0.02) {
-                        notified.continuation.yield(Date()); notified.continuation.finish(); cancellation.cancel()
+            trace.record("task entered", critical: true)
+            defer { trace.record("task leaving", critical: true); notified.continuation.finish() }
+            let operation: @Sendable () async throws -> MasterCandidate = {
+                try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { status,_ in
+                    if status.hasPrefix(phase) {
+                        trace.record("target phase observed", critical: true)
+                        DispatchQueue.global().asyncAfter(deadline: .now()+0.02) {
+                            trace.record("notification callback entered", critical: true)
+                            notified.continuation.yield(Date()); notified.continuation.finish()
+                            trace.record("cancel requested", critical: true)
+                            cancellation.cancel()
+                            trace.record("cancel returned", critical: true)
+                        }
                     }
                 }
             }
+            #if DEBUG
+            if phase == "Fresh analysis" {
+                return try await ToolRunner.$observeBoundary.withValue({ label in
+                    // Keep the request/child/reader/join boundaries within the
+                    // approved cap; ordinary async-entry/submission labels are
+                    // redundant here and can crowd out the final pipe joins.
+                    guard label != "body entered", label != "submitting worker" else { return }
+                    trace.record("tool " + label, critical: label.hasPrefix("cancel handler"))
+                }) { try await operation() }
+            }
+            #endif
+            return try await operation()
         }
         cancellation.install(task)
         var iterator = notified.stream.makeAsyncIterator()
         let start = try #require(await iterator.next())
+        trace.record("notification consumed", critical: true)
         await #expect(throws: CancellationError.self) { try await task.value }
+        trace.record("task result consumed", critical: true)
         #expect(Date().timeIntervalSince(start) < 5)
         #expect(try await SourceFingerprint.read(source) == fingerprint)
         #expect(!FileManager.default.fileExists(atPath: destination.path))

@@ -37,6 +37,9 @@ struct AV1CopyTests {
 
     @Test(.enabled(if: FFmpegTools.discover() != nil), .timeLimit(.minutes(2)))
     nonisolated func actualQueuePreservesEightAndTenBitAV1AcrossMP4AndMatroska() async throws {
+        let trace = BoundedLifecycleTrace()
+        trace.record("matrix entered")
+        defer { trace.record("matrix leaving"); trace.report("AV1_MATRIX_TRACE") }
         #expect(!Thread.isMainThread)
         let tools = try #require(FFmpegTools.discover())
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("av1-copy-" + UUID().uuidString)
@@ -60,6 +63,7 @@ struct AV1CopyTests {
                     "-pix_fmt", pixel, "-threads", "2", "-svtav1-params",
                     "lp=2:color-primaries=1:transfer-characteristics=1:matrix-coefficients=1:color-range=0", mp4.path], tools: tools)
                 _ = try await encode(["-i", mp4.path, "-map", "0:v:0", "-c:v", "copy", mkv.path], tools: tools)
+                trace.record("fixture ready \(bits)")
                 let originals = try [Data(contentsOf: mp4), Data(contentsOf: mkv)]
                 for source in [mp4, mkv] {
                     let before = try await MediaProbe.read(source, tools: tools)
@@ -77,6 +81,7 @@ struct AV1CopyTests {
                         }
                         try #require(samples.allSatisfy { $0 < 1024 } && samples.contains { $0 & 3 != 0 })
                     }
+                    trace.record("reference ready \(bits) \(source.pathExtension)")
                     for container in ["MP4", "MKV"] {
                         var c = EncodeConfiguration(); c.selectCodec("Copy original"); c.container = container
                         c.audio = "No audio"; c.subtitleMode = "Remove all subtitles"
@@ -86,12 +91,14 @@ struct AV1CopyTests {
                             ChapterEntry(startMilliseconds: 1500, endMilliseconds: 3000, title: "Second")])
                         let output = root.appendingPathComponent("\(bits)-\(source.pathExtension)-to-\(container.lowercased()).\(container.lowercased())")
                         let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: output.path, configuration: c, created: Date())
+                        trace.record("case prepare \(bits) \(source.pathExtension) \(container)")
                         let preflight = try await QueuePreflight.inspect(job, tools: tools, encoders: [])
                         try #require(preflight.kind == .deferred && preflight.detail.contains("packet verification"))
                         await batch.start([job])
                         while await batch.running { try await Task.sleep(for: .milliseconds(10)) }
                         let status = try #require(await batch.statuses[job.id])
                         try #require(status.phase == "Completed", Comment(rawValue: status.detail))
+                        trace.record("case published \(bits) \(source.pathExtension) \(container)")
                         #expect(status.detail.contains("Verified copied video: 72 encoded packets"))
                         #expect(try await pictureHash(output, pixel: pixel, tools: tools) == referenceHash)
                         let actualFrames = try await frames(output, pixel: pixel, tools: tools)
@@ -112,6 +119,7 @@ struct AV1CopyTests {
                         #expect(try Data(contentsOf: mp4) == originals[0] && Data(contentsOf: mkv) == originals[1])
                         #expect(try Data(contentsOf: caption) == text && Data(contentsOf: prior) == sentinel)
                         #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).allSatisfy { !$0.hasPrefix(".staxrip-batch-") })
+                        trace.record("case verified \(bits) \(source.pathExtension) \(container)")
                     }
                 }
             }

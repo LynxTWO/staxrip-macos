@@ -1,5 +1,5 @@
 # Slice 047: Preserve AV1 video across MP4 and MKV
-Date: 2026-10-03. Status: implemented; local actual-queue matrix, ordinary regression and optimized build passed. Native reviewed export is blocked by the locked console; hosted qualification is pending.
+Date: 2026-10-03. Status: implemented; local actual-queue matrix, ordinary regression and optimized build passed. Native reviewed export is blocked by the locked console; hosted qualification failed at an existing process-start marker; D-086 repairs state-test ordering and fresh ordinary checks are pending.
 
 ## Outcome and walkthrough
 

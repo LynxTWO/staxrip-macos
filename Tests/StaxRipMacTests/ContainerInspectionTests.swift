@@ -96,40 +96,71 @@ struct ContainerInspectionTests {
         #expect(try Data(contentsOf: movie) == movieBytes)
     }
 
-    @Test func supersededInspectionCannotClearOrReplaceNewSource() async throws {
-        let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
-        let script = root.appendingPathComponent("probe"), oldSource = root.appendingPathComponent("old"), newSource = root.appendingPathComponent("new")
-        let body = """
-        #!/bin/sh
-        for source do :; done
-        printf started > "$source.started"
-        case "$source" in
-          */old) exec /bin/sleep 30 ;;
-        esac
-        while [ ! -f "$source.ready" ]; do /bin/sleep 0.02; done
-        printf '%s' '{"streams":[],"chapters":[{"id":2,"start_time":"0","end_time":"2","tags":{"title":"New source"}}]}'
-        """
-        try Data(body.utf8).write(to: script)
-        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
-        let controller = BatchController(); controller.tools = FFmpegTools(ffmpeg: script, ffprobe: script)
-        let old = Task { await controller.inspect(oldSource) }; defer { old.cancel() }
-        try await waitFor(oldSource.appendingPathExtension("started"))
-        let newer = Task { await controller.inspect(newSource) }; defer { newer.cancel() }
-        try await waitFor(newSource.appendingPathExtension("started"))
-        old.cancel(); await old.value
-        #expect(controller.inspecting); #expect(controller.inspection == nil); #expect(controller.inspectionError == nil)
-        try Data().write(to: newSource.appendingPathExtension("ready"))
-        await newer.value
-        #expect(!controller.inspecting); #expect(controller.inspectionError == nil)
-        #expect(controller.inspection?.chapters?.first?.tags?["title"] == "New source")
-        controller.tools = nil
-        await controller.inspect(oldSource)
-        #expect(controller.inspection == nil); #expect(!controller.inspecting)
-        #expect(controller.inspectionError == "FFmpeg tools are unavailable.")
+    private actor HeldInspection {
+        let entered: AsyncStream<URL>.Continuation
+        var pending: [URL: CheckedContinuation<MediaProbe, Error>] = [:]
+        var reads: [URL] = []
+        init(entered: AsyncStream<URL>.Continuation) { self.entered = entered }
+        func read(_ source: URL) async throws -> MediaProbe {
+            reads.append(source)
+            // Hold the real completion boundary, including an uncooperative late
+            // result. No child-process startup speed is part of this state test.
+            return try await withCheckedThrowingContinuation { continuation in
+                pending[source] = continuation
+                entered.yield(source)
+            }
+        }
+        func release(_ source: URL, result: Result<MediaProbe, Error>) {
+            guard let continuation = pending.removeValue(forKey: source) else {
+                Issue.record("Missing held inspection"); return
+            }
+            continuation.resume(with: result)
+        }
+        func releaseAll() {
+            let held = pending; pending = [:]
+            for continuation in held.values { continuation.resume(throwing: CancellationError()) }
+            entered.finish()
+        }
     }
-    private func waitFor(_ url: URL) async throws {
-        let deadline = Date().addingTimeInterval(5)
-        while !FileManager.default.fileExists(atPath: url.path) && Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
-        try #require(FileManager.default.fileExists(atPath: url.path))
+    enum OldCompletion: Sendable { case success, failure, cancelled }
+
+    @Test(.timeLimit(.minutes(1)), arguments: [OldCompletion.success, .failure, .cancelled])
+    func supersededInspectionCannotClearOrReplaceNewSource(completion: OldCompletion) async throws {
+        let oldSource = URL(fileURLWithPath: "/generated/old"), newSource = URL(fileURLWithPath: "/generated/new")
+        let (entries, entered) = AsyncStream<URL>.makeStream()
+        let reader = HeldInspection(entered: entered)
+        let controller = BatchController(readInspection: { source, _ in try await reader.read(source) })
+        controller.tools = FFmpegTools(ffmpeg: URL(fileURLWithPath: "/generated/ffmpeg"), ffprobe: URL(fileURLWithPath: "/generated/ffprobe"))
+        let oldResult = try probe(["streams": [], "chapters": [["id": 1, "tags": ["title": "Old source"]]]])
+        let newResult = try probe(["streams": [], "chapters": [["id": 2, "start_time": "0", "end_time": "2", "tags": ["title": "New source"]]]])
+        var iterator = entries.makeAsyncIterator()
+        let old = Task { await controller.inspect(oldSource) }
+        var newer: Task<Void, Never>?
+        do {
+            try #require(await iterator.next() == oldSource)
+            newer = Task { await controller.inspect(newSource) }
+            try #require(await iterator.next() == newSource)
+            if completion == .cancelled { old.cancel() }
+            await reader.release(oldSource, result: completion == .failure ?
+                .failure(NativeExportError.invalid("Generated stale inspection failure")) : .success(oldResult))
+            await old.value
+            #expect(controller.inspecting)
+            #expect(controller.inspection == nil && controller.inspectionError == nil)
+            await reader.release(newSource, result: .success(newResult))
+            await newer?.value
+            #expect(!controller.inspecting && controller.inspectionError == nil)
+            #expect(controller.inspection?.chapters?.first?.tags?["title"] == "New source")
+            controller.tools = nil
+            await controller.inspect(oldSource)
+            #expect(controller.inspection == nil && !controller.inspecting)
+            #expect(controller.inspectionError == "FFmpeg tools are unavailable.")
+            #expect(await reader.reads == [oldSource, newSource])
+            await reader.releaseAll()
+        } catch {
+            old.cancel(); newer?.cancel()
+            await reader.releaseAll()
+            await old.value; await newer?.value
+            throw error
+        }
     }
 }

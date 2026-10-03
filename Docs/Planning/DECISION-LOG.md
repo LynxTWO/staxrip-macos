@@ -1335,3 +1335,31 @@ Owner explicitly requests proper support, lossless preservation where achievable
 The inspected private source exposes Dolby Vision Profile 7 configuration, enhancement/RPU information and a TrueHD/Atmos profile which the existing inspector discards or omits. The current HDR refusal is generic; the SDR planner could silently discard recognized dynamic metadata if color tags were misleading. Add typed declarations, native explanation, a shared specific transcode refusal and selected-audio conversion consequences. No generic preservation bypass, new encode mode, inferred FEL/MEL, schema change or audio DSP work.
 
 R-056 binds declared-format parsing, adversarial planner refusal, native presentation and ordinary local/hosted regression. Preserve owner media/journal, original copy restrictions and publication/cancellation behavior. Revisit when a separately qualified preservation/conversion brief authorizes the corresponding formats; never claim Dolby Vision to AV1 or HDR10+ is lossless without a precise verified meaning.
+
+## D-085: Extend verified stream copy to declared SDR AV1 Main
+Date: 2026-10-03
+Status: Confirmed
+
+Owner requests proper format support and maximum-information preservation. Approve Slice 047 / R-057 under the standing autonomous delegation. Eight generated 8/10-bit MP4/MKV remux cases retained all packets, complete decoded pictures and color/configuration with time differences within the existing millisecond bound. Initial SVT-generated sources lacked primaries/transfer declarations despite general output tags; explicit SVT-AV1 parameters produced fully declared qualified fixtures. Preserve that failed declaration assumption.
+
+Extend the existing copy contract to AV1 Main 8/10-bit 4:2:0 with complete BT.709 limited-range SDR. Keep all metadata, transform, timing, resource, full packet and exclusive publication checks. Alternatives were unnecessary video re-encoding or a generic high-bit-depth bypass; neither preserves the stated boundary. No new schema, encoder path, dependency, audio work or release. Slice 046's final native accessible-label repair and hosted check remain separate. Revisit for HDR/Profile 10, additional profiles, missing declarations or actual interoperability failures.
+
+## D-086: Qualify inspector replacement at its completion boundary
+Date: 2026-10-03
+Status: Confirmed under standing autonomous repair authority
+
+Slice 047 hosted run 37111085056 failed once at the existing inspection test's five-second shell-start marker for the newer source. The eight-case AV1 controller matrix and ToolRunner process/cancellation suite passed in that same run; no original-mastering cancellation deadline recurrence occurred. Preserve the hosted failure. This test checked stale state ownership, not a published process-start latency requirement, but tied that check to external shell scheduling and did not join cancelled tasks on failure.
+
+Add a narrow injected inspection reader to BatchController, defaulting to the unchanged MediaProbe.read path and used only by inspector state tests. Hold old/new completions with explicit asynchronous entry signals; exercise late success, failure and cancellation, assert that older completion cannot clear current progress/result/error, then settle the newer result. Release and join held tasks on every thrown path. Actual generated FFmpeg metadata inspection and existing ToolRunner process cancellation/draining checks remain required. The test retains an outer one-minute failure bound without changing any product or mastering deadline, admission or executor policy. No blind hosted rerun, suite-wide serialization, observer expansion or weakened stale-result assertion.
+
+Focused repaired state and actual process tests passed seven tests in two suites, 4.297 seconds. Ordinary local/hosted repair runs and the optimized bundle are pending; this repair alone does not accept the AV1 native gate. Revisit for any product generation/cancellation regression or another unexplained scheduling failure.
+
+## D-087: Keep independent AV1 validation off the main actor
+Date: 2026-10-03
+Status: Confirmed under standing autonomous repair authority
+
+Hosted repair run 37111867733 at f39918e passed the deterministic inspector cases but exceeded the AV1 eight-case matrix's unchanged 120-second test limit, finishing cancellation after 126.646 seconds. Preserve this failed ordinary run. The first hosted matrix had passed in 95.723 seconds, and isolated local execution took seconds; that contrast does not itself prove a hosted scheduling cause. No mastering cancellation recurrence occurred.
+
+The matrix was main-actor isolated despite generated-file preparation and independent FFmpeg/reference/byte validation having no UI requirement. Make only these test helpers and the matrix nonisolated, assert non-main-thread entry, and cross to MainActor solely for actual BatchController creation, state and starts/stops. Retain all eight exports, 72-frame and exact packet/picture/color/caption/chapter/source/prior-output assertions, source-stability/publication behavior, failure joining/retention, the same two-minute test bound and default suite parallel execution. No skipping, broad serialization, observer expansion, new executor/admission policy or deadline inflation. This is an isolation correction; improved hosted performance remains unknown until observed.
+
+Focused final tests passed eight tests/three suites in 4.301 seconds; the actual AV1 matrix took 2.780 seconds. Fresh ordinary local/hosted checks are required. If the same unchanged bound fails again, retain the failure and stop acceptance for a concrete reframe rather than retrying or raising it. Separately, the optimized native app completed a reviewed generated ten-bit AV1 copy with captions/chapters; all 24 packets/pictures were independently verified and owner recovery bytes restored.

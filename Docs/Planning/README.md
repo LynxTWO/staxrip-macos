@@ -152,3 +152,7 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 55. [Slice 045: native identity and live Dock status](SLICE-045-dynamic-app-icons.md), active under D-083 / R-055; [evidence and remaining native walkthrough](DYNAMIC-ICON-EVIDENCE.md).
 
 [Slice 046: HDR/audio format inspection](SLICE-046-hdr-format-inspection.md) and [format preservation/conversion sequence](FORMAT-PRESERVATION.md) implement the owner's 2026-10-03 direction. Original audio listening and Slice 045 visible Dock qualification remain open.
+
+[Slice 047: verified SDR AV1 copy](SLICE-047-av1-video-copy.md) extends the existing copy pipeline after bounded generated feasibility. HDR/Profile 10 and arbitrary conversion remain later qualified work.
+
+[AV1 copy evidence](AV1-COPY-EVIDENCE.md) records all eight actual-controller cases, independent ten-bit pictures/captions/chapters, local regression/build and the locked-console native gate.

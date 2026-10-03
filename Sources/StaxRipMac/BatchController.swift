@@ -82,6 +82,7 @@ final class BatchController: ObservableObject {
         }
     }
 
+    private let readInspection: (URL, FFmpegTools) async throws -> MediaProbe
     private let readSource: ExportSourceFingerprint.Reader
     private let publishOutput: (URL, URL) async throws -> Void
     private let removeStaging: (URL) async throws -> Void
@@ -93,10 +94,12 @@ final class BatchController: ObservableObject {
     private var sourceCheck: (id: UUID, jobID: UUID, acceptsProgress: Bool)?
 
     init(journalURL: URL? = nil,
+         readInspection: @escaping (URL, FFmpegTools) async throws -> MediaProbe = { try await MediaProbe.read($0, tools: $1) },
          readSource: @escaping ExportSourceFingerprint.Reader = { try await ExportSourceFingerprint.read($0, progress: $1) },
          publishOutput: @escaping (URL, URL) async throws -> Void = { try await ExportPublication.publishAsync(staged: $0, destination: $1) },
          removeStaging: @escaping (URL) async throws -> Void = { try await ExportStaging.remove($0) },
          beginActivity: @escaping ExportActivity.Factory = ExportActivity.begin) {
+        self.readInspection = readInspection
         self.readSource = readSource
         self.publishOutput = publishOutput
         self.removeStaging = removeStaging
@@ -151,7 +154,7 @@ final class BatchController: ObservableObject {
         inspecting = true
         defer { if inspectionGeneration == id { inspecting = false } }
         do {
-            let result = try await MediaProbe.read(source, tools: tools)
+            let result = try await readInspection(source, tools)
             try Task.checkCancellation()
             guard inspectionGeneration == id else { return }
             inspection = result

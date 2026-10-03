@@ -142,4 +142,27 @@ struct VideoCopyTests {
             #expect(throws: (any Error).self) { try packet.validate(tick: 1.0 / 24000, seconds: 3) }
         }
     }
+
+    @Test(arguments: ["yuv420p", "yuv420p10le"])
+    func av1CopyRequiresQualifiedMainSDRAndStillRefusesTransformsOrChangedMetadata(pixel: String) throws {
+        let fields: [String: Any] = ["codec_name": "av1", "profile": "Main", "pix_fmt": pixel,
+            "color_primaries": "bt709", "color_transfer": "bt709", "color_space": "bt709", "color_range": "tv"]
+        let source = try probe(fields)
+        let contract = try VideoCopyContract.make(probe: source, configuration: configuration)
+        _ = try contract.verifyMetadata(source)
+        for field in ["color_primaries", "color_transfer", "color_space", "color_range"] {
+            var incomplete = fields; incomplete.removeValue(forKey: field)
+            #expect(throws: (any Error).self) { try VideoCopyContract.make(probe: probe(incomplete), configuration: configuration) }
+        }
+        for (field, value) in [("profile", "Professional"), ("pix_fmt", "yuv422p10le"), ("pix_fmt", "yuv420p12le"),
+            ("color_transfer", "smpte2084"), ("color_transfer", "arib-std-b67"), ("color_range", "pc"), ("field_order", "tt")] {
+            var bad = fields; bad[field] = value
+            #expect(throws: (any Error).self) { try VideoCopyContract.make(probe: probe(bad), configuration: configuration) }
+            #expect(throws: (any Error).self) { try contract.verifyMetadata(probe(bad)) }
+        }
+        var dynamic = fields; dynamic["side_data_list"] = [["side_data_type": "DOVI configuration record", "dv_profile": 10]]
+        #expect(throws: (any Error).self) { try VideoCopyContract.make(probe: probe(dynamic), configuration: configuration) }
+        var c = configuration; c.cropTop = 2
+        #expect(throws: (any Error).self) { try VideoCopyContract.make(probe: source, configuration: c) }
+    }
 }

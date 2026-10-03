@@ -1335,3 +1335,11 @@ Owner explicitly requests proper support, lossless preservation where achievable
 The inspected private source exposes Dolby Vision Profile 7 configuration, enhancement/RPU information and a TrueHD/Atmos profile which the existing inspector discards or omits. The current HDR refusal is generic; the SDR planner could silently discard recognized dynamic metadata if color tags were misleading. Add typed declarations, native explanation, a shared specific transcode refusal and selected-audio conversion consequences. No generic preservation bypass, new encode mode, inferred FEL/MEL, schema change or audio DSP work.
 
 R-056 binds declared-format parsing, adversarial planner refusal, native presentation and ordinary local/hosted regression. Preserve owner media/journal, original copy restrictions and publication/cancellation behavior. Revisit when a separately qualified preservation/conversion brief authorizes the corresponding formats; never claim Dolby Vision to AV1 or HDR10+ is lossless without a precise verified meaning.
+
+## D-085: Extend verified stream copy to declared SDR AV1 Main
+Date: 2026-10-03
+Status: Confirmed
+
+Owner requests proper format support and maximum-information preservation. Approve Slice 047 / R-057 under the standing autonomous delegation. Eight generated 8/10-bit MP4/MKV remux cases retained all packets, complete decoded pictures and color/configuration with time differences within the existing millisecond bound. Initial SVT-generated sources lacked primaries/transfer declarations despite general output tags; explicit SVT-AV1 parameters produced fully declared qualified fixtures. Preserve that failed declaration assumption.
+
+Extend the existing copy contract to AV1 Main 8/10-bit 4:2:0 with complete BT.709 limited-range SDR. Keep all metadata, transform, timing, resource, full packet and exclusive publication checks. Alternatives were unnecessary video re-encoding or a generic high-bit-depth bypass; neither preserves the stated boundary. No new schema, encoder path, dependency, audio work or release. Slice 046's final native accessible-label repair and hosted check remain separate. Revisit for HDR/Profile 10, additional profiles, missing declarations or actual interoperability failures.

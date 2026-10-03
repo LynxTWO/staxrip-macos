@@ -33,6 +33,7 @@ struct QueueView: View {
                         .help(batch.publicationJobID == nil ? "Cancel the current job and stop the batch. An active source content check waits for filesystem reads to return before cleanup." : "Wait for this publication to finish, preserve any successful output, and stop before the next job.")
                 } else {
                     Button { model.chooseQueueStart(using: batch) { !exporter.running && !audio.running && !fileAccess.reviewing } } label: { Label("Start queue…", systemImage: "play.fill") }
+                        .accessibilityIdentifier("start-reviewed-queue")
                         .primaryAction().disabled(batch.pendingJobs(in: model.jobs).isEmpty || batch.tools == nil || batch.reviewing || exporter.running || audio.running || model.filePanelActive || fileAccess.reviewing)
                         .help("Review each configured output folder before starting. Cancel starts nothing. Each job then performs independent checks, including reading its source in full before inspection and publication.")
                 }

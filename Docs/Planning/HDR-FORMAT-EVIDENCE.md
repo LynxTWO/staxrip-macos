@@ -1,5 +1,5 @@
 # HDR format inspection checkpoint
-Date: 2026-10-03. Scope: Slice 046 / D-084 / R-056. Status: implemented; native and hosted qualification open.
+Date: 2026-10-03. Scope: Slice 046 / D-084 / R-056. Status: native accessible fields and final ordinary hosted regression qualified; heard VoiceOver and rendered pixels remain open.
 
 The native inspector now retains and displays Dolby Vision configuration fields and chroma placement. Audio inspection/routing show codec profiles; settings explain that AAC/Opus do not preserve Atmos/DTS:X object metadata. The actual selected-track encode plan includes that consequence where the profile declares a spatial format. Recognized Dolby Vision/HDR10+ declarations fail unqualified SDR/static HDR10 transcoding before encoding, including missing/misleading color tags. No new format is advertised as a supported preservation/conversion workflow.
 
@@ -18,3 +18,5 @@ Owner-granted Accessibility access worked. Direct traversal of UI children resto
 Actual native inspection then found field rows with AXUnknown role and value-only exposure. Adding a static-text trait established AXStaticText but still omitted the label when a separate accessibilityValue overrode text. The final shared row uses combined label/value accessible text plus the static-text trait. Native values now include `Chroma placement: Top left (topleft)`, `Dolby Vision profile: 7`, level, version, base/enhancement/RPU flags and compatibility ID. Scrolling inspected `Reported audio profile: Dolby TrueHD + Dolby Atmos`, eight channels / 7.1 / 48000 Hz and the object-metadata conversion notice; the other audio profile remains explicitly not reported. Native accessibility text is observed; heard VoiceOver and screen pixels are not certified. The earlier automation/role failures remain recorded above.
 
 Initial hosted run 37108911207 passed at 926186d: 289 tests, 541.993 seconds, with the existing opt-in gates skipped; preview/fallback build passed. The subsequent native accessibility repair needs its own hosted run. Source stat and owner journal bytes remain protected. No test filename/path appears in the repository.
+
+Final repair run 37109980211 passed at 4922dbcc430dd6b10338a86d33aa0dd0537b4028. The final native accessible-field repair therefore has its own hosted acceptance. It does not certify rendered pixels, heard VoiceOver or new HDR conversion support.

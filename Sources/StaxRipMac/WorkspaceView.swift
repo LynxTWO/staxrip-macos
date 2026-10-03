@@ -125,7 +125,7 @@ struct WorkspaceView: View {
                 .foregroundStyle(model.section == title ? Color.accent : Color.primary)
                 .background(model.section == title ? Color.accent.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 9))
                 .contentShape(Rectangle())
-        }.buttonStyle(.plain).padding(.bottom, 4)
+        }.buttonStyle(.plain).padding(.bottom, 4).accessibilityIdentifier("navigation-" + title)
     }
 
     private func preset(_ title: String, subtitle: String, symbol: String) -> some View {
@@ -185,6 +185,7 @@ struct WorkspaceView: View {
             }
             if model.sourceURL != nil {
                 Button("Choose tracks") { showingTracks = true }.disabled(batch.running || model.loading || model.sourceNeedsReview)
+                    .accessibilityIdentifier("choose-source-tracks")
                 Button { showingInspector = true } label: { Image(systemName: "info.circle") }
                     .buttonStyle(.borderless).help("Inspect media contents").accessibilityLabel("Inspect media contents")
                     .disabled(model.loading || model.sourceNeedsReview)

@@ -29,6 +29,7 @@ struct EncodePlan: Sendable {
         let c = job.configuration
         let copyingVideo = c.copiesVideo
         let videoCopy = copyingVideo ? try VideoCopyContract.make(probe: probe, configuration: c) : nil
+        if !copyingVideo { try HDRInspection.requireQualifiedTranscode(video) }
         guard externalDocument == nil || externalSnapshots == nil else {
             throw SubRipDocument.failure("Conflicting caption snapshot inputs.")
         }
@@ -199,7 +200,7 @@ struct EncodePlan: Sendable {
             let trimDescription = captionTrim ? ", clipped to trim" : ""
             return " · additional SRT: \(track.document.cues.count) captured cues" + trimDescription + " (\(track.reference.language))" + (track.reference.playback.map { ", " + $0.label } ?? "")
         }.joined()
-        let summary = videoSummary + captionSummary + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary
+        let summary = videoSummary + TrackInspection.conversionSummary(audio, audio: c.audio) + captionSummary + " · " + outputDisplayAspect.summary + " · " + chapterPlan.summary
         let captionTitles = try ExternalCaptionTitles.make(external.map(\.reference))
         let expectedCodec = copyingVideo ? video.codec_name! : c.codec == "AV1" ? "av1" : c.codec == "HEVC" ? "hevc" : "h264"
         return EncodePlan(arguments: args, containerPreservation: containerPreservation, chapterPlan: chapterPlan, outputGeometry: outputGeometry, outputDisplayAspect: outputDisplayAspect, externalSubtitles: external, captionTitles: captionTitles, captionPlayback: captionPlayback, videoCopy: videoCopy, expectedCodec: expectedCodec, expectedAudio: expectedAudio,

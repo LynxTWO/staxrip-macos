@@ -1325,3 +1325,13 @@ Consequences: Add build resources and read-only presentation around existing con
 Revisit when: Icon compilation cannot support the existing build platforms, native status contradicts actual state, small-size legibility fails, or a richer animation/theme requires new runtime ownership.
 
 D-083 partial outcome: Slice 045 checkpoint: product 260f5fd and hosted run 36921033338 qualified the initial fallback bundle and read-only Dock state/API. The owner subsequently explicitly approved Icon Composer agreement EA1954 (April 16, 2025), which was accepted. Native layered source, three Composer appearance previews and actual compilation are now implemented; an extensionless compiler-matched icon key fixes Finder choosing the flat fallback. Updated bundle and regression receipts are in DYNAMIC-ICON-EVIDENCE.md. Visible Dock/menu, closed-window navigation and heard VoiceOver remain open; no full slice acceptance, merge or release.
+
+## D-084: Explain HDR and spatial-audio declarations before expanding preservation
+Date: 2026-10-03
+Status: Confirmed
+
+Owner explicitly requests proper support, lossless preservation where achievable and maximum-information conversion where needed, and delegates implementation autonomously. Private encoding-test filenames must remain out of code. Approve Slice 046 / R-056 as the first bounded implementation, with FORMAT-PRESERVATION.md recording the dependent sequence. Slice 045 visible Dock qualification remains open separately.
+
+The inspected private source exposes Dolby Vision Profile 7 configuration, enhancement/RPU information and a TrueHD/Atmos profile which the existing inspector discards or omits. The current HDR refusal is generic; the SDR planner could silently discard recognized dynamic metadata if color tags were misleading. Add typed declarations, native explanation, a shared specific transcode refusal and selected-audio conversion consequences. No generic preservation bypass, new encode mode, inferred FEL/MEL, schema change or audio DSP work.
+
+R-056 binds declared-format parsing, adversarial planner refusal, native presentation and ordinary local/hosted regression. Preserve owner media/journal, original copy restrictions and publication/cancellation behavior. Revisit when a separately qualified preservation/conversion brief authorizes the corresponding formats; never claim Dolby Vision to AV1 or HDR10+ is lossless without a precise verified meaning.

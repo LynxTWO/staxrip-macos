@@ -96,7 +96,12 @@ struct MediaInspectorView: View {
             if stream.codec_type == "video" {
                 details("Picture format", rows: VideoInspection.picture(stream))
                 details("Declared color", rows: VideoInspection.color(stream))
+                details("HDR and color sampling", rows: HDRInspection.rows(stream))
                 details("Timing and geometry", rows: VideoInspection.timing(stream))
+            }
+            if stream.codec_type == "audio" {
+                field("Reported audio profile", value: TrackInspection.audioProfile(stream), help: "Codec profile reported by the decoder. Track titles, channel counts and filenames are not used to infer Dolby Atmos or D T S X.")
+                Text(TrackInspection.audioConversionNotice).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
         }
     }

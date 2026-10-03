@@ -24,6 +24,22 @@ enum TrackInspection {
     static func language(_ stream: MediaProbe.Stream) -> String {
         ContainerInspection.text(ContainerInspection.tag("language", in: stream.tags))
     }
+    static func audioProfile(_ stream: MediaProbe.Stream) -> String {
+        ContainerInspection.text(stream.profile, fallback: "Not reported")
+    }
+    static let audioConversionNotice = "AAC and Opus encode channel-based audio. They do not preserve Dolby Atmos or DTS:X object metadata. Copy original avoids audio re-encoding; the destination must support the source codec. Channel count alone does not establish a spatial format."
+    static func declaredSpatialAudio(_ stream: MediaProbe.Stream) -> String? {
+        guard stream.codec_type == "audio", let profile = stream.profile else { return nil }
+        if profile.range(of: "Atmos", options: .caseInsensitive) != nil { return "Dolby Atmos" }
+        if profile.range(of: "DTS:X", options: .caseInsensitive) != nil { return "DTS:X" }
+        return nil
+    }
+    static func conversionSummary(_ streams: [MediaProbe.Stream], audio: String) -> String {
+        guard audio == "AAC" || audio == "Opus" else { return "" }
+        let spatial = Set(streams.compactMap(declaredSpatialAudio)).sorted()
+        guard !spatial.isEmpty else { return "" }
+        return " · " + spatial.joined(separator: " / ") + " declared: " + audio + " keeps channel-based audio, without object metadata"
+    }
     static func roles(_ stream: MediaProbe.Stream) -> [Role] {
         let definitions = [
             ("default", "Default", "A request to prefer this track when choosing among tracks. Player preferences can override it."),

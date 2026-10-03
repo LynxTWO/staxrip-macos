@@ -150,3 +150,5 @@ Readback: measurement and its owner walkthrough are accepted. Original mastering
 54. [Slice 044: verify Quick Export duration](SLICE-044-native-export-duration.md), accepted at f385cec under D-082 / R-054; [evidence](NATIVE-DURATION-EVIDENCE.md).
 
 55. [Slice 045: native identity and live Dock status](SLICE-045-dynamic-app-icons.md), active under D-083 / R-055; [evidence and remaining native walkthrough](DYNAMIC-ICON-EVIDENCE.md).
+
+[Slice 046: HDR/audio format inspection](SLICE-046-hdr-format-inspection.md) and [format preservation/conversion sequence](FORMAT-PRESERVATION.md) implement the owner's 2026-10-03 direction. Original audio listening and Slice 045 visible Dock qualification remain open.

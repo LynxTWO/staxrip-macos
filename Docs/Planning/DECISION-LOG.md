@@ -98,6 +98,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-086 | 2026-10-03 | Qualify inspector completion ownership | Confirmed | |
 | D-087 | 2026-10-03 | Keep independent AV1 checks off MainActor | Confirmed | |
 | D-088 | 2026-10-03 | Retain the last-window workspace process | Confirmed | |
+| D-089 | 2026-10-03 | Read complete native HDR container configuration | Confirmed | |
 
 ## D-001: Native offline product
 Date: 2026-09-28
@@ -1383,3 +1384,15 @@ Restored Accessibility permission enabled actual Dock navigation. Closing the so
 Closing a workspace must preserve process-owned state; Dock navigation must reopen exactly one workspace at the requested destination and launch no operation. Explicit Quit retains its existing running-operation and cleanup checks. No media/session/processing/termination-guard policy, security preference, dependency, timer, merge or release change. Native close/reopen checks, original recovery protection, optimized build and ordinary regression qualify this repair; rendered badges and heard VoiceOver remain distinct open checks.
 
 D-088 local outcome: optimized build and native idle Dock/menu navigation passed all four destinations, each after observed zero-window closure. Ordinary local regression passed 291 tests/72 suites in 205.218 seconds, including actual Dock API/status tests. Recovery bytes stayed unchanged. Hosted regression remains pending; rendered badges/appearances and heard VoiceOver remain open independently.
+
+## D-089: Read complete native HDR container configuration before preservation admission
+Date: 2026-10-03
+Status: Confirmed
+
+Owner explicitly authorizes proper format support and autonomous research/implementation, with private encoding-test identities excluded. Approve Slice 048 M1 / R-058 as read-only native Swift configuration capture, structurally bounded and tested. ffprobe's typed Dolby fields do not expose the full opaque enhancement configuration, and default remux settings can omit Dolby signaling or alter codec configuration while ordinary packet hashes still match.
+
+Capture actual MP4 sample-entry boxes and Matroska CodecPrivate/BlockAdditionMapping bytes with track identity; reject ambiguity/truncation/resource excess. Do not link a research C helper or newly installed tool into the app. This foundation has no execution/admission/persistence changes; a parser result does not permit copying arbitrary metadata. Explicit raw-byte records avoid a lossy allowlist of probe labels, while later format-specific contracts still decide what can be preserved. Full packet additional data, intent migration, audio/caption timeline and actual controller/native export remain separate gates. The full Matroska exact-timestamp research failure stays recorded; absent timestamps are never invented.
+
+D-077/D-087/D-088 recurrence: hosted 37115174217 at c435e6d failed Fresh analysis cancellation (5.450 seconds against five) and the unchanged AV1 matrix bound (135.628 seconds). Native/local lifecycle success remains, hosted acceptance reopens. HOSTED-QUALIFICATION-REFRAME.md records the recurrence stop and concrete bounded investigation proposal; no new observation/rerun or relaxed guard has been executed.
+
+D-089 checkpoint: native reader and eight focused checks/optimized build passed; full-file native configuration equality verified. Initial combined element-budget failure is retained; measured long-movie cluster headers now traverse under a distinct bounded streaming budget while metadata/payload/read limits remain. HDR-CONTAINER-CONFIGURATION-EVIDENCE.md records the narrower result. Ordinary regression is pending the D-077/D-087 reframe; no M1 completion or runtime HDR admission.

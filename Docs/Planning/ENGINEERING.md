@@ -345,3 +345,7 @@ D-086 narrows the hosted Slice 047 repair to deterministic inspector completion 
 D-087 moves only independent AV1 test fixture/reference work off MainActor, retaining real controller actor boundaries and the unchanged two-minute matrix bound. Native reviewed export is verified; final ordinary regression remains required. No product policy or test deadline change.
 
 Slice 047 accepted at 356337b under D-085/D-086/D-087: all five gates, native export and final ordinary hosted run 37113569693 passed. Prior failures remain in AV1-COPY-EVIDENCE.md. D-088 repairs the observed last-window termination within Slice 045 / R-055, preserving the single workspace and existing explicit-Quit guards; native/regression receipts remain required.
+
+R-058 under D-089 binds Slice 048 M1's read-only native container configuration capture: header-structure, header-native, header-protection and header-regression. Local-only internal prerequisite, no runtime HDR admission or saved-format change. Strict structural/resource bounds and opaque-byte/identity comparisons close the typed-probe gap before original-signal export work.
+
+Hosted 37115174217 recurred at the historical cancellation and unchanged AV1 matrix bounds; D-077/D-087 stop applies and hosted acceptance reopens. HOSTED-QUALIFICATION-REFRAME.md contains the concrete owner decision. Slice 048 M1 separately passed eight focused parser checks, native full-file configuration comparisons and optimized build; ordinary regression remains pending, so neither M1 nor HDR preservation is accepted yet.

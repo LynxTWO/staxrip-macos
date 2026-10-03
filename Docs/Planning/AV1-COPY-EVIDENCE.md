@@ -1,5 +1,5 @@
 # AV1 original-video copy evidence
-Date: 2026-10-03. Scope: Slice 047 / D-085 / R-057. Status: accepted at 356337b1de32860a8fcc60c5135c332cf01d7060; scoped native, local and final hosted gates passed after retained failures.
+Date: 2026-10-03. Scope: Slice 047 / D-085 / R-057. Status: scoped gates passed at 356337b1de32860a8fcc60c5135c332cf01d7060; subsequent ordinary hosted recurrence reopens regression qualification.
 
 The existing copy workflow now admits AV1 Main 8/10-bit yuv420p/yuv420p10le only with complete BT.709 primaries, transfer, matrix and limited-range declarations. Original geometry, upright/progressive/square-pixel, zero-origin, bounded duration/timebase, complete encoded packet/configuration and timing verification remain required. HDR, unknown/dynamic metadata, unsupported profiles/pixels and picture transforms still refuse. This preserves video; audio and subtitle settings retain their existing separate consequences.
 
@@ -34,3 +34,7 @@ Hosted repair run 37111867733 failed at the AV1 matrix's two-minute limit (126.6
 At 356337b1de32860a8fcc60c5135c332cf01d7060, ordinary local regression passed 291 tests in 72 suites in 205.284 seconds; the unchanged AV1 matrix completed in 12.190 seconds. Final ordinary hosted run [37113569693](https://github.com/LynxTWO/staxrip-macos/actions/runs/37113569693) passed 291 tests in 560.623 seconds, including the AV1 matrix in 111.546 seconds under its original 120-second bound and all three deterministic superseded-inspector outcomes. The workflow's preview/fallback bundle build also succeeded. This observed run establishes the scoped gate, without proving the earlier timeout's scheduling cause or promising performance on another machine. Existing tool/platform skips and warnings remain; no original-mastering cancellation recurrence occurred.
 
 All five Slice 047 gates are accepted for declared SDR AV1 Main 8/10-bit only. Both earlier hosted failures and the native/fixture/comparison failures above remain recorded. No further test relaxation was made. Owner media and recovery protection, player/HDR/platform limits, parked listening, and no-merge/no-release boundaries remain.
+
+## Subsequent regression recurrence
+
+Hosted 37115174217 at the one-line last-window repair c435e6d failed the unchanged AV1 matrix bound (135.628 seconds) and historical Fresh analysis cancellation requirement (5.450 seconds). The earlier passing 356337b receipt is retained, but current ordinary qualification reopens; no inferred scheduling explanation, retry or limit change. HOSTED-QUALIFICATION-REFRAME.md records the evidence and proposed next discriminating investigation.

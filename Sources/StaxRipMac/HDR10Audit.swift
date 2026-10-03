@@ -260,6 +260,7 @@ enum HDR10Audit {
         return value
     }
     static func validate(_ s: MediaProbe.Stream) throws {
+        try HDRInspection.requireQualifiedTranscode(s)
         guard s.codec_name == "hevc", s.profile == "Main 10", s.pix_fmt == "yuv420p10le",
               s.color_transfer == "smpte2084", s.color_primaries == "bt2020", s.color_space == "bt2020nc",
               s.color_range == "tv", s.chroma_location == "left", s.field_order == "progressive",

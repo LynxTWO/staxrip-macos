@@ -202,6 +202,9 @@ struct MediaProbe: Decodable, Sendable {
             let red_x, red_y, green_x, green_y, blue_x, blue_y, white_point_x, white_point_y: String?
             let min_luminance, max_luminance: String?
             let max_content, max_average: Int64?
+            let dv_version_major, dv_version_minor, dv_profile, dv_level: Int?
+            let rpu_present_flag, el_present_flag, bl_present_flag, dv_bl_signal_compatibility_id: Int?
+            let dv_md_compression: String?
             func fields() throws -> [String: Any] {
                 try JSONSerialization.jsonObject(with: JSONEncoder().encode(self)) as! [String: Any]
             }

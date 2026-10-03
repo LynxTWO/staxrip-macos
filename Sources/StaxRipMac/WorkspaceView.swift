@@ -356,6 +356,7 @@ struct WorkspaceView: View {
             }
             Text("Applies to chosen audio tracks (all by default). Copy preserves their codecs; AAC and Opus re-encode at the selected bitrate. Inspect the source to see its tracks.")
                 .font(.caption).foregroundStyle(.secondary)
+            Text(TrackInspection.audioConversionNotice).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
 

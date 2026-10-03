@@ -69,8 +69,12 @@ struct TrackRoutingView: View {
                         Text("Title: " + TrackInspection.title(stream)).font(.caption).foregroundStyle(.secondary)
                         Text(TrackInspection.summary(stream)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                         if let channels = stream.channels { Text("\(channels) channels · \(ContainerInspection.text(stream.channel_layout, fallback: "unspecified layout"))").font(.caption).foregroundStyle(.secondary) }
+                        if type == "audio" { Text("Profile: " + TrackInspection.audioProfile(stream)).font(.caption).foregroundStyle(.secondary) }
                     }
                 }
+            }
+            if type == "audio" {
+                Text(TrackInspection.audioConversionNotice).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
             if let indices = selection.wrappedValue {
                 let missing = indices.filter { index in !streams.contains { $0.index == index } }

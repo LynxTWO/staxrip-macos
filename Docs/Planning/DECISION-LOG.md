@@ -135,6 +135,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-126 | 2026-10-04 | Native source-only reconstruction | Confirmed | |
 | D-127 | 2026-10-04 | Native source/frame association | Confirmed | |
 | D-128 | 2026-10-04 | Own source/frame association access and activity | Confirmed | |
+| D-129 | 2026-10-04 | Measure actual coded and codec-visible base samples | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3508,3 +3509,44 @@ warnings. New actor-trait/error-type/finite-Segment/gate/descriptor-number fixtu
 failures retained with scoped corrections, no global policy change. PR102 automatic
 479tests1218.685s129issues retained/PR updated without retry; causes unknown. See
 NATIVE-SOURCE-FRAME-ACCESS-EVIDENCE.md for concrete scope and remaining gates.
+
+
+## D-129: Qualify bounded actual base-picture sample measurement
+Status: Confirmed
+Date:2026-10-04, owner standing autonomous generated non-audio delegation, R059.
+
+D127 proves frame metadata/source association, not sample-level crop equivalence.
+Choose a separate unused DEVELOPMENT C sample probe and finite plane measurement
+core, leaving existing reference/protocol/frozen objects unchanged. Reuse the known
+read-only FFmpeg source/packet/frame provenance subset in the new probe. Measure
+progressive10-bit planar420 coded and codec-visible rectangles with explicit buffer
+extent/positive byte stride/chroma phase checks, canonical little-endian sample hashes
+and checked count/min/max/sum/sum-square arithmetic. No pixel payload is emitted and
+no full picture is copied. Record decoder color declarations as declarations only.
+Even aligned codec windows only; unsupported crop/format/interlace/buffer values
+refuse. User/container crop, resize, PQ/linear luminance, EL and metadata conversion
+remain separate. All native edited/sample admission stays unqualified.
+
+Acceptance: generated padded/unaligned-storage/ROI/invalid/overflow/10-bit boundary
+core fixtures, actual generated frozen-compatible HEVC planes both threads and
+codec conformance against bounded row-streaming FFmpeg test oracle, fixed source/
+prior/dependency identities, exclusive output build/refusal and owned child settlement.
+Builder uses installed compiler/dependencies only, separate output and identity, finite
+logs/deadline with owned group/direct-child observation; uncertain ownership retains
+its owned stage. No Python runtime app bridge, UI/default packaging/release factory,
+owner media body/movie run/listening/signing retry/merge/release. Inspect PR103 automatic
+outcome without rerun. R059 scope includes this sample prerequisite, not a historical
+timing observer. Revisit at native sample/process/source association and edited stats.
+
+
+D129 acceptance: generated five-group installed sample suite4.958s and compatible
+minimal LGPL-prefix suite17.034s pass, including ten actual both-thread coded/codec-
+visible plane trials, sanitizer bounds/maximum arithmetic, live cancel/path substitution
+and exclusive builder refusal. Separate sample artifact min14.0 and original-prefix
+libraries observed; frozen five objects unchanged. Ordinary485tests/98suites211.948s
+failed one existing writer-surrogate child-settlement assertion,30 unchanged opt-in
+skips, no warnings; retained without retry/relaxation/cause claim. Product unchanged,
+D128 explicit optimized receipt reused and current strict ad-hoc signatures pass.
+PR103 automatic113issues retained/PR updated, no retry. Source metadata/current
+journal/privacy/planning checks pass. See DECODED-BASE-SAMPLE-EVIDENCE.md; native
+sample/source binding, rendering/color/EL/resize/edited flags remain unqualified.

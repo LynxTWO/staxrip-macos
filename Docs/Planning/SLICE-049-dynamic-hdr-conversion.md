@@ -1540,3 +1540,81 @@ Final five-file privacy scan has zero private source path/name/stem matches and 
 positive sentinel. Owner source metadata/current recovery journal remain unchanged;
 full planning findings empty. Current owned84530 bounded awake assertion exact command/
 start matches receipt and expires19:37UTC; no persistent locking/security changes.
+
+## D-123: Qualify a statically linked hardened native Swift host
+Date: 2026-10-04
+Status: Confirmed
+
+Authority/Approved for build: owner standing autonomous generated non-audio delegation,
+R059 / Slice049. D122's actual dynamic test-module Team-ID refusal does not establish
+statically linked native app failure. Use a separately compiled TEST-ONLY entry linked
+with unchanged actual product Swift sources, excluding StaxRipMacApp.swift (the only main).
+The non-entry target closure avoids test stubs or copied product implementations; unused
+UI/controller definitions may link, but no app, owner workspace/session or queue is created.
+Compile installed Swift5 language mode/DEBUG generated capabilities for native macOS14,
+then explicitly sign the owned host/bundle ad-hoc runtime/no entitlements and admit fixed
+helpers/notices/outer identity. No XCTest/plugin loading or owner-session entry.
+
+Use exclusive generated source/prior/root and fixed finite parameters. Require actual
+D116 preservation and D120 review both modes with full native source-dependent semantics,
+helper direct-child joins, source/prior preservation and read-only parent review. Qualify
+cancellation of a real launched metadata reader in a separately acknowledged generated
+boundary; distinguish ordinary cancellation from typed unresolved group ownership and
+retain any uncertain fixture/access. One sole POSIX caller owns compiler and native host
+PID/groups/logs/deadlines/reaping; unknown failures retain evidence, never native success.
+No generic receipt/runtime adapter, Python oracle bridge, app startup/Preview/helper
+packaging change, unsigned fallback, widened entitlements, library-validation disablement
+or blind Developer ID retry. No owner media body/queue/film archive/encode/listening,
+merge/release or D090 historical observer/assertion/deadline/concurrency adjustment.
+
+Acceptance: actual static host loading and native operations after strict ad-hoc outer/
+helper/resource admission; truthful host/helper/worker settlement or typed retained review,
+source/prior/candidate protection, focused and ordinary tests, unchanged product optimized
+build reuse/current signatures, privacy/planning and automatic PR97 observation without retry.
+This is not SwiftUI host interaction, positive Developer ID, sandbox grant/revocation,
+stable importer/producer binding, decoded/edit association or distribution qualification.
+
+Outcome: owned statically linked hardened Swift native host actually executed D116
+preservation/D120 review both modes, six joined helper children and full original native
+semantics. A separate live actual packet-stream reader cancelled ordinarily and joined
+a seventh child; source/prior/root/notices/signatures preserved. Parent independently
+reviewed both outputs. Initial focused1test26.276s, ordinary456tests/95suites212.376s
+(26unchanged skips, static host32.018s), final focused1test14.311s passed without warnings.
+Final focus covers added thin arm64/system-only dependency checks after ordinary began;
+no global concurrency/assertion/deadline change. Product sources/Preview/writer packaging
+unchanged; D120 explicit optimized build reused, current strict ad-hoc app/helper signatures
+minima14.0/11.0 pass. Actual ad-hoc native code execution is not SwiftUI interaction,
+positive Developer ID, sandbox grant/revocation, release packaging or distribution proof.
+See STATIC-HARDENED-NATIVE-HOST-EVIDENCE.md. D097 already records ad-hoc hardened decoder
+library Team-ID refusal; no redundant retry follows. Next inspect actual C decoder contracts
+and qualify a development-only owned native process/frame protocol/resource bridge using
+frozen artifacts/generated fixtures. Explicitly ordinary ad-hoc, unbundled and not release
+authentication; no validation bypass/certificate retry or PR73 full-source repetition.
+
+PR97 automatic37224662640 failed455reported tests795.389s37issues:15unchanged60-second,
+15unchanged120-second and one180-second deadline, three motion message/mutation expectations,
+Fresh-analysis cancellation7.004178vs5, measuring-candidate phase EOF, plus NEW fixed module
+name mismatch. Hosted SwiftPM uses StaxRipMacPackageTests. Failure/log retained and PR97
+updated without retry; historical timing/phase/motion causes unknown. The new fixture fix
+admits exactly StaxRipMacTests or StaxRipMacPackageTests and exercises both actual copied
+binary/Info layouts with unchanged original module hashes. Both generated layouts retain
+concrete Team-ID refusal; no positive dynamic loading follows. Compatibility focused2tests/
+2suites12.497s passed (static12.497s, two-layout refusal2.302s), no warnings. This is a scoped
+new fixture format correction, not a D090 historical assertion/deadline relaxation.
+
+Post-compatibility ordinary456reported tests/95suites208.749s passed with26unchanged
+opt-in skips/no new warnings. Actual static host29.196s and two-layout dynamic-refusal
+suite13.211s passed; ordinary cancellation observed. Final focused execution follows
+for native-architecture conditional (local arm64 flags/header unchanged).
+The changed hosted SwiftPM input correction remains pending automatic qualification.
+
+Final focused2tests/2suites13.015s passed without warnings with native-architecture
+selection and both copied SwiftPM layouts. Static native case13.015s cancelled ordinarily
+and joined seven helper children; dynamic refusal suite2.324s retained both signed fixtures.
+No positive dynamic plugin/Intel/Developer ID/SwiftUI claim follows. Two hygiene findings
+in the new planning outcome were retained and corrected; final planning findings empty.
+
+Final seven-file privacy scan has zero private source path/name/stem matches and a
+positive sentinel. Owner source metadata/current recovery journal remain unchanged;
+full planning findings empty. Current owned84530 temporary awake assertion exact command/
+start matches its receipt, expires19:37UTC; no persistent locking/security changes.

@@ -122,7 +122,8 @@ struct HardenedSwiftHostTests {
         try file.write(contentsOf: bytes); try file.close()
         Darwin._exit(0)
     }
-    @Test func ownedHardenedSwiftHostLoadsNativeEntryOrReportsConcreteLoaderRefusal() async throws {
+    @Test(arguments: ["StaxRipMacTests", "StaxRipMacPackageTests"])
+    func ownedHardenedSwiftHostLoadsNativeEntryOrReportsConcreteLoaderRefusal(copiedModuleName: String) async throws {
         let env = ProcessInfo.processInfo.environment
         if let root = env["STAXRIP_TEST_SWIFT_HOST_ROOT"] {
             try await nativeEntry(root: URL(fileURLWithPath: root), writerHash: try #require(env["STAXRIP_TEST_SWIFT_HOST_WRITER_SHA"]), readerHash: try #require(env["STAXRIP_TEST_SWIFT_HOST_READER_SHA"]), sourceHash: try #require(env["STAXRIP_TEST_SWIFT_HOST_SOURCE_SHA"]))
@@ -132,7 +133,9 @@ struct HardenedSwiftHostTests {
         try #require(originalHost.lastPathComponent == "swiftpm-testing-helper")
         let index = try #require(CommandLine.arguments.firstIndex(of: "--test-bundle-path")); try #require(index + 1 < CommandLine.arguments.count)
         let originalModule = URL(fileURLWithPath: CommandLine.arguments[index + 1])
-        try #require(originalModule.lastPathComponent == "StaxRipMacTests")
+        // Installed SwiftPM versions use either fixed package test-module name.
+        // Never admit an arbitrary basename or media-selected executable.
+        try #require(["StaxRipMacTests", "StaxRipMacPackageTests"].contains(originalModule.lastPathComponent))
         let hostBefore = try Self.hash(originalHost), moduleBefore = try Self.hash(originalModule)
         let b = try await HardenedReaderBundleFixture.make(targetName: "native-hardened-swift-host-fixtures")
         var settled = false
@@ -146,13 +149,24 @@ struct HardenedSwiftHostTests {
         let moduleRoot = originalModule.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         try #require(moduleRoot.pathExtension == "xctest")
         try FileManager.default.copyItem(at: moduleRoot, to: module)
-        let moduleBinary = module.appendingPathComponent("Contents/MacOS/StaxRipMacTests")
+        let originalCopy = module.appendingPathComponent("Contents/MacOS/" + originalModule.lastPathComponent)
+        let moduleBinary = module.appendingPathComponent("Contents/MacOS/" + copiedModuleName)
         // The SDK dependency path is explicit installed test infrastructure, not a
         // DYLD override, copied platform library or distribution portability proof.
         let developer = try #require(originalHost.path.components(separatedBy: "/Toolchains/").first)
         try #require(developer.hasSuffix("/Contents/Developer"))
         let sdk = developer + "/Platforms/MacOSX.platform/Developer/Library/Frameworks"
         try await Self.run("/usr/bin/codesign", ["--remove-signature", module.path])
+        if originalCopy != moduleBinary { try FileManager.default.moveItem(at: originalCopy, to: moduleBinary) }
+        let moduleInfoURL = module.appendingPathComponent("Contents/Info.plist")
+        var moduleInfo: [String: Any] = [:]
+        if FileManager.default.fileExists(atPath: moduleInfoURL.path) {
+            moduleInfo = try #require(PropertyListSerialization.propertyList(from: Data(contentsOf: moduleInfoURL), format: nil) as? [String: Any])
+        }
+        moduleInfo["CFBundleExecutable"] = copiedModuleName
+        moduleInfo["CFBundleIdentifier"] = Self.moduleID
+        moduleInfo["CFBundlePackageType"] = "BNDL"
+        try PropertyListSerialization.data(fromPropertyList: moduleInfo, format: .xml, options: 0).write(to: moduleInfoURL)
         try await Self.run("/usr/bin/install_name_tool", ["-add_rpath", sdk, moduleBinary.path])
         let info: [String: Any] = ["CFBundleIdentifier": Self.hostID, "CFBundleExecutable": "SwiftNativeHost", "CFBundlePackageType": "APPL", "CFBundleVersion": "1", "LSMinimumSystemVersion": "14.0"]
         try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(to: contents.appendingPathComponent("Info.plist"))

@@ -207,3 +207,14 @@ Automatic [37219515075](https://github.com/LynxTWO/staxrip-macos/actions/runs/37
 
 
 Automatic [37221710621](https://github.com/LynxTWO/staxrip-macos/actions/runs/37221710621) failed454reported tests732.817s27issues:16existing60-second and10existing120-second deadlines, plus the mastering cancellation test observed EOF instead of its expected Measuring encoded candidate phase. Signature suite434.771s and access suite435.537s passed; preview skipped/no reader workflow. Log retained without retry, causal attribution, historical observer, assertion/deadline or scheduling change. Causes remain unknown.
+
+PR97 automatic37224662640 failed455reported tests795.389s37issues:15unchanged60-second,
+15unchanged120-second and one180-second deadline, three motion message/mutation expectations,
+Fresh-analysis cancellation7.004178vs5, measuring-candidate phase EOF, plus NEW fixed module
+name mismatch. Hosted SwiftPM uses StaxRipMacPackageTests. Failure/log retained and PR97
+updated without retry; historical timing/phase/motion causes unknown. The new fixture fix
+admits exactly StaxRipMacTests or StaxRipMacPackageTests and exercises both actual copied
+binary/Info layouts with unchanged original module hashes. Both generated layouts retain
+concrete Team-ID refusal; no positive dynamic loading follows. Compatibility focused2tests/
+2suites12.497s passed (static12.497s, two-layout refusal2.302s), no warnings. This is a scoped
+new fixture format correction, not a D090 historical assertion/deadline relaxation.

@@ -111,9 +111,11 @@ Final focus emitted no warnings. An initial planning audit found a missing D116 
 row; corrected full audit reports empty findings. These observations are retained,
 not substituted for final qualification.
 
-Optimized development app/read-only helper build and strict ad-hoc signature verification
+D116 debug Swift app/release Rust helper build and strict ad-hoc signature verification
 passed without new warnings; app/helper minima14.0/11.0, development writer absent.
-This optimized build uses the same unchanged product code as the added permission test;
+The D116 log explicitly says Building for debugging; the initial optimized-app claim was
+incorrect. D117 corrects it and requires an explicit release build. This debug build uses
+the same unchanged product code as the added permission test;
 it is not DeveloperID/notarization or older-OS runtime qualification. No UI walkthrough
 is claimed for an internal operation that remains unexposed.
 
@@ -122,7 +124,7 @@ D-116 final qualification: expanded ordinary433reported tests/90suites205.588s p
 26 opt-in skips unchanged; new access suite8tests14.273s including actual non-root
 POSIX read/write denials. No new warnings. Focused26tests/3suites3.807s passed before
 final generated permission-restoration cleanup adjustment; expanded ordinary run covers
-that final test code. Optimized unchanged product build/strict ad-hoc app/read-only helper
+that final test code. Debug development build/strict ad-hoc app/read-only helper
 signatures passed without warnings, minima14.0/11.0; writer absent. Actual live-reader
 PID-specific idle-sleep assertion present during ownership and absent after settled release,
 source/parent descriptor FileIDs held through phases and retained review. Positive scope

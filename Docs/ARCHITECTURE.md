@@ -27,3 +27,14 @@ AudioController owns an independent source, selected stream index, output recipe
 An EncodeConfiguration exposes a canonical list of up to eight external SRT references, backed by the original first-reference field and an optional additional list. Session version 8 and journal version 7 reject old-envelope/new-field ambiguity. The plan requires snapshots matching every reference in order; it never truncates unmatched lists. Batch execution captures each file again, writes operation-owned SRT and literal title argument files, then independently verifies every added output stream before publication. Native picker callbacks must still match the source and full caption list they opened for. Per-track language/title edits, reorder, replacement and removal retain explicit user intent.
 
 Titles use FFmpeg's file-loaded option argument (`-/metadata:s:s:N`) because Foundation.Process can normalize Unicode argument bytes. Each private, exclusive title file contains at most 1030 bytes of literal UTF-8, including `title=`, without a terminating newline or FFmetadata escaping. The writer settles before cancellation returns and owned staging is removed. Existing automatic retained-stream metadata copying remains unchanged; added-track verification does not certify every embedded track label or player behavior.
+
+
+D-101 adds a read-only generated-development verifier for prototype original companion
+packages. An independent bounded EBML walk locates the original selected TrackEntry;
+actual track/configuration, fresh trusted reader audit, ordered packet/RPU index and
+archived payload bytes must agree with the supplied source. Before/after content and
+filesystem identity checks are observations, not an immutable snapshot. Refusal,
+interruption and a bounded helper deadline settle owned processes before returning.
+The producer manifest remains unmodified and unbound; a separate result records the
+validator boundary. No stable importer, native archive feature, publication, decoded
+picture/EL reconstruction, future carriage or signed-distribution admission follows.

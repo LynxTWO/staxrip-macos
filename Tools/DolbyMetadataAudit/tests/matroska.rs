@@ -1251,6 +1251,47 @@ fn original_companions_preserve_raw_bytes_encoded_order_and_distinct_retention()
             }
             let mut manifest_bytes = Vec::new();
             manifest(&receipt, &mut manifest_bytes).unwrap();
+            // Opt-in generated fixture export for the independent development verifier.
+            // Exclusive writes; never accepts an owner media input or replaces files.
+            if width == 4
+                && let Some(root) =
+                    std::env::var_os("STAXRIP_GENERATED_COMPANION_FIXTURE_DIRECTORY")
+            {
+                let root = PathBuf::from(root);
+                if !full {
+                    let mut source = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(root.join("generated-source.mkv"))
+                        .unwrap();
+                    source.write_all(&input).unwrap();
+                }
+                let folder = root.join(if full { "full" } else { "metadata" });
+                fs::create_dir(&folder).unwrap();
+                for (name, bytes) in [
+                    ("original-track-entry-payload.bin", &track_payload),
+                    ("hevc-configuration.bin", &cfg),
+                    ("original-rpu.bin", &archive),
+                    ("rpu-index.jsonl", &index),
+                    ("source-audit.jsonl", &audit),
+                    ("manifest.json", &manifest_bytes),
+                ] {
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(folder.join(name))
+                        .unwrap();
+                    file.write_all(bytes).unwrap();
+                }
+                if full {
+                    let mut file = fs::OpenOptions::new()
+                        .write(true)
+                        .create_new(true)
+                        .open(folder.join("original-container.mkv"))
+                        .unwrap();
+                    file.write_all(&retained).unwrap();
+                }
+            }
             let m = &lines(&manifest_bytes)[0];
             assert_eq!(
                 m["components"].as_array().unwrap().len(),

@@ -2,9 +2,9 @@ name: Dolby metadata reader
 on:
   push:
     branches: [main]
-    paths: ['Tools/DolbyMetadataAudit/**', 'Tools/DolbyFrameReference/**', '.github/workflows/dolby-metadata.yml']
+    paths: ['Tools/DolbyMetadataAudit/**', 'Tools/DolbyFrameReference/**', 'Tools/DolbyCompanionCheck/**', '.github/workflows/dolby-metadata.yml']
   pull_request:
-    paths: ['Tools/DolbyMetadataAudit/**', 'Tools/DolbyFrameReference/**', '.github/workflows/dolby-metadata.yml']
+    paths: ['Tools/DolbyMetadataAudit/**', 'Tools/DolbyFrameReference/**', 'Tools/DolbyCompanionCheck/**', '.github/workflows/dolby-metadata.yml']
 permissions:
   contents: read
 jobs:
@@ -28,3 +28,5 @@ jobs:
         run: cargo clippy --locked --all-targets --manifest-path Tools/DolbyMetadataAudit/Cargo.toml -- -D warnings
       - name: Generated decoded-frame and raw-metadata association
         run: python3 Tools/DolbyFrameReference/test_reference.py -v
+      - name: Generated original companion semantic verification and owned refusal cleanup
+        run: python3 Tools/DolbyCompanionCheck/test_check.py -v

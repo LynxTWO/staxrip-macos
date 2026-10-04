@@ -418,3 +418,14 @@ Component byte/hash receipts, independent content rehash and writer/flush refusa
 required; source pathname identity and decoded frame/EL association remain external
 integration obligations. Prototype components/manifest are not a stable import format.
 No owner archive, queue, native admission or parked listening follows.
+
+
+D-101 adds a read-only generated-development verifier for prototype original companion
+packages. An independent bounded EBML walk locates the original selected TrackEntry;
+actual track/configuration, fresh trusted reader audit, ordered packet/RPU index and
+archived payload bytes must agree with the supplied source. Before/after content and
+filesystem identity checks are observations, not an immutable snapshot. Refusal,
+interruption and a bounded helper deadline settle owned processes before returning.
+The producer manifest remains unmodified and unbound; a separate result records the
+validator boundary. No stable importer, native archive feature, publication, decoded
+picture/EL reconstruction, future carriage or signed-distribution admission follows.

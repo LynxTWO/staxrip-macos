@@ -4,7 +4,7 @@ A native SwiftUI media workspace with native AVFoundation export and a real FFmp
 
 ## Try it locally
 
-Requires Xcode / Swift 6 and macOS 14 or newer. Run `./build.command`, then open `Preview/StaxRip.app`. Quit the previous app before rebuilding. The development app is ad-hoc signed, not notarized. Binaries and personal media are excluded from Git.
+Requires Xcode / Swift 6, macOS 14 or newer, Rust/Cargo (edition 2024; locally qualified with Rust 1.98.1), and Python 3.11 or newer for build-time dependency notice verification. Run `./build.command`, then open `Preview/StaxRip.app`. Quit the previous app before rebuilding. The development app is ad-hoc signed, not notarized. Binaries and personal media are excluded from Git.
 
 - **Workspace:** import local video, preview it, explore advanced settings, and create independent queue configurations.
 - **Quick Export:** export a real MP4 using Apple's H.264 1080p, H.264 720p or HEVC 1080p preset. Choose a new destination. Progress, cancellation, result preview and Finder reveal are available.
@@ -36,7 +36,7 @@ Workspace file dialogs attach to the main window. Only one workspace file reques
 
 ## Verification
 
-Run `swift test`. Automated Swift Testing coverage includes a parameterized media test covering all three native presets. Current test receipts and opt-in skips are recorded in Docs/Planning evidence ledgers. Generated video plus a synthetic audio tone verifies H.264/HEVC video, AAC audio, duration and source preservation. Real FFmpeg tests cover AV1/H.264/HEVC, Opus, crop dimensions, literal path arguments, cancellation of an active encode followed by retry, HDR rejection and stop-on-failure. Audio tests exercise all four output formats, channel/sample-rate/duration checks, source preservation and overwrite refusal. A two-track fixture verifies a measured 6 dB difference and that exported signal levels follow the selected track. Other checks cover active/pre-start cancellation, staging cleanup, existing files and dangling symlinks, malformed sessions, document round-trip and queue isolation/reordering.
+Build the read-only inspection helper first with `cargo build --locked --release --manifest-path Tools/DolbyMetadataAudit/Cargo.toml`, then run `swift test`. Automated Swift Testing coverage includes a parameterized media test covering all three native presets. Current test receipts and opt-in skips are recorded in Docs/Planning evidence ledgers. Generated video plus a synthetic audio tone verifies H.264/HEVC video, AAC audio, duration and source preservation. Real FFmpeg tests cover AV1/H.264/HEVC, Opus, crop dimensions, literal path arguments, cancellation of an active encode followed by retry, HDR rejection and stop-on-failure. Audio tests exercise all four output formats, channel/sample-rate/duration checks, source preservation and overwrite refusal. A two-track fixture verifies a measured 6 dB difference and that exported signal levels follow the selected track. Other checks cover active/pre-start cancellation, staging cleanup, existing files and dangling symlinks, malformed sessions, document round-trip and queue isolation/reordering.
 
 Native UI checks on the development Mac cover import/playback, preset changes, queue edits and JSON export, output conflict feedback, actual export → preview, session save → change settings → restore, light/dark rendering, media inspection and a completed AV1 queue job. The SwiftUI VideoPlayer wrapper crashed on the original runtime; the AppKit AVPlayerView bridge passed the same playback check.
 
@@ -153,3 +153,13 @@ Active advanced video queues and native Quick Export temporarily prevent automat
 The media inspector and track picker show reported titles/languages plus default, forced, hearing accessibility, visual accessibility and commentary flags. Expand Declared track roles in the inspector for Set, Not set, Not reported or Invalid value. These hints come from file metadata; they do not certify accessibility content or player behavior. Track selection still uses the source stream indices.
 
 Quick Export now requires a finite positive source duration and checks the staged result against it before saving, using a fixed difference of less than 250 milliseconds. This compares reported total duration, not every decoded frame or audio/video synchronization. Source/previous files remain protected by the existing export lifecycle.
+
+
+The native source inspector includes a complete Dolby Vision metadata read for its
+bounded Matroska HEVC subset. It bundles a pinned MIT Rust helper and dependency
+notices; the app never installs a compiler or downloads that helper. FFprobe remains
+an existing local tool required for the independent complete encoded-packet check.
+The page reports validated metadata and encoded payload/timestamp agreement, with
+container crop/display declarations and Level 5 active areas. It does not qualify
+Dolby Vision re-encoding, crop/resize, enhancement reconstruction or rendering.
+See Tools/DolbyMetadataAudit/README.md for protocol, bounds and packaging scope.

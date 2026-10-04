@@ -361,18 +361,69 @@ fn block<R: Read>(
 
 #[derive(Debug)]
 pub struct ContainerReceipt {
+    pub protocol: u8,
     pub packets: u64,
     pub records: u64,
     pub enhancement_nals: u64,
     pub bytes: u64,
     pub sha256: String,
     pub peak_record_bytes: usize,
+    pub packet_sequence_sha256: String,
 }
 struct Census {
     packets: u64,
     records: u64,
     enhancement: u64,
     peak: usize,
+    compact: bool,
+    sequence: Sha256,
+}
+
+fn compact_metadata(metadata: &serde_json::Value) -> Result<serde_json::Value, Failure> {
+    let profile = metadata["dovi_profile"]
+        .as_u64()
+        .ok_or(Failure::InvalidRecord)?;
+    let dm = &metadata["vdr_dm_data"];
+    let scene = if dm.is_null() {
+        None
+    } else {
+        match dm["scene_refresh_flag"].as_u64() {
+            Some(0) => Some(false),
+            Some(1) => Some(true),
+            _ => return Err(Failure::InvalidRecord),
+        }
+    };
+    let mut areas = Vec::new();
+    for version in ["cmv29_metadata", "cmv40_metadata"] {
+        if let Some(blocks) = dm[version]["ext_metadata_blocks"].as_array() {
+            for block in blocks {
+                if let Some(area) = block.get("Level5") {
+                    if areas.len() == 4 {
+                        return Err(Failure::Bounds);
+                    }
+                    let mut offsets = Vec::new();
+                    for key in [
+                        "active_area_left_offset",
+                        "active_area_right_offset",
+                        "active_area_top_offset",
+                        "active_area_bottom_offset",
+                    ] {
+                        let v = area[key]
+                            .as_u64()
+                            .filter(|v| *v <= 8191)
+                            .ok_or(Failure::InvalidRecord)?;
+                        offsets.push(v);
+                    }
+                    areas.push(offsets);
+                }
+            }
+        }
+    }
+    Ok(
+        serde_json::json!({"mapping_profile":profile, "enhancement_type":metadata.get("el_type"),
+        "scene_refresh":scene, "active_areas_left_right_top_bottom":areas,
+        "cmv29_present":!dm["cmv29_metadata"].is_null(), "cmv40_present":!dm["cmv40_metadata"].is_null()}),
+    )
 }
 impl Census {
     fn emit(
@@ -391,12 +442,18 @@ impl Census {
         let duration = duration
             .map(|v| v.checked_mul(scale).ok_or(Failure::Bounds))
             .transpose()?;
+        let payload_hash = Sha256::digest(&b.data);
+        // Canonical order-sensitive proof: i64 LE PTS nanoseconds, i64 LE
+        // packet byte count and 32 SHA-256 bytes. Inferred duration is omitted.
+        self.sequence.update(pts.to_le_bytes());
+        self.sequence.update((b.data.len() as i64).to_le_bytes());
+        self.sequence.update(payload_hash);
         write_json(
             output,
             &serde_json::json!({"kind":"packet", "index":self.packets,
             "input_byte_offset":b.offset, "pts_ns":pts, "duration_ns":duration,
             "invisible":b.invisible, "keyframe":b.keyframe, "discardable":b.discardable,
-            "encoded_bytes":b.data.len(), "sha256":hex(Sha256::digest(&b.data))}),
+            "encoded_bytes":b.data.len(), "sha256":hex(payload_hash)}),
         )?;
         let mut pos = 0;
         let mut ordinal = 0;
@@ -422,13 +479,16 @@ impl Census {
                         return Err(Failure::Bounds);
                     }
                     let metadata = parse_metadata(payload)?;
-                    write_json(
-                        output,
-                        &serde_json::json!({"kind":"rpu", "index":self.records,
+                    let mut record = serde_json::json!({"kind":if self.compact { "rpu-summary" } else { "rpu" }, "index":self.records,
                         "packet_index":self.packets, "nal_index":ordinal, "pts_ns":pts,
                         "input_byte_offset":b.offset + pos as u64 + 2, "encoded_bytes":payload.len(),
-                        "sha256":hex(Sha256::digest(payload)), "metadata":metadata}),
-                    )?;
+                        "sha256":hex(Sha256::digest(payload))});
+                    if self.compact {
+                        record["summary"] = compact_metadata(&metadata)?;
+                    } else {
+                        record["metadata"] = metadata;
+                    }
+                    write_json(output, &record)?;
                     self.records += 1;
                     self.peak = self.peak.max(payload.len());
                 }
@@ -535,6 +595,23 @@ pub fn audit_matroska(
     length: u64,
     output: &mut impl Write,
 ) -> Result<ContainerReceipt, Failure> {
+    audit_mode(input, length, output, false)
+}
+
+pub fn audit_matroska_summary(
+    input: &mut impl Read,
+    length: u64,
+    output: &mut impl Write,
+) -> Result<ContainerReceipt, Failure> {
+    audit_mode(input, length, output, true)
+}
+
+fn audit_mode(
+    input: &mut impl Read,
+    length: u64,
+    output: &mut impl Write,
+    compact: bool,
+) -> Result<ContainerReceipt, Failure> {
     if length == 0 || length > MOVIE_LIMIT {
         return Err(Failure::Bounds);
     }
@@ -589,6 +666,8 @@ pub fn audit_matroska(
         records: 0,
         enhancement: 0,
         peak: 0,
+        compact,
+        sequence: Sha256::new(),
     };
     let mut blocks = 0;
     let mut began = false;
@@ -630,8 +709,8 @@ pub fn audit_matroska(
                 if !began {
                     write_json(
                         output,
-                        &serde_json::json!({"kind":"begin", "version":2,
-                        "input_type":"matroska-hevc-packets", "parser":"libdovi 3.3.2",
+                        &serde_json::json!({"kind":"begin", "version":if compact { 3 } else { 2 },
+                        "input_type":if compact { "matroska-hevc-summary" } else { "matroska-hevc-packets" }, "parser":"libdovi 3.3.2",
                         "track_number":t.number, "timestamp_scale_ns":scale,
                         "declared_pixel_width":t.width, "declared_pixel_height":t.height,
                         "declared_crop_left_right_top_bottom":t.crop,
@@ -678,22 +757,25 @@ pub fn audit_matroska(
         return Err(Failure::ChangedSource);
     }
     Ok(ContainerReceipt {
+        protocol: if compact { 3 } else { 2 },
         packets: counts.packets,
         records: counts.records,
         enhancement_nals: counts.enhancement,
         bytes: r.position,
         sha256: hex(r.hash.finalize()),
         peak_record_bytes: counts.peak,
+        packet_sequence_sha256: hex(counts.sequence.finalize()),
     })
 }
 
 pub fn complete_matroska(output: &mut impl Write, r: &ContainerReceipt) -> Result<(), Failure> {
     write_json(
         output,
-        &serde_json::json!({"kind":"complete", "version":2, "packets":r.packets,
+        &serde_json::json!({"kind":"complete", "version":r.protocol, "packets":r.packets,
         "records":r.records, "enhancement_nals":r.enhancement_nals,
         "input_bytes":r.bytes, "input_sha256":r.sha256,
-        "peak_record_bytes":r.peak_record_bytes, "source_recheck":true}),
+        "peak_record_bytes":r.peak_record_bytes, "source_recheck":true,
+        "packet_sequence_sha256":r.packet_sequence_sha256}),
     )?;
     output.flush().map_err(|_| Failure::OutputIO)
 }

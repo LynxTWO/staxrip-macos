@@ -185,7 +185,19 @@ Slice 045 checkpoint:product 260f5fd and hosted run 36921033338 qualified the in
 
 Slice 049 / D-091/D-092 now distinguishes original encoded preservation, compatible HEVC Profile 8.1 or AV1 Profile 10 conversion, and HDR10 fallback/new HDR10+ authoring. Source census and bounded encoder feasibility are documented separately from product admission. The first implemented prerequisite is HEVCBufferLimits: optional persisted suggested/manual intent, level/tier planning in HEVCBufferPlanner, independent enabled-source inspection in its native view, and explicit x265 VBV/HRD parameters in EncodePlan. BatchController remains the sole execution/publication owner. Session 10, recovery 9 and preset library 2 protect the new intent; legacy unrestricted recipes remain unrestricted. Companion archival and crop/resize metadata transformation are planned, not admitted workflows.
 
-Tools/DolbyMetadataAudit is a development-only prerequisite, outside the app bundle. Its protocol requires complete archive metadata, source recheck, receipt plus successful exit; it does not authorize or qualify video conversion. Native integration must independently verify extraction completeness, frame/timing mapping, transformations and dependency packaging.
+At D-093/D-094, Tools/DolbyMetadataAudit was a development-only prerequisite, outside the app bundle. D-095 admits only the fixed bundled read-only inspection helper, as described below. Its protocol requires complete archive metadata, source recheck, receipt plus successful exit; it does not authorize or qualify video conversion. Native integration must independently verify extraction completeness, frame/timing mapping, transformations and dependency packaging.
 
 
 D-094 / Slice 049 extends the development-only Rust reader with complete bounded Matroska HEVC packet observations. Source bytes, signed PTS and every RPU retain their original association; unsupported packet/timing interpretations refuse. No additional crate, app bundling or runtime/copy/transcode admission. BOUNDED-MATROSKA-DOLBY-EVIDENCE.md records packet/reference agreement and display-order versus decoding-order limits. Native integration, frame/POC mapping and resulting-picture crop/resize statistics remain separate gates.
+
+
+D-095 adds the native read-only Dolby inspection tab. DolbyInspectionController owns
+one cancellable task and waits for replaced work to settle; DolbyInspection owns the
+security-scoped lease, bounded helper stream, independent FFprobe packet proof and
+final off-actor SourceFingerprint. The helper's compact protocol retains aggregate
+metadata without a full-film packet/metadata array in the UI. A complete receipt,
+exit zero, matching selected hvcC and every ordered encoded payload/PTS are required.
+No BatchController execution, EncodePlan admission, persistence or publication
+ownership changes. Geometry declarations remain distinct from decoded-picture and
+edited-metadata qualification. The builder verifies/copies all 69 dependency texts
+and signs the nested helper before the app; running builds download nothing.

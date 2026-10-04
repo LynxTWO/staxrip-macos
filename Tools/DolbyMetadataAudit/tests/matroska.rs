@@ -2,7 +2,7 @@ use dolby_vision::rpu::generate::GenerateConfig;
 use sha2::{Digest, Sha256};
 use staxrip_dolby_metadata_audit::{
     Failure, audit_rpu,
-    matroska::{PACKET_LIMIT, audit_matroska, complete_matroska},
+    matroska::{PACKET_LIMIT, audit_matroska, audit_matroska_summary, complete_matroska},
 };
 use std::{
     fs,
@@ -737,5 +737,106 @@ fn actual_hevc_packets_and_rpu_association_match_independent_ffprobe() {
     }
     assert_eq!(independent["packets"].as_array().unwrap().len(), 4);
     assert_eq!(rows.last().unwrap()["records"], 5);
+    let summary = Command::new(env!("CARGO_BIN_EXE_staxrip-dolby-metadata-audit"))
+        .arg("mkv-summary")
+        .arg(&mkv)
+        .output()
+        .unwrap();
+    assert!(summary.status.success());
+    let compact = lines(&summary.stdout);
+    assert_eq!(compact.last().unwrap()["version"], 3);
+    assert_eq!(
+        compact.last().unwrap()["packet_sequence_sha256"],
+        rows.last().unwrap()["packet_sequence_sha256"]
+    );
+    assert_eq!(
+        compact
+            .iter()
+            .filter(|r| r["kind"] == "rpu-summary")
+            .count(),
+        5
+    );
+
     assert_eq!(fs::read(&mkv).unwrap(), input);
+    // Explicit development/test fixture export only. Never replace an existing file.
+    if let Some(destination) = std::env::var_os("STAXRIP_GENERATED_DOLBY_FIXTURE") {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(destination)
+            .unwrap();
+        file.write_all(&input).unwrap();
+    }
+}
+
+#[test]
+fn compact_protocol_preserves_associations_and_canonical_sequence_proof() {
+    let p = packet(&[vec![2, 1, 0xaa], rpu(), rpu()], 4);
+    let input = movie(
+        &config(4),
+        &[simple(1, -20, 0x80, &p), simple(1, 30, 0, &p)].concat(),
+        &[],
+        false,
+    );
+    let mut full = Vec::new();
+    let mut compact = Vec::new();
+    audit_matroska(&mut Cursor::new(&input), input.len() as u64, &mut full).unwrap();
+    let receipt =
+        audit_matroska_summary(&mut Cursor::new(&input), input.len() as u64, &mut compact).unwrap();
+    let rows = lines(&compact);
+    assert_eq!(rows[0]["version"], 3);
+    assert_eq!(rows[0]["input_type"], "matroska-hevc-summary");
+    for (a, b) in rows.iter().zip(lines(&full)) {
+        if a["kind"] == "packet" {
+            assert_eq!(*a, b);
+        }
+        if a["kind"] == "rpu-summary" {
+            for field in [
+                "index",
+                "packet_index",
+                "nal_index",
+                "pts_ns",
+                "encoded_bytes",
+                "sha256",
+            ] {
+                assert_eq!(a[field], b[field]);
+            }
+            assert!(a.get("metadata").is_none());
+            assert_eq!(
+                a["summary"]["mapping_profile"],
+                b["metadata"]["dovi_profile"]
+            );
+            assert_eq!(
+                a["summary"]["active_areas_left_right_top_bottom"],
+                serde_json::json!([[1, 3, 5, 7]])
+            );
+            assert_eq!(a["summary"]["cmv29_present"], true);
+        }
+    }
+    let mut expected = Sha256::new();
+    for pts in [-10_000_000i64, 40_000_000] {
+        expected.update(pts.to_le_bytes());
+        expected.update((p.len() as i64).to_le_bytes());
+        expected.update(Sha256::digest(&p));
+    }
+    assert_eq!(
+        receipt.packet_sequence_sha256,
+        format!("{:x}", expected.finalize())
+    );
+    complete_matroska(&mut compact, &receipt).unwrap();
+    assert_eq!(lines(&compact).last().unwrap()["version"], 3);
+    let mut corrupt = input.clone();
+    let at = input
+        .windows(rpu().len())
+        .position(|window| window == rpu())
+        .unwrap();
+    corrupt[at + 12] ^= 1;
+    assert!(
+        audit_matroska_summary(
+            &mut Cursor::new(&corrupt),
+            corrupt.len() as u64,
+            &mut Vec::new()
+        )
+        .is_err()
+    );
 }

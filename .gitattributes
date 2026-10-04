@@ -1,0 +1,3 @@
+
+# Preserve the inventoried bytes of supplied dependency notices.
+Tools/DolbyMetadataAudit/LICENSES/** -text

@@ -4,13 +4,19 @@ struct MediaInspectorView: View {
     @EnvironmentObject var batch: BatchController
     @Environment(\.dismiss) private var dismiss
     @State private var section = 0
+    @EnvironmentObject var dolby: DolbyInspectionController
     let source: URL
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 sectionTitle("Inside the source", subtitle: source.lastPathComponent)
                 Spacer()
-                Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
+                if dolby.running { Button("Cancel inspection") { dolby.cancel() }
+                    .accessibilityIdentifier("dolby.inspection.cancel")
+                    .help("Cancel the full-source inspection and wait for its reader to stop. No partial result is reported.") }
+                Button("Done") { dismiss() }.keyboardShortcut(.cancelAction).disabled(dolby.running)
+                    .accessibilityIdentifier("source.inspector.done")
+                    .help("Close the source inspector. A running Dolby inspection must stop first.")
             }
             if batch.inspecting { ProgressView("Reading media contents…").frame(maxWidth: .infinity, minHeight: 180) }
             if let error = batch.inspectionError { Text(error).foregroundStyle(Color.warning).textSelection(.enabled) }
@@ -24,6 +30,7 @@ struct MediaInspectorView: View {
                     Text("Tracks (\(ContainerInspection.tracks(probe).count))").tag(0)
                     Text("Chapters (\(probe.chapters?.count ?? 0))").tag(1)
                     Text("Attachments (\(ContainerInspection.attachmentStreams(probe).count))").tag(2)
+                    Text("Dolby Vision").tag(3)
                 }.pickerStyle(.segmented).tint(Color.primaryActionFill).labelsHidden()
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
@@ -45,7 +52,7 @@ struct MediaInspectorView: View {
                                     if let note = chapter.note { Text(note).foregroundStyle(Color.warning).textSelection(.enabled) }
                                 }
                             }
-                        } else {
+                        } else if section == 2 {
                             let attachments = ContainerInspection.attachmentStreams(probe)
                             if attachments.isEmpty { empty("No embedded files or cover artwork reported.") }
                             limitNotice(attachments.count)
@@ -58,6 +65,8 @@ struct MediaInspectorView: View {
                                     field("Reported codec", value: item.codec, help: "Codec reported by the probe, when available. Cover artwork is not selected as the main movie video.")
                                 }
                             }
+                        } else {
+                            DolbyInspectionView(controller: dolby, source: source, probe: probe)
                         }
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }.frame(height: 340).id(section)
@@ -71,7 +80,12 @@ struct MediaInspectorView: View {
                 Text("The advanced plan encodes the first non-cover-art video. Choose tracks selects audio and subtitles. Inspecting chapters and attachments does not guarantee their preservation in an output.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-        }.padding(26).frame(width: 690).task(id: source) { await batch.inspect(source) }
+        }.padding(26).frame(width: 690).task(id: source) {
+                await dolby.reset().value
+                guard !Task.isCancelled else { return }
+                await batch.inspect(source)
+            }
+            .onDisappear { dolby.cancel() }
     }
     private func track(_ stream: MediaProbe.Stream) -> some View {
         card {

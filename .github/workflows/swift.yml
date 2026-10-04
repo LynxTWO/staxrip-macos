@@ -12,8 +12,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Toolchain
         run: swift --version
-      - name: Install encoding test tools
-        run: brew install ffmpeg
+      - name: Install development and encoding test tools
+        run: brew install ffmpeg rust
+      - name: Build read-only Dolby inspection helper
+        run: cargo build --locked --release --manifest-path Tools/DolbyMetadataAudit/Cargo.toml
       - name: Build and test
         run: swift test
       - name: Build preview bundle and icon fallback

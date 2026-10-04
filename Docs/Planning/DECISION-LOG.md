@@ -128,6 +128,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-117 | 2026-10-04 | Qualify fixed Rust helper signatures before release admission | Confirmed | |
 | D-118 | 2026-10-04 | Abrupt native coordinator loss around companion commit | Confirmed | |
 | D-119 | 2026-10-04 | Read-only original companion candidate review | Confirmed | |
+| D-120 | 2026-10-04 | Read-only candidate access ownership | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -3028,3 +3029,52 @@ planning findings empty. Current owned55829 bounded awake command/start matches 
 expiry17:46:06UTC, no persistent locking/security change. No owner media body/queue/film
 archive/encode/listening, signing retry, merge or release. Controlled generated candidate
 fixtures with typed unsettled group ownership remain retained outside Git.
+
+## D-120: Own source and candidate access through read-only native review
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner standing autonomous generated non-audio implementation, R059 / Slice049.
+Approved for build by that delegation. Extend the concrete D116 operation with D119
+read-only review using explicit original source/candidate folder and fixed trusted reader.
+Acquire only source/candidate scopes, never infer a parent grant. Pin actual no-follow
+descriptors before activity; false Foundation scope acquisition on ordinary URLs is
+not denial. Share executing/retained-review exclusion with preservation operations.
+Ordinary return must join native worker/helper before reverse scope/pin/activity release.
+Unsettled ownership or loss of outer source/folder identity retains access after dropped
+error; the existing bounded energy expiry ends activity only. No production recovery
+release, stage creation, publication, deletion, directory search, archive action or UI.
+
+Acceptance: generated actual native both-mode review preserving source/candidate/prior
+bytes; scopes target exactly source and candidate (not parent), real descriptor and
+POSIX denial, live-reader OS idle-sleep assertion and absence after ordinary settlement,
+pre/active cancellation, acquisition rollback, joined semantic refusal, final substitution
+and controlled typed retained-review/drop/expiry/conflict tests. Fake scope balancing
+is not actual sandbox grant/revocation evidence. Retain any actual unsettled fixture;
+DEBUG access release only after separately proved controlled generated settlement.
+Ordinary regression, explicit optimized build/ad-hoc signatures, privacy/protection and
+planning checks; observe PR94 automatic failure without retry. Signing/packaging, owner
+mode review, stable import/binding and physical I/O/volume/power durability remain open.
+
+D120 final local outcome: unused concrete reviewCandidate holds only source/candidate
+scopes and no-follow pins across D119 native worker/fresh-reader settlement. Shared
+preservation/review exclusion and retained-access policy propagate typed unsettled
+ownership or outer source/candidate identity loss; dropped errors and bounded energy
+expiry do not release access or authorize cleanup. Actual both-mode review preserves
+source/candidate/prior bytes. Six added generated checks cover exact grant URLs/reverse
+balancing, real descriptor/POSIX refusal, acquisition rollback/pre-cancel, repaired compact
+metadata forgery with joined reader, current-PID OS activity/cancellation/conflicts,
+controlled retained review after expiry and final directory substitution after join.
+Focused14tests/1suite4.989s and ordinary451reported tests/93suites210.803s passed with26
+unchanged opt-in skips/no warnings; access suite17.603s ordinary. Explicit optimized
+product build and strict ad-hoc app/read-only helper signatures passed without warnings,
+minima14.0/11.0, writer absent. Unused backend, no UI walkthrough/release inference.
+Seven-file privacy zero matches/positive sentinel, owner source metadata/current journal
+unchanged and planning findings empty. PR94 automatic445tests734.974s47issues retained
+and PR updated, no rerun or causal claim; D090 timing causes remain unknown.
+Next qualify a separately owned relocated hardened generated bundle hosting fixed Rust
+reader/writer roles and native operations, with static role admission, actual child loading,
+outer seal/notice checks and refusal on substitution. This is ad-hoc generated packaging
+evidence, not Developer ID positive trust or release capability. Do not touch Preview
+writer packaging or retry D097/D117 signing without changed condition/new discriminator.
+See NATIVE-CANDIDATE-ACCESS-EVIDENCE.md.

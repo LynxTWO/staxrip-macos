@@ -49,7 +49,7 @@ enum CompanionArchiveOperation {
               environment.retainedActivitySeconds > 0, environment.retainedActivitySeconds <= 120 else { throw refused() }
         executing = true
         defer { executing = false }
-        let access = try Access(source: source, parent: parent, environment: environment)
+        let access = try Access(source: source, directory: parent, reason: "StaxRip original companion preservation", environment: environment)
         let pins = access.pins
         #if DEBUG
         boundary.pinned(pins.descriptors)
@@ -81,16 +81,62 @@ enum CompanionArchiveOperation {
             else if let e = error as? OriginalCompanionTransaction.CleanupFailure { stage = e.intendedStage }
             else { stage = nil }
             if let stage {
-                let id = UUID(); retained[id] = access
-                // Expiry ends only the temporary energy request. Scope/pin retention
-                // survives dropped errors and never authorizes deletion or success.
-                DispatchQueue.main.asyncAfter(deadline: .now() + environment.retainedActivitySeconds) {
-                    retained[id]?.endActivity()
-                }
-                throw ReviewFailure(operationError: error, reviewID: id, intendedStage: stage)
+                throw retain(access, error: error, locator: stage, environment: environment)
             }
             access.finish(); throw error
         }
+    }
+    /// Source-dependent read-only examination. Candidate permission does not grant
+    /// access to its parent; no directory is created, changed, published or removed.
+    static func reviewCandidate(source: URL, candidate: URL,
+                                retention: OriginalCompanionTransaction.Retention,
+                                reader: CompanionMetadataProcess.Tool) async throws -> CompanionDiskCheck.Receipt {
+        try Task.checkCancellation()
+        guard [source, candidate].allSatisfy({ $0.isFileURL && !$0.path.utf8.contains(0) }) else { throw refused() }
+        #if DEBUG
+        let environment = testEnvironment, boundary = testBoundary
+        #else
+        let environment = Environment()
+        #endif
+        guard !executing, retained.isEmpty, environment.retainedActivitySeconds.isFinite,
+              environment.retainedActivitySeconds > 0, environment.retainedActivitySeconds <= 120 else { throw refused() }
+        executing = true
+        defer { executing = false }
+        let access = try Access(source: source, directory: candidate, reason: "StaxRip original companion review", environment: environment)
+        let pins = access.pins
+        #if DEBUG
+        boundary.pinned(pins.descriptors)
+        #endif
+        do {
+            try pins.check()
+            #if DEBUG
+            try boundary.phase("reviewer")
+            #endif
+            let result = try await CompanionDiskCheck.reviewOriginalCandidate(source: source, candidate: candidate, retention: retention, tool: reader)
+            try pins.check()
+            access.finish()
+            return result
+        } catch {
+            // Native worker/process refusal returns only after settlement, except
+            // its explicit ownership marker. Changed outer locators likewise cannot
+            // establish the held access still describes the caller's selection.
+            if error is any CompanionUnsettledOwnership {
+                throw retain(access, error: error, locator: candidate, environment: environment)
+            }
+            do { try pins.check() }
+            catch { throw retain(access, error: error, locator: candidate, environment: environment) }
+            access.finish()
+            throw error
+        }
+    }
+    private static func retain(_ access: Access, error: Error, locator: URL, environment: Environment) -> ReviewFailure {
+        let id = UUID(); retained[id] = access
+        // Expiry ends only temporary energy. Dropped errors do not release access
+        // or authorize cleanup, adoption, publication or a successful review.
+        DispatchQueue.main.asyncAfter(deadline: .now() + environment.retainedActivitySeconds) {
+            retained[id]?.endActivity()
+        }
+        return ReviewFailure(operationError: error, reviewID: id, intendedStage: locator)
     }
     private nonisolated static func refused() -> NativeExportError { .invalid("Native companion access refused. No result was published.") }
 
@@ -98,15 +144,15 @@ enum CompanionArchiveOperation {
         let pins: Pins
         private var ends: [() -> Void]
         private var activityEnd: (() -> Void)?
-        init(source: URL, parent: URL, environment: Environment) throws {
+        init(source: URL, directory: URL, reason: String, environment: Environment) throws {
             var acquired: [() -> Void] = []
             do {
                 if let end = try environment.access(source) { acquired.append(end) }
-                if let end = try environment.access(parent) { acquired.append(end) }
-                pins = try Pins(source: source, parent: parent)
+                if let end = try environment.access(directory) { acquired.append(end) }
+                pins = try Pins(source: source, directory: directory)
             } catch { for end in acquired.reversed() { end() }; throw error }
             ends = acquired
-            activityEnd = environment.activity("StaxRip original companion preservation")
+            activityEnd = environment.activity(reason)
         }
         func endActivity() { let end = activityEnd; activityEnd = nil; end?() }
         func finish() {
@@ -118,16 +164,16 @@ enum CompanionArchiveOperation {
     /// Concrete descriptors establish current access, not immutable snapshots or
     /// sandbox bookmark rights. They close only after all native phases return.
     private final class Pins: @unchecked Sendable {
-        private let source, parent: URL
+        private let source, directory: URL
         private var fds: [Int32] = []
         private var identities: [stat] = []
         #if DEBUG
         var descriptors: [Int32] { fds }
         #endif
-        init(source: URL, parent: URL) throws {
-            self.source = source; self.parent = parent
+        init(source: URL, directory: URL) throws {
+            self.source = source; self.directory = directory
             do {
-                for (url, directory) in [(source, false), (parent, true)] {
+                for (url, directory) in [(source, false), (directory, true)] {
                     let fd = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY | O_CLOEXEC | (directory ? O_DIRECTORY : 0))
                     guard fd >= 0 else { throw refused() }
                     fds.append(fd)
@@ -141,7 +187,7 @@ enum CompanionArchiveOperation {
         }
         func check() throws {
             guard fds.count == 2 else { throw refused() }
-            for (i, url) in [source, parent].enumerated() {
+            for (i, url) in [source, directory].enumerated() {
                 var s = stat(), p = stat()
                 guard fstat(fds[i], &s) == 0, lstat(url.path, &p) == 0,
                       Self.same(identities[i], s, directory: i == 1), Self.same(identities[i], p, directory: i == 1) else { throw refused() }

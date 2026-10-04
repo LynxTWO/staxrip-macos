@@ -132,6 +132,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-121 | 2026-10-04 | Relocated sealed generated reader-host bundle | Confirmed | |
 | D-122 | 2026-10-04 | Hardened Swift host loading discriminator | Confirmed | |
 | D-123 | 2026-10-04 | Static hardened native Swift host | Confirmed | |
+| D-126 | 2026-10-04 | Native source-only reconstruction | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3397,3 +3398,36 @@ matches with positive sentinel; source metadata/current recovery journal unchang
 no owner media body read. Planning findings empty. Owned19716 temporary awake receipt/
 command/start remain matched, expires21:30:44UTC. No persistent security setting change,
 UI walkthrough, positive certificate loading, distribution or full association claim.
+
+
+## D-126: Independently reconstruct original source facts into native storage
+Status: Confirmed
+Date: 2026-10-04. Owner standing autonomous delegation, R-059 / Slice049.
+
+Need: D110 currently requires existing source-matched original companion components.
+A native source/spool/decoder composition needs an explicit source-only read capability
+first. Reuse the finite D109/D110 Matroska/HEVC source walkers and D108 pinned owning
+worker. Source-only track/config/packet/RPU APIs reconstruct fresh source bytes/hash/
+framing/timing facts and keep original companion equality flags false. Existing retained
+component APIs remain checked. Feed every observation to D125 storage on one worker;
+initial/final source hash/path/descriptor checks, spool count settlement and owned close
+precede return. No borrowed source reader or asynchronous observer escapes the worker.
+
+Choose this concrete source capability over producing a temporary whole companion or
+trusting producer metadata. No new helper, source filename/payload in storage, generic
+receipt protocol or Python runtime bridge. Generated source parsing/oracle and source/
+spool cancellation/substitution/page-full/final-refusal checks are bounded acceptance.
+Use actual generated signed duplicate/nonmonotonic packets/multiple RPUs and finite
+malformed source fixtures. Inspect PR100 automatic outcomes without rerun. No decoder
+association flag, UI/action, owner media body, queue/film run, listening, signing retry,
+merge or release. Revisit at synchronous actual decoder/source/table composition.
+
+
+D126 generated acceptance: source-only native worker4packet/5RPU/1EL actual sources
+for both modes match every field after fixture companions are removed, preserving
+signed order and source bytes. Forty-six focused tests/5suites13.306s and ordinary
+474tests/98suites210.730s pass,28 unchanged opt-in skips/no warnings. New compile
+and test-only SQLite alias failures are retained with precise corrections. Old
+companion APIs retain equality requirements; source-only flags remain false. PR100
+automatic468tests1141.409s98issues retained/PR updated without retry, causes unknown.
+See NATIVE-SOURCE-SPOOL-EVIDENCE.md for ownership, limits and incomplete association.

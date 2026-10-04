@@ -1747,3 +1747,39 @@ matches with positive sentinel; source metadata/current recovery journal unchang
 no owner media body read. Planning findings empty. Owned19716 temporary awake receipt/
 command/start remain matched, expires21:30:44UTC. No persistent security setting change,
 UI walkthrough, positive certificate loading, distribution or full association claim.
+
+
+## D-126: Native source-only facts and owned spool pass
+Status: Confirmed. Approved for build by: owner standing autonomous generated non-audio
+delegation, 2026-10-04, R-059.
+
+Extend concrete D109/D110 source walkers with source-only reads that never request
+companion files. Derive selected TrackEntry/hvcC and original packet/raw-RPU facts from
+source; component-match flags stay false. Existing original-component checks remain
+required in their current APIs. Join one actual D108 source owning worker and D125
+exclusive private spool, checking full initial/final source content and identity and
+all worker/spool closure before success. No decoder execution or association claim.
+
+Acceptance: generated native source walker facts versus existing source/component
+checks and independent test-only Rust/Python oracle, signed duplicate/extreme timing,
+multiple RPUs and malformed framing, actual cancellation/source/spool/final refusal,
+configured SQLite-full, focused/ordinary regression, optimized build/signatures,
+privacy/planning and PR100 automatic observation without retry. Only generated fixtures;
+no owner body, helper selected by source, audio listening, UI, signing retry or release.
+
+
+D126 evidence: NATIVE-SOURCE-SPOOL-EVIDENCE.md records actual source-only4packet/
+5RPU/1EL both-mode rows matched against native original facts and test-only oracle,
+all widths/Segment modes/signed extremes/unsigned duration, malformed sources,
+actual read/final cancellation and source/spool mutation, configured SQLite-full.
+Focus46tests5suites13.306s and ordinary474tests98suites210.730s pass with28 unchanged
+skips/no warnings. Source-frame/edit and companion-match flags stay false for the
+source-only result; old companion APIs remain stricter. PR100 automatic failed
+468tests1141.409s98issues; retained without retry or historical policy changes.
+
+Explicit optimized build observed Building for production and completed19.74s, no
+warnings. Current strict ad-hoc app/read-only helper signatures pass, deployment
+minima14.0/11.0. Writer and decoder remain absent. Ten changed files pass privacy
+scan with zero owner path/name/stem matches and positive sentinel. Owner source
+metadata and recovery journal remain unchanged; planning hygiene has no findings.
+These checks do not qualify signing provenance, native archive action or frame edits.

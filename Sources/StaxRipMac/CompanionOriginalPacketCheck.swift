@@ -17,11 +17,11 @@ enum CompanionOriginalPacketCheck {
         let inputOffset: Int64, archiveDelimiterOffset: Int64, payloadBytes: Int
         let sha256: String
     }
-    enum Observation { case packet(Packet), rpu(RPU) }
+    enum Observation: Sendable { case packet(Packet), rpu(RPU) }
     struct Receipt: Sendable {
         let packets: Int64, records: Int64, enhancementNALs: Int64
         let peakRecordBytes: Int, rawArchiveBytes: Int64, packetSequenceSHA256: String
-        let originalEscapedRPUBytesMatch = true
+        let originalEscapedRPUBytesMatch: Bool
         let sourceEncodedPacketFramingReconstructed = true
         let originalPacketRPUSemanticsVerified = false
     }
@@ -33,7 +33,15 @@ enum CompanionOriginalPacketCheck {
     static func read(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt,
                      begin: @escaping (UInt64, Bool) throws -> Void = { _, _ in },
                      observe: @escaping (Observation) throws -> Void = { _ in }) throws -> Receipt {
-        let scan = Scanner(view, track, observe, begin)
+        let scan = Scanner(view, track, observe, begin, compareRetained: true)
+        return try scan.read()
+    }
+    /// Original source observations only. rawArchiveBytes/delimiter offsets are
+    /// the potential concatenated size/positions, not a written or matched file.
+    static func readSource(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt,
+                           begin: @escaping (UInt64, Bool) throws -> Void = { _, _ in },
+                           observe: @escaping (Observation) throws -> Void = { _ in }) throws -> Receipt {
+        let scan = Scanner(view, track, observe, begin, compareRetained: false)
         return try scan.read()
     }
     /// Exact integer arithmetic, including Int64.min and cluster timestamps above
@@ -59,10 +67,12 @@ enum CompanionOriginalPacketCheck {
         let view: CompanionDiskCheck.ReadView, track: Track.Receipt, walker: Track.Walker
         let observe: (Observation) throws -> Void
         let begin: (UInt64, Bool) throws -> Void
+        let compareRetained: Bool
         var packets: Int64 = 0, records: Int64 = 0, enhancement: Int64 = 0, archive: Int64 = 0
         var blocks = 0, peak = 0, sequence = SHA256()
-        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void) {
+        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void, compareRetained: Bool) {
             self.view = view; self.track = track; self.observe = observe; self.begin = begin
+            self.compareRetained = compareRetained
             walker = Track.Walker(view, elementLimit: 128_000_000)
         }
         func children(_ e: Element, _ body: (Element) throws -> Void) throws {
@@ -113,9 +123,14 @@ enum CompanionOriginalPacketCheck {
                     guard !selected, !began else { throw refused() }
                     let fresh = try walker.tracks(e)
                     guard fresh.number == track.trackNumber, fresh.offset == track.originalPayloadOffset,
-                          fresh.payload == (try view.component("original-track-entry-payload.bin")),
-                          fresh.configuration == (try view.component("hevc-configuration.bin")),
+                          fresh.payload.count == track.payloadBytes, fresh.configuration.count == track.configurationBytes,
+                          DolbyInspection.hex(SHA256.hash(data: fresh.payload)) == track.payloadSHA256,
+                          DolbyInspection.hex(SHA256.hash(data: fresh.configuration)) == track.configurationSHA256,
                           try Track.configuration(fresh.configuration, checkpoint: view.checkpoint) == track.nalLengthBytes else { throw refused() }
+                    if compareRetained {
+                        guard fresh.payload == (try view.component("original-track-entry-payload.bin")),
+                              fresh.configuration == (try view.component("hevc-configuration.bin")) else { throw refused() }
+                    }
                     try timing(fresh); selected = true
                 case 0x1f43b675:
                     guard selected, let scale else { throw refused() }
@@ -130,11 +145,13 @@ enum CompanionOriginalPacketCheck {
                 let e = try walker.element(cursor, end: view.sourceBytes)
                 guard !e.unknown, e.id == 0xec || e.id == 0xbf else { throw refused() }; cursor = e.end
             }
-            guard began, packets > 0, records > 0, archive == (try view.componentBytes("original-rpu.bin")) else { throw refused() }
+            guard began, packets > 0, records > 0 else { throw refused() }
+            if compareRetained { guard archive == (try view.componentBytes("original-rpu.bin")) else { throw refused() } }
             try view.checkpoint()
             return .init(packets: packets, records: records, enhancementNALs: enhancement,
                          peakRecordBytes: peak, rawArchiveBytes: archive,
-                         packetSequenceSHA256: DolbyInspection.hex(sequence.finalize()))
+                         packetSequenceSHA256: DolbyInspection.hex(sequence.finalize()),
+                         originalEscapedRPUBytesMatch: compareRetained)
         }
         func timing(_ selected: Track.Selected) throws {
             // D109 retained these bytes opaquely; before interpreting PTS, explicitly
@@ -248,8 +265,10 @@ enum CompanionOriginalPacketCheck {
                           records < 2_000_000 else { throw refused() }
                     let size = Int(length - 2), original = try view.source(cursor + 2, size)
                     // No unescape/re-escape, interpretation or deduplication of original bytes.
-                    let retained = try view.componentRead("original-rpu.bin", archive, size + 4)
-                    guard retained == Data([0,0,0,1]) + original else { throw refused() }
+                    if compareRetained {
+                        let retained = try view.componentRead("original-rpu.bin", archive, size + 4)
+                        guard retained == Data([0,0,0,1]) + original else { throw refused() }
+                    }
                     try observe(.rpu(.init(index: records, packetIndex: packets, nalIndex: ordinal, ptsNS: b.pts,
                                           inputOffset: cursor + 2, archiveDelimiterOffset: archive, payloadBytes: size,
                                           sha256: DolbyInspection.hex(SHA256.hash(data: original)))))

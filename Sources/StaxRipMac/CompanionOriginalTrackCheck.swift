@@ -12,13 +12,20 @@ enum CompanionOriginalTrackCheck {
         let nalLengthBytes: Int
         let payloadSHA256: String
         let configurationSHA256: String
-        let originalTrackAndConfigurationMatch = true
+        let originalTrackAndConfigurationMatch: Bool
         let originalPacketRPUSemanticsVerified = false
     }
     struct Element { let id: UInt64, payload: Int64, end: Int64, unknown: Bool }
     struct Selected { let number: UInt64, offset: Int64, payload: Data, configuration: Data }
     private static func refused() -> NativeExportError { .invalid("Original companion track verification refused. No complete semantic receipt.") }
     static func read(_ view: CompanionDiskCheck.ReadView) throws -> Receipt {
+        try read(view, compareRetained: true)
+    }
+    /// Reconstructs source declarations only. No companion equality is inferred.
+    static func readSource(_ view: CompanionDiskCheck.ReadView) throws -> Receipt {
+        try read(view, compareRetained: false)
+    }
+    private static func read(_ view: CompanionDiskCheck.ReadView, compareRetained: Bool) throws -> Receipt {
         let walker = Walker(view)
         let header = try walker.element(0, end: view.sourceBytes)
         guard header.id == 0x1a45dfa3, !header.unknown else { throw refused() }
@@ -36,15 +43,18 @@ enum CompanionOriginalTrackCheck {
             }
             cursor = child.end
         }
-        guard let track = selected,
-              try view.component("original-track-entry-payload.bin") == track.payload,
-              try view.component("hevc-configuration.bin") == track.configuration else { throw refused() }
+        guard let track = selected else { throw refused() }
+        if compareRetained {
+            guard try view.component("original-track-entry-payload.bin") == track.payload,
+                  try view.component("hevc-configuration.bin") == track.configuration else { throw refused() }
+        }
         let width = try configuration(track.configuration, checkpoint: view.checkpoint)
         try view.checkpoint()
         return .init(trackNumber: track.number, originalPayloadOffset: track.offset,
                      payloadBytes: track.payload.count, configurationBytes: track.configuration.count,
                      nalLengthBytes: width, payloadSHA256: DolbyInspection.hex(SHA256.hash(data: track.payload)),
-                     configurationSHA256: DolbyInspection.hex(SHA256.hash(data: track.configuration)))
+                     configurationSHA256: DolbyInspection.hex(SHA256.hash(data: track.configuration)),
+                     originalTrackAndConfigurationMatch: compareRetained)
     }
     final class Walker {
         let view: CompanionDiskCheck.ReadView

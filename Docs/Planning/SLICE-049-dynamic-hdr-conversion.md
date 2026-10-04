@@ -462,3 +462,56 @@ reader passed; app failed unchanged Fresh analysis6.702383vs5 and AV1125.935vs12
 331tests487.092s2issues. Private failure log retained and PR updated without retry,
 historical observer or relaxed assertions/deadlines. See
 COMPANION-TRANSACTION-SETTLEMENT-EVIDENCE.md for actual scope and final settlement.
+
+## D-106: Admit the companion writer protocol natively before process integration
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner original-companion/autonomous development, R-059 / Slice049. Bounded
+internal generated protocol prerequisite only. No owner media/queue/archive/encode,
+app action, writer packaging, signing retry, merge/release or listening. Consequence
+local_only now; future production parser influences user_data admission.
+
+Need/product contract: successful writer process completion must describe the requested
+original retention and captured source/stage, not stale or forged protocol rows. A ready
+row permits only one finite start response, not archive success. The native reader CLI
+stays read-only. Receipt admission cannot replace semantic/disk checks or process joining.
+
+Choice delegated to AI. Alternatives: parse through permissive JSONDecoder and ignore
+unknown/duplicate fields; extend the general ToolRunner before defining its handshake;
+or first qualify a bounded strict native protocol state machine. Select the last: existing
+ToolRunner supplies null stdin and no finite bidirectional handshake. A small private
+ASCII JSON protocol reader supports exactly the writer's emitted strings/unsigned decimal
+integers/booleans, rejects duplicate/unknown fields, limits depth/collections/rows, and
+requires operation/mode/IDs/size/count/member/resource agreement. Narrow accepted syntax
+is explicit, not a general JSON importer. Native process control follows separately.
+
+Scope: internal parser, ready/start/staged/EOF and exit-zero state admission; fixed
+component limits from D105, stable correlation and captured source/stage identities.
+No source path/payload/error-detail retention. Ready precedes one authorized start;
+completion requires one staged row and EOF plus zero status. Invalid/trailing/partial,
+nonzero, reordered/extra/stale/unknown/duplicate/oversized/type/bound failures refuse
+and invalidate prior partial state. Generic diagnostics preserve data privacy.
+
+Acceptance: parser admits actual both-mode generated writer stdout and exact start
+response; hashed component/source observations agree with generated disk files. Every
+chunk partition yields same admission. Malformed/forged protocol, staged-before-start,
+repeat-start, nonzero/partial/trailing records and forged semantic claims refuse. Generated
+Python transport is test-only, not native bridge/cancellation ownership. No original
+semantic, decoded, stable importer, immutable snapshot, native provenance/lease/resource/
+signing or physical I/O claim. Existing D090 investigation remains completed unchanged.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+D-106 outcome: eight focused protocol tests passed in0.701s including actual generated
+writer rows and source/component disk agreement in both modes. Ordinary regression348tests/
+80suites passed203.731s with unchanged assertions/default scheduling. Optimized build and
+strict ad-hoc app/read-only helper signatures passed; actual minimum declarations14.0/11.0,
+writer absent. Source stat/current recovery bytes unchanged; ten-file scoped privacy scan
+with three exact identifiers and positive sentinel has zero matches; planning no findings.
+Unchanged Rust/semantic/process/reference sources retain their D105 passing receipts, not
+new execution claims. Native writer/group/handshake/cancellation ownership is next, then
+independent native semantics and D105 integration. No app action or production archive claim.
+See NATIVE-COMPANION-PROTOCOL-EVIDENCE.md. PR80 automatic reader passed; app failed unchanged
+Fresh analysis5.133918vs5,340tests401.731s1issue; transaction tests passed58.066s. Retained
+without rerun, historical observer or relaxed assertion/deadline; causes unknown.

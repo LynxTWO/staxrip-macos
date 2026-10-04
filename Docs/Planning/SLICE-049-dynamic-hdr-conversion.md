@@ -1163,8 +1163,9 @@ D-116 final qualification: expanded ordinary433reported tests/90suites205.588s p
 26 opt-in skips unchanged; new access suite8tests14.273s including actual non-root
 POSIX read/write denials. No new warnings. Focused26tests/3suites3.807s passed before
 final generated permission-restoration cleanup adjustment; expanded ordinary run covers
-that final test code. Optimized unchanged product build/strict ad-hoc app/read-only helper
-signatures passed without warnings, minima14.0/11.0; writer absent. Actual live-reader
+that final test code. Debug development build/strict ad-hoc app/read-only helper
+signatures passed without warnings, minima14.0/11.0; writer absent. Optimized Swift
+app qualification was initially reported incorrectly and is corrected in D117. Actual live-reader
 PID-specific idle-sleep assertion present during ownership and absent after settled release,
 source/parent descriptor FileIDs held through phases and retained review. Positive scope
 counts are explicitly fake-provider lifecycle evidence; sandbox grants/revocation remain
@@ -1182,3 +1183,77 @@ metadata and current recovery journal unchanged; full planning audit findings em
 No source-body read, owner queue, private film archive/encode/listening, merge or release.
 Initial missing-index planning finding retained and corrected. Existing bounded awake
 PID32011 exact command/start inspected; expiry16:01:07UTC, no renewal/security changes.
+
+
+## D-117: Qualify fixed Rust helper signatures before release admission
+
+Status: Confirmed
+
+Need trace: R-059 native archive access ownership does not authenticate its executables.
+D097 DeveloperID attempt on relocated FFmpeg is interrupted/incomplete. Read its receipt,
+existing helper notice/build contracts and Apple static-code/requirements guidance first.
+Choose a fixed source-built Rust reader/writer signature and hardened execution
+prerequisite, rather than retry FFmpeg signing, bless paths/hashes as release trust,
+change library-validation policy or expose an archive action.
+
+Scope: unused native Security static signature admission of fixed helper roles under an
+owned bundle layout, bounded no-follow/pinned path observations before/after, exact role
+identifier, runtime flag, no entitlements, explicit trusted requirement. DEBUG ad-hoc
+fixture policy is distinct from DeveloperID Apple-anchor/Team/leaf/intermediate policy;
+no production Tool constructor or untrusted requirement/policy deserialization. Qualify
+real copied Rust helpers with generated source and actual existing native owned processes,
+plus altered/unsigned/wrong-role/wrong-policy fixtures. Not a universal hostile same-user
+or per-universal-slice execution proof. Pin and refuse unsuitable architecture/layout.
+
+A genuinely new bounded DeveloperID discriminator may sign a newly owned standalone
+Rust helper (no relocated dylibs) using the already configured local identity, after
+receipt inspection. No private key/password arguments or logging; no notarization upload,
+credential changes, release, disabled library validation or broadened entitlements.
+Own signing process/group with timeout/reaping and retain incomplete output on refusal.
+No blind retry. If Keychain interaction blocks it, retain evidence and qualify independent
+ad-hoc/refusal paths without claiming DeveloperID readiness.
+
+Correct prior D116 optimized-app claim: d116-release-build.log says Building for debugging.
+Rust helper was release, Swift app was debug. Preserve original receipt and add explicit
+correction to docs/PR91; run STAXRIP_CONFIGURATION=release for genuine optimized product
+qualification. D115 production build receipt remains valid. No source/previous-output
+or current journal changes. Generated media only; no full-source rerun/archive/queue.
+
+Acceptance: fixed-role signature/identifier/runtime/entitlement and pinned-layout checks,
+actual hardened Rust execution/source-dependent validation on generated inputs where
+qualified, exact refusal of ad-hoc under DeveloperID policy, mutation/unsigned/wrong role
+or parent substitution. Match scope of signing evidence honestly. Ordinary regression,
+explicit optimized build/strict ad-hoc development bundle, privacy/protection/planning;
+inspect automatic PR91 without rerun. Release provenance/packaging/notarization/review
+recovery/owner losses-storage-privacy remain gates before archive UI.
+
+Approved for build by: owner standing autonomous generated non-audio delegation, 2026-10-04.
+
+
+D117 scoped local outcome: fixed native static signature/refusal prerequisite and actual
+ad-hoc hardened Rust reader/writer source-dependent publication both modes pass. DeveloperID
+positive admission remains UNQUALIFIED: new owned standalone Rust reader signing did not
+settle in20s, stopped/joined with incomplete output retained; prior FFmpeg attempt untouched,
+cause unknown, no blind retry. Policy keeps anchored DeveloperID and DEBUG known-CDHash
+ad-hoc trust separate. No release Tool factory, writer packaging or archive UI. Initial
+Data hex compile error/hash-syntax parse failure/competing app-slot fixture refusal logs
+retained. Corrected independent native transaction fixture preserves single-operation
+guard/global scheduling/deadlines. Ordinary438reported tests/91suites207.134s passed with26
+unchanged opt-in skips; one test-only unnecessary try warning later removed. Final
+focused13tests/2suites2.507s and explicit release product build passed without new warnings;
+strict ad-hoc app/read-only helper signatures/minima14.0/11.0, writer absent. D116 debug
+receipt/incorrect optimized claim corrected in docs/PR91, original retained; D115 genuine
+optimized receipt untouched. Source/static observations are not hostile-race/immutable/live
+capability/outer-seal/notarization guarantees. PR91 automatic21 unchanged timing failures
+retained/PR updated; access135.829s passed; no retry or D090 causal claim. Final protection/
+privacy/planning checks follow.
+
+
+Final seven-file public/nonignored scan: zero private source path/name/stem matches,
+positive decoded source-field sentinel; original source metadata/current recovery journal
+unchanged, full planning findings empty. No owner source body/queue/film archive/encode/
+listening, merge or release. Prior awake32011 exact command/start and receipt revalidated;
+replaced only that owned assertion with bounded55829 -diu -t7200, expiry17:46:06UTC,
+for continuing authorized scheduled development. No persistent security/locking change
+or manual-lock override. Incomplete D097/D117 signing artifacts and detached D115 failed
+image stay retained. No blanket signing/production/archive acceptance follows.

@@ -12,12 +12,14 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Install development compiler
-        run: brew install rust
+      - name: Install development compiler and independent packet reference
+        run: brew install rust ffmpeg
       - name: Toolchain
         run: |
           rustc --version
           cargo --version
+          ffmpeg -version
+          ffprobe -version
       - name: Format
         run: cargo fmt --manifest-path Tools/DolbyMetadataAudit/Cargo.toml --check
       - name: Generated and adversarial reader tests

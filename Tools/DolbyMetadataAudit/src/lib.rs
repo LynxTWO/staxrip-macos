@@ -3,6 +3,8 @@ use std::io::{Read, Write};
 use dolby_vision::rpu::dovi_rpu::DoviRpu;
 use sha2::{Digest, Sha256};
 
+pub mod matroska;
+
 pub const RECORD_LIMIT: usize = 64 * 1024;
 pub const JSON_LIMIT: usize = 2 * 1024 * 1024;
 pub const FILE_LIMIT: u64 = 512 * 1024 * 1024;
@@ -17,6 +19,7 @@ pub enum Failure {
     Bounds,
     Empty,
     ChangedSource,
+    UnsupportedContainer,
 }
 
 impl std::fmt::Display for Failure {
@@ -34,11 +37,14 @@ pub struct Receipt {
     pub peak_record_bytes: usize,
 }
 
-fn hex(bytes: impl AsRef<[u8]>) -> String {
+pub(crate) fn hex(bytes: impl AsRef<[u8]>) -> String {
     bytes.as_ref().iter().map(|b| format!("{b:02x}")).collect()
 }
 
-fn write_json(output: &mut impl Write, value: &serde_json::Value) -> Result<(), Failure> {
+pub(crate) fn write_json(
+    output: &mut impl Write,
+    value: &serde_json::Value,
+) -> Result<(), Failure> {
     let bytes = serde_json::to_vec(value).map_err(|_| Failure::InvalidRecord)?;
     if bytes.len() > JSON_LIMIT {
         return Err(Failure::Bounds);
@@ -130,10 +136,7 @@ impl<W: Write> Scanner<'_, W> {
         if self.payload.len() < 25 || !self.payload.starts_with(&[0x19, 8, 9]) {
             return Err(Failure::InvalidRecord);
         }
-        let rpu = std::panic::catch_unwind(|| DoviRpu::parse_unspec62_nalu(&self.payload))
-            .map_err(|_| Failure::InvalidRecord)?
-            .map_err(|_| Failure::InvalidRecord)?;
-        let metadata = serde_json::to_value(rpu).map_err(|_| Failure::InvalidRecord)?;
+        let metadata = parse_metadata(&self.payload)?;
         write_json(
             self.output,
             &serde_json::json!({"kind":"rpu", "index":self.records,
@@ -149,6 +152,10 @@ impl<W: Write> Scanner<'_, W> {
 
 /// Explicit I/O errors and a hard byte bound also apply to the independent scan.
 pub fn fingerprint(input: &mut impl Read) -> Result<(u64, String), Failure> {
+    fingerprint_with_limit(input, FILE_LIMIT)
+}
+
+pub fn fingerprint_with_limit(input: &mut impl Read, limit: u64) -> Result<(u64, String), Failure> {
     let mut hash = Sha256::new();
     let mut bytes = 0u64;
     let mut chunk = [0u8; 32 * 1024];
@@ -161,12 +168,22 @@ pub fn fingerprint(input: &mut impl Read) -> Result<(u64, String), Failure> {
         if n == 0 {
             return Ok((bytes, hex(hash.finalize())));
         }
-        if n as u64 > FILE_LIMIT - bytes {
+        if n as u64 > limit - bytes {
             return Err(Failure::Bounds);
         }
         bytes += n as u64;
         hash.update(&chunk[..n]);
     }
+}
+
+pub(crate) fn parse_metadata(payload: &[u8]) -> Result<serde_json::Value, Failure> {
+    if payload.len() < 25 || payload.len() > RECORD_LIMIT || !payload.starts_with(&[0x19, 8, 9]) {
+        return Err(Failure::InvalidRecord);
+    }
+    let rpu = std::panic::catch_unwind(|| DoviRpu::parse_unspec62_nalu(payload))
+        .map_err(|_| Failure::InvalidRecord)?
+        .map_err(|_| Failure::InvalidRecord)?;
+    serde_json::to_value(rpu).map_err(|_| Failure::InvalidRecord)
 }
 
 pub fn complete(output: &mut impl Write, receipt: &Receipt) -> Result<(), Failure> {

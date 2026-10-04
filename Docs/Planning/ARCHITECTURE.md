@@ -313,3 +313,16 @@ returns a process receipt, never independent semantic/disk admission, cleanup or
 OwnershipFailure requires retaining stage for review; D105 must not clean up an unsettled
 phase. Native semantic admission/transaction integration, leases/resources/signing and
 stable/crash/storage gates remain. See NATIVE-COMPANION-PROCESS-EVIDENCE.md.
+
+
+D-108 adds unused native CompanionDiskCheck integrity settlement: dedicated cancellable
+read worker owns pinned source/stage/component descriptors, exact fixed membership,
+owner/mode/single-link checks, independent bounded SHA256 and byte-for-byte original
+container comparison. Final path/descriptor observations refuse source/stage/component
+changes. Receipt explicitly does not verify original metadata semantics. The shared
+CompanionUnsettledOwnership marker makes D105 retain its stage instead of discarding
+when any phase reports unsettled ownership; D107 OwnershipFailure conforms. Generated
+tests compose actual native writer/disk checks with the independent Python semantic
+checker only as a test oracle through native publication. No native runtime original
+semantic validator, app action, release writer capability/packaging or lease/resource/
+signing admission follows. See NATIVE-COMPANION-DISK-EVIDENCE.md.

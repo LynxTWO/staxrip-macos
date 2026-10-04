@@ -86,6 +86,47 @@ struct OriginalCompanionTransactionTests {
         Set(try FileManager.default.contentsOfDirectory(atPath: root.path))
     }
 
+    @Test(arguments: ["writer", "verifier"])
+    func unsettledOwnershipRetainsStageForReview(phase: String) async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let src = try source(root), box = Box(), before = try Data(contentsOf: src)
+        do {
+            _ = try await Transaction.execute(source: src, in: root, destinationName: "result", retention: .metadataOnly,
+                produce: { directory in
+                    box.set(directory); let c = try synthetic(src, directory, .metadataOnly)
+                    if phase == "writer" { throw CompanionWriterProcess.OwnershipFailure() }; return c
+                }, verify: { _, _ in throw CompanionWriterProcess.OwnershipFailure() })
+            Issue.record("Unsettled ownership unexpectedly published")
+        } catch let error as Transaction.UnsettledPhaseFailure {
+            #expect(error.operationError is CompanionWriterProcess.OwnershipFailure)
+            #expect(error.intendedStage == box.value)
+            #expect(FileManager.default.fileExists(atPath: error.intendedStage.appendingPathComponent("manifest.json").path))
+        }
+        #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("result").path))
+        #expect(try Data(contentsOf: src) == before)
+    }
+
+    @Test func unsettledGeneratedWorkerRetainsStageUntilExplicitJoin() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let src = try source(root), box = Box(), gate = Gate()
+        let worker = Task { await gate.pause() }
+        for await _ in gate.entered { break }
+        do {
+            _ = try await Transaction.execute(source: src, in: root, destinationName: "result", retention: .metadataOnly,
+                produce: { directory in
+                    box.set(directory); _ = try synthetic(src, directory, .metadataOnly)
+                    // Explicit unsettled ownership fault; not an OS signal-denial claim.
+                    throw CompanionWriterProcess.OwnershipFailure()
+                }, verify: { _, c in verified(c) })
+            Issue.record("Unsettled generated worker unexpectedly published")
+        } catch let error as Transaction.UnsettledPhaseFailure {
+            #expect(error.intendedStage == box.value)
+            #expect(FileManager.default.fileExists(atPath: error.intendedStage.appendingPathComponent("manifest.json").path))
+        } catch { gate.release(); await worker.value; throw error }
+        #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("result").path))
+        gate.release(); await worker.value // Test caller joins before any root cleanup.
+    }
+
     @Test func writerAndVerifierFailuresSettleBeforeOwnedCleanup() async throws {
         for phase in ["writer", "verifier"] {
             let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }

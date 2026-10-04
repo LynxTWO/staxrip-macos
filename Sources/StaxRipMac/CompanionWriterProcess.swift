@@ -20,7 +20,7 @@ enum CompanionWriterProcess {
         }
         #endif
     }
-    struct OwnershipFailure: Error, LocalizedError {
+    struct OwnershipFailure: CompanionUnsettledOwnership, LocalizedError {
         var errorDescription: String? { "Companion process ownership could not be fully settled. Retain the temporary stage for review." }
     }
     struct Boundary: Sendable {

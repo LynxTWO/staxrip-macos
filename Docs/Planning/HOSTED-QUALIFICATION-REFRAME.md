@@ -180,3 +180,6 @@ PR88 automatic app [37204687364](https://github.com/LynxTWO/staxrip-macos/action
 
 
 PR89 automatic app [37207096659](https://github.com/LynxTWO/staxrip-macos/actions/runs/37207096659) failed nine unchanged timing limits: three60-second cases (queue destination review, export activity and preview frame stepping), and six120-second cases (Dolby inspection, writer protocol, writer process, original companion transaction, AV1 and ten-bit copy). All424tests finished566.001s with nine issues; new native original metadata comparison suite192.150s passed and owned metadata reader188.686s passed. Preview packaging skipped. Private failed log retained/PR updated; no rerun, historical observer, assertion/deadline or scheduling change. Causes remain unknown.
+
+
+PR90 automatic reader37209356237 passed1m47s. App [37209356252](https://github.com/LynxTWO/staxrip-macos/actions/runs/37209356252) failed three unchanged timing limits: Fresh analysis cancellation5.288956s against5s, AV1 and ten-bit copy120-second deadlines (both about166.55s on reporting). All425reported tests finished571.979s with three issues; preview packaging skipped. Private failed log retained/PR updated. No retry, historical observer, assertion/deadline or scheduling change. D090 runtime causes remain unknown.

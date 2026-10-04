@@ -8,14 +8,14 @@ import Testing
 struct CompanionOriginalMetadataCheckTests {
     typealias Writer = CompanionWriterProcess
     typealias Transaction = OriginalCompanionTransaction
-    private struct Fixture {
+    struct Fixture {
         let root, source, stage, executable, reader: URL
         var tool: Writer.Tool { get throws { try .development(executable, expectedSHA256: DolbyInspection.hex(SHA256.hash(data: Data(contentsOf: executable)))) } }
         var readerTool: CompanionMetadataProcess.Tool { get throws { try .development(reader, expectedSHA256: DolbyInspection.hex(SHA256.hash(data: Data(contentsOf:reader)))) } }
         func cleanup() { try? FileManager.default.removeItem(at: root) }
     }
     private static var repo: URL { URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent() }
-    private static func fixture() async throws -> Fixture {
+    static func fixture(targetName: String = "native-original-metadata-fixtures") async throws -> Fixture {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("native-companion-process-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
         do {
@@ -24,7 +24,7 @@ struct CompanionOriginalMetadataCheckTests {
             let cargo = repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml")
             // This serialized suite owns its feature-specific artifacts. Other suites
             // must not replace binaries between a successful Cargo build and copy.
-            let buildTarget = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/native-original-metadata-fixtures")
+            let buildTarget = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/" + targetName)
             let f = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
                 "STAXRIP_GENERATED_COMPANION_FIXTURE_DIRECTORY=" + generated.path, "cargo", "test", "--locked",
                 "--target-dir",buildTarget.path,"--manifest-path", cargo.path, "original_companions_preserve_raw_bytes_encoded_order_and_distinct_retention"])

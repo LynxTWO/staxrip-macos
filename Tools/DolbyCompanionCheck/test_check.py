@@ -361,6 +361,25 @@ class CompanionTests(unittest.TestCase):
             self.assertFalse(json.loads(components["manifest.json"])["source_path_identity_bound"])
         self.assertEqual(source.read_bytes(), before)
 
+    def test_owned_stage_producer_packages_pass_independent_semantic_verifier(self):
+        root = self.path / "owned-stage"
+        root.mkdir()
+        environment = dict(os.environ, STAXRIP_GENERATED_STAGED_COMPANION_DIRECTORY=str(root))
+        subprocess.run(["cargo", "test", "--locked", "--manifest-path",
+                        str(ROOT / "Tools/DolbyMetadataAudit/Cargo.toml"),
+                        "owned_stage_packages_preserve_originals_and_match_disk_receipts"],
+                       env=environment, check=True, stdout=subprocess.DEVNULL)
+        source = root / "generated-source.mkv"
+        before = source.read_bytes()
+        for mode in ("metadata", "full"):
+            package = root / mode
+            components = {p.name: p.read_bytes() for p in package.iterdir()}
+            result = check.validate(source, package, HELPER)
+            self.assertEqual((result["packets"], result["records"]), (1, 2))
+            self.assertEqual(components, {p.name: p.read_bytes() for p in package.iterdir()})
+            self.assertFalse(json.loads(components["manifest.json"])["source_path_identity_bound"])
+        self.assertEqual(source.read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

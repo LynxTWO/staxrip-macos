@@ -182,3 +182,24 @@ AV1/other-container readers remain separate acceptance work.
 Tools/DolbyFrameReference is a separate, unbundled development reference for decoded
 base-frame/raw-RPU association. Its direct wire and complete coverage checks do not
 change this helper's protocol version, native packaging or conversion admission.
+
+
+## Development original-companion staging library
+
+The optional macOS/Linux `companion_stage::produce` library entry point requires a
+trusted caller's existing empty, owned 0700 stage. It creates only fixed 0600 component
+names exclusively with descriptor-relative no-follow opens, records their identities
+and passes concrete files to the cancellable source-bound core. After settlement it
+writes the unchanged version-zero prototype manifest exclusively, rereads actual disk
+membership/content and requires final stage/parent/component/source identity observations.
+It returns an in-memory staged receipt. It never creates/removes/publishes a stage or
+accepts manifest-directed output paths; partial files remain the caller's responsibility.
+
+This library has no runtime writer command or native app caller. Semantic verification,
+worker/process/resource integration, stable archive/import and storage/crash qualification
+remain separate. The caller must join its worker before cleanup. Cooperative cancellation
+cannot interrupt physical filesystem I/O or parser CPU. Immediate parent/path observations
+are not an ancestor sandbox, immutable snapshot or same-user adversarial guarantee.
+Metadata-only omits BL/EL pictures and outside-track information; complete mode copies the
+whole source-sized original container including embedded names/metadata. MacOS generated
+checks are recorded in Docs/Planning/OWNED-COMPANION-STAGE-EVIDENCE.md; Linux is untested.

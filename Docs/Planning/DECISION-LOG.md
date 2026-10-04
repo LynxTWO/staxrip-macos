@@ -111,6 +111,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-100 | 2026-10-04 | Produce original companion components without metadata rewriting | Confirmed | |
 | D-101 | 2026-10-04 | Independently validate original companion components against source | Confirmed | |
 | D-102 | 2026-10-04 | Own a source-bound cancellable companion producer | Confirmed | |
+| D-103 | 2026-10-04 | Bind exclusive companion component creation to an owned stage | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1846,3 +1847,69 @@ No native command/protocol/UI/session or dependency changed; no owner archive/qu
 encode/listening, signing retry, merge or release. PR 76 automatic reader/app passed
 without retry; prior timing failure causes remain unknown. Native stage/path ownership,
 semantic settlement, worker/process integration and D-099 publication remain next.
+
+
+## D-103: Bind exclusive companion component creation to an owned stage
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner original preservation/companion request, standing autonomous
+delegation and R-059 / Slice 049. Generated development operation only; no owner
+archive/queue/full-film encode, native command/UI/importer, decoder integration,
+listening, signing retry, merge or release.
+
+Need/product contract: the future owner chooses retention and reviews storage/privacy.
+Source-bound File ownership alone cannot establish that components belong to the
+caller-owned stage or that their settled disk bytes match the producer receipts.
+Before independent semantic verification and publication, exclusive fixed-name files,
+stage/parent identity and actual content must agree. Partial components never become
+success from file presence. Consequence local_only for generated execution; user_data
+for later native integration. Caller owns cleanup only after producers settle.
+
+Choice delegated to AI. Alternatives: expose a writer command now; duplicate native
+stage creation/cleanup in Rust; or first add descriptor-relative production inside a
+trusted caller's existing stage. Select the last option. The native D-099 factory
+already owns stage creation, and delaying a command avoids exposing a prototype before
+its stage binding is qualified. Cost: this core does not prove caller creation history
+or create/remove/publish a directory; native process and stage ownership remain later.
+
+Scope: pin a caller-supplied empty private 0700 regular directory and its parent with
+no-follow opens. Create only fixed components with descriptor-relative exclusive 0600
+regular-file opens. Record created identities; pass consumed File handles to D-102.
+Write the unchanged prototype manifest exclusively after producer settlement. Reopen
+all actual components read-only/no-follow, check membership, identities, bounds/hashes
+and final path/descriptor/source-receipt observations. Return a staged receipt, never
+publication. Cancellation checks stage/file creation, manifest write and disk reread;
+no hard physical I/O deadline or immutable snapshot is claimed.
+
+Acceptance: generated both-mode packages pass the independent semantic verifier;
+preexisting directories/components remain untouched on refusal; unsafe stage paths/
+permissions/entries, partial creation, links/substitutions, extra/missing/corrupt
+components, source change and cancellation refuse. A bounded generated worker joins
+before caller cleanup. Errors leave staged files for caller review and close owned handles.
+No recursive or automatic cleanup, arbitrary manifest-directed paths, stable importer,
+future carriage, decoded/EL reconstruction or archive-specific crash/durability claim.
+Historical D-090 timing work stays completed without retry/observer/deadline change.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04; bounded
+stage/path prerequisite inside the authorized original archival work.
+
+
+D-103 outcome: generated stage ownership and settled disk receipt checks passed.
+Rust passed 38 tests with zero failures/ignored; format/Clippy passed. Independent
+companion verification passed 19 checks in 3.613 s; existing decoder reference passed
+15 checks in 1.145 s. Ordinary app regression passed 331 tests/78 suites in 202.252 s;
+optimized build/strict ad-hoc app/helper signatures passed. Actual minimum declarations
+remain 14.0/11.0, not older-OS execution or hardened/notarized evidence. Source/current
+recovery unchanged; fifteen-file scoped privacy scan has zero owner identifier matches
+and a positive sentinel; planning audit has no findings. Evidence is recorded in
+OWNED-COMPANION-STAGE-EVIDENCE.md. The stage writer is development-library-only and
+returns no receipt for generated collision/link/substitution/corruption/source-change/
+cancellation faults. The prototype manifest is unchanged and unbound; caller stage
+creation history, worker join and semantic/publication integration remain obligations.
+No native command/protocol/UI/session/dependency changed, owner queue/archive/encode/
+listening, signing retry, merge or release. PR 77 automatic reader/app both passed
+without retry; prior hosted failure causes remain unknown. Next bounded prerequisite:
+trusted native writer process/worker lifecycle, then semantic settlement and D-099
+exclusive result-set publication. Native storage/privacy review, stable importer,
+archive-specific ENOSPC/volume/crash and decoded association remain separate gates.

@@ -50,3 +50,18 @@ Source-bound receipts remain separate from unmodified prototype manifests. Trust
 caller exclusive creation, output pathname ownership, semantic disk reread, native
 worker/process policy and D-099 publication integration remain required. No new
 native CLI command, UI/session schema, decoded/EL admission or dependency follows.
+
+
+D-103 adds a generated-development writer into a trusted caller's precreated empty
+private stage. It pins the immediate parent/stage, creates fixed regular 0600 components
+with descriptor-relative exclusive no-follow opens, consumes them through D-102 and
+exclusively writes the unchanged prototype manifest after the producer settles. It then
+rereads exact disk membership, original created identities and content hashes, retains
+read descriptors through final path checks and checks the source identity receipt again.
+A staged receipt does not establish independent semantic verification or publication.
+The caller creates/owns the stage, joins its worker before cleanup and later supplies
+native process/resource policy plus D-101 semantic settlement and D-099 publication.
+No directory creation/deletion, native command/UI/session change, decoded/EL conversion,
+stable importer, crash durability or hard physical I/O deadline is added. MacOS generated
+execution is exercised; Linux conditional compilation is not qualification. See
+OWNED-COMPANION-STAGE-EVIDENCE.md.

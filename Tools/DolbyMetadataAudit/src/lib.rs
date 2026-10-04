@@ -5,6 +5,8 @@ use sha2::{Digest, Sha256};
 
 pub mod companion;
 pub mod companion_source;
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+pub mod companion_stage;
 pub mod matroska;
 
 pub const RECORD_LIMIT: usize = 64 * 1024;

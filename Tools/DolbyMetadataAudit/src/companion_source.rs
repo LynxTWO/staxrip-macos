@@ -130,7 +130,10 @@ fn source_metadata(input: &File) -> Result<Metadata, ProductionFailure> {
         .metadata()
         .map_err(|_| ProductionFailure::Audit(Failure::InputIO))
 }
-fn check_source_path(path: &Path, before: &SourceIdentity) -> Result<(), ProductionFailure> {
+pub(crate) fn check_source_path(
+    path: &Path,
+    before: &SourceIdentity,
+) -> Result<(), ProductionFailure> {
     let path_metadata =
         std::fs::symlink_metadata(path).map_err(|_| ProductionFailure::ChangedSource)?;
     if !path_metadata.is_file() || SourceIdentity::from_metadata(&path_metadata) != *before {
@@ -253,4 +256,4 @@ fn produce_then_check(
 
 #[cfg(test)]
 #[path = "companion_source_tests.rs"]
-mod tests;
+pub(crate) mod tests;

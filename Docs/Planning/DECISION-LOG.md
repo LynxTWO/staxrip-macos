@@ -134,6 +134,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-123 | 2026-10-04 | Static hardened native Swift host | Confirmed | |
 | D-126 | 2026-10-04 | Native source-only reconstruction | Confirmed | |
 | D-127 | 2026-10-04 | Native source/frame association | Confirmed | |
+| D-128 | 2026-10-04 | Own source/frame association access and activity | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3473,3 +3474,37 @@ protected source metadata/current journal/planning checks pass. Narrow source/pr
 flags stay false; settled association true does not establish samples/EL/edits or
 production authentication. PR101 failed automatic68issues retained, no retry/causal
 timing claim. See NATIVE-SOURCE-FRAME-ASSOCIATION-EVIDENCE.md for concrete contracts.
+
+
+## D-128: Own explicit source and spool access through native association
+Status: Confirmed
+Date:2026-10-04, owner standing autonomous generated non-audio delegation, R059.
+
+Need: D127 source-frame association has no concrete grant/activity caller. Extend the
+existing D116/D120 operation, acquiring only explicit source/spool-folder grants and
+actual no-follow descriptors before activity. False ordinary Foundation acquisition
+is not denial. Hold access through source reconstruction, open SQLite coverage,
+actual fixed development decoder and final source/spool observations, checked closes
+and joined worker/helper return. Ordinary release reverses scopes/activity; typed
+uncertain phase/close or changed outer selection retains needed access in the shared
+review registry after a dropped error. Energy expiry is not cleanup or release authority.
+
+Bounded acceptance: existing serialized concrete-operation tests, generated real
+open/read/write refusal and rollback, controlled uncertain ownership, cancellation,
+final substitution, actual frozen both-thread association and live PID-specific idle
+sleep activity through decoder join. Separate injected scope balance from sandbox
+rights and controlled refusal from actual OS failure. No generic receipt wrapper,
+Python runtime bridge, owner body/queue/film/listening, automatic folder removal,
+adoption/publication/import, recovery-release API, app action/default packaging or
+signing retry. Inspect PR102 automatic outcome without rerun. Revisit at resource/
+release packaging, actual sandbox grants, retained-review recovery or edited pictures.
+
+
+D128 acceptance: final composed22tests8.913s includes actual frozen both-thread
+association2.272s/six joined helpers and ordinary live cancellation. Generated grant/
+activity/read-write refusal/source cancellation/controlled close and retained review
+checks pass. Final ordinary485tests/98suites210.801s passes30explicit opt-in skips/no
+warnings. New actor-trait/error-type/finite-Segment/gate/descriptor-number fixture
+failures retained with scoped corrections, no global policy change. PR102 automatic
+479tests1218.685s129issues retained/PR updated without retry; causes unknown. See
+NATIVE-SOURCE-FRAME-ACCESS-EVIDENCE.md for concrete scope and remaining gates.

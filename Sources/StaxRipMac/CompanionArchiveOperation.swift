@@ -24,6 +24,8 @@ enum CompanionArchiveOperation {
     struct Boundary: Sendable {
         var phase: @Sendable (String) throws -> Void = { _ in }
         var pinned: @Sendable ([Int32]) -> Void = { _ in }
+        var beforeAssociationRelease: @Sendable () throws -> Void = {}
+        var associationClosed: @Sendable (Int) -> Void = { _ in }
     }
     @TaskLocal static var testBoundary = Boundary()
     static func retainedForTesting(_ id: UUID) -> Bool { retained[id] != nil }
@@ -129,6 +131,73 @@ enum CompanionArchiveOperation {
             throw error
         }
     }
+    /// Development original base-frame association. The caller owns an explicit
+    /// empty private spool folder. This operation neither removes nor publishes it.
+    static func associateOriginalFrames(source: URL, spoolDirectory: URL,
+                                        tool: DolbyDecoderProcess.Tool, threads: Int = 4,
+                                        timeout: Double = 120,
+                                        limits: DolbyAssociationSpool.Limits = .init()) async throws -> CompanionDiskCheck.SourceFrameReceipt {
+        try Task.checkCancellation()
+        guard [source, spoolDirectory].allSatisfy({ $0.isFileURL && !$0.path.utf8.contains(0) }),
+              [1, 4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw refused() }
+        #if DEBUG
+        let environment = testEnvironment, boundary = testBoundary
+        #else
+        let environment = Environment()
+        #endif
+        guard !executing, retained.isEmpty, environment.retainedActivitySeconds.isFinite,
+              environment.retainedActivitySeconds > 0, environment.retainedActivitySeconds <= 120 else { throw refused() }
+        executing = true
+        defer { executing = false }
+        let access = try Access(source: source, directory: spoolDirectory,
+                                reason: "StaxRip original source frame association", environment: environment)
+        let pins = access.pins
+        #if DEBUG
+        boundary.pinned(pins.descriptors)
+        #endif
+        do {
+            try pins.check()
+            #if DEBUG
+            try boundary.phase("association")
+            #endif
+            let result = try await CompanionDiskCheck.associateOriginalFrames(source: source, in: spoolDirectory,
+                tool: tool, threads: threads, timeout: timeout, limits: limits)
+            try pins.check()
+            try Task.checkCancellation()
+            #if DEBUG
+            try boundary.beforeAssociationRelease()
+            #endif
+            let closed = try access.finishChecked()
+            #if DEBUG
+            boundary.associationClosed(closed)
+            #else
+            _ = closed
+            #endif
+            return result
+        } catch {
+            // D127 returns after its worker/database/source/helper unwind except
+            // for the shared uncertainty marker. Keep grants on either that marker
+            // or loss of the explicit outer path identity. No file cleanup follows.
+            if error is any CompanionUnsettledOwnership {
+                throw retain(access, error: error, locator: spoolDirectory, environment: environment)
+            }
+            do { try pins.check() }
+            catch { throw retain(access, error: error, locator: spoolDirectory, environment: environment) }
+            do {
+                #if DEBUG
+                try boundary.beforeAssociationRelease()
+                #endif
+                let closed = try access.finishChecked()
+                #if DEBUG
+                boundary.associationClosed(closed)
+                #else
+                _ = closed
+                #endif
+            }
+            catch { throw retain(access, error: error, locator: spoolDirectory, environment: environment) }
+            throw error
+        }
+    }
     private static func retain(_ access: Access, error: Error, locator: URL, environment: Environment) -> ReviewFailure {
         let id = UUID(); retained[id] = access
         // Expiry ends only temporary energy. Dropped errors do not release access
@@ -159,6 +228,12 @@ enum CompanionArchiveOperation {
             pins.close()
             for end in ends.reversed() { end() }; ends.removeAll()
             endActivity()
+        }
+        func finishChecked() throws -> Int {
+            let closed = try pins.closeChecked()
+            for end in ends.reversed() { end() }; ends.removeAll()
+            endActivity()
+            return closed
         }
     }
     /// Concrete descriptors establish current access, not immutable snapshots or
@@ -199,7 +274,17 @@ enum CompanionArchiveOperation {
                 a.st_mtimespec.tv_sec == b.st_mtimespec.tv_sec && a.st_mtimespec.tv_nsec == b.st_mtimespec.tv_nsec &&
                 a.st_ctimespec.tv_sec == b.st_ctimespec.tv_sec && a.st_ctimespec.tv_nsec == b.st_ctimespec.tv_nsec)
         }
-        func close() { for fd in fds { Darwin.close(fd) }; fds.removeAll() }
+        struct CloseFailure: CompanionUnsettledOwnership {}
+        func closeChecked() throws -> Int {
+            // Consume each number before close. An uncertain close must never be
+            // retried against a possibly reused descriptor. Grants remain held.
+            let owned = fds; fds.removeAll()
+            var failed = false
+            for fd in owned { if Darwin.close(fd) != 0 { failed = true } }
+            if failed { throw CloseFailure() }
+            return owned.count
+        }
+        func close() { _ = try? closeChecked() }
         deinit { close() }
     }
 }

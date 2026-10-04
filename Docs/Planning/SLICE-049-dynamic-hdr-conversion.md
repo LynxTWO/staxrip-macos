@@ -1813,3 +1813,28 @@ Source-frame flag is true only in settled composition; source-only/process flags
 and all edited-picture flags remain false. Owner metadata/journal/privacy/planning
 checks pass. No production/rendering/EL/edit/hardened-loading claim. PR101 automatic
 failed68issues, retained without retry or timing policy changes.
+
+
+## D-128: Concrete source/frame association access ownership
+Status: Confirmed. Approved for build by: owner standing autonomous generated non-audio
+delegation,2026-10-04,R059.
+
+Extend the existing concrete operation with only explicit original-source/spool-folder
+access and activity around D127. Reuse exclusion and retained review policy. Actual
+no-follow opens precede activity. Scopes/pins remain needed until source/database/
+worker/helper settlement and final observations. Ordinary release balances in reverse;
+uncertain ownership/close or outer substitution retains access after dropped errors.
+Do not remove the caller-owned folder or infer parent grants. Acceptance follows D128
+with generated real permission/cancel/substitution and frozen actual decoder trials,
+focused/ordinary/optimized/privacy/planning checks. No owner body, action, signing,
+release, known-crashing dynamic loader or completed full-source repeat.
+
+
+D128 acceptance: final composed22tests8.913s includes actual frozen both-thread
+association2.272s/six joined helpers and ordinary live cancellation. Generated grant/
+activity/read-write refusal/source cancellation/controlled close and retained review
+checks pass. Final ordinary485tests/98suites210.801s passes30explicit opt-in skips/no
+warnings. New actor-trait/error-type/finite-Segment/gate/descriptor-number fixture
+failures retained with scoped corrections, no global policy change. PR102 automatic
+479tests1218.685s129issues retained/PR updated without retry; causes unknown. See
+NATIVE-SOURCE-FRAME-ACCESS-EVIDENCE.md for concrete scope and remaining gates.

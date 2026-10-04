@@ -264,3 +264,14 @@ child assertions, three motion expectations, existing owned static compiler/host
 bound and measuring-candidate EOF. Source packet suite714.516s and spool57.787s
 passed. Full log retained privately/PR101 updated. Timing, phase and prelaunch causes
 remain unknown; no observer, assertion/deadline/global concurrency or scheduling change.
+
+
+D128 observation: PR102 automatic run37235926771 at b096cbd41a4fd752ab917fe46406866f1f20b0f4
+failed479reported tests1218.685s129issues. Unchanged deadlines:57at60s,45at120s,
+oneat180s. Twenty-six other recorded issues include cancellation/publication gates,
+completion selection, motion message/mutation, four absent-positive decoder children,
+10s external-caption settlement/typed-failure expectations, existing owned static
+compiler/host bound and mastering phase EOF. Original packet613.213s/spool73.914s/
+concrete access828.876s passed; preview skipped. Full failed log retained privately,
+PR102 updated without retry. No new historical timing observer, assertion/deadline,
+global concurrency or scheduling change; timing/phase/prelaunch causes unknown.

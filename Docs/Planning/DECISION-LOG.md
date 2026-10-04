@@ -115,6 +115,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-104 | 2026-10-04 | Qualify a separate development companion writer process | Confirmed | |
 | D-105 | 2026-10-04 | Settle original companion phases before exclusive publication | Confirmed | |
 | D-106 | 2026-10-04 | Admit companion writer protocol natively before process integration | Confirmed | |
+| D-107 | 2026-10-04 | Own actual native companion writer process and pipes | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -2092,3 +2093,60 @@ independent native semantics and D105 integration. No app action or production a
 See NATIVE-COMPANION-PROTOCOL-EVIDENCE.md. PR80 automatic reader passed; app failed unchanged
 Fresh analysis5.133918vs5,340tests401.731s1issue; transaction tests passed58.066s. Retained
 without rerun, historical observer or relaxed assertion/deadline; causes unknown.
+
+## D-107: Own the actual native companion writer process and pipes
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner original companion/autonomous development, R-059 / Slice049. Internal
+unbundled generated process prerequisite; no owner media/queue/archive/encode/action,
+writer packaging, DeveloperID retry, merge/release or listening. Consequence local_only
+now; future production ownership affects user_data. D106 protocol remains authoritative.
+
+Need/product contract: a ready/staged row is not completion until the owned actual
+writer and its pipes settle. Cancellation/deadline must prevent late receipt admission
+and complete before trusted caller cleanup. The future owner chooses retention/reviews
+losses, storage and privacy; no UI or production trust capability is added in this unit.
+
+Choice delegated to AI. Alternatives: retain nested Python transport; add bidirectional
+state to shared ToolRunner; or own a specialized POSIX spawn group and dedicated native
+worker with bounded nonblocking pipes. Select the last. Existing ToolRunner is unchanged,
+D090 timing work not reopened. One worker owns PID/group, handshake, drains, signals and
+waitpid; no monitor can signal a reaped/reused PID. Keep direct child unreaped until pipe
+EOF or abort so group identity remains anchored. Native production executable/signature/
+lease/resource policy remains gated; DEBUG generated capability binds fixed binary name
+and explicit trusted digest/file observations, never paths from untrusted sessions.
+
+Scope: pin regular source/private empty stage; captured expected IDs passed to actual
+writer; explicit bounded generated executable capability; sanitized environment/no shell;
+separate group, CLOEXEC descriptors, bounded finite stdin after parsed ready, nonblocking
+stdout/stderr and strict D106 schema. Dedicated worker checks task cancellation/deadline;
+abort signals owned group, closes pipes and joins direct child before returning. No
+automatic stage deletion/publication. Success requires joined zero exit/EOF, source/stage/
+executable identity observations and no cancellation. Receipt still needs disk/original
+semantic settlement; observations are not immutable content versions/authentication.
+
+Acceptance: actual generated writer both modes with native handshake, IDs/disk receipt
+agreement; pre-cancel/no launch, ready/active/late cancellation, deadline, early EOF/nonzero/
+malformed/trailing/pipe-holder results refuse and direct child/pipes settle. Fixed trusted
+writer does not fork; orphan descendants cannot be portably joined, physical I/O cannot be
+preempted. Group signal refusal/identity substitution must remain explicit retained-stage
+ownership errors, not permission to delete. No new timing observer/assertion relaxation.
+Independent native semantic admission and D105 transaction integration remain next.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+D-107 outcome: actual unbundled Rust writer passes native group/stdin/pipe execution in
+both modes; generated ready/partial128MiBcopy/late-zero-exit cancellation refuses receipts
+and joins direct child. Seven focused tests passed3.695s; after immutable test capture
+warning cleanup, final7tests3.850s with no new warnings. Ordinary355tests/81suites passed
+203.526s; optimized build and strict ad-hoc app/read-only helper signatures passed,
+minimum14.0/11.0, writer absent. Source stat/current recovery bytes unchanged; nine-file
+scoped privacy scan has zero matches/positive sentinel; planning findings empty. No
+release tool capability/action/native semantic admission, disk settlement or publication
+integration follows. Next qualify independent native semantic/disk checks and D105 joining,
+with explicit stage retention on OwnershipFailure. Resource/lease/signing, stable import/
+persisted binding, ENOSPC/volume/crash/blocked-I/O/decoded gates remain. PR81 hostedreader
+passed; appfailed unchanged cancellation6.648579vs5 and two copy matrices130.882vs120,
+348tests468.176s3issues; protocolsuite79.448s passed, no retry/observer/assertion changes.
+See NATIVE-COMPANION-PROCESS-EVIDENCE.md for actual coverage and limitations.

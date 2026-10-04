@@ -300,3 +300,16 @@ source/disk hashes or original semantics. Generated tests admit actual unbundled
 stdout in both modes and compare receipt observations with disk; Python capture is
 explicitly test-only. No app writer action/packaging or native bridge exists. See
 NATIVE-COMPANION-PROTOCOL-EVIDENCE.md.
+
+
+D-107 adds an unused internal CompanionWriterProcess: one dedicated native worker owns
+POSIX spawn group/PID, finite ready/start stdin and bounded nonblocking stdout/stderr,
+strict D106 receipt parsing, cancellation/deadline, signal/reap and pipe closure. Direct
+child remains unreaped until EOF or abort; no monitor can signal after reaping. DEBUG
+only generated tool capability binds fixed basename/explicit expected digest and source/
+stage/executable observations; no release capability/signature policy is installed.
+Actual generated writer both modes and ready/active-copy/late cancellation passed. It
+returns a process receipt, never independent semantic/disk admission, cleanup or publication.
+OwnershipFailure requires retaining stage for review; D105 must not clean up an unsettled
+phase. Native semantic admission/transaction integration, leases/resources/signing and
+stable/crash/storage gates remain. See NATIVE-COMPANION-PROCESS-EVIDENCE.md.

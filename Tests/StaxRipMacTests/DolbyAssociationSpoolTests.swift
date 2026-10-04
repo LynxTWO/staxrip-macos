@@ -193,6 +193,7 @@ struct DolbyAssociationSpoolTests {
         }
     }
     @Test func missingCoverageAmbiguousRPUsAndInvisibleSourceCannotBeSettled() throws {
+        for profile in [DolbyDecoderStream.Profile.metadata,.baseSamples] {
         for variant in 0..<4 {
             let root=try directory();defer{try? FileManager.default.removeItem(at:root)}
             #expect(throws:(any Error).self) { try Spool.withSpool(in:root,sourceBytes:100_000) { store in
@@ -206,15 +207,89 @@ struct DolbyAssociationSpoolTests {
                         if variant == 2 && i == 1 {try store.append(.rpu(rpu(2,packet:p,nal:3)))}
                     }
                 }
-                _=try store.finishSourcePass(expected:.init(packets:2,rpus:variant == 2 ? 3 : 2));try store.startDecoderPass()
-                let parser=try DolbyDecoderStream(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],observe:{ row in
-                    let o=try CompanionArchiveJSON.object(row,maximum:65535)
+                _=try store.finishSourcePass(expected:.init(packets:2,rpus:variant == 2 ? 3 : 2));try store.startDecoderPass(profile:profile)
+                let parser=try DolbyDecoderStream(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],profile:profile,observeSamples:{if profile == .baseSamples{try store.acceptSampleObservation($0)}},observe:{ row in
+                    let o=try CompanionArchiveJSON.object(row,maximum:65535,decoderSampleFields:profile == .baseSamples)
                     let kind=try CompanionArchiveJSON.string(o,"kind")
-                    if variant == 0 && kind == "frame" { return }
+                    if variant == 0 && (kind == "frame" || kind == "sample-frame") { return }
                     try store.acceptDecoderRow(row,track:decoderTrack())
                 })
-                try parser.accept(wire(decoderRows()));try store.finishDecoderPass(parser.finish(status:0))
+                try parser.accept(wire(profile == .metadata ? decoderRows():sampleRows()));try store.finishDecoderPass(parser.finish(status:0))
             } }
+        }
+        }
+    }
+
+    private func sampleRows() -> [[String:Any]] {
+        var rows=decoderRows()
+        rows[0]["kind"]="sample-begin"; rows[5]["kind"]="sample-complete"
+        let prototype=DolbySampleProcessTests.rows()[2]
+        for i in [3,4] {
+            rows[i]["kind"]="sample-frame"
+            for key in ["sample_encoding","color_range","color_primaries","color_transfer","color_matrix","chroma_location","container_crop_applied","edited_picture_semantics_verified","coded","codec_visible"] { rows[i][key]=prototype[key] }
+        }
+        return rows
+    }
+    private func sampleParser(_ store:Spool, typed:Bool=true) throws -> DolbyDecoderStream {
+        try .init(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],profile:.baseSamples,
+            observeSamples:{ if typed {try store.acceptSampleObservation($0)} },
+            observe:{try store.acceptDecoderRow($0,track:decoderTrack())})
+    }
+    @Test func explicitSampleCoveragePreservesReorderedSourceAndDoesNotProveStatisticValues() throws {
+        let root=try directory();defer{try? FileManager.default.removeItem(at:root)}
+        var escaped:Spool?
+        try Spool.withSpool(in:root,sourceBytes:100000) { store in
+            escaped=store;try sourceRows(store);try store.startDecoderPass(profile:.baseSamples)
+            var rows=sampleRows()
+            var coded=try #require(rows[3]["coded"] as? [[String:Any]])
+            coded[0]["sha256"]=String(repeating:"e",count:64);rows[3]["coded"]=coded;rows[3]["codec_visible"]=coded
+            let parser=try sampleParser(store);try parser.accept(wire(rows))
+            let r=try parser.finish(status:0);try store.finishDecoderPass(r)
+            #expect(r.sampleFrameSummaryCount == 2 && !r.independentSampleSourceAssociationVerified)
+            for i in Int64(0)...1 {#expect(try store.packet(i) == visible(i));#expect(try store.rpu(i) == rpu(i,packet:visible(i)))}
+        }
+        #expect(escaped?.ownedPinsClosed == true)
+    }
+    @Test func sampleShapeValidSourceForgeriesRefuseAndCloseOpenStore() throws {
+        let faults:[(Int,String,Any)] = [(0,"configuration_bytes",24),(0,"configuration_sha256",String(repeating:"e",count:64)),
+            (0,"time_base",[1,2000]),(1,"pts",41),(1,"block_input_byte_offset",9),(1,"encoded_bytes",999),(1,"sha256",String(repeating:"e",count:64)),
+            (3,"packet_index",0),(3,"block_input_byte_offset",1033),(3,"packet_size",999),(3,"rpu_bytes",99),(3,"rpu_sha256",String(repeating:"e",count:64))]
+        for (index,key,value) in faults {
+            let root=try directory();defer{try? FileManager.default.removeItem(at:root)}
+            var rows=sampleRows();rows[index][key]=value
+            let partial=try DolbyDecoderStream(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],profile:.baseSamples)
+            try partial.accept(wire(rows));_=try partial.finish(status:0)
+            var escaped:Spool?
+            #expect(throws:(any Error).self){try Spool.withSpool(in:root,sourceBytes:100000){store in
+                escaped=store;try sourceRows(store);try store.startDecoderPass(profile:.baseSamples)
+                let checked=try sampleParser(store);try checked.accept(wire(rows));try store.finishDecoderPass(checked.finish(status:0))
+            }}
+            #expect(escaped?.ownedPinsClosed == true)
+        }
+    }
+    @Test func missingTypedSampleDuplicateCallbacksMixedProfilesAndPartialCountsRefuse() throws {
+        for variant in 0..<6 {
+            let root=try directory();defer{try? FileManager.default.removeItem(at:root)}
+            var escaped:Spool?
+            #expect(throws:(any Error).self){try Spool.withSpool(in:root,sourceBytes:100000){store in
+                escaped=store;try sourceRows(store);try store.startDecoderPass(profile:variant == 2 ? .metadata:.baseSamples)
+                let checked=try DolbyDecoderStream(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],profile:.baseSamples,observeSamples:{f in
+                    if variant != 0 {try store.acceptSampleObservation(f)}
+                    if variant == 1 {try store.acceptSampleObservation(f)}
+                },observe:{row in
+                    let o=try CompanionArchiveJSON.object(row,maximum:65535,decoderSampleFields:true)
+                    let kind=try CompanionArchiveJSON.string(o,"kind")
+                    if variant == 3 && kind == "sample-frame" {return}
+                    try store.acceptDecoderRow(row,track:decoderTrack())
+                })
+                let rows=variant == 4 ? decoderRows():sampleRows()
+                try checked.accept(wire(rows));let result=try checked.finish(status:0)
+                if variant == 5 {
+                    let forged=DolbyDecoderStream.Receipt(source:result.source,packets:result.packets,frames:result.frames,geometry:result.geometry,configurationSHA256:result.configurationSHA256,timeBase:result.timeBase)
+                    try store.finishDecoderPass(forged)
+                }else{try store.finishDecoderPass(result)}
+            }}
+            #expect(escaped?.ownedPinsClosed == true)
         }
     }
 

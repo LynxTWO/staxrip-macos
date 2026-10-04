@@ -82,7 +82,18 @@ enum CompanionDiskCheck {
         let independentSourceFrameAssociationVerified = true
         let editedPictureSemanticsVerified = false
     }
+    /// Fixed decoder observations bound to independently reconstructed original
+    /// source facts. Summary values still rely on the admitted decoder implementation.
+    struct SourceSampleReceipt: Sendable {
+        let source: SourceSpoolReceipt
+        let decoder: DolbyDecoderStream.Receipt
+        let independentSourceFrameAssociationVerified = true
+        let independentSampleSourceAssociationVerified = true
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+    }
     private struct DecoderRequest: Sendable {
+        var profile: DolbyDecoderStream.Profile = .metadata
         let tool: DolbyDecoderProcess.Tool
         let threads: Int
         let timeout: Double
@@ -97,6 +108,17 @@ enum CompanionDiskCheck {
                                        decoder:.init(tool:tool,threads:threads,timeout:timeout))
         guard let decoder=result.1 else { throw failure() }
         return .init(source:result.0,decoder:decoder)
+    }
+    /// Distinct development sample path on the same pinned source/open-store worker.
+    /// Caller owns folder/access; no resource controller, edits or release action.
+    static func associateOriginalSamples(source: URL, in directory: URL, tool: DolbyDecoderProcess.Tool,
+                                         threads: Int = 4, timeout: Double = 120,
+                                         limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceSampleReceipt {
+        guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        let result = try await sourceWork(source: source, in: directory, limits: limits,
+            decoder: .init(profile: .baseSamples, tool: tool, threads: threads, timeout: timeout))
+        guard let decoder = result.1 else { throw failure() }
+        return .init(source: result.0, decoder: decoder)
     }
     struct SourceOwnershipFailure: CompanionUnsettledOwnership {}
     /// Source-only observations into an exclusive disposable database. Caller
@@ -144,11 +166,20 @@ enum CompanionDiskCheck {
                                 guard let timing else { throw failure() }
                                 var decoded: DolbyDecoderStream.Receipt?
                                 if let decoder {
-                                    try spool.startDecoderPass()
+                                    try spool.startDecoderPass(profile: decoder.profile)
                                     // No second worker, nested async wait or closed-store adoption.
-                                    let actual=try DolbyDecoderProcess.runOwned(tool:decoder.tool,source:source,
-                                        threads:decoder.threads,observe:{ try spool.acceptDecoderRow($0,track:track) },
-                                        timeout:decoder.timeout,checkCancellation:cancelled.check,boundary:decoderBoundary)
+                                    let actual: DolbyDecoderStream.Receipt
+                                    switch decoder.profile {
+                                    case .metadata:
+                                        actual = try DolbyDecoderProcess.runOwned(tool:decoder.tool,source:source,
+                                            threads:decoder.threads,observe:{ try spool.acceptDecoderRow($0,track:track) },
+                                            timeout:decoder.timeout,checkCancellation:cancelled.check,boundary:decoderBoundary)
+                                    case .baseSamples:
+                                        actual = try DolbyDecoderProcess.runOwnedSamples(tool:decoder.tool,source:source,
+                                            threads:decoder.threads,observeSamples:{ try spool.acceptSampleObservation($0) },
+                                            observe:{ try spool.acceptDecoderRow($0,track:track) },
+                                            timeout:decoder.timeout,checkCancellation:cancelled.check,boundary:decoderBoundary)
+                                    }
                                     guard actual.source == SourceFingerprint(sha256:hash,byteCount:file.bytes),
                                           actual.configurationSHA256 == track.configurationSHA256,
                                           actual.packets == packets.packets, actual.frames == packets.packets else { throw failure() }

@@ -103,6 +103,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-092 | 2026-10-03 | Editable HEVC VBV suggestions and companion archive requirements | Confirmed | |
 | D-093 | 2026-10-03 | Bound complete RPU archive parsing | Confirmed | |
 | D-094 | 2026-10-03 | Bound Matroska HEVC packet association | Confirmed | |
+| D-095 | 2026-10-03 | Native read-only complete Dolby metadata inspection | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1465,3 +1466,19 @@ Hosted status update: automatic PR 68 app run 37164120623 at docs-only 140861c f
 
 
 D-094 outcome: all 15 generated Rust tests, formatting, warnings-denied Clippy and optimized helper build passed. The final complete private-source pass consumed/rechecked the source in 287.646 seconds; every one of 120,552 video payloads/PTS matched the independent complete manifest. All RPUs matched the prior archive under verified unique-PTS presentation ordering, and complete source/configuration hashes and enhancement/RPU NAL counts matched. All RPUs classify P7 MEL; peak tracked heap 3,132,901 bytes. BOUNDED-MATROSKA-DOLBY-EVIDENCE.md retains the source-specific order distinction, failures and limits. This closes the bounded packet-read prerequisite only; native/helper distribution, frame/POC/general-container mapping, archive publication, edits and rendering remain open.
+
+
+## D-095: Native complete Dolby metadata inspection
+Date: 2026-10-03
+Status: Confirmed
+
+Authority: standing autonomous native-app development/tool-install delegation and explicit dynamic-HDR/original-preservation/crop-resize requests. R-059 / Slice 049 now has a generated/private qualified development reader (D-094); proceed to a bounded native read-only inspection unit. No new copy/transcode/crop admission, owner queue execution, audio listening, timing diagnosis, merge or release.
+
+Need: the native inspector currently shows container declarations but cannot display complete validated MEL/FEL metadata counts, active-area declarations or packet agreement. Consequence: local_only inspection; later user_data if results are overstated as picture/rendering/edit qualification. Reuse the bounded reader, SourceFingerprint, ToolRunner cancellation/draining and FFprobe. Add a compact inspector protocol without full source payloads, retain order-sensitive packet/PTS/payload digest proof, compare every video packet independently with FFprobe, recheck source content afterward and require final receipt plus successful exit. Declared crop/display units and Level 5 offsets are not measured black-pixel/brightness bounds; mapping-family identifiers are not container/profile-carriage certification. No metadata-derived image/brightness claims.
+
+Bundle the existing pinned MIT Rust helper in the local development app, with all 69 supplied dependency license texts and verified inventory, sign the nested helper before the app, and declare Cargo build/FFmpeg reference dependencies in build instructions/CI. No additional crate, compiler/tool download from the running app or GPL reconstruction dependency. The app invokes only its fixed bundled helper. Existing ad-hoc development signing is not signed distribution acceptance.
+
+Own one cancellable analysis task per inspector, keep file/process/JSON work off MainActor, keep partial/failed/cancelled results distinct from complete and settle owned work before releasing access. Source changes, unsupported framing, malformed/oversize protocol, reordered/missing packet proof, nonzero exit and receipt disagreement must refuse completion. Present measured syntax/census and independently checked encoded-packet association with clear remaining decoded-frame/POC/brightness/rendering/edit gates. Generated native integration, cancellation/lifecycle/protocol failures, appropriate ordinary regression/build and a focused native walkthrough are required. Owner source/journal/session/prior outputs stay protected and test identifiers stay generic.
+
+
+D-095 outcome: 16 locked Rust tests/format/warnings-denied Clippy and eight new native core/lifecycle tests passed. Final ordinary local run passed 311 tests in 203.950 seconds; optimized helper/app build, nested/outer signature checks and 69 Cargo plus 16 Rust library notice-file hashes passed. Generated native disclosures retain individual geometry/scope values and expanded metrics after correcting an inherited accessibility label. Native long-read cancellation settled with no result; retry fully checked 120,552 packets/RPUs and source/configuration integrity. Original owner session/Failed queue restored exactly, source descriptor/current recovery bytes unchanged. NATIVE-DOLBY-INSPECTION-EVIDENCE.md retains failures and scope. Native encoded metadata inspection closes only this prerequisite; decoded-picture/POC, edits, reconstruction, archive publication, conversion and calibrated rendering remain open. Hosted acceptance is separate; no merge or release.

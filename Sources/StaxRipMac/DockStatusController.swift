@@ -10,9 +10,9 @@ final class DockStatusController {
 
     func bind(model: WorkspaceModel, exporter: ExportController, batch: BatchController,
               audio: AudioController, picture: PicturePreviewController, motion: MotionPreviewController,
-              chapters: ChapterEditorController, show: @escaping (String) -> Void) {
+              chapters: ChapterEditorController, dolby: DolbyInspectionController? = nil, show: @escaping (String) -> Void) {
         self.show = show
-        read = { [weak model, weak exporter, weak batch, weak audio, weak picture, weak motion, weak chapters] in
+        read = { [weak model, weak exporter, weak batch, weak audio, weak picture, weak motion, weak chapters, weak dolby] in
             var work: [DockPresentation.Activity] = [], attention: [String] = []
             if let model, let batch {
                 let queue = DockPresentation.queue(jobs: model.jobs.map(\.id), statuses: batch.statuses,
@@ -36,6 +36,7 @@ final class DockStatusController {
             if motion?.running == true { work.append(.init(title: "Rendering motion comparison")) }
             if motion?.cleanupFailed == true { attention.append("Motion comparison · cleanup needs attention") }
             if chapters?.running == true { work.append(.init(title: "Reading chapters")) }
+            if dolby?.running == true { work.append(.init(title: "Inspecting Dolby Vision metadata")) }
             return DockPresentation(activities: work, attention: attention)
         }
         // Published values change after objectWillChange. Deliver on the next main
@@ -45,7 +46,7 @@ final class DockStatusController {
             batch.objectWillChange.eraseToAnyPublisher(), audio.objectWillChange.eraseToAnyPublisher(),
             picture.objectWillChange.eraseToAnyPublisher(), motion.objectWillChange.eraseToAnyPublisher(),
             chapters.objectWillChange.eraseToAnyPublisher()
-        ]).receive(on: DispatchQueue.main).sink { [weak self] _ in self?.refresh() }
+        ] + (dolby.map { [$0.objectWillChange.eraseToAnyPublisher()] } ?? [])).receive(on: DispatchQueue.main).sink { [weak self] _ in self?.refresh() }
         refresh(force: true)
     }
 

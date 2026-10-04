@@ -10,6 +10,7 @@ struct StaxRipMacApp: App {
     @StateObject private var presets = CustomPresetStore()
     @StateObject private var picturePreview = PicturePreviewController()
     @StateObject private var motionPreview = MotionPreviewController()
+    @StateObject private var dolby = DolbyInspectionController()
     @StateObject private var chapters = ChapterEditorController()
     @StateObject private var batch = BatchController(journalURL: BatchJournal.defaultURL)
     @AppStorage("appearance") private var appearance = "System"
@@ -23,6 +24,7 @@ struct StaxRipMacApp: App {
                 .environmentObject(picturePreview)
                 .environmentObject(motionPreview)
                 .environmentObject(chapters)
+                .environmentObject(dolby)
                 .environmentObject(presets)
                 .task { await batch.discover() }
                 .onChange(of: model.jobs) { before, after in
@@ -34,7 +36,7 @@ struct StaxRipMacApp: App {
                 .tint(Color.accent)
                 .modifier(DockWindowBinding { openWindow in
                     delegate.dockStatus.bind(model: model, exporter: exporter, batch: batch, audio: audio,
-                        picture: picturePreview, motion: motionPreview, chapters: chapters) { section in
+                        picture: picturePreview, motion: motionPreview, chapters: chapters, dolby: dolby) { section in
                         model.section = section
                         openWindow(id: "main")
                         NSApplication.shared.activate(ignoringOtherApps: true)
@@ -47,6 +49,7 @@ struct StaxRipMacApp: App {
                     delegate.picturePreview = picturePreview
                     delegate.motionPreview = motionPreview
                     delegate.chapters = chapters
+                    delegate.dolby = dolby
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
                 }
@@ -74,10 +77,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     weak var audio: AudioController?
     weak var picturePreview: PicturePreviewController?
     weak var motionPreview: MotionPreviewController?
+    weak var dolby: DolbyInspectionController?
     weak var chapters: ChapterEditorController?
+    var hasActiveOperation: Bool { exporter?.running == true || batch?.running == true || batch?.reviewing == true || audio?.running == true || picturePreview?.running == true || motionPreview?.running == true || chapters?.running == true || dolby?.running == true }
     func applicationWillTerminate(_ notification: Notification) { audio?.invalidateMaster() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard exporter?.running == true || batch?.running == true || batch?.reviewing == true || audio?.running == true || picturePreview?.running == true || motionPreview?.running == true || chapters?.running == true else {
+        guard hasActiveOperation else {
             guard let motionPreview, motionPreview.workspace != nil else { return .terminateNow }
             Task { @MainActor in
                 let cleaned = await motionPreview.finishClosing()

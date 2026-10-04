@@ -15,6 +15,7 @@ cp "$BUILD_DIR/$BUILD_CONFIGURATION/StaxRipMac" "$APP_DIR/Contents/MacOS/StaxRip
 mkdir -p "$APP_DIR/Contents/Resources"
 cp "$PROJECT_DIR/THIRD-PARTY-NOTICES.md" "$APP_DIR/Contents/Resources/THIRD-PARTY-NOTICES.md"
 "$PROJECT_DIR/scripts/build-icons.command" "$BUILD_DIR/icons" "$APP_DIR/Contents/Resources" "$APP_DIR/Contents/Info.plist"
+"$PROJECT_DIR/scripts/build-dolby-helper.command" "$APP_DIR"
 touch "$APP_DIR"
 codesign --force --sign - "$APP_DIR"
 echo "Built: $APP_DIR"

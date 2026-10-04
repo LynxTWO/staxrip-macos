@@ -32,7 +32,7 @@ Owner additionally requests editable, prefilled VBV suggestions. Implement a bou
 
 ## Picture-edit contract
 
-Owner explicitly includes crop and resize. Preserve the untouched original RPU/EL separately. An edit manifest must record original/output raster, sample aspect, chroma siting and resampling, exact crop rectangle, resize kernel and dimensions, original/output frame mapping and timestamps. RPU Level 5 coordinates must be transformed into the output raster with validated bounds and deliberate rounding consistent with subsampling; reject ambiguous active-area mapping. Actual picture edits may change content statistics (Level 1 and MaxCLL/MaxFALL), while target-display trims represent artistic intent and are not automatically interchangeable with new HDR10+ authoring. Do not blindly reuse the original RPU after crop, scale, color/gamut/tone mapping, deinterlace, cadence edits or trimming. Initially qualify unchanged geometry and cadence; keep edited dynamic HDR refused until actual transformed metadata and picture evidence exists. Retaining an archive does not make the edited media equivalent to the original master.
+Owner explicitly includes crop and resize. Preserve the untouched original RPU/EL separately. An edit manifest must record coded raster and codec conformance-window removal, decoded raster, container crop/display units, rotation/orientation, original/output sample aspect, chroma siting and resampling, the exact effective pixel crop rectangle, padding, resize kernel/dimensions and original/output frame mapping/timestamps. Keep decoder, container, user crop and Dolby active-area coordinate systems explicit; do not subtract the same crop twice. RPU Level 5 coordinates must be transformed into the output raster with validated bounds and deliberate rounding consistent with subsampling; reject ambiguous active-area mapping. Actual picture edits may change content statistics (Level 1 and MaxCLL/MaxFALL), while target-display trims represent artistic intent and are not automatically interchangeable with new HDR10+ authoring. Do not blindly reuse the original RPU after crop, scale, color/gamut/tone mapping, deinterlace, cadence edits or trimming. Initially qualify unchanged geometry and cadence; keep edited dynamic HDR refused until actual transformed metadata and picture evidence exists. Retaining an archive does not make the edited media equivalent to the original master.
 
 ## Gates
 
@@ -59,3 +59,13 @@ D-093 adds a locally qualified development-only bounded RPU archive reader. BOUN
 
 
 D-094 adds a development-only bounded Matroska HEVC packet reader with signed timestamps, duplicate-preserving RPU association and strict read failure boundaries. BOUNDED-MATROSKA-DOLBY-EVIDENCE.md records generated FFprobe comparisons and complete private source agreement. This is an extraction/association prerequisite, not native admission, decoded-frame/POC qualification, crop/resize validity or rendering. Presentation-order archives and decoding-order packets must remain distinct in edit manifests.
+
+
+D-095 admits a fixed bundled read-only native Matroska HEVC inspector with protocol 3,
+complete encoded-packet/hash/timestamp proof, selected configuration agreement and a
+final source fingerprint. The active-area UI explicitly separates container crop,
+display units and Level 5 luma offsets. Generated protocol/lifecycle/actual helper
+checks, ordinary regression, licensed nested-helper build and a focused native
+walkthrough are the required boundary; evidence is recorded separately. This does
+not close conversion, decoded-picture/POC, brightness, archive publication,
+crop/resize, rendering or hosted timing-reliability gates.

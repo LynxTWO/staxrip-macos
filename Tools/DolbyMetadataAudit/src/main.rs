@@ -6,7 +6,7 @@ use std::{
 
 use staxrip_dolby_metadata_audit::{
     FILE_LIMIT, Failure, audit_rpu, complete, fingerprint_with_limit,
-    matroska::{MOVIE_LIMIT, audit_matroska, complete_matroska},
+    matroska::{MOVIE_LIMIT, audit_matroska, audit_matroska_summary, complete_matroska},
 };
 
 mod heap;
@@ -36,11 +36,15 @@ fn run() -> Result<(), Failure> {
         return Err(Failure::Bounds);
     }
     let args: Vec<_> = std::env::args_os().collect();
-    if args.len() != 3 || (args[1] != "rpu-json" && args[1] != "mkv-json") {
-        eprintln!("Usage: staxrip-dolby-metadata-audit <rpu-json|mkv-json> <local input>");
+    if args.len() != 3
+        || (args[1] != "rpu-json" && args[1] != "mkv-json" && args[1] != "mkv-summary")
+    {
+        eprintln!(
+            "Usage: staxrip-dolby-metadata-audit <rpu-json|mkv-json|mkv-summary> <local input>"
+        );
         return Err(Failure::Framing);
     }
-    let movie = args[1] == "mkv-json";
+    let movie = args[1] != "rpu-json";
     let limit = if movie { MOVIE_LIMIT } else { FILE_LIMIT };
     let mut input = OpenOptions::new()
         .read(true)
@@ -56,7 +60,11 @@ fn run() -> Result<(), Failure> {
     let archive_receipt;
     let movie_receipt;
     let (bytes, digest) = if movie {
-        movie_receipt = Some(audit_matroska(&mut input, before.len(), &mut output)?);
+        movie_receipt = Some(if args[1] == "mkv-summary" {
+            audit_matroska_summary(&mut input, before.len(), &mut output)?
+        } else {
+            audit_matroska(&mut input, before.len(), &mut output)?
+        });
         archive_receipt = None;
         let r = movie_receipt.as_ref().unwrap();
         (r.bytes, r.sha256.clone())

@@ -23,3 +23,20 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+The bundled read-only staxrip-dolby-metadata-audit helper uses MIT libdovi 3.3.2
+from quietvoid/dovi_tool, pinned to revision
+82384bc7652c6f88cb63f7f11e0315b624003fc3. Cargo.lock pins its transitive dependencies.
+Their complete supplied license texts and package/hash inventory are included in
+Contents/Resources/DolbyMetadataLicenses in the development app; source copies are
+under Tools/DolbyMetadataAudit/LICENSES and DEPENDENCY-LICENSES.json. The helper's
+own MIT license is included there as LICENSE-staxrip-helper. No GPL enhancement
+reconstruction code is bundled. Runtime FFmpeg/FFprobe remains a separately
+installed tool, subject to the license of the user's particular build.
+
+The helper also links the Rust standard library. The active build toolchain's
+supplied library attribution catalog, license texts, compiler version and content
+hash inventory are included in DolbyMetadataLicenses/RustLibrary. That catalog
+can mention toolchain components beyond the linked runtime; it is not a claim
+that every listed component or license applies to this executable.

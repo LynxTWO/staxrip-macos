@@ -362,3 +362,13 @@ D-093 / Slice 049 adds development-only Tools/DolbyMetadataAudit with pinned MIT
 
 
 D-094 / Slice 049 extends the development-only Rust reader with complete bounded Matroska HEVC packet observations. Source bytes, signed PTS and every RPU retain their original association; unsupported packet/timing interpretations refuse. No additional crate, app bundling or runtime/copy/transcode admission. BOUNDED-MATROSKA-DOLBY-EVIDENCE.md records packet/reference agreement and display-order versus decoding-order limits. Native integration, frame/POC mapping and resulting-picture crop/resize statistics remain separate gates.
+
+
+D-095 admits a fixed bundled read-only native Matroska HEVC inspector with protocol 3,
+complete encoded-packet/hash/timestamp proof, selected configuration agreement and a
+final source fingerprint. The active-area UI explicitly separates container crop,
+display units and Level 5 luma offsets. Generated protocol/lifecycle/actual helper
+checks, ordinary regression, licensed nested-helper build and a focused native
+walkthrough are the required boundary; evidence is recorded separately. This does
+not close conversion, decoded-picture/POC, brightness, archive publication,
+crop/resize, rendering or hosted timing-reliability gates.

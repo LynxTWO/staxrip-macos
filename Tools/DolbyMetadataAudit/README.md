@@ -1,8 +1,8 @@
-# Bounded Dolby metadata development reader
+# Bounded Dolby metadata reader
 
-This is a read-only development prerequisite for Slice 049. It is **not bundled,
-discovered or executed by StaxRip**, and does not enable any Dolby Vision
-conversion or picture edit. Build with Cargo on macOS or another Unix platform;
+This read-only helper is bundled at a fixed app-owned path for the native complete
+Matroska HEVC inspection page in Slice 049. It enables no Dolby Vision conversion,
+copy admission or picture edit. Build with Cargo on macOS or another Unix platform;
 local qualification used macOS and Rust 1.98.1. Generated packet-reference tests also require FFmpeg/FFprobe (locally 9.0.2). The declared 1.88 minimum reflects
 the pinned dependency's let-chain syntax; that minimum compiler is not qualified.
 
@@ -58,22 +58,27 @@ without an independent expected sequence. Extraction completeness, one RPU per
 displayed picture, previous-RPU references, frame/timestamp association, EL/BL
 correspondence, AV1 framing and semantic transformations require separate checks.
 The parser is shared with dovi_tool; matching its prior JSON is not independent
-Dolby-standard or rendering validation. Native integration and packaging remain
-unfinished.
+Dolby-standard or rendering validation. Native inspection adds an independent
+encoded-packet proof and final source fingerprint, described below.
 
 Dependency license declarations are inventoried in DEPENDENCY-LICENSES.json. The
 libdovi MIT notice is in LICENSE-libdovi. No GPL reconstruction code is used.
-This is source/development tooling; collect the complete transitive license text
-set with binary packaging. Follow-up inspection found 69 supplied texts across
-all 37 dependency packages, including crc-catalog's nested LICENSES directory;
-they are captured privately and their names/hashes are inventoried. No app/distribution dependency change is claimed here.
+All 69 supplied texts from the 37 dependency packages, including crc-catalog's
+nested LICENSES directory, are retained under LICENSES. The app builder verifies
+every inventoried hash before copying the helper and notices into its bundle.
+The active Homebrew Rust toolchain library catalog and license texts are also
+included, since the linked standard library is not a Cargo.lock dependency.
+A separate build inventory retains compiler version and notice hashes.
+The helper is signed before the enclosing app. Local ad-hoc development packaging
+is not notarized or production distribution qualification.
 
 
 ## Complete Matroska HEVC packet observations
 
 `mkv-json <local input>` adds a deliberately bounded container-reading prerequisite.
-It is still development-only, not bundled/invoked by the app, and enables no copy,
-conversion or crop/resize operation. No additional dependency is used. The evaluated
+The native app uses the compact mode described below; full source-derived JSON
+is development evidence and should remain private. Neither mode enables copy,
+conversion or crop/resize. No additional dependency is used. The evaluated
 matroska-demuxer 0.8.1 crate was not admitted: next_frame can treat an I/O error as
 EOF, and unsigned timestamps cannot represent a negative total block timestamp.
 
@@ -112,3 +117,41 @@ The final receipt requires EOF, an independent whole-file hash scan and stable
 file/path identity just as archive mode does. Require both complete and exit zero.
 Output remains private; no helper-created files, media writes, processing admission
 or archive publication. See Docs/Planning/BOUNDED-MATROSKA-DOLBY-EVIDENCE.md.
+
+
+## Native compact inspection (protocol 3)
+
+`mkv-summary <local input>` uses exactly the same container/framing, syntax/CRC,
+resource, I/O and source-recheck boundaries. Every packet remains observable.
+Each `rpu-summary` retains packet/NAL ordinal, PTS, payload digest and encoded
+length, with mapping family, enhancement classification, declared scene refresh,
+Level 5 active areas and content-mapping-version presence. Full metadata is omitted
+from this protocol, not from its validation. The complete receipt includes an
+order-sensitive SHA-256 over concatenated records of signed i64 little-endian
+PTS nanoseconds, signed i64 little-endian encoded byte count and 32 packet digest
+bytes. Durations are not in this proof; missing packet durations are not inferred.
+
+The native caller retains one bounded 64 KiB protocol line and aggregate counts,
+not a full-film metadata or packet array. It requires protocol 3, consistent ordinals,
+bounds, counts, resource settlement, final receipt and exit zero. It independently
+streams FFprobe packet payload hashes and exact integer nanosecond timestamps,
+checks the selected stream configuration against the helper's hvcC digest, and
+rehashes the source afterward. Reordering or disagreement refuses completion.
+It owns a security-scoped lease and joins child processes/readers on cancellation;
+replacement requests wait for the old worker and cannot publish its late result.
+
+Build the release helper before `swift test`, or use the CI workflow. Native
+integration tests invoke the generated Rust fixture test with the explicit
+STAXRIP_GENERATED_DOLBY_FIXTURE export path; that test uses create_new and never
+replaces an existing file. This test-only export is not a runtime helper command.
+`build.command` / `package.command` invoke scripts/build-dolby-helper.command,
+requiring Cargo plus Python 3.11 or newer at build time. The notice inventory must
+match every locked dependency package before packaging. The running app installs nothing.
+The native reference check requires the existing locally installed FFprobe.
+
+The page distinguishes encoded-packet association from decoded-picture/POC
+association, counts enhancement NAL units rather than enhancement frames, and
+shows container crop/display units separately from Level 5 luma offsets. Odd
+luma offsets are valid declarations, not proof of chroma-aligned cropping.
+Re-encoding, edited geometry, measured brightness, calibrated rendering and
+AV1/other-container readers remain separate acceptance work.

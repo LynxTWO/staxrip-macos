@@ -370,3 +370,17 @@ compact summary fields are shape-checked but not independently decoded. Native s
 geometry means container declarations, not decoded parameter sets or edited-picture
 statistics. No full transaction publication/action/release writer capability is added.
 See NATIVE-ORIGINAL-AUDIT-EVIDENCE.md for actual checks and limits.
+
+
+D-113 adds unused CompanionMetadataProcess and CompanionMetadataStream for fixed
+read-only mkv-summary execution. A DEBUG-only trusted basename/digest capability,
+observed executable/source identities, source content before/after, dedicated POSIX
+worker/group/EOF/reap and bounded exact typed rows precede its fresh stream receipt.
+Transient row callbacks are synchronous/trusted and must remain bounded; no callback
+is itself semantic truth or successful settlement. No stage writes or app action and
+no release authentication/capability. The previous general ToolRunner and native
+Dolby inspection route are unchanged. Shared unsettled ownership marker propagates
+EPERM/failed group/join refusal; uncertain ownership requires retained-stage review
+when later integrated. Full original archive semantics remain false until actual
+stored audit/source/components comparison and final D108 observations. See
+OWNED-NATIVE-METADATA-EVIDENCE.md.

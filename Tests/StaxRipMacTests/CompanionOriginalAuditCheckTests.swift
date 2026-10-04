@@ -113,7 +113,10 @@ struct CompanionOriginalAuditCheckTests {
         for (cluster, relative, scale, expected) in cases {
             let f = try await Self.fixture(); defer { f.cleanup() }
             let originalComponents = f.root.appendingPathComponent("generated/metadata")
-            let video = element(0xe0, element(0xb0,unsigned(4096)) + element(0xba,unsigned(2160)) + element(0x54cc,unsigned(2)) + element(0x54dd,unsigned(4)) + element(0x54bb,unsigned(6)) + element(0x54aa,unsigned(8)) + element(0x54b0,unsigned(65536)) + element(0x54ba,unsigned(2160)) + element(0x54b2,unsigned(4)))
+            let videoFields: [Data] = [element(0xb0,unsigned(4096)), element(0xba,unsigned(2160)),
+                element(0x54cc,unsigned(2)), element(0x54dd,unsigned(4)), element(0x54bb,unsigned(6)),
+                element(0x54aa,unsigned(8)), element(0x54b0,unsigned(65536)), element(0x54ba,unsigned(2160)), element(0x54b2,unsigned(4))]
+            let video = element(0xe0, videoFields.reduce(into:Data()) { $0.append($1) })
             let cfg = try Data(contentsOf: originalComponents.appendingPathComponent("hevc-configuration.bin"))
             try #require(Int(cfg[21] & 3) + 1 == 4)
             let track = element(0xd7,unsigned(1)) + element(0x83,unsigned(1)) + element(0x86,Data("V_MPEGH/ISO/HEVC".utf8)) + element(0x63a2,cfg) + video + element(0x23e383,unsigned(UInt64.max))

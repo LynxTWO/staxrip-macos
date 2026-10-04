@@ -171,3 +171,6 @@ PR85 automatic app [37200378605](https://github.com/LynxTWO/staxrip-macos/action
 
 
 PR86 automatic app [37201922436](https://github.com/LynxTWO/staxrip-macos/actions/runs/37201922436) passed without retry: all399 tests471.151s; native index suite83.675s; preview bundle/icon fallback passed. Private automatic log retained. This successful run does not resolve previous unknown-cause timing failures. No historical observer, assertion/deadline or scheduling change.
+
+
+PR87 automatic app [37203312255](https://github.com/LynxTWO/staxrip-macos/actions/runs/37203312255) failed compilation before any tests: the hosted compiler could not type-check the long generated Video Data concatenation at CompanionOriginalAuditCheckTests.swift:116. Preview skipped; no test-duration or assertion outcome exists for this run. Private failed log retained. The following D113 branch splits that exact fixture into typed Data fields and append reduction, preserving bytes/assertions; hosted qualification of the changed expression remains pending. No rerun, historical timing observer or assertion/deadline/scheduling change. This new compile failure is distinct from D090's prior unknown-cause runtime timing failures.

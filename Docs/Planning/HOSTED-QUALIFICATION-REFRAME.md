@@ -86,3 +86,12 @@ five seconds. All 311 tests finished in 444.484 s with two issues; preview packa
 was skipped. Reader run 37177037607 passed in 1m5s. Private failure log retained;
 no retry, new timing observer or assertion/deadline change. D-096 local full-source
 and default app regression evidence remains scoped separately from hosted acceptance.
+
+
+PR 72 head b516251 app run
+[37179578405](https://github.com/LynxTWO/staxrip-macos/actions/runs/37179578405)
+failed the unchanged AV1 matrix 120-second deadline. All 311 tests finished in
+535.062 s with one issue; preview packaging was skipped. Reader run 37179578410
+passed in 1m21s, including the newly included generated decoded-frame suite.
+The private app failure log is retained. No retry, observer or changed assertion/
+deadline follows; D-097 development/native qualification remains separate.

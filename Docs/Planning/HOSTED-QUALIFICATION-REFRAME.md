@@ -186,3 +186,6 @@ PR90 automatic reader37209356237 passed1m47s. App [37209356252](https://github.c
 
 
 PR91 automatic app [37211675808](https://github.com/LynxTWO/staxrip-macos/actions/runs/37211675808) failed21 unchanged120-second deadline cases: chapters2, external captions6, trimmed captions3, original video copy8, ten-bit copy1 and AV1 copy1. All433reported tests finished494.174s with21issues; new access suite passed135.829s including real POSIX denial, preview packaging skipped. No reader workflow was triggered by this Swift-only change. Private failed log retained/PR updated, no rerun, historical observer, assertion/deadline or scheduling change. D090 causes remain unknown.
+
+
+PR92 automatic app [37214474279](https://github.com/LynxTWO/staxrip-macos/actions/runs/37214474279) failed16 unchanged timing limits: eight60-second cases, six120-second cases, HDR10 cancellation6.453681s against5s and Fresh analysis cancellation7.668301s against5s. All438reported tests finished618.883s with16issues. New native signature suite passed246.881s; preview packaging skipped. No reader workflow was triggered by this Swift-only change. Private failure log retained/PR updated. No retry, historical observer, assertion/deadline or scheduling change; D090 causes remain unknown.

@@ -1,0 +1,26 @@
+name: Dolby metadata reader
+on:
+  push:
+    branches: [main]
+    paths: ['Tools/DolbyMetadataAudit/**', '.github/workflows/dolby-metadata.yml']
+  pull_request:
+    paths: ['Tools/DolbyMetadataAudit/**', '.github/workflows/dolby-metadata.yml']
+permissions:
+  contents: read
+jobs:
+  reader:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install development compiler
+        run: brew install rust
+      - name: Toolchain
+        run: |
+          rustc --version
+          cargo --version
+      - name: Format
+        run: cargo fmt --manifest-path Tools/DolbyMetadataAudit/Cargo.toml --check
+      - name: Generated and adversarial reader tests
+        run: cargo test --locked --manifest-path Tools/DolbyMetadataAudit/Cargo.toml
+      - name: Lint
+        run: cargo clippy --locked --all-targets --manifest-path Tools/DolbyMetadataAudit/Cargo.toml -- -D warnings

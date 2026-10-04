@@ -101,6 +101,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-089 | 2026-10-03 | Read complete native HDR container configuration | Confirmed | |
 | D-090 | 2026-10-03 | Observe bounded hosted lifecycle settlement | Confirmed | |
 | D-092 | 2026-10-03 | Editable HEVC VBV suggestions and companion archive requirements | Confirmed | |
+| D-093 | 2026-10-03 | Bound complete RPU archive parsing | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1432,3 +1433,16 @@ Status: Confirmed
 Owner explicitly requests automatically suggested, prefilled VBV/HRD limits with manual overrides; additionally requests original Dolby Vision companion data alongside unsupported output formats and inclusion of crop/resize effects. Standing autonomous authorization permits scoped implementation and generated/local checks. Software HEVC suggestions are a prerequisite within R-059; they do not grant Dolby Vision admission. Suggested Main/High tier limits derive from bounded output raster and matching declared cadence; manual values stay fixed, are validated and applied explicitly. Existing unrestricted recipes remain unrestricted. Session 10, recovery 9 and preset library 2 retain the new intent and reject mislabelled legacy payloads. No silent codec/engine fallback, altered cancellation deadlines, owner queue execution, persistent security changes, audio listening, merge or release. Companion archive and picture-edit qualification remain separate future acceptance gates; Slice 049 records their required semantics.
 
 D-092 local prerequisite outcome: final ordinary regression passed all 303 tests/74 suites in 204.256 seconds, optimized build passed, and native suggestions/manual prefill/edit/session reopen passed on generated Matroska. The native-preview availability gate finding was reproduced and corrected. HEVC-BUFFER-LIMITS-EVIDENCE.md retains the scope and failed automation receipts. Dolby Vision admission, companion publication, picture edits, calibrated rendering and hosted timing qualification remain open independently.
+
+
+## D-093: Bound complete Dolby metadata parsing before runtime integration
+Date: 2026-10-03
+Status: Confirmed
+
+Outcome: development-only archive reader locally qualified; native integration and conversion admission remain open.
+
+Need: the source/encoder feasibility relies on complete RPU validity, including data retained for future crop/resize and archival. The pinned dovi_tool 2.3.4 extractor warns and discards duplicate RPUs; its exporter loads the complete parsed sequence into memory, and parse_rpu_file uses a read loop that can terminate on an I/O error before an explicit complete-file check. These behaviors prevent treating tool success alone as complete preservation. Consequence: user_data for a later false preservation claim; the development reader itself is local_only. Existing whole-source fingerprints, count comparisons and refusal remain required controls.
+
+Authority: standing autonomous implementation/tool-install direction plus the owner's explicit dynamic-HDR, archive and picture-edit requests. Implement a separate development-only read-only RPU archive reader using pinned MIT libdovi, one bounded record at a time. Verify every record and CRC, preserve full parsed metadata and wire hashes, report completion only after complete EOF and stable source identity, propagate input/output errors and bound record/file/count/JSON resources. No paths or payload in errors. Generated malformed/truncated and injected I/O failures must fail; duplicate records remain observable rather than silently dropped. No native app integration, new copy/transcode admission, owner media edits, bundled dependency, timing diagnostic, merge or release.
+
+Alternative: directly integrate the existing CLI and monitor its output size. Rejected for this prerequisite because that would not bound its parsed sequence or establish that failed reads were not silently shortened. Reuse the MIT metadata parser rather than reimplementing Dolby syntax; pinned code and explicit limits still require generated tests. CRC-valid metadata does not prove frame association, picture fidelity, correct crop/resize statistics or future reattachment. Native integration and AV1 framing require separate acceptance.

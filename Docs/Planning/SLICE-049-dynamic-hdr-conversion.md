@@ -81,6 +81,14 @@ remain separate gates.
 
 ## Edited-picture analysis prerequisites
 
+D-097 qualifies a compatible development dependency before native decoded-frame
+integration. The first private dependency inherited a macOS 27 minimum; the rebuilt
+candidate and development reference explicitly target macOS 14. Generated and
+relocated development checks pass. Complete compatible source association is running;
+Developer ID hardened loading and native resource/ownership integration stay open.
+MINIMAL-DECODER-RUNTIME-EVIDENCE.md records the bounded effect and failures. No native
+conversion, edit or new dependency is admitted by these observations.
+
 Dolby's creation guidance specifies the active image before analysis, permits it to
 vary by shot and distinguishes measured L1 analysis from artistic target trims.
 MaxCLL/MaxFALL normally require separate calculation. Therefore removing only verified

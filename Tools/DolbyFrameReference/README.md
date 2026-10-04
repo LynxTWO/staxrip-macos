@@ -104,6 +104,18 @@ Primary API references: [raw Dolby RPU side data](https://ffmpeg.org/doxygen/tru
 [opaque propagation and codec cropping](https://ffmpeg.org/doxygen/trunk/avcodec_8h_source.html).
 The development tool is separate from the native helper's packaging contract.
 
+The builder explicitly targets macOS 14.0, matching the native package, and supports
+`--deployment-target 14.0`. Its generated test inspects the executable's actual
+Mach-O minimum. Linked libraries need their own compatible minimum; targeting the
+executable alone cannot make a newer library run on an older Mac. Actual execution
+on macOS 14 and x86_64 remains unqualified. The generated suite is included in the
+reader workflow for changes to either development tool.
+
+The later private minimal build also explicitly compiles/links for macOS 14.
+Development relocation passes generated cases with relative library dependencies,
+but hardened Developer ID loading and native integration remain open. See
+Docs/Planning/MINIMAL-DECODER-RUNTIME-EVIDENCE.md for retained failures and scope.
+
 A separately built minimal FFmpeg 9.0.2 LGPL-only configuration also passed all fourteen
 generated tests. This is private build/API feasibility, not full-source or distribution
 qualification. Configure flags, source checksum and limits are recorded in

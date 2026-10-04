@@ -215,6 +215,16 @@ class ReferenceTests(unittest.TestCase):
         self.assertTrue(dangling.is_symlink())
         self.assertFalse((self.path / "absent-target").exists())
 
+    def test_builder_sets_native_deployment_target_and_rejects_unsupported_target(self):
+        # Inspect the real Mach-O; a compiler flag alone does not prove its result.
+        build = subprocess.check_output(["vtool", "-show-build", str(self.reference)], text=True)
+        self.assertRegex(build, r"minos\s+14\.0(?:\s|$)")
+        destination = self.path / "unsupported-target"
+        result = subprocess.run([sys.executable, str(Path(__file__).with_name("build.py")),
+            "--output", str(destination), "--deployment-target", "27.0"], capture_output=True, timeout=2)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(destination.exists())
+
     def test_final_source_change_refuses_and_restores_generated_file(self):
         original = self.source.read_bytes()
         real_consume = check.consume

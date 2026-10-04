@@ -76,3 +76,13 @@ against 5 s; AV1 matrix 122.239 s against 120 s. All 311 tests finished in
 Its private log is retained with this separate result. No blind retry,
 new diagnostic observer, deadline/assertion change or production qualification
 follows. Native local 311-test/optimized/full-source evidence remains local scope.
+
+
+PR 71 head 4d1b93f ordinary app run
+[37177037602](https://github.com/LynxTWO/staxrip-macos/actions/runs/37177037602)
+failed two existing timing checks. AV1 copy matrix exceeded its unchanged 120 s
+limit and settled in 126.740 s. Fresh analysis cancellation took 6.863703 s against
+five seconds. All 311 tests finished in 444.484 s with two issues; preview packaging
+was skipped. Reader run 37177037607 passed in 1m5s. Private failure log retained;
+no retry, new timing observer or assertion/deadline change. D-096 local full-source
+and default app regression evidence remains scoped separately from hosted acceptance.

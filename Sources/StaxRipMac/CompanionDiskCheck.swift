@@ -57,6 +57,22 @@ enum CompanionDiskCheck {
         try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: true,
                          originalIndex: true, originalAudit: true, metadataTool: tool)
     }
+    /// Explicit read-only review of surviving files against the original source.
+    /// No lost coordinator receipt, path discovery, import or cleanup authority.
+    static func reviewOriginalCandidate(source: URL, candidate: URL, retention: Transaction.Retention,
+                                        tool: CompanionMetadataProcess.Tool) async throws -> Receipt {
+        try await settle(source: source, stage: candidate, input: .candidate(retention), originalTrack: true,
+                         originalPackets: true, originalIndex: true, originalAudit: true, metadataTool: tool)
+    }
+    private enum Input: Sendable {
+        case provided(Transaction.Contents), candidate(Transaction.Retention)
+        var retention: Transaction.Retention {
+            switch self { case .provided(let c): return c.retention; case .candidate(let r): return r }
+        }
+        var provided: Transaction.Contents? {
+            if case .provided(let c) = self { return c }; return nil
+        }
+    }
     struct ReadView {
         let sourceBytes: Int64
         let source: (Int64, Int) throws -> Data
@@ -66,6 +82,11 @@ enum CompanionDiskCheck {
         var componentRead: (String, Int64, Int) throws -> Data = { _, _, _ in throw failure() }
     }
     private static func settle(source: URL, stage: URL, contents: Transaction.Contents, originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool, metadataTool: CompanionMetadataProcess.Tool? = nil) async throws -> Receipt {
+        try await settle(source: source, stage: stage, input: .provided(contents), originalTrack: originalTrack,
+                         originalPackets: originalPackets, originalIndex: originalIndex, originalAudit: originalAudit, metadataTool: metadataTool)
+    }
+    private static func settle(source: URL, stage: URL, input: Input, originalTrack: Bool, originalPackets: Bool,
+                               originalIndex: Bool, originalAudit: Bool, metadataTool: CompanionMetadataProcess.Tool? = nil) async throws -> Receipt {
         try Task.checkCancellation()
         let cancelled = Cancellation()
         #if DEBUG
@@ -79,45 +100,73 @@ enum CompanionDiskCheck {
             try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue(label: "StaxRip.companion-disk-check", qos: .userInitiated).async {
                     continuation.resume(with: Result {
-                        try check(source: source, stage: stage, contents: contents, originalTrack: originalTrack, originalPackets: originalPackets, originalIndex: originalIndex, originalAudit: originalAudit, metadataTool: metadataTool, metadataBoundary: metadataBoundary, cancelled: cancelled, boundary: boundary)
+                        try check(source: source, stage: stage, input: input, originalTrack: originalTrack, originalPackets: originalPackets, originalIndex: originalIndex, originalAudit: originalAudit, metadataTool: metadataTool, metadataBoundary: metadataBoundary, cancelled: cancelled, boundary: boundary)
                     })
                 }
             }
         } onCancel: { cancelled.cancel() }
         try Task.checkCancellation(); return result
     }
-    private static func check(source url: URL, stage urlStage: URL, contents: Transaction.Contents,
+    private static func check(source url: URL, stage urlStage: URL, input: Input,
                               originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool, metadataTool: CompanionMetadataProcess.Tool?, metadataBoundary: CompanionMetadataProcess.Boundary, cancelled: Cancellation, boundary: Boundary) throws -> Receipt {
         try cancelled.check()
         let source = try File(url: url, maximum: 1 << 40), directory = try Directory(urlStage)
-        let limits = contents.retention.limits, expected = Set(limits.keys)
-        guard source.id == contents.sourceID, directory.id == contents.stageID,
-              source.bytes == contents.sourceBytes, (1...2_000_000).contains(contents.packets),
-              (1...2_000_000).contains(contents.records), (0...4_000_000_000_000).contains(contents.enhancementNALs),
-              contents.members.count == expected.count, Set(contents.members.map(\.name)) == expected,
-              try directory.names() == expected else { throw failure() }
+        let limits = input.retention.limits, expected = Set(limits.keys), provided = input.provided
+        guard try directory.names() == expected else { throw failure() }
+        if let c = provided {
+            guard source.id == c.sourceID, directory.id == c.stageID, source.bytes == c.sourceBytes,
+                  (1...2_000_000).contains(c.packets), (1...2_000_000).contains(c.records),
+                  (0...4_000_000_000_000).contains(c.enhancementNALs), c.members.count == expected.count,
+                  Set(c.members.map(\.name)) == expected else { throw failure() }
+        }
         let sourceHash = try source.hash(cancelled: cancelled, original: nil, progress: { count in
             #if DEBUG
             boundary.progress("source", count)
             #endif
         })
-        guard sourceHash == contents.sourceSHA256 else { throw failure() }
-        var opened: [String: File] = [:]
+        if let c = provided { guard sourceHash == c.sourceSHA256 else { throw failure() } }
+        var opened: [String: File] = [:], actualMembers: [ResultSetStaging.Member] = []
         defer { withExtendedLifetime((source, directory, opened)) {} }
-        for member in contents.members {
+        for name in expected.sorted() {
             try cancelled.check()
-            guard let maximum = limits[member.name], (1...maximum).contains(member.byteCount) else { throw failure() }
-            let file = try File(name: member.name, directory: directory.fd, maximum: maximum)
-            opened[member.name] = file
-            guard file.bytes == member.byteCount else { throw failure() }
-            let original = member.name == "original-container.mkv" ? source : nil
+            guard let maximum = limits[name] else { throw failure() }
+            let file = try File(name: name, directory: directory.fd, maximum: maximum)
+            opened[name] = file
+            if let c = provided {
+                guard let member = c.members.first(where: { $0.name == name }), (1...maximum).contains(member.byteCount),
+                      file.bytes == member.byteCount else { throw failure() }
+            }
+            let original = name == "original-container.mkv" ? source : nil
             if original != nil { guard file.bytes == source.bytes else { throw failure() } }
             let digest = try file.hash(cancelled: cancelled, original: original, progress: { count in
                 #if DEBUG
-                boundary.progress(member.name, count)
+                boundary.progress(name, count)
                 #endif
             })
-            guard digest == member.sha256 else { throw failure() }
+            if let c = provided {
+                guard let member = c.members.first(where: { $0.name == name }), file.bytes == member.byteCount,
+                      digest == member.sha256 else { throw failure() }
+            }
+            actualMembers.append(.init(name: name, byteCount: file.bytes, sha256: digest))
+        }
+        let contents: Transaction.Contents
+        if let c = provided { contents = c }
+        else {
+            guard let manifest = opened["manifest.json"], manifest.bytes <= 1 << 20 else { throw failure() }
+            let bytes = try manifest.read(offset: 0, count: Int(manifest.bytes), cancelled: cancelled)
+            #if DEBUG
+            boundary.originalComponentRead("manifest.json", 0, Int(manifest.bytes))
+            #endif
+            try cancelled.check()
+            // Only bootstrap bounded count claims. D111 then admits the whole
+            // exact manifest schema and D110 reconstructs those counts from source.
+            let claims = try CompanionArchiveJSON.object(bytes, maximum: 1 << 20)
+            contents = .init(retention: input.retention, sourceID: source.id, stageID: directory.id,
+                sourceBytes: source.bytes, sourceSHA256: sourceHash,
+                packets: Int64(try CompanionArchiveJSON.unsigned(claims, "packets", 1...2_000_000)),
+                records: Int64(try CompanionArchiveJSON.unsigned(claims, "records", 1...2_000_000)),
+                enhancementNALs: Int64(try CompanionArchiveJSON.unsigned(claims, "enhancement_nals", 0...4_000_000_000_000)),
+                members: actualMembers)
         }
         let track: CompanionOriginalTrackCheck.Receipt?
         let packets: CompanionOriginalPacketCheck.Receipt?

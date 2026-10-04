@@ -126,6 +126,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-115 | 2026-10-04 | Qualify native original companion ENOSPC settlement on owned APFS | Confirmed | |
 | D-116 | 2026-10-04 | Own native companion access and temporary export activity | Confirmed | |
 | D-117 | 2026-10-04 | Qualify fixed Rust helper signatures before release admission | Confirmed | |
+| D-118 | 2026-10-04 | Abrupt native coordinator loss around companion commit | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -2898,3 +2899,65 @@ replaced only that owned assertion with bounded55829 -diu -t7200, expiry17:46:06
 for continuing authorized scheduled development. No persistent security/locking change
 or manual-lock override. Incomplete D097/D117 signing artifacts and detached D115 failed
 image stay retained. No blanket signing/production/archive acceptance follows.
+
+## D-118: Qualify abrupt native coordinator loss around exclusive companion commit
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner standing autonomous generated non-audio development, R059 / Slice049.
+Need trace: D105 owns cleanup only while its process lives. A lost coordinator cannot
+report success or discard its stage. D099 exclusive rename must be observed separately
+from a returned receipt. Consequence local_only for this generated qualification;
+future user_data recovery remains gated. Preserve owner source/session/journal/outputs.
+
+Choice delegated to AI: test actual native writer/full verifier/publication at explicit
+before/after commit boundaries in a separately owned generated Swift test coordinator.
+Alternatives are fabricated filesystem state or exposing recovery adoption/deletion now.
+Select observed process-loss evidence without adding an archive action or recovery API.
+
+Scope: test-only native coordinator reexecution, finite trusted fixture paths/digests,
+exclusive generated root, joined actual writer/reader before boundary acknowledgment,
+parent-gated immediate POSIX exit (no arbitrary external PID signaling), child/pipe settlement,
+read-only native semantic revalidation of surviving stage/result and original/prior bytes.
+The handshake is test instrumentation, not a persisted journal or application bridge.
+Retain fixture on uncertain ownership/failure; delete only successful owned generated
+fixtures after settled direct child and all assertions. No disk image or owner volume.
+
+Acceptance: both retention modes at both boundaries, direct immediate coordinator exit without Swift unwinding,
+acknowledged helper joins, exact surviving directory identity/content/membership,
+precommit stage with absent destination, postcommit destination with absent old stage,
+unchanged generated source/prior output, full source-dependent native semantic reread.
+No power-loss durability, immutable snapshot, persisted producer provenance, portable
+importer, production recovery release or orphan/blocked-I/O settlement follows.
+Ordinary regression, privacy/protection/planning and PR92 automatic observation without
+retry. Product unchanged; reuse explicit D117 release signature/build receipt if so.
+
+Approved for build by: owner standing autonomous generated non-audio delegation, 2026-10-04.
+
+D118 fixture specification correction: the initial four SIGKILL cases passed in isolation,
+but ordinary regression observed raise returning in one generated child. Its cause is
+unknown; the child error ran ordinary cleanup, so that case is not abrupt-loss evidence.
+Retain the failed generated fixture/log. Select explicit POSIX _exit86 at every boundary,
+not an optional success fallback: it ends the process without Swift/defer/atexit cleanup.
+Parent must observe normal exit86 and joined coordinator. This qualifies abrupt native
+coordinator loss without claiming signal-delivery or power-loss behavior. No D090 test,
+assertion, timing limit, concurrency policy or scheduling rule changes.
+
+D118 final outcome: actual immediate coordinator exit86 bypasses Swift cleanup at both
+exclusive commit boundaries in both retention modes. Source/prior bytes and pinned
+surviving stage/result identities remain equal; fresh full native source-dependent
+semantic verification passes. Final focused1test/1suite1.800s and ordinary439reported
+tests/92suites207.798s passed with26 unchanged opt-in skips and no new warnings. New loss
+suite passed4.577s within ordinary. The earlier Foundation stall and returned SIGKILL
+ordinary failure439tests206.791s remain retained, not retroactively passed. Exact owned
+stalled runner stopped; failed fixtures retained outside Git. No D090 causal claim or
+historical assertion/deadline/concurrency/scheduling change. Product sources unchanged
+since D117; explicit optimized build reused, current strict ad-hoc app/read-only helper
+signatures passed, writer absent. Five-file privacy scan zero matches/positive sentinel,
+owner source metadata/current journal unchanged, full planning findings empty. PR92
+automatic16 unchanged timing issues438tests618.883s retained/PR updated; signature suite
+passed246.881s, preview skipped, no reader workflow. No archive action, release capability,
+persisted recovery/adoption/deletion API or power-loss durability follows. Next qualify
+read-only native source-dependent candidate review without the lost coordinator's test
+frame. Packaging/signing, production review recovery and owner mode/privacy remain gates.
+See NATIVE-COMPANION-COORDINATOR-LOSS-EVIDENCE.md for actual coverage and limits.

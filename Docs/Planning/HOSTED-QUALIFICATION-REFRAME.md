@@ -192,3 +192,8 @@ PR92 automatic app [37214474279](https://github.com/LynxTWO/staxrip-macos/action
 
 
 PR93 automatic app [37216344134](https://github.com/LynxTWO/staxrip-macos/actions/runs/37216344134) failed13 issues: five unchanged60-second motion cases, six unchanged120-second cases, Fresh analysis cancellation5.848435s against5s and a motion error-message expectation observing CancellationError instead of the expected frame-bound error. All439reported tests finished765.145s; new coordinator-loss suite passed295.425s. No reader workflow triggered; preview skipped. Private failure log retained/PR updated without retry. These observations do not establish a timing cause or a separate motion root cause; D090 causes remain unknown. No historical observer, assertion/deadline or scheduling change.
+
+## D-120 observation of PR94 automatic qualification
+
+
+Automatic hosted qualification [37217896269](https://github.com/LynxTWO/staxrip-macos/actions/runs/37217896269) failed: 445 reported tests in 734.974 seconds, 47 issues. Seventeen existing 60-second, twenty-five 120-second and two 180-second deadline issues; three motion expectations observed CancellationError or did not observe the intended generated source mutation. Candidate review suite313.611s and access operation suite320.415s passed. Preview skipped; no reader workflow for Swift-only changes. Failure log retained privately without retry, observer, assertion/deadline or scheduling change. Timing and motion failure causes remain unknown; local success does not erase this outcome.

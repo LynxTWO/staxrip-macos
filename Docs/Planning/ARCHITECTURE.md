@@ -384,3 +384,16 @@ EPERM/failed group/join refusal; uncertain ownership requires retained-stage rev
 when later integrated. Full original archive semantics remain false until actual
 stored audit/source/components comparison and final D108 observations. See
 OWNED-NATIVE-METADATA-EVIDENCE.md.
+
+
+D-120 extends the existing concrete CompanionArchiveOperation with unused read-only
+reviewCandidate. Explicit source/candidate-folder scope attempts and no-follow descriptor
+pins precede temporary activity; candidate permission is not parent permission. The shared
+operation/review registry excludes conflicting preservation/review. D119 derives pinned
+source/member observations and requires complete D109-D114 original source-dependent
+semantics, including actual owned fresh metadata equal stored audit. Both worker and helper
+settle before ordinary reverse scope/pin/activity release. Typed unsettled ownership or
+changed outer source/candidate identity retains pins/scopes across dropped errors; expiry
+ends energy only. No creation/publication/deletion/adoption/import or production recovery
+release follows. Native helper release provenance/packaging and actual sandbox grants remain
+open. See NATIVE-CANDIDATE-ACCESS-EVIDENCE.md for concrete qualification and limits.

@@ -116,7 +116,9 @@ struct StaticHardenedNativeHostTests {
         let root = bundle.original.root, main = bundle.bundle.appendingPathComponent("Contents/MacOS/StaticNativeHost")
         try FileManager.default.removeItem(at: bundle.main)
         let sources = try FileManager.default.contentsOfDirectory(at: Self.repo.appendingPathComponent("Sources/StaxRipMac"), includingPropertiesForKeys: nil).filter { $0.pathExtension == "swift" && $0.lastPathComponent != "StaxRipMacApp.swift" }.sorted { $0.path < $1.path }
-        try #require(sources.count == 90)
+        // D124 adds two real non-entry product files to the prior 90-source closure.
+        try #require(sources.count == 92)
+        try #require(Set(sources.map(\.lastPathComponent)).isSuperset(of: ["DolbyDecoderProcess.swift", "DolbyDecoderStream.swift"]))
         let entry = Self.repo.appendingPathComponent("scripts/fixtures/static-native-companion-host.swift")
         let fingerprints = try sources.map { try Self.hash($0) }, entryHash = try Self.hash(entry)
         let compiler = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/xcrun"), arguments: ["--find", "swiftc"])

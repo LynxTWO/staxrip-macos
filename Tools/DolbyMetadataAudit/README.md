@@ -99,6 +99,10 @@ container crop and display dimensions/unit are explicitly declarations. DisplayU
 can mean pixels, physical units, a ratio or unknown; do not treat every DisplayWidth
 as an output pixel count. Each `packet` preserves its ordinal, source payload offset,
 signed nanosecond PTS, explicit duration (null when absent), flags, size and SHA-256.
+The additive `block_input_byte_offset` identifies the Block payload's start, including
+its variable-width track VINT; `input_byte_offset` remains the encoded-video payload
+start. FFmpeg packet position refers to the former. Never subtract a presumed fixed
+four-byte prefix: generated one/two/three-byte track VINTs establish the distinction.
 Each `rpu` retains the original packet and NAL ordinals, source offset, matching PTS,
 full validated metadata and escaped-payload digest. Duplicates are retained. Type 63
 NALs are counted as encoded enhancement declarations, not decoded pictures/residuals.
@@ -155,3 +159,7 @@ shows container crop/display units separately from Level 5 luma offsets. Odd
 luma offsets are valid declarations, not proof of chroma-aligned cropping.
 Re-encoding, edited geometry, measured brightness, calibrated rendering and
 AV1/other-container readers remain separate acceptance work.
+
+Tools/DolbyFrameReference is a separate, unbundled development reference for decoded
+base-frame/raw-RPU association. Its direct wire and complete coverage checks do not
+change this helper's protocol version, native packaging or conversion admission.

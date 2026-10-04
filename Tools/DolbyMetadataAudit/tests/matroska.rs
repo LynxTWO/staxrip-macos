@@ -63,6 +63,16 @@ fn packet(nals: &[Vec<u8>], width: usize) -> Vec<u8> {
     bytes
 }
 fn track(number: u64, kind: u64, codec: &[u8], config: &[u8], extras: &[u8]) -> Vec<u8> {
+    track_geometry(number, kind, codec, config, extras, [160, 96])
+}
+fn track_geometry(
+    number: u64,
+    kind: u64,
+    codec: &[u8],
+    config: &[u8],
+    extras: &[u8],
+    raster: [u64; 2],
+) -> Vec<u8> {
     element(
         0xae,
         &[
@@ -75,8 +85,8 @@ fn track(number: u64, kind: u64, codec: &[u8], config: &[u8], extras: &[u8]) -> 
                 element(
                     0xe0,
                     &[
-                        uint(0xb0, 160),
-                        uint(0xba, 96),
+                        uint(0xb0, raster[0]),
+                        uint(0xba, raster[1]),
                         uint(0x54bb, 1),
                         uint(0x54b2, 3),
                         uint(0x54b0, 16),
@@ -126,6 +136,15 @@ fn block_group(relative: i16, packet: &[u8], extra: &[u8]) -> Vec<u8> {
     element(0xa0, &[uint(0x9b, 40), block, extra.to_vec()].concat()) // duration precedes packet
 }
 fn movie(config: &[u8], blocks: &[u8], track_extra: &[u8], unknown_segment: bool) -> Vec<u8> {
+    movie_geometry(config, blocks, track_extra, unknown_segment, [160, 96])
+}
+fn movie_geometry(
+    config: &[u8],
+    blocks: &[u8],
+    track_extra: &[u8],
+    unknown_segment: bool,
+    raster: [u64; 2],
+) -> Vec<u8> {
     let header = element(
         0x1a45dfa3,
         &[
@@ -148,7 +167,7 @@ fn movie(config: &[u8], blocks: &[u8], track_extra: &[u8], unknown_segment: bool
         element(
             0x1654ae6b,
             &[
-                track(1, 1, b"V_MPEGH/ISO/HEVC", config, track_extra),
+                track_geometry(1, 1, b"V_MPEGH/ISO/HEVC", config, track_extra, raster),
                 track(2, 2, b"A_PCM/INT/LIT", &[], &[]),
             ]
             .concat(),
@@ -649,10 +668,12 @@ fn actual_hevc_packets_and_rpu_association_match_independent_ffprobe() {
     let mut blocks = Vec::new();
     let mut expected = Vec::new();
     let mut expected_rpus = Vec::new();
+    let mut reference_packets = Vec::new();
     for (index, entry) in probe["packets"].as_array().unwrap().iter().enumerate() {
         let mut bytes = probe_hex(entry["data"].as_str().unwrap());
         let rpu = rpu_with_left(index as u64 + 1);
         bytes.extend(packet(std::slice::from_ref(&rpu), 4));
+        reference_packets.push((entry["pts"].as_i64().unwrap(), bytes.clone()));
         expected_rpus.push((index as u64, digest(&rpu[2..])));
         // Deliberately repeat a metadata record; never deduplicate by wire value.
         if index == 2 {
@@ -709,7 +730,7 @@ fn actual_hevc_packets_and_rpu_association_match_independent_ffprobe() {
             "v:0",
             "-show_packets",
             "-show_entries",
-            "packet=pts,size,data_hash",
+            "packet=pts,size,pos,data_hash",
             "-show_data_hash",
             "sha256",
             "-of",
@@ -730,6 +751,10 @@ fn actual_hevc_packets_and_rpu_association_match_independent_ffprobe() {
         assert_eq!(entry["data_hash"], format!("SHA256:{}", expected[index].1));
         assert_eq!(packets[index]["pts_ns"], expected[index].0);
         assert_eq!(packets[index]["sha256"], expected[index].1);
+        assert_eq!(
+            packets[index]["block_input_byte_offset"],
+            entry["pos"].as_str().unwrap().parse::<u64>().unwrap()
+        );
         assert_eq!(
             packets[index]["encoded_bytes"],
             entry["size"].as_str().unwrap().parse::<u64>().unwrap()
@@ -766,6 +791,196 @@ fn actual_hevc_packets_and_rpu_association_match_independent_ffprobe() {
             .open(destination)
             .unwrap();
         file.write_all(&input).unwrap();
+    }
+    // Explicit development-reference fixtures; each file is exclusively created.
+    if let Some(destination) = std::env::var_os("STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY") {
+        let directory = PathBuf::from(destination);
+        for case in [
+            "single",
+            "duplicate",
+            "missing",
+            "negative",
+            "group",
+            "wide-vint",
+            "duplicate-pts",
+        ] {
+            let mut blocks = Vec::new();
+            for (index, (pts, bytes)) in reference_packets.iter().enumerate() {
+                let mut bytes = bytes.clone();
+                if case == "duplicate" && index == 2 {
+                    bytes.extend(packet(&[rpu_with_left(index as u64 + 1)], 4));
+                }
+                if case == "missing" && index == 2 {
+                    // Remove just the generated final RPU, retaining the coded picture.
+                    bytes.truncate(bytes.len() - rpu_with_left(index as u64 + 1).len() - 4);
+                }
+                let relative = if case == "duplicate-pts" {
+                    -10
+                } else {
+                    (pts - 10 - if case == "negative" { 200 } else { 0 }) as i16
+                };
+                if case == "group" {
+                    blocks.extend(block_group(relative, &bytes, &[]));
+                } else if case == "wide-vint" {
+                    blocks.extend(element(
+                        0xa3,
+                        &[
+                            vec![0x40, 1],
+                            relative.to_be_bytes().to_vec(),
+                            vec![if index == 0 { 0x80 } else { 0 }],
+                            bytes,
+                        ]
+                        .concat(),
+                    ));
+                } else {
+                    blocks.extend(simple(
+                        1,
+                        relative,
+                        if index == 0 { 0x80 } else { 0 },
+                        &bytes,
+                    ));
+                }
+            }
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(directory.join(format!("{case}.mkv")))
+                .unwrap();
+            file.write_all(&movie(&config, &blocks, &[], false))
+                .unwrap();
+        }
+        // Real SPS conformance window: dimensions need not equal coded block extent.
+        let padded = dir.0.join("conformance.mp4");
+        let result = Command::new("ffmpeg").args(["-v", "error", "-nostdin", "-f", "lavfi",
+            "-i", "testsrc2=size=162x98:rate=25", "-frames:v", "4", "-an", "-c:v", "libx265",
+            "-pix_fmt", "yuv420p10le", "-preset", "ultrafast", "-x265-params",
+            "bframes=2:b-adapt=0:keyint=4:colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc",
+            "-video_track_timescale", "1000"]).arg(&padded).output().unwrap();
+        assert!(result.status.success());
+        let probe = tool(
+            "ffprobe",
+            &[
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_packets",
+                "-show_streams",
+                "-show_data",
+                "-of",
+                "json",
+            ],
+            &padded,
+        );
+        let padded_config = probe_hex(probe["streams"][0]["extradata"].as_str().unwrap());
+        let mut blocks = Vec::new();
+        for (index, entry) in probe["packets"].as_array().unwrap().iter().enumerate() {
+            let mut bytes = probe_hex(entry["data"].as_str().unwrap());
+            bytes.extend(packet(&[rpu_with_left(index as u64 + 1)], 4));
+            blocks.extend(simple(
+                1,
+                (entry["pts"].as_i64().unwrap() - 10) as i16,
+                if index == 0 { 0x80 } else { 0 },
+                &bytes,
+            ));
+        }
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(directory.join("conformance.mkv"))
+            .unwrap();
+        file.write_all(&movie_geometry(
+            &padded_config,
+            &blocks,
+            &[],
+            false,
+            [162, 98],
+        ))
+        .unwrap();
+        // Random-access CRA starts can include encoded RASL pictures not output by a decoder.
+        let random_access = dir.0.join("random-access.mp4");
+        let result = Command::new("ffmpeg")
+            .args([
+                "-v",
+                "error",
+                "-nostdin",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc2=size=160x96:rate=25",
+                "-frames:v",
+                "24",
+                "-an",
+                "-c:v",
+                "libx265",
+                "-pix_fmt",
+                "yuv420p10le",
+                "-preset",
+                "ultrafast",
+                "-x265-params",
+                "bframes=2:b-adapt=0:keyint=12:min-keyint=12:scenecut=0:open-gop=1",
+                "-video_track_timescale",
+                "1000",
+            ])
+            .arg(&random_access)
+            .output()
+            .unwrap();
+        assert!(result.status.success());
+        let probe = tool(
+            "ffprobe",
+            &[
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_packets",
+                "-show_streams",
+                "-show_data",
+                "-of",
+                "json",
+            ],
+            &random_access,
+        );
+        let access_config = probe_hex(probe["streams"][0]["extradata"].as_str().unwrap());
+        let mut all_blocks = Vec::new();
+        let mut cra_blocks = Vec::new();
+        let mut found_cra = false;
+        for (index, entry) in probe["packets"].as_array().unwrap().iter().enumerate() {
+            let mut bytes = probe_hex(entry["data"].as_str().unwrap());
+            let mut position = 0;
+            while position < bytes.len() {
+                let size =
+                    u32::from_be_bytes(bytes[position..position + 4].try_into().unwrap()) as usize;
+                position += 4;
+                found_cra |= bytes[position] >> 1 == 21;
+                position += size;
+            }
+            bytes.extend(packet(&[rpu_with_left(index as u64 + 1)], 4));
+            let block = simple(
+                1,
+                (entry["pts"].as_i64().unwrap() - 10) as i16,
+                if entry["flags"].as_str().unwrap().contains('K') {
+                    0x80
+                } else {
+                    0
+                },
+                &bytes,
+            );
+            all_blocks.extend(&block);
+            if found_cra {
+                cra_blocks.extend(&block);
+            }
+        }
+        assert!(found_cra && !cra_blocks.is_empty());
+        for (name, blocks) in [("whole-gop", all_blocks), ("cra-start", cra_blocks)] {
+            let mut file = fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(directory.join(format!("{name}.mkv")))
+                .unwrap();
+            file.write_all(&movie(&access_config, &blocks, &[], false))
+                .unwrap();
+        }
     }
 }
 
@@ -839,4 +1054,24 @@ fn compact_protocol_preserves_associations_and_canonical_sequence_proof() {
         )
         .is_err()
     );
+}
+
+#[test]
+fn original_block_offset_does_not_guess_track_vint_width() {
+    let p = packet(&[rpu()], 4);
+    for prefix in [vec![0x81], vec![0x40, 0x01], vec![0x20, 0, 0x01]] {
+        let block = element(
+            0xa3,
+            &[prefix.clone(), vec![0, 0, 0x80], p.clone()].concat(),
+        );
+        let input = movie(&config(4), &block, &[], false);
+        let mut out = Vec::new();
+        audit_matroska(&mut Cursor::new(&input), input.len() as u64, &mut out).unwrap();
+        let row = &lines(&out)[1];
+        let start = row["block_input_byte_offset"].as_u64().unwrap() as usize;
+        let payload = row["input_byte_offset"].as_u64().unwrap() as usize;
+        assert_eq!(&input[start..start + prefix.len()], prefix);
+        assert_eq!(payload - start, prefix.len() + 3);
+        assert_eq!(&input[payload..payload + p.len()], p);
+    }
 }

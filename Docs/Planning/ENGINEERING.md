@@ -372,3 +372,13 @@ checks, ordinary regression, licensed nested-helper build and a focused native
 walkthrough are the required boundary; evidence is recorded separately. This does
 not close conversion, decoded-picture/POC, brightness, archive publication,
 crop/resize, rendering or hosted timing-reliability gates.
+
+
+D-096 adds the unbundled development Tools/DolbyFrameReference. An installed-FFmpeg
+software decoder exposes opaque packet provenance and raw frame-RPU digests without
+automatic codec cropping. A bounded disk spool requires source/configuration/packet
+agreement, one validated RPU per supported picture packet, complete decoder coverage
+and final source rehash; no native execution/admission or new dependency is bundled.
+DECODED-DOLBY-ASSOCIATION-EVIDENCE.md retains the generated and private outcome.
+Codec conformance/container/user/Dolby active-area transforms stay separate; original
+EL pairing, general POC, picture statistics, rendering and edited conversion stay open.

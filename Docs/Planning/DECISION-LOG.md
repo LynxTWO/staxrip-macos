@@ -104,6 +104,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-093 | 2026-10-03 | Bound complete RPU archive parsing | Confirmed | |
 | D-094 | 2026-10-03 | Bound Matroska HEVC packet association | Confirmed | |
 | D-095 | 2026-10-03 | Native read-only complete Dolby metadata inspection | Confirmed | |
+| D-096 | 2026-10-03 | Bounded decoded base-picture packet association | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1482,3 +1483,47 @@ Own one cancellable analysis task per inspector, keep file/process/JSON work off
 
 
 D-095 outcome: 16 locked Rust tests/format/warnings-denied Clippy and eight new native core/lifecycle tests passed. Final ordinary local run passed 311 tests in 203.950 seconds; optimized helper/app build, nested/outer signature checks and 69 Cargo plus 16 Rust library notice-file hashes passed. Generated native disclosures retain individual geometry/scope values and expanded metrics after correcting an inherited accessibility label. Native long-read cancellation settled with no result; retry fully checked 120,552 packets/RPUs and source/configuration integrity. Original owner session/Failed queue restored exactly, source descriptor/current recovery bytes unchanged. NATIVE-DOLBY-INSPECTION-EVIDENCE.md retains failures and scope. Native encoded metadata inspection closes only this prerequisite; decoded-picture/POC, edits, reconstruction, archive publication, conversion and calibrated rendering remain open. Hosted acceptance is separate; no merge or release.
+
+
+## D-096: Bound decoded base-picture packet association
+Date: 2026-10-03
+Status: Confirmed
+
+Authority: standing autonomous implementation/research delegation and explicit proper dynamic-HDR preservation/conversion plus crop/resize requests. This continues R-059 / Slice 049's frame/timing prerequisite after D-095 native encoded-packet inspection. No owner encode, source/journal edit, new native conversion/admission, audio listening, timing diagnosis, merge or release.
+
+Need: an encoded-packet census and unique-PTS sorting are not general proof of decoded-picture/RPU association. The inspected pinned hevc_parser 0.6.10 API retains complete NAL/frame sequences and keeps lower-level SPS/PPS/slice routines private; no new crate is admitted merely to reuse that whole-sequence path. Evaluate existing FFprobe decoded base-frame packet provenance (opaque packet position/size plus declared PTS) with exact observed Matroska block offsets, rather than guessing a fixed track-VINT prefix length or treating best-effort timestamps as original timing. FFprobe is an independent decoder reference, not an enhancement decoder or calibrated renderer.
+
+First developmental contract: complete bounded source packet/RPU read, exact configuration and packet reference, then a bounded on-disk association spool. Require unique original PTS/block position, one validated RPU per supported picture packet, source/reference timing and payload size agreement, one decoded base frame per admitted packet and complete coverage. Duplicate/missing associations, synthesized/disagreeing PTS, changing raster/pixel format, malformed/oversize output, decoder errors and nonoutput seek/CRA access units refuse this initial contract; later trimming needs explicit qualified pre-roll/nonoutput treatment. Retain signed timestamps and original/output order separately. No full-film metadata/frame array or silently dropped surplus RPU.
+
+Generated actual HEVC/B-frame, variable track-VINT block offsets, duplicate/missing RPU, source/decoder/receipt corruption and prefix/CRA behavior precede private complete decoder validation. Protect owner source/current journal and leave the existing restored native app untouched. Coded/decoded/conformance/container/user crop and display transforms stay distinct. Frame association does not qualify crop/resize brightness, artistic trims, FEL reconstruction, HDR10+ authoring or visual parity.
+
+
+D-096 research refinement: installed FFmpeg headers document the escaped raw RPU buffer on each AVFrame and explicitly warn that COPY_OPAQUE mappings can be many-to-many. FFprobe prints packet provenance but does not expose a hash of that raw buffer. Evaluate a separate development-only reference executable using the existing installed FFmpeg libraries to expose raw-buffer digests and opaque packet provenance; do not bundle it or introduce a native dependency. Packet/frame coverage and direct RPU-buffer agreement are required, not assumed from COPY_OPAQUE alone. Cap frame/payload/count/single-allocation bounds and report that these do not establish a whole-process heap ceiling. Dependency/license distribution and native integration would require a later separate contract.
+
+D-096 decoder configuration: the first one-thread complete-source attempt was
+deliberately interrupted after a partial byte-position observation suggested it
+might not finish within the unchanged two-hour development timeout. Refusal/owned
+cleanup and source/current-journal protection passed. Qualify explicit one/four-thread
+configurations on actual generated associations; default to four for the new complete
+pass. Retain the failed partial receipt and unknown full outcome. This changes no app
+test deadline, scheduling or D-090 observation scope.
+
+D-096 dependency feasibility: evaluate an unbundled minimal LGPL-only FFmpeg 9.0.2
+source build under standing local tool-install authority. Pin official source checksum,
+inspect licenses, disable GPL/nonfree/version3/autodetection/network/unneeded modules,
+verify source contents/configuration/runtime license and generated associations. This
+introduces no app dependency or distribution. Full-source backend parity, bounded
+runtime ownership/resources, relocation and corresponding notices/source/signing
+remain a later contract.
+
+D-096 outcome (2026-10-04): 17 Rust and 14 generated reference tests, warnings-denied
+Clang/Clippy and ordinary 311-test app regression passed. Complete four-thread source
+check passed all 120,552 packet/base-frame/RPU associations, stable geometry and
+final fingerprint in 2,674.797 s with a 24,592,384-byte owned disk spool. Source
+descriptor/current recovery bytes stayed unchanged; no owner encode or native
+workspace edit. The initial interrupted one-thread pass remains a failed partial
+receipt. Minimal LGPL-only build/API tests passed separately; full-source parity
+and bundling stay open. DECODED-DOLBY-ASSOCIATION-EVIDENCE.md retains scope, crop/
+resize distinctions and prior hosted failures. Rendering, enhancement pairing,
+edited statistics, runtime conversion/archive publication and distribution remain
+separate gates; no merge/release.

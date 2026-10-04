@@ -4,3 +4,5 @@ Preview/
 .DS_Store
 *.xcuserstate
 Distribution/
+Tools/DolbyFrameReference/.build/
+Tools/DolbyFrameReference/__pycache__/

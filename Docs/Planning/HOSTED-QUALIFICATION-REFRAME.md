@@ -150,3 +150,6 @@ successful automatic runs did not resolve timing reliability or the unknown caus
 
 
 PR 79 automatic app run [37190405469](https://github.com/LynxTWO/staxrip-macos/actions/runs/37190405469) failed two unchanged timing checks: Fresh analysis cancellation 6.702383 s against five seconds, and AV1 matrix 125.935 s after its 120-second deadline. All 331 tests finished in 487.092 s with two issues; preview packaging skipped. Reader run 37190405516 passed in 1m30s. Private failed log retained; no rerun, historical observer or assertion/deadline change. Causes remain unknown.
+
+
+PR80 automatic reader37192320483 passed in 1m26s. App [37192320472](https://github.com/LynxTWO/staxrip-macos/actions/runs/37192320472) failed the unchanged Fresh analysis cancellation assertion: 5.133918 s against five seconds. All340 tests finished in401.731 s with one issue, preview packaging skipped. The new actual writer/semantic/native transaction case passed in58.064 s and its suite58.066 s; AV1 passed its existing deadline. Private failed log retained; no rerun, historical observer or assertion/deadline change. Causes remain unknown.

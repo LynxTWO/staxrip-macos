@@ -112,3 +112,23 @@ The real both-mode fixture preserves duplicate raw RPU/signed encoded associatio
 separate opaque-component phase tests qualify sequencing and cleanup only. Source
 observations are not immutable snapshots. Trusted settled callbacks and a read-only
 precommit source guard are necessary; callbacks cannot prove their own authenticity.
+
+
+## Native writer protocol admission prerequisite
+
+CompanionWriterProtocolTests validate the new internal native parser against actual
+writer ready/staged stdout for both generated retention modes and malformed messages.
+protocol_fixture.py captures an explicit development writer's stdout for these tests
+only. It is not a native bridge, stdin driver, semantic check or cancellation owner
+qualified for application use. No Python tool in this directory is bundled.
+
+```sh
+swift test --filter CompanionWriterProtocolTests
+```
+
+The parser accepts the ASCII JSON subset actually emitted by the fixed writer: strings
+without escapes, unsigned decimal integers, booleans, arrays and objects. Duplicate and
+unknown fields refuse. Escaped/non-ASCII strings, signed/fraction/exponent numbers and
+null refuse deliberately; future writer serialization changes require parser review.
+Native process joining, tool provenance, source/stage/disk checks and independent
+semantic admission remain separate requirements.

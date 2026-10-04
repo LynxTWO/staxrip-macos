@@ -94,3 +94,16 @@ the actual development writer and independent checker on generated fixtures thro
 native publication. Native lease/provenance/resource/signing, owner review, stable import,
 crash/storage and decoded association remain gates. See
 COMPANION-TRANSACTION-SETTLEMENT-EVIDENCE.md.
+
+
+D-106 adds an unused strict native CompanionWriterProtocol parser before process
+integration. Single-owner bounded ready/start/staged state requires expected operation,
+retention, captured source/stage IDs and source size, fixed component limits, resource
+bounds and no claimed semantic verification. Its private ASCII JSON subset rejects
+duplicate/unknown keys, escapes, unsupported numbers, oversized/deep collections and
+trailing/incomplete/nonzero results. The controller declares joined EOF/status through
+finish; this parser cannot establish process/pipe settlement, executable provenance,
+source/disk hashes or original semantics. Generated tests admit actual unbundled writer
+stdout in both modes and compare receipt observations with disk; Python capture is
+explicitly test-only. No app writer action/packaging or native bridge exists. See
+NATIVE-COMPANION-PROTOCOL-EVIDENCE.md.

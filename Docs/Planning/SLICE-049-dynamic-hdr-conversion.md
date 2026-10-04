@@ -1863,3 +1863,27 @@ D128 explicit optimized receipt reused and current strict ad-hoc signatures pass
 PR103 automatic113issues retained/PR updated, no retry. Source metadata/current
 journal/privacy/planning checks pass. See DECODED-BASE-SAMPLE-EVIDENCE.md; native
 sample/source binding, rendering/color/EL/resize/edited flags remain unqualified.
+
+
+## D-130: Native base-sample ownership prerequisite
+Status: Confirmed. Approved for build by: owner standing autonomous generated non-audio
+delegation,2026-10-04,R059.
+
+Use the existing concrete decoder worker with a separate fixed sample role/profile,
+strict bounded typed plane admission and actual generated process qualification as
+D130. Default metadata parser/schema/role remain unchanged. No independent original
+sample-source proof, color/EL/rendering/edited qualification, archive action or release
+capability follows. D127 open-source/spool binding and D128 access remain later gates.
+Preserve original/frozen objects and owner state, keep generated artifacts private.
+
+
+D130 acceptance: final composed15tests/5suites12.996s passes, actual native ten
+generated sample trials/13helper joins and ordinary live cancellation. Deliberate
+consumer refusal propagated group-1-joined-true and retained files. New26-key count
+correction and release-only missing boundary argument failure retained; corrected
+production build/signatures/minima14.0/11.0 pass. Ordinary492tests/100suites210.495s
+passes31opt-in skips/no warnings before release-only fix; final default14tests3.803s
+passes after it, DEBUG behavior unchanged. Fixed role/profile remains development-
+only; source-frame/sample-source and edited flags stay false. PR104 reader
+passed/app105issues failed; retained without retry or timing policy changes. See
+NATIVE-BASE-SAMPLE-PROCESS-EVIDENCE.md for actual scope/limits and next source binding.

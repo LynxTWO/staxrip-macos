@@ -9,11 +9,12 @@ struct CompanionArchiveJSON {
     typealias Object = [String: Value]
     private let bytes: [UInt8]
     private var auditNullable = false
+    private var fieldLimit = 20
     private var position = 0, nodes = 0
     static func refused() -> NativeExportError { .invalid("Original index/manifest JSON refused. No complete semantic receipt.") }
-    static func object(_ data: Data, maximum: Int, auditNullable: Bool = false) throws -> Object {
+    static func object(_ data: Data, maximum: Int, auditNullable: Bool = false, decoderSampleFields: Bool = false) throws -> Object {
         guard !data.isEmpty, data.count <= maximum, maximum <= 1 << 20 else { throw refused() }
-        var reader = Self(bytes: Array(data), auditNullable: auditNullable); let value = try reader.value(depth: 0); reader.space()
+        var reader = Self(bytes: Array(data), auditNullable: auditNullable, fieldLimit: decoderSampleFields ? 32 : 20); let value = try reader.value(depth: 0); reader.space()
         guard reader.position == reader.bytes.count, case .object(let object) = value else { throw refused() }; return object
     }
     static func string(_ object: Object, _ key: String) throws -> String {
@@ -52,7 +53,7 @@ struct CompanionArchiveJSON {
             position += 1; var object: Object = [:]
             if take(125) { return .object(object) }
             repeat {
-                guard object.count < 20 else { throw Self.refused() }
+                guard object.count < fieldLimit else { throw Self.refused() }
                 let key = try text(); guard object[key] == nil, take(58) else { throw Self.refused() }
                 object[key] = try value(depth: depth + 1)
                 if take(125) { return .object(object) }; guard take(44) else { throw Self.refused() }

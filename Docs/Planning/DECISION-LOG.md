@@ -136,6 +136,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-127 | 2026-10-04 | Native source/frame association | Confirmed | |
 | D-128 | 2026-10-04 | Own source/frame association access and activity | Confirmed | |
 | D-129 | 2026-10-04 | Measure actual coded and codec-visible base samples | Confirmed | |
+| D-130 | 2026-10-04 | Own explicit development base-sample decoder profile | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3550,3 +3551,42 @@ D128 explicit optimized receipt reused and current strict ad-hoc signatures pass
 PR103 automatic113issues retained/PR updated, no retry. Source metadata/current
 journal/privacy/planning checks pass. See DECODED-BASE-SAMPLE-EVIDENCE.md; native
 sample/source binding, rendering/color/EL/resize/edited flags remain unqualified.
+
+
+## D-130: Own an explicit native development base-sample process profile
+Status: Confirmed
+Date:2026-10-04, owner standing autonomous generated non-audio delegation, R059.
+
+D129 sample probe has no native owner or typed admission. Reuse the concrete D124
+source/executable/library pins and dedicated POSIX worker through a distinct fixed
+sample-probe role and explicit base-sample parser profile. Metadata entry/schema
+remain unchanged by default and refuse sample role/rows; no fallback/normalization
+through Python or extra generic receipt wrapper. Incremental native parser validates
+all six finite plane summaries, geometry/chroma/count/extrema/hash/moment bounds and
+color declarations as declarations only. Transient consumers cannot claim settled
+receipts or spawn unjoined work. Process EOF/zero status/final source/tool/library
+observations precede return. Source-frame/sample-source/rendering/edited flags stay
+false until independent D127-style open-spool source binding is actually composed.
+
+Acceptance: actual separate generated compatible D129 probe and owned relocated
+copied libraries, both thread choices/source variants, fixed role substitution,
+repaired summary/provenance/schema forgeries, active/late/deadline/malformed/nonzero/
+EOF/storage-output refusals and actual owned native child/pipe joins. Keep limits
+configured rather than claiming total memory or physical-I/O preemption. Shared
+unsettled ownership must retain needed access/files. Reuse concrete owner; no
+archive-selected executable, app action/default packaging/release Tool, owner media
+body/queue/movie/listening, known crashing loader or blind signing retry. Full/native
+regression/optimized/privacy/planning evidence and automatic outcomes retained.
+Revisit at actual sample-source coverage, resource/access integration and edits.
+
+
+D130 acceptance: final composed15tests/5suites12.996s passes, actual native ten
+generated sample trials/13helper joins and ordinary live cancellation. Deliberate
+consumer refusal propagated group-1-joined-true and retained files. New26-key count
+correction and release-only missing boundary argument failure retained; corrected
+production build/signatures/minima14.0/11.0 pass. Ordinary492tests/100suites210.495s
+passes31opt-in skips/no warnings before release-only fix; final default14tests3.803s
+passes after it, DEBUG behavior unchanged. Fixed role/profile remains development-
+only; source-frame/sample-source and edited flags stay false. PR104 reader
+passed/app105issues failed; retained without retry or timing policy changes. See
+NATIVE-BASE-SAMPLE-PROCESS-EVIDENCE.md for actual scope/limits and next source binding.

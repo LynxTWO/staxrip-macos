@@ -62,6 +62,7 @@ pub struct StagedComponent {
     pub content: ContentReceipt,
 }
 pub struct StagedReceipt {
+    pub stage_file_id: (u64, u64),
     pub source_bound: SourceBoundReceipt,
     pub members: Vec<StagedComponent>,
 }
@@ -380,6 +381,28 @@ pub fn produce(
 ) -> Result<StagedReceipt, StageFailure> {
     produce_checked(source, stage, retention, cancel, |_, _| {}, || {}, |_| {})
 }
+#[derive(Clone, Copy)]
+pub struct ExpectedFiles {
+    pub source: (u64, u64),
+    pub stage: (u64, u64),
+}
+/// File identities from a trusted controlling caller, checked before writes.
+pub fn produce_expected(
+    source: &Path,
+    stage: &Path,
+    retention: Retention,
+    cancel: Arc<Cancellation>,
+    expected: ExpectedFiles,
+) -> Result<StagedReceipt, StageFailure> {
+    produce_expected_checked(
+        source,
+        stage,
+        retention,
+        cancel,
+        Some(expected),
+        (|_, _| {}, || {}, |_| {}),
+    )
+}
 fn produce_checked(
     source: &Path,
     path: &Path,
@@ -389,8 +412,29 @@ fn produce_checked(
     after_write: impl FnOnce(),
     progress: impl Fn(u64),
 ) -> Result<StagedReceipt, StageFailure> {
+    produce_expected_checked(
+        source,
+        path,
+        retention,
+        cancel,
+        None,
+        (after_create, after_write, progress),
+    )
+}
+fn produce_expected_checked(
+    source: &Path,
+    path: &Path,
+    retention: Retention,
+    cancel: Arc<Cancellation>,
+    expected: Option<ExpectedFiles>,
+    hooks: (impl Fn(usize, &Path), impl FnOnce(), impl Fn(u64)),
+) -> Result<StagedReceipt, StageFailure> {
+    let (after_create, after_write, progress) = hooks;
     check_cancel(&cancel)?;
     let stage = Stage::open(path)?;
+    if expected.is_some_and(|e| e.stage != (stage.identity.dev, stage.identity.ino)) {
+        return Err(StageFailure::ChangedStage);
+    }
     let mut identities = Vec::new();
     let mut create = |index| {
         check_cancel(&cancel)?;
@@ -428,7 +472,10 @@ fn produce_checked(
             return Err(StageFailure::UnsafeComponent);
         }
     }
-    let source_bound = companion_source::produce(source, outputs, cancel.clone())?;
+    let source_bound = match expected {
+        Some(e) => companion_source::produce_expected(source, outputs, cancel.clone(), e.source)?,
+        None => companion_source::produce(source, outputs, cancel.clone())?,
+    };
     check_cancel(&cancel)?;
     stage.check_identity()?;
     let mut bytes = Vec::new();
@@ -474,6 +521,7 @@ fn produce_checked(
     companion_source::check_source_path(source, &source_bound.source_identity)?;
     check_cancel(&cancel)?;
     Ok(StagedReceipt {
+        stage_file_id: (stage.identity.dev, stage.identity.ino),
         source_bound,
         members,
     })

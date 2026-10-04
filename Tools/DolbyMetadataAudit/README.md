@@ -203,3 +203,33 @@ are not an ancestor sandbox, immutable snapshot or same-user adversarial guarant
 Metadata-only omits BL/EL pictures and outside-track information; complete mode copies the
 whole source-sized original container including embedded names/metadata. MacOS generated
 checks are recorded in Docs/Planning/OWNED-COMPANION-STAGE-EVIDENCE.md; Linux is untested.
+
+
+## Separate unbundled development writer
+
+The `development-companion-writer` feature builds the separate
+`staxrip-dolby-companion-writer` executable. Default builds and the native bundle still
+include only the existing read-only reader. Build it deliberately for generated work:
+
+```sh
+cargo build --release --locked --features development-companion-writer \
+  --manifest-path Tools/DolbyMetadataAudit/Cargo.toml
+python3 Tools/DolbyCompanionCheck/test_writer.py -v
+```
+
+The development Python caller supplies metadata/full retention, source/stage paths,
+an operation correlation ID and captured source/stage device/inode IDs as arguments
+without a shell. The writer emits one bounded ready row, waits for the exact bounded
+start frame followed by EOF, then uses the source/stage IDs before writing. Completion
+contains actual source/stage IDs, source digest/counts, fixed component receipts and
+tracked heap observations, all without source paths or RPU payloads. Require exact
+protocol plus exit zero; a row alone is insufficient. This is a temporary development
+process protocol, not a stable archive/import or persisted execution binding.
+
+The parent must own cancellation, wait/close child and pipes before cleanup, verify
+actual disk/source boundaries and separately establish semantics/publication. The
+Python development caller implements those narrower process/disk checks; it accepts
+only an explicitly trusted executable. Cancellation terminates the process group;
+physical I/O preemption and native lifecycle/resource/signing are not qualified.
+No automatic cleanup/publication, native writer command or new dependency is added.
+See Docs/Planning/COMPANION-WRITER-PROCESS-EVIDENCE.md.

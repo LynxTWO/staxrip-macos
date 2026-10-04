@@ -14,3 +14,16 @@ libc = "=0.2.190"
 
 [dev-dependencies]
 bitvec_helpers = { version = "=4.0.2", default-features = false, features = ["bitstream-io"] }
+
+[features]
+default = []
+development-companion-writer = []
+
+[[bin]]
+name = "staxrip-dolby-metadata-audit"
+path = "src/main.rs"
+
+[[bin]]
+name = "staxrip-dolby-companion-writer"
+path = "src/companion_writer.rs"
+required-features = ["development-companion-writer"]

@@ -400,3 +400,46 @@ fn owned_writer_worker_joins_before_caller_cleanup() {
     fs::remove_dir_all(stage).unwrap();
     assert!(temp.0.join("generated-source.mkv").exists());
 }
+
+#[test]
+fn controlling_file_identities_refuse_before_source_writes() {
+    for wrong_stage in [false, true] {
+        let temp = Temp::new();
+        let source = temp.source();
+        let stage = temp.stage();
+        let s = fs::metadata(&source).unwrap();
+        let d = fs::metadata(&stage).unwrap();
+        let expected = ExpectedFiles {
+            source: if wrong_stage {
+                (s.dev(), s.ino())
+            } else {
+                (s.dev(), 0)
+            },
+            stage: if wrong_stage {
+                (d.dev(), 0)
+            } else {
+                (d.dev(), d.ino())
+            },
+        };
+        assert!(
+            produce_expected(
+                &source,
+                &stage,
+                Retention::EntireContainer,
+                cancel(),
+                expected
+            )
+            .is_err()
+        );
+        for entry in fs::read_dir(&stage).unwrap() {
+            assert_eq!(entry.unwrap().metadata().unwrap().len(), 0);
+        }
+        if wrong_stage {
+            assert_eq!(fs::read_dir(stage).unwrap().count(), 0);
+        }
+        assert_eq!(
+            fs::read(source).unwrap(),
+            crate::companion_source::tests::fixture()
+        );
+    }
+}

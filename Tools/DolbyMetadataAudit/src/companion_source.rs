@@ -74,6 +74,10 @@ pub struct SourceIdentity {
     changed: (i64, i64),
 }
 impl SourceIdentity {
+    /// Development process correlation only; not persisted archive provenance.
+    pub fn file_id(&self) -> (u64, u64) {
+        (self.device, self.inode)
+    }
     fn from_metadata(m: &Metadata) -> Self {
         Self {
             device: m.dev(),
@@ -190,12 +194,31 @@ pub fn produce(
     produce_then_check(source, outputs, cancellation, || {})
 }
 
+/// Match the controlling caller's source device/inode before any component write.
+pub(crate) fn produce_expected(
+    source: &Path,
+    outputs: OwnedComponents,
+    cancellation: std::sync::Arc<Cancellation>,
+    expected: (u64, u64),
+) -> Result<SourceBoundReceipt, ProductionFailure> {
+    produce_expected_then_check(source, outputs, cancellation, Some(expected), || {})
+}
+
 // Internal fault-injection boundary used by generated tests. Ordinary callers
 // cannot select a callback, skip source checks or force a receipt.
 fn produce_then_check(
     source: &Path,
     outputs: OwnedComponents,
     cancellation: std::sync::Arc<Cancellation>,
+    after_components: impl FnOnce(),
+) -> Result<SourceBoundReceipt, ProductionFailure> {
+    produce_expected_then_check(source, outputs, cancellation, None, after_components)
+}
+fn produce_expected_then_check(
+    source: &Path,
+    outputs: OwnedComponents,
+    cancellation: std::sync::Arc<Cancellation>,
+    expected: Option<(u64, u64)>,
     after_components: impl FnOnce(),
 ) -> Result<SourceBoundReceipt, ProductionFailure> {
     cancellation.check()?;
@@ -209,6 +232,9 @@ fn produce_then_check(
         return Err(ProductionFailure::UnsafeSource);
     }
     let before = SourceIdentity::from_metadata(&metadata);
+    if expected.is_some_and(|id| id != before.file_id()) {
+        return Err(ProductionFailure::ChangedSource);
+    }
     check_source_path(source, &before)?;
     check_outputs(&outputs, &before)?;
     cancellation.check()?;

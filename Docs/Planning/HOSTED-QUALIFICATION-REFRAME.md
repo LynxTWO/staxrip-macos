@@ -138,3 +138,12 @@ passed all 331 tests in 526.291 s and preview/icon packaging. Reader run 3718728
 passed in 1m34s, including eighteen companion verifier checks. No rerun, historical
 timing observer or assertion/deadline changes. Prior failure causes remain unknown;
 two successful automatic runs do not establish timing reliability or causal repair.
+
+
+PR 78 head 492a2ef automatic app run
+[37188875079](https://github.com/LynxTWO/staxrip-macos/actions/runs/37188875079)
+failed the unchanged AV1 matrix deadline: 132.370 s against 120 s. All 331 tests
+finished in 543.636 s with one issue; preview packaging was skipped. Reader run
+37188875102 passed in 1m51s, including nineteen companion checks. Private failure
+log retained; no rerun, historical observer or assertion/deadline change. Earlier
+successful automatic runs did not resolve timing reliability or the unknown causes.

@@ -339,3 +339,67 @@ without retry; prior hosted failure causes remain unknown. Next bounded prerequi
 trusted native writer process/worker lifecycle, then semantic settlement and D-099
 exclusive result-set publication. Native storage/privacy review, stable importer,
 archive-specific ENOSPC/volume/crash and decoded association remain separate gates.
+
+
+## D-104: Qualify a separate development companion writer process
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner original preservation/companion request and standing autonomous
+R-059 / Slice 049 delegation. Generated execution only; no owner archive/queue/full-film
+encode, native caller/UI, merge/release, signing retry or parked listening.
+
+Need/product contract: a future native operation must own actual writer execution,
+reject late/partial completion and settle processes before caller cleanup. Library
+ownership cannot establish that boundary across a process. Consequence local_only for
+this generated development unit, user_data for later native integration. Retention
+loss/storage/privacy review remains required before exposing a native archive action.
+
+Choice delegated to AI. Alternatives: add a writing command to the bundled read-only
+reader now; launch Rust through a shell; or first qualify a separate feature-gated
+unbundled development executable and an explicit trusted development process caller.
+Select the last option. No shell, dependency or bundled helper command change. Cost:
+this does not qualify native signing, security-scope leases or controller integration.
+
+Scope: fixed metadata/full choices, opaque operation correlation ID, bounded ready/
+start/staged protocol and existing tracked Rust heap limit. Start is an internal
+controller handshake, not an owner approval flow. Invoke D-103; completion describes
+actual staged members and source/stage file identities, not semantic/import approval.
+Prototype manifest remains unchanged. Parent pins source/stage, validates correlation,
+strict schema/limits and exit zero, rereads actual members and final identity boundaries.
+Parent cancellation/deadline kills its owned group and joins/closes direct process and
+pipes before return; no automatic directory cleanup/publication. In-process core
+cancellation remains cooperative; cross-process interruption is termination, with
+partial files allowed and no receipt admitted after cancellation. No physical I/O
+preemption or portable join of orphan descendants is claimed.
+
+Acceptance: both real executable modes pass independent semantic verification on
+generated sources. Wrong/oversize start, EOF, invalid mode/ID/args and unsafe/preexisting
+stage/source refuse; no source/old entry replacement. Controlled ready-wait cancellation
+settles actual child before cleanup. Nonzero exit, stale/malformed/extra/duplicate/
+unbounded receipts, deadline/pipe-holding child and interruption refuse and settle.
+Current read-only CLI/default build remains unchanged; no automatic fixture pause hook.
+Historical D-090 timing remains completed with no observer/retry/assertion change.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04; bounded
+writer-process prerequisite within authorized original archival development.
+
+
+D-104 outcome: separate unbundled development writer/process checks passed. All-feature
+Rust passed 40 tests with zero failures/ignored; format/Clippy passed. Eleven actual/
+surrogate process checks passed in 2.338 s, nineteen independent companion checks in
+14.369 s and fifteen existing decoder-reference checks in 1.216 s, without resource
+warnings. Ordinary app regression passed 331 tests/78 suites in 204.552 s; optimized
+build and strict ad-hoc app/helper signatures passed. Actual minimum declarations remain
+14.0/11.0; the writer is absent from the native bundle. No older-OS/hardened/notarized
+claim follows. COMPANION-WRITER-PROCESS-EVIDENCE.md records before-write caller IDs,
+bounded protocol/heap, strict disk/result admission, cancelled/late/nonzero refusal,
+monitor/reaping ordering repair and joined direct children/pipes. Ready-wait and late
+cancellation were observed; active physical-copy interruption remains unqualified.
+Original source/current recovery unchanged; scoped privacy/planning checks passed.
+No native command/UI/session/dependency, owner queue/archive/encode/listening, signing
+retry, merge or release. PR 78 automatic reader passed; app failed the retained existing
+AV1 deadline 132.370 s against 120 s, with no rerun/observer/assertion change. Next:
+independent semantic settlement and D-099 exclusive publication joined to writer/native
+worker ownership. Native review/lease/resource/signing, persisted execution binding,
+stable import, storage/crash and decoded association remain separate qualification.

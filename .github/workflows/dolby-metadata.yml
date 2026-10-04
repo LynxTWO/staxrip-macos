@@ -23,10 +23,12 @@ jobs:
       - name: Format
         run: cargo fmt --manifest-path Tools/DolbyMetadataAudit/Cargo.toml --check
       - name: Generated and adversarial reader tests
-        run: cargo test --locked --manifest-path Tools/DolbyMetadataAudit/Cargo.toml
+        run: cargo test --locked --all-features --manifest-path Tools/DolbyMetadataAudit/Cargo.toml
       - name: Lint
-        run: cargo clippy --locked --all-targets --manifest-path Tools/DolbyMetadataAudit/Cargo.toml -- -D warnings
+        run: cargo clippy --locked --all-targets --all-features --manifest-path Tools/DolbyMetadataAudit/Cargo.toml -- -D warnings
       - name: Generated decoded-frame and raw-metadata association
         run: python3 Tools/DolbyFrameReference/test_reference.py -v
       - name: Generated original companion semantic verification and owned refusal cleanup
         run: python3 Tools/DolbyCompanionCheck/test_check.py -v
+      - name: Generated unbundled companion writer process ownership
+        run: python3 Tools/DolbyCompanionCheck/test_writer.py -v

@@ -1618,3 +1618,26 @@ Final seven-file privacy scan has zero private source path/name/stem matches and
 positive sentinel. Owner source metadata/current recovery journal remain unchanged;
 full planning findings empty. Current owned84530 temporary awake assertion exact command/
 start matches its receipt, expires19:37UTC; no persistent locking/security changes.
+
+## Owner-observed crash notices and routine-test correction
+
+The owner reported repeated crash notices. Read-only recent macOS diagnostic metadata
+matched both final copied SwiftNativeHost PIDs to SIGTRAP reports. Their retained logs
+show the installed SwiftPM helper's fatal trap after the concrete Team-ID dlopen refusal;
+waitStatus5 and joined host are recorded. These are real copied test-helper crashes,
+not ordinary exit messages. The actual static native host passed and is a different entry.
+
+Known-crashing dynamic-module qualification is now explicit opt-in through
+STAXRIP_TEST_HARDENED_MODULE_LOADING=1. Ordinary tests no longer launch it. Two-layout
+refusal evidence remains retained; no opt-in rerun is needed for this guard-only change.
+This is a scoped desktop side-effect correction in response to the owner's observation,
+not a D090 timing workaround, global scheduling change or silent assertion relaxation.
+No macOS crash reporting, library validation, locking or persistent security setting
+is altered. Routine-check skip and unchanged actual static execution are verified below.
+
+Final default focused2tests/2suites15.243s passed without warnings: known-crashing dynamic
+fixture explicitly skipped once, actual static native case15.242s passed with ordinary
+cancellation/seven joined helpers. No copied SwiftPM host launched and no new
+SwiftNativeHost diagnostic report appeared. Prior full ordinary456tests208.749s/26skips
+evidence predates this guard-only change; the final default focus checks changed behavior.
+No known-refusal opt-in rerun or new positive dynamic-loading claim follows.

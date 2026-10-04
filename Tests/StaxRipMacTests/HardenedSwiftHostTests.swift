@@ -122,7 +122,11 @@ struct HardenedSwiftHostTests {
         try file.write(contentsOf: bytes); try file.close()
         Darwin._exit(0)
     }
-    @Test(arguments: ["StaxRipMacTests", "StaxRipMacPackageTests"])
+    // The installed SwiftPM helper traps on the known loader refusal, producing
+    // visible macOS crash reports. Keep this discriminator explicit opt-in;
+    // routine regression must not repeatedly crash a copied helper on the desktop.
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["STAXRIP_TEST_HARDENED_MODULE_LOADING"] == "1"),
+          arguments: ["StaxRipMacTests", "StaxRipMacPackageTests"])
     func ownedHardenedSwiftHostLoadsNativeEntryOrReportsConcreteLoaderRefusal(copiedModuleName: String) async throws {
         let env = ProcessInfo.processInfo.environment
         if let root = env["STAXRIP_TEST_SWIFT_HOST_ROOT"] {

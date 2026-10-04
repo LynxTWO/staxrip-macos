@@ -52,6 +52,8 @@ pub enum ProductionFailure {
     Cancelled,
     UnsafeSource,
     UnsafeOutput,
+    /// Actual component write/flush ENOSPC, never inferred from capacity.
+    OutputFull,
     ChangedSource,
     Audit(Failure),
 }
@@ -98,6 +100,7 @@ pub struct SourceBoundReceipt {
 struct Checked<T> {
     inner: T,
     cancel: std::sync::Arc<Cancellation>,
+    output_full: std::sync::Arc<AtomicBool>,
 }
 impl<T: Read> Read for Checked<T> {
     fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
@@ -118,13 +121,25 @@ impl<T: Seek> Seek for Checked<T> {
 impl<T: Write> Write for Checked<T> {
     fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
         self.cancel.io_check()?;
-        let count = self.inner.write(bytes)?;
+        let result = self.inner.write(bytes);
+        if let Err(error) = &result
+            && error.raw_os_error() == Some(libc::ENOSPC)
+        {
+            self.output_full.store(true, Ordering::Release);
+        }
+        let count = result?;
         self.cancel.io_check()?;
         Ok(count)
     }
     fn flush(&mut self) -> io::Result<()> {
         self.cancel.io_check()?;
-        self.inner.flush()?;
+        let result = self.inner.flush();
+        if let Err(error) = &result
+            && error.raw_os_error() == Some(libc::ENOSPC)
+        {
+            self.output_full.store(true, Ordering::Release);
+        }
+        result?;
         self.cancel.io_check()
     }
 }
@@ -238,9 +253,11 @@ fn produce_expected_then_check(
     check_source_path(source, &before)?;
     check_outputs(&outputs, &before)?;
     cancellation.check()?;
+    let output_full = std::sync::Arc::new(AtomicBool::new(false));
     let guarded = |inner| Checked {
         inner,
         cancel: cancellation.clone(),
+        output_full: output_full.clone(),
     };
     let mut input = guarded(input);
     let mut track = guarded(outputs.track_payload);
@@ -263,6 +280,8 @@ fn produce_expected_then_check(
     .map_err(|failure| {
         if cancellation.requested() {
             ProductionFailure::Cancelled
+        } else if output_full.load(Ordering::Acquire) {
+            ProductionFailure::OutputFull
         } else {
             ProductionFailure::Audit(failure)
         }

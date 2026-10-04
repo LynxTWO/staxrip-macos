@@ -134,3 +134,14 @@ production native action, release capabilities/resource/security leases and writ
 packaging remain absent. Source-dependent prototype verification does not establish
 portable import, persisted provenance, immutable snapshots, independent libdovi decoding
 or decoded/edit picture association. See NATIVE-ORIGINAL-METADATA-EVIDENCE.md.
+
+
+D-115 qualifies actual generated companion component storage refusal on a newly owned
+bounded APFS image. Source-bound Rust output writes/flushes preserve a sanitized actual
+ENOSPC classification; unbundled development writer exits28, and native controller
+returns a typed refusal after EOF/child/pin settlement. No success receipt or publication
+is inferred from a partial file. Opt-in native transaction proves partial full-container
+refusal/source-prior preservation and verified retry after reclaiming owned filler.
+Harness revalidates image/mount identity before non-forced detach and retains uncertain
+ownership. No existing owner volume, archive action/release capability or universal
+storage/crash/resource guarantee. See NATIVE-COMPANION-STORAGE-EVIDENCE.md.

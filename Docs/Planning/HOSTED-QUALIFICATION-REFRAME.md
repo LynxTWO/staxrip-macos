@@ -177,3 +177,6 @@ PR87 automatic app [37203312255](https://github.com/LynxTWO/staxrip-macos/action
 
 
 PR88 automatic app [37204687364](https://github.com/LynxTWO/staxrip-macos/actions/runs/37204687364) compiled the changed D113 fixture successfully, resolving the reported PR87 expression compilation failure on this hosted run. It then failed the unchanged AV1 copy matrix120-second deadline: all417tests537.172s with one issue; native metadata process suite66.047s passed; preview packaging skipped. Private failure log retained/PR updated. No rerun, historical observer, assertion/deadline or scheduling change. D090 prior runtime timing causes remain unknown.
+
+
+PR89 automatic app [37207096659](https://github.com/LynxTWO/staxrip-macos/actions/runs/37207096659) failed nine unchanged timing limits: three60-second cases (queue destination review, export activity and preview frame stepping), and six120-second cases (Dolby inspection, writer protocol, writer process, original companion transaction, AV1 and ten-bit copy). All424tests finished566.001s with nine issues; new native original metadata comparison suite192.150s passed and owned metadata reader188.686s passed. Preview packaging skipped. Private failed log retained/PR updated; no rerun, historical observer, assertion/deadline or scheduling change. Causes remain unknown.

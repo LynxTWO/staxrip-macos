@@ -493,6 +493,7 @@ fn cancellation_is_checked_before_and_after_read_seek_write_flush_including_rech
                     calls: 0,
                 },
                 cancel: cancel.clone(),
+                output_full: Arc::new(AtomicBool::new(false)),
             };
             if early {
                 cancel.request();
@@ -512,9 +513,54 @@ fn cancellation_is_checked_before_and_after_read_seek_write_flush_including_rech
     let mut input = Checked {
         inner: Cursor::new(vec![1; 8192]),
         cancel: cancel.clone(),
+        output_full: Arc::new(AtomicBool::new(false)),
     };
     input.seek(SeekFrom::End(0)).unwrap();
     input.rewind().unwrap();
     cancel.request();
     assert!(crate::fingerprint_with_limit(&mut input, MOVIE_LIMIT).is_err());
+}
+
+#[test]
+fn output_full_classification_requires_output_enospc_and_preserves_cancel_gate() {
+    struct Fault(i32);
+    impl Read for Fault {
+        fn read(&mut self, _: &mut [u8]) -> io::Result<usize> {
+            Err(io::Error::from_raw_os_error(self.0))
+        }
+    }
+    impl Write for Fault {
+        fn write(&mut self, _: &[u8]) -> io::Result<usize> {
+            Err(io::Error::from_raw_os_error(self.0))
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            Err(io::Error::from_raw_os_error(self.0))
+        }
+    }
+    for action in 0..3 {
+        for code in [libc::ENOSPC, libc::EIO, libc::EACCES] {
+            for cancelled in [false, true] {
+                let full = Arc::new(AtomicBool::new(false));
+                let cancel = Arc::new(Cancellation::default());
+                if cancelled {
+                    cancel.request();
+                }
+                let mut checked = Checked {
+                    inner: Fault(code),
+                    cancel,
+                    output_full: full.clone(),
+                };
+                let result = match action {
+                    0 => checked.read(&mut [0; 1]).map(|_| ()),
+                    1 => checked.write(&[1]).map(|_| ()),
+                    _ => checked.flush(),
+                };
+                assert!(result.is_err());
+                assert_eq!(
+                    full.load(Ordering::Acquire),
+                    !cancelled && action != 0 && code == libc::ENOSPC
+                );
+            }
+        }
+    }
 }

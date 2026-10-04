@@ -20,6 +20,11 @@ enum CompanionWriterProcess {
         }
         #endif
     }
+    /// Nonzero fixed development writer status from actual component ENOSPC.
+    /// No receipt, cleanup authorization or release authentication is inferred.
+    struct StorageFullFailure: Error, LocalizedError {
+        var errorDescription: String? { "Companion storage is full. Free destination space and retry. No result was published." }
+    }
     struct OwnershipFailure: CompanionUnsettledOwnership, LocalizedError {
         var errorDescription: String? { "Companion process ownership could not be fully settled. Retain the temporary stage for review." }
     }
@@ -190,7 +195,9 @@ enum CompanionWriterProcess {
         #endif
         try check(); try input.check(); try directory.check(); try executable.check()
         guard status & 0x7f == 0 else { throw failure() }
-        let result = try parser.finish(status: (status >> 8) & 0xff)
+        let exitStatus = (status >> 8) & 0xff
+        if exitStatus == 28 { throw StorageFullFailure() }
+        let result = try parser.finish(status: exitStatus)
         try check(); return result
     }
     private final class PipeEnds {

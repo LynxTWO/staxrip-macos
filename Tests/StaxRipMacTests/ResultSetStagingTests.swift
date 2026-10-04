@@ -1,0 +1,264 @@
+import Foundation
+import CryptoKit
+import Darwin
+import Testing
+@testable import StaxRipMac
+
+struct ResultSetStagingTests {
+    private func folder() throws -> URL {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("result-set-test-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+        return root
+    }
+    private func fixture(_ stage: ResultSetStaging, marker: UInt8 = 7) throws -> [ResultSetStaging.Member] {
+        // Opaque generated component bytes: no playable media/archive semantics claimed.
+        let payloads: [(String, Data)] = [
+            ("media.bin", Data(repeating: marker, count: 2 * 1024 * 1024 + 17)),
+            ("original-metadata.bin", Data([marker, 8, 9, 10])),
+            ("manifest.json", Data("{\"fixture\":true}".utf8))]
+        return try payloads.map { name, data in
+            try data.write(to: stage.fileURL(name))
+            return .init(name: name, byteCount: Int64(data.count), sha256: SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined())
+        }
+    }
+    private func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
+
+    @Test func exactVerifiedSetMovesTogetherAndCannotBeDiscardedAfterCommit() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        let original = try stage.fileURL("media.bin"), owned = original.deletingLastPathComponent()
+        let inode = try FileManager.default.attributesOfItem(atPath: owned.path)[.systemFileNumber] as? NSNumber
+        let result = try await stage.publish(as: "result", members: members)
+        #expect(result.verifiedBytes == members.reduce(0) { $0 + $1.byteCount })
+        #expect(result.memberCount == 3)
+        #expect(!exists(owned))
+        #expect(Set(try FileManager.default.contentsOfDirectory(atPath: result.directory.path)) == Set(members.map(\.name)))
+        #expect(try FileManager.default.attributesOfItem(atPath: result.directory.path)[.systemFileNumber] as? NSNumber == inode)
+        for member in members {
+            let data = try Data(contentsOf: result.directory.appendingPathComponent(member.name))
+            #expect(Int64(data.count) == member.byteCount)
+            #expect(SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() == member.sha256)
+        }
+        #expect(throws: (any Error).self) { try stage.discard() }
+        await #expect(throws: (any Error).self) { try await stage.publish(as: "another", members: members) }
+        #expect(exists(result.directory) && !exists(root.appendingPathComponent("another")))
+    }
+
+    @Test(arguments: ["file", "directory", "symlink"])
+    func destinationCollisionNeverReplacesAnything(kind: String) async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        let result = root.appendingPathComponent("result")
+        switch kind {
+        case "file": try Data("keep".utf8).write(to: result)
+        case "directory": try FileManager.default.createDirectory(at: result, withIntermediateDirectories: false)
+        default: try FileManager.default.createSymbolicLink(at: result, withDestinationURL: root.appendingPathComponent("absent"))
+        }
+        var before = stat(); try #require(lstat(result.path, &before) == 0)
+        await #expect(throws: (any Error).self) { try await stage.publish(as: "result", members: members) }
+        var after = stat(); try #require(lstat(result.path, &after) == 0)
+        #expect(before.st_ino == after.st_ino && before.st_mode == after.st_mode)
+        if kind == "file" { #expect(try Data(contentsOf: result) == Data("keep".utf8)) }
+        if kind == "directory" { #expect(try FileManager.default.contentsOfDirectory(atPath: result.path).isEmpty) }
+        if kind == "symlink" { #expect(try FileManager.default.destinationOfSymbolicLink(atPath: result.path) == root.appendingPathComponent("absent").path) }
+        let retry = try await stage.publish(as: "new-result", members: members)
+        #expect(retry.memberCount == 3 && exists(retry.directory))
+    }
+
+    @Test(arguments: ["missing", "extra", "length", "hash", "manifest-hash"])
+    func incompleteOrCorruptRequestedSetRefusesAndLeavesExistingSourceAlone(change: String) async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let source = root.appendingPathComponent("source.bin"), sourceData = Data("generated source".utf8)
+        try sourceData.write(to: source)
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        let archive = try stage.fileURL("original-metadata.bin")
+        switch change {
+        case "missing": try FileManager.default.removeItem(at: archive)
+        case "extra": try Data([1]).write(to: stage.fileURL("unexpected.bin"))
+        case "length": try Data([1]).write(to: archive)
+        case "hash": try Data([1, 2, 3, 4]).write(to: archive)
+        default: try Data(repeating: 32, count: Int(members[2].byteCount)).write(to: stage.fileURL("manifest.json"))
+        }
+        await #expect(throws: (any Error).self) { try await stage.publish(as: "result", members: members) }
+        #expect(!exists(root.appendingPathComponent("result")))
+        #expect(try Data(contentsOf: source) == sourceData)
+        try stage.discard()
+    }
+
+    @Test(arguments: ["symlink", "hardlink", "fifo", "directory"])
+    func linkedAndSpecialMembersAreNeverTraversed(kind: String) async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        let archive = try stage.fileURL("original-metadata.bin"), protected = root.appendingPathComponent("protected.bin")
+        let bytes = try Data(contentsOf: archive); try bytes.write(to: protected)
+        try FileManager.default.removeItem(at: archive)
+        switch kind {
+        case "symlink": try FileManager.default.createSymbolicLink(at: archive, withDestinationURL: protected)
+        case "hardlink": try FileManager.default.linkItem(at: protected, to: archive)
+        case "fifo": try #require(mkfifo(archive.path, 0o600) == 0)
+        default: try FileManager.default.createDirectory(at: archive, withIntermediateDirectories: false)
+        }
+        await #expect(throws: (any Error).self) { try await stage.publish(as: "result", members: members) }
+        #expect(!exists(root.appendingPathComponent("result")))
+        if kind == "directory" {
+            // Cleanup refuses recursion; the caller must settle its known producer.
+            #expect(throws: (any Error).self) { try stage.discard() }
+            try FileManager.default.removeItem(at: archive)
+        }
+        try stage.discard()
+        #expect(try Data(contentsOf: protected) == bytes)
+    }
+
+    @Test(arguments: ["../escape", ".hidden", "a/b", "a\u{0}b", "", String(repeating: "x", count: 121)])
+    func untrustedNamesCannotEscapeTheStage(name: String) async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        #expect(throws: (any Error).self) { try stage.fileURL(name) }
+        await #expect(throws: (any Error).self) { try await stage.publish(as: name, members: members) }
+        try stage.discard()
+    }
+
+    @Test func malformedReceiptsRefuseBeforePublication() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        let bad: [[ResultSetStaging.Member]] = [Array(members.dropLast()), members + [members[0]],
+            [.init(name: "media.bin", byteCount: 0, sha256: members[0].sha256)] + Array(members.dropFirst()),
+            [.init(name: "media.bin", byteCount: Int64.max, sha256: members[0].sha256)] + Array(members.dropFirst()),
+            [.init(name: "media.bin", byteCount: members[0].byteCount, sha256: String(repeating: "z", count: 64))] + Array(members.dropFirst()),
+            Array(members.dropLast()) + [.init(name: "other.json", byteCount: 1, sha256: members[2].sha256)],
+            Array(members.dropLast()) + [.init(name: "manifest.json", byteCount: 1_048_577, sha256: members[2].sha256)]]
+        for rows in bad {
+            await #expect(throws: (any Error).self) { try await stage.publish(as: "result", members: rows) }
+        }
+        #expect(!exists(root.appendingPathComponent("result")))
+        try stage.discard()
+    }
+
+    @Test(arguments: ["rewrite", "replace", "append", "extra"])
+    func mutationAfterHashingRefuses(change: String) async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        let archive = try stage.fileURL("original-metadata.bin"), extra = try stage.fileURL("extra.bin")
+        await ResultSetStaging.$testBoundary.withValue(.init(beforeCommit: {
+            switch change {
+            case "rewrite": try Data([1, 2, 3, 4]).write(to: archive)
+            case "replace": try Data([7, 8, 9, 10]).write(to: archive, options: .atomic)
+            case "append":
+                let handle = try FileHandle(forWritingTo: archive); defer { try? handle.close() }
+                try handle.seekToEnd(); try handle.write(contentsOf: Data([1]))
+            default: try Data([1]).write(to: extra)
+            }
+        })) {
+            await #expect(throws: (any Error).self) { try await stage.publish(as: "result", members: members) }
+        }
+        #expect(!exists(root.appendingPathComponent("result")))
+        try stage.discard()
+    }
+
+    @Test func substitutedStageIsNeitherPublishedNorRemoved() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        let owned = try stage.fileURL("media.bin").deletingLastPathComponent()
+        let moved = root.appendingPathComponent("moved-stage")
+        try FileManager.default.moveItem(at: owned, to: moved)
+        try FileManager.default.createDirectory(at: owned, withIntermediateDirectories: false)
+        let sentinel = owned.appendingPathComponent("keep.bin"); try Data([42]).write(to: sentinel)
+        await #expect(throws: (any Error).self) { try await stage.publish(as: "result", members: members) }
+        #expect(throws: (any Error).self) { try stage.discard() }
+        #expect(try Data(contentsOf: sentinel) == Data([42]))
+        #expect(exists(moved.appendingPathComponent("media.bin")))
+        #expect(!exists(root.appendingPathComponent("result")))
+    }
+
+    private final class Gate: @unchecked Sendable {
+        let release = DispatchSemaphore(value: 0)
+        let entered: AsyncStream<Bool>
+        private let signal: AsyncStream<Bool>.Continuation
+        private let lock = NSLock()
+        private var didEnter = false
+        init() {
+            let pair = AsyncStream<Bool>.makeStream(bufferingPolicy: .bufferingNewest(1))
+            entered = pair.stream; signal = pair.continuation
+        }
+        func holdOnce() throws {
+            let first = lock.withLock { if didEnter { return false }; didEnter = true; return true }
+            if first {
+                #expect(!Thread.isMainThread)
+                signal.yield(true); signal.finish()
+                guard release.wait(timeout: .now() + 30) == .success else { throw NativeExportError.invalid("Generated semantic gate was not released") }
+            }
+        }
+        func waitForEntry() async throws {
+            var iterator = entered.makeAsyncIterator()
+            try #require(await iterator.next() == true)
+        }
+    }
+
+    @Test func cancellationBeforeCommitAwaitsWorkerAndPreservesOwnedCleanup() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage), gate = Gate()
+        let task = Task {
+            try await ResultSetStaging.$testBoundary.withValue(.init(progress: { _ in try gate.holdOnce() })) {
+                try await stage.publish(as: "result", members: members)
+            }
+        }
+        try await gate.waitForEntry(); task.cancel()
+        #expect(throws: (any Error).self) { try stage.discard() }
+        await #expect(throws: (any Error).self) { try await stage.publish(as: "second", members: members) }
+        #expect(!exists(root.appendingPathComponent("result")))
+        gate.release.signal()
+        await #expect(throws: CancellationError.self) { try await task.value }
+        try stage.discard()
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test func cancellationAfterCommitReportsTheAlreadyPublishedSet() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage), gate = Gate()
+        let task = Task {
+            try await ResultSetStaging.$testBoundary.withValue(.init(afterCommit: { try? gate.holdOnce() })) {
+                try await stage.publish(as: "result", members: members)
+            }
+        }
+        try await gate.waitForEntry(); task.cancel()
+        #expect(Set(try FileManager.default.contentsOfDirectory(atPath: root.appendingPathComponent("result").path)) == Set(members.map(\.name)))
+        #expect(throws: (any Error).self) { try stage.discard() }
+        gate.release.signal()
+        let result = try await task.value
+        #expect(result.memberCount == 3 && exists(result.directory))
+        #expect(throws: (any Error).self) { try stage.discard() }
+    }
+
+    @Test func alreadyCancelledRequestNeverTakesStageOwnership() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try await stage.publish(as: "result", members: members)
+        }
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(!exists(root.appendingPathComponent("result")))
+        try stage.discard()
+    }
+
+    @Test func competingStagesPublishExactlyOneIntactSet() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let a = try ResultSetStaging.create(in: root), b = try ResultSetStaging.create(in: root)
+        let ma = try fixture(a, marker: 11), mb = try fixture(b, marker: 22)
+        let results = await withTaskGroup(of: Bool.self, returning: [Bool].self) { group in
+            group.addTask { (try? await a.publish(as: "result", members: ma)) != nil }
+            group.addTask { (try? await b.publish(as: "result", members: mb)) != nil }
+            var values: [Bool] = []; for await value in group { values.append(value) }; return values
+        }
+        #expect(results.filter { $0 }.count == 1)
+        let result = root.appendingPathComponent("result")
+        let media = try Data(contentsOf: result.appendingPathComponent("media.bin"))
+        let marker = try #require(media.first)
+        #expect(marker == 11 || marker == 22)
+        #expect(media.allSatisfy { $0 == marker })
+        #expect(try Data(contentsOf: result.appendingPathComponent("original-metadata.bin")).first == marker)
+        #expect(Set(try FileManager.default.contentsOfDirectory(atPath: result.path)) == Set(ma.map(\.name)))
+        if marker == 11 { try b.discard() } else { try a.discard() }
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path) == ["result"])
+    }
+}

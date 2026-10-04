@@ -118,6 +118,15 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
+Slice 049 / D-099 adds unused internal ResultSetStaging for original companion result
+publication. Owned same-parent staging and exact requested member size/SHA-256 checks
+precede one exclusive directory rename. Cancellation awaits the real worker outcome;
+cleanup refuses active/published or substituted stages and never follows links or
+recurses. This supplies no archive writer, HDR semantic admission, session or UI change.
+Caller writers must settle first. Original/transformed component semantics, storage
+review and native integration remain later work. RESULT-SET-PUBLICATION-EVIDENCE.md
+records the scoped generated filesystem observations and limitations.
+
 Slice 049 / D-098 adds internal DolbyEditGeometry proposals with explicit coordinate
 origins, one composite decoder crop, rational active-region scaling/padding and sample
 aspect. This has no UI, metadata writer, persistence or admission effect. Integer

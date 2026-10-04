@@ -95,3 +95,12 @@ failed the unchanged AV1 matrix 120-second deadline. All 311 tests finished in
 passed in 1m21s, including the newly included generated decoded-frame suite.
 The private app failure log is retained. No retry, observer or changed assertion/
 deadline follows; D-097 development/native qualification remains separate.
+
+
+PR 73 head 1aa5a22 automatic app run
+[37181281124](https://github.com/LynxTWO/staxrip-macos/actions/runs/37181281124)
+failed the existing Fresh analysis cancellation assertion: 6.251403 s against five.
+All 319 tests finished in 449.741 s with one issue; preview packaging was skipped.
+The AV1 matrix passed in 116.965 s within its unchanged 120 s limit. New geometry
+checks passed. Private failure log retained; cause stays unknown. No retry, new timing
+observer or deadline/assertion change. D-098 local qualification remains separate.

@@ -107,6 +107,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-096 | 2026-10-03 | Bounded decoded base-picture packet association | Confirmed | |
 | D-097 | 2026-10-04 | Qualify minimal decoder runtime before native integration | Confirmed | |
 | D-098 | 2026-10-04 | Explicit Dolby edit coordinate proposals | Confirmed | |
+| D-099 | 2026-10-04 | Verify and publish a complete companion result set | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1631,3 +1632,46 @@ helper signature checks passed; no FFmpeg dependency was bundled or native contr
 session/queue behavior changed. DOLBY-EDIT-GEOMETRY-EVIDENCE.md records validated origins,
 fractional-edge refusal and unresolved physical/timeline/metadata-writing gates.
 No edited-Dolby admission, owner encode, audio listening, merge or release follows.
+
+
+## D-099: Verify and publish a complete companion result set
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner requests original companion archival and delegates autonomous
+implementation; R-059 / Slice 049 authorizes this internal prerequisite. Generated
+fixtures only, no owner archive, queue or full-film encode. No native option/session
+migration, decoder integration, parked audio, timing repair, signing retry, merge
+or release. Choice delegated to AI recommendation.
+
+Need: independent media/companion renames can expose an incomplete result. Build an
+internal owned staging primitive that verifies requested file membership,
+byte lengths and SHA-256 digests, then publishes the directory using one same-parent
+exclusive Darwin rename. Do not replace any existing destination or fall back to
+nonexclusive rename. Keep the existing flat-file publication unchanged.
+
+Callers must settle all writers and establish semantic component/manifest receipts
+before this primitive runs. Content verification does not prove an RPU archive's
+completeness, BL/EL matching, frame mapping or future import compatibility. Internal
+file receipts are not a public archive format. Separate original/transformed component
+contracts and native review/storage estimates remain later gates.
+
+Acceptance: actual generated media/companion/manifest membership and hashes; missing,
+extra, corrupt, unsafe linked/special entries, collision, cancellation and staged
+replacement refusals; concurrent destination competition; owned cleanup and cancelled
+worker settlement. Stream bounded verification off the caller's actor. Cancellation
+before commit refuses; after a successful exclusive commit report the completed result.
+Default app regression/build required, no new native UI walkthrough for an unused seam.
+Reopen when archive producers and result review integrate or another filesystem needs
+qualification. No crash/power-loss durability or adversarial same-user writer guarantee.
+
+
+D-099 outcome: twelve focused generated filesystem tests (29 invocations) passed;
+final ordinary app regression passed 331 tests/78 suites in 209.291 s. Optimized build,
+outer app/existing helper signatures and actual macOS 14 deployment declaration passed.
+RESULT-SET-PUBLICATION-EVIDENCE.md binds membership/content verification, collision,
+mutation, cancellation settlement and competing publication to an unused internal seam.
+Original archive writers/semantics, storage/native review and volume/crash recovery
+remain open. PR 73's automatic existing cancellation failure is retained; no timing
+repair or retry. Owner source/current recovery unchanged; no encode/archive/listening,
+new dependency, merge or release.

@@ -226,4 +226,105 @@ struct FrozenNativeDolbyDecoderTests {
         // An unsettled ownership branch intentionally keeps its generated files.
         cleanup = !unsettled
     }
+    @Test(.enabled(if: directory != nil), .timeLimit(.minutes(2)))
+    func actualSourceSpoolDecoderAssociationAndOwnedCancellation() async throws {
+        typealias Check=CompanionDiskCheck
+        let runtime=URL(fileURLWithPath:try #require(Self.directory),isDirectory:true),exe=runtime.appendingPathComponent("Helpers/reference")
+        let names=["libavcodec.63.dylib","libavformat.63.dylib","libavutil.61.dylib"]
+        var hashes=[String:String]();for n in names{hashes[n]=try Self.digest(runtime.appendingPathComponent("Frameworks/"+n))}
+        let originalExe=try Self.digest(exe)
+        let tool=try DolbyDecoderProcess.Tool.development(exe,expectedSHA256:originalExe,libraries:hashes,versions:[4129126,4129126,3998054])
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("native-source-frame-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+        var cleanup=false;defer{if cleanup{try? FileManager.default.removeItem(at:root)}}
+        let target=Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-NativeFrameAssociationTests")
+        let generated=try await ToolRunner().run(executable:URL(fileURLWithPath:"/usr/bin/env"),arguments:["STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY="+root.path,"cargo","test","--locked","--target-dir",target.path,"--manifest-path",Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path,"actual_hevc_packets_and_rpu_association_match_independent_ffprobe"])
+        try #require(generated.status == 0)
+        let prior=root.appendingPathComponent("prior-output");try Data("prior".utf8).write(to:prior)
+        var joins=0
+        for name in ["single","group","wide-vint","conformance","whole-gop"] {
+            let source=root.appendingPathComponent(name+".mkv"), original=try Self.digest(source)
+            for threads in [1,4] {
+                let stage=root.appendingPathComponent("spool-"+UUID().uuidString),state=State()
+                try FileManager.default.createDirectory(at:stage,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+                let result=try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{state.launch($0)},settled:{state.settle($0)})) {
+                    try await Check.associateOriginalFrames(source:source,in:stage,tool:tool,threads:threads)
+                }
+                #expect(result.independentSourceFrameAssociationVerified && !result.editedPictureSemanticsVerified)
+                #expect(!result.source.independentSourceFrameAssociationVerified && !result.decoder.independentSourceFrameAssociationVerified)
+                #expect(result.decoder.packets == (name == "whole-gop" ? 24:4) && result.source.packets.records == result.decoder.frames)
+                #expect(result.source.sourceSHA256 == original && result.decoder.source.sha256 == original)
+                #expect(result.source.track.configurationSHA256 == result.decoder.configurationSHA256)
+                state.assertJoined();joins += 1
+                #expect(try Self.digest(source) == original)
+                if name == "conformance" {#expect(result.decoder.geometry.width == 176 && result.decoder.geometry.height == 112 && result.decoder.geometry.crop == [0,14,0,14])}
+            }
+        }
+        // Actual decoder joins before these final source/spool refusals and
+        // late cancellation. Previous/source fixture outputs remain caller-owned.
+        for variant in 0..<4 {
+            let input=root.appendingPathComponent("final-source-"+UUID().uuidString)
+            try FileManager.default.copyItem(at:root.appendingPathComponent("single.mkv"),to:input)
+            let initial=try Self.digest(input),stage=root.appendingPathComponent("final-spool-"+UUID().uuidString)
+            try FileManager.default.createDirectory(at:stage,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+            let state=State(),gate=Gate()
+            let task=Task {
+                try await Check.$testBoundary.withValue(.init(beforeFinal:{
+                    do {
+                        switch variant {
+                        case 0: let file=try FileHandle(forWritingTo:input);try file.write(contentsOf:Data([0]));try file.close()
+                        case 1: try Data("prior".utf8).write(to:stage.appendingPathComponent("extra"))
+                        case 2:
+                            let moved=root.appendingPathComponent("retained-source-"+UUID().uuidString)
+                            try FileManager.default.moveItem(at:input,to:moved);try FileManager.default.copyItem(at:moved,to:input)
+                        default: break
+                        }
+                    } catch { Issue.record("Generated association final mutation failed") }
+                })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{state.launch($0)},settled:{state.settle($0)},beforeReceipt:{
+                        if variant == 3 {gate.first(Data("{\"kind\":\"frame\"}".utf8))}
+                    })) { try await Check.associateOriginalFrames(source:input,in:stage,tool:tool) }
+                }
+            }
+            if variant == 3 {for await _ in gate.stream{break};state.assertJoined();task.cancel();gate.release.signal()}
+            do {_=try await task.value;Issue.record("Final mutated/cancelled association admitted")}
+            catch is CancellationError {#expect(variant == 3)}
+            catch let error as CompanionUnsettledOwnership {throw error}
+            catch {#expect(variant != 3)}
+            state.assertJoined();joins += 1
+            if variant != 0 {#expect(try Self.digest(input) == initial)}
+            if variant == 1 {#expect(try Data(contentsOf:stage.appendingPathComponent("extra")) == Data("prior".utf8))}
+        }
+        // Observe an actual live decoder after source facts are sealed. Keep the
+        // original private fixture if group ownership cannot be settled.
+        let source=root.appendingPathComponent("single.mkv"),data=try Data(contentsOf:source)
+        let view=Check.ReadView(sourceBytes:Int64(data.count),source:{o,n in data.subdata(in:Int(o)..<(Int(o)+n))},component:{_ in Data()},checkpoint:{})
+        let walker=CompanionOriginalTrackCheck.Walker(view),header=try walker.element(0,end:view.sourceBytes),segment=try walker.element(header.end,end:view.sourceBytes)
+        var prefix=Data(),clusters=Data(),offset=segment.payload
+        while offset < segment.end {let e=try walker.element(offset,end:segment.end);let bytes=data.subdata(in:Int(offset)..<Int(e.end));if e.id == 0x1f43b675{clusters.append(bytes)}else{prefix.append(bytes)};offset=e.end}
+        var repeated=data.prefix(Int(header.end))+Data([0x18,0x53,0x80,0x67,0xff])+prefix
+        for _ in 0..<2000{repeated.append(clusters)}
+        let input=root.appendingPathComponent("generated-cancel.mkv"),stage=root.appendingPathComponent("cancel-spool")
+        try repeated.write(to:input);let initial=try Self.digest(input)
+        try FileManager.default.createDirectory(at:stage,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+        let gate=Gate(),state=State()
+        let task=Task {try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{state.launch($0)},row:{gate.first($0)},settled:{state.settle($0)})) {
+            try await Check.associateOriginalFrames(source:input,in:stage,tool:tool)
+        }}
+        for await _ in gate.stream{break}
+        try #require(state.pid > 0)
+        let live=try await ToolRunner().run(executable:URL(fileURLWithPath:"/bin/ps"),arguments:["-p",String(state.pid),"-o","stat="])
+        #expect(live.status == 0 && !String(decoding:live.stdout,as:UTF8.self).trimmingCharacters(in:.whitespacesAndNewlines).hasPrefix("Z"))
+        task.cancel();gate.release.signal();var unsettled=false
+        do {_=try await task.value;Issue.record("Cancelled native association admitted")}
+        catch is CancellationError {}
+        catch let e as DolbyDecoderProcess.OwnershipFailure {unsettled=true;#expect(e.reason == "group-1-joined-true")}
+        state.assertJoined();joins += 1
+        #expect(try Self.digest(input) == initial && Self.digest(exe) == originalExe)
+        for n in names {#expect(try Self.digest(runtime.appendingPathComponent("Frameworks/"+n)) == hashes[n])}
+        #expect(try Data(contentsOf:prior) == Data("prior".utf8))
+        print("GENERATED_NATIVE_ASSOCIATION accepted=10 helpers_joined=\(joins) cancellation=\(unsettled ? "retained-group" : "ordinary")")
+        cleanup = !unsettled
+    }
+
 }

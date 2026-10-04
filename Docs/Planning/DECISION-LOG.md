@@ -133,6 +133,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-122 | 2026-10-04 | Hardened Swift host loading discriminator | Confirmed | |
 | D-123 | 2026-10-04 | Static hardened native Swift host | Confirmed | |
 | D-126 | 2026-10-04 | Native source-only reconstruction | Confirmed | |
+| D-127 | 2026-10-04 | Native source/frame association | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3431,3 +3432,44 @@ and test-only SQLite alias failures are retained with precise corrections. Old
 companion APIs retain equality requirements; source-only flags remain false. PR100
 automatic468tests1141.409s98issues retained/PR updated without retry, causes unknown.
 See NATIVE-SOURCE-SPOOL-EVIDENCE.md for ownership, limits and incomplete association.
+
+
+## D-127: Bind actual native decoder rows to independently reconstructed source
+Status: Confirmed
+Date:2026-10-04, owner standing autonomous generated non-audio delegation, R059.
+
+Need: D126 independently reads source facts but no native decoder/source association
+exists. Compose source/owned open D125 spool and D124 synchronous decoder on one
+dedicated native worker. Keep pinned source/configuration/hash before/after and real
+worker/database/source/helper closure. Reuse fixed packet/RPU lookups and add fixed
+coverage rows only for the decoder pass, avoiding whole-row memory or database
+adoption. Exact rational nanoseconds use factor cancellation and checked arithmetic.
+Every decoded packet/frame must match source offsets/size/hash/time and original raw
+RPU size/hash, with one checked visible picture and one RPU per original packet.
+Preserve all encoded records; refuse unsupported ambiguity/surplus rather than
+deduplicate. Frame metadata/geometry do not establish sample/rendering, EL or edits.
+
+Authority/effects: unused native development composition and generated fixtures,
+fixed trusted decoder/library identities only. No runtime Python bridge, generic
+protocol wrapper, default packaging, archive UI, source-selected tool, owner media
+body, queue/film work, listening, signing retry, merge or release. Concrete source
+access/spool ownership remains caller obligation; unsettled process/close ownership
+retains needed access/files. No physical-I/O/parser preemption or hostile same-user
+immutable assurance. Keep narrower source/process flags false; complete native
+source-frame receipt only after actual coverage/EOF/status/final observations/close.
+
+Acceptance: actual generated frozen decoder both thread choices, one owning source/
+spool/decoder worker and source preservation; repaired plausible row forgery/coverage/
+timing/extra/missing ambiguity, page-full/cancel/late settlement. Explicit frozen
+opt-in and fixed D097 identities, no rejected hardened trial. Focused/ordinary/build/
+privacy/planning and automatic PR101 observation without rerun. Revisit at edits/EL/
+rendering or application resource/access admission.
+
+D127 acceptance: actual frozen generated native source/spool/decoder ten trials
+both thread choices,15 child joins, final/late/live cancellation refusals pass2.479s.
+Focus36tests13.072s and ordinary479tests210.792s pass29unchanged/new opt-in skips,
+no warnings. Explicit optimized19.56s/ad-hoc signature/minima14.0/11.0/privacy/
+protected source metadata/current journal/planning checks pass. Narrow source/process
+flags stay false; settled association true does not establish samples/EL/edits or
+production authentication. PR101 failed automatic68issues retained, no retry/causal
+timing claim. See NATIVE-SOURCE-FRAME-ASSOCIATION-EVIDENCE.md for concrete contracts.

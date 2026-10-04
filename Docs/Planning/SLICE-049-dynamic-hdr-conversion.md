@@ -1783,3 +1783,33 @@ minima14.0/11.0. Writer and decoder remain absent. Ten changed files pass privac
 scan with zero owner path/name/stem matches and positive sentinel. Owner source
 metadata and recovery journal remain unchanged; planning hygiene has no findings.
 These checks do not qualify signing provenance, native archive action or frame edits.
+
+
+## D-127: Native independently reconstructed source/frame association
+Status: Confirmed. Approved for build by: owner standing autonomous generated non-audio
+delegation,2026-10-04,R059.
+
+Bind D124 actual native development decoder on the existing D126 pinned source
+worker to the still-open D125 spool. Reuse independent source-only TrackEntry/hvcC,
+original encoded packets and raw escaped RPUs. Add fixed bounded packet/frame
+coverage and overflow-safe exact rational timing. Refuse missing/surplus/nonoutput/
+ambiguous records, never deduplicate. Completion requires all source/table/decoder
+counts, source/config/raw/packet equality, final source/tool/spool observations and
+actual worker/helper/database/source settlement. Source-only/process APIs stay partial.
+
+Acceptance and effects follow D127 decision: generated frozen both1/four-thread
+actual trials, plausible row forgeries and coverage/storage/cancellation/late refusal,
+focused/ordinary/optimized build/privacy/planning; no owner body/action/packaging/
+film/listening/certificate retry. Complete source-frame result remains distinct from
+rendering, EL, edits, immutable snapshots, production provenance and distribution.
+
+D127 evidence: NATIVE-SOURCE-FRAME-ASSOCIATION-EVIDENCE.md. Actual opt-in2.479s
+passes ten generated both-thread associations,15 joined helpers including final
+mutation/after-join/live cancellation refusals. Twelve schema-valid plausible
+forgeries fail native source/coverage binding, exact clock overflow/fraction tests
+pass. Focus36tests13.072s/ordinary479tests210.792s pass29skips/no warnings; explicit
+optimized19.56s/current strict ad-hoc signatures pass, no decoder/writer bundled.
+Source-frame flag is true only in settled composition; source-only/process flags
+and all edited-picture flags remain false. Owner metadata/journal/privacy/planning
+checks pass. No production/rendering/EL/edit/hardened-loading claim. PR101 automatic
+failed68issues, retained without retry or timing policy changes.

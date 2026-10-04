@@ -76,20 +76,48 @@ enum CompanionDiskCheck {
         let independentSourceFrameAssociationVerified = false
         let editedPictureSemanticsVerified = false
     }
+    struct SourceFrameReceipt: Sendable {
+        let source: SourceSpoolReceipt
+        let decoder: DolbyDecoderStream.Receipt
+        let independentSourceFrameAssociationVerified = true
+        let editedPictureSemanticsVerified = false
+    }
+    private struct DecoderRequest: Sendable {
+        let tool: DolbyDecoderProcess.Tool
+        let threads: Int
+        let timeout: Double
+    }
+    /// Unused development association. Caller owns explicit empty private folder
+    /// and source access; this establishes no release or edited-picture admission.
+    static func associateOriginalFrames(source: URL, in directory: URL, tool: DolbyDecoderProcess.Tool,
+                                        threads: Int = 4, timeout: Double = 120,
+                                        limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceFrameReceipt {
+        guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        let result=try await sourceWork(source:source,in:directory,limits:limits,
+                                       decoder:.init(tool:tool,threads:threads,timeout:timeout))
+        guard let decoder=result.1 else { throw failure() }
+        return .init(source:result.0,decoder:decoder)
+    }
     struct SourceOwnershipFailure: CompanionUnsettledOwnership {}
     /// Source-only observations into an exclusive disposable database. Caller
     /// owns the empty private folder/access and retains it on uncertain close.
     /// Neither companion equality nor decoder association follows from this pass.
     static func spoolOriginalSource(source: URL, in directory: URL,
                                     limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceSpoolReceipt {
+        try await sourceWork(source:source,in:directory,limits:limits,decoder:nil).0
+    }
+    private static func sourceWork(source: URL, in directory: URL, limits: DolbyAssociationSpool.Limits,
+                                   decoder: DecoderRequest?) async throws -> (SourceSpoolReceipt,DolbyDecoderStream.Receipt?) {
         try Task.checkCancellation()
         let cancelled = Cancellation()
         #if DEBUG
         let boundary = testBoundary
+        let decoderBoundary = DolbyDecoderProcess.testBoundary
         #else
         let boundary = Boundary()
+        let decoderBoundary = DolbyDecoderProcess.Boundary()
         #endif
-        let result: SourceSpoolReceipt = try await withTaskCancellationHandler {
+        let result: (SourceSpoolReceipt,DolbyDecoderStream.Receipt?) = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue(label: "StaxRip.original-source-spool", qos: .userInitiated).async {
                     continuation.resume(with: Result {
@@ -114,12 +142,24 @@ enum CompanionDiskCheck {
                                 }, observe: { try spool.append($0) })
                                 _ = try spool.finishSourcePass(expected: .init(packets: packets.packets, rpus: packets.records))
                                 guard let timing else { throw failure() }
+                                var decoded: DolbyDecoderStream.Receipt?
+                                if let decoder {
+                                    try spool.startDecoderPass()
+                                    // No second worker, nested async wait or closed-store adoption.
+                                    let actual=try DolbyDecoderProcess.runOwned(tool:decoder.tool,source:source,
+                                        threads:decoder.threads,observe:{ try spool.acceptDecoderRow($0,track:track) },
+                                        timeout:decoder.timeout,checkCancellation:cancelled.check,boundary:decoderBoundary)
+                                    guard actual.source == SourceFingerprint(sha256:hash,byteCount:file.bytes),
+                                          actual.configurationSHA256 == track.configurationSHA256,
+                                          actual.packets == packets.packets, actual.frames == packets.packets else { throw failure() }
+                                    try spool.finishDecoderPass(actual); decoded=actual
+                                }
                                 let finalHash = try file.hash(cancelled: cancelled, original: nil) { boundary.progress("source-recheck", $0) }
                                 guard finalHash == hash else { throw failure() }
                                 boundary.beforeFinal()
                                 try file.check(source); try cancelled.check()
-                                return SourceSpoolReceipt(sourceID: file.id, sourceBytes: file.bytes, sourceSHA256: hash,
-                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1)
+                                return (SourceSpoolReceipt(sourceID: file.id, sourceBytes: file.bytes, sourceSHA256: hash,
+                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1),decoded)
                             }
                             try file.check(source); try cancelled.check()
                             return receipt

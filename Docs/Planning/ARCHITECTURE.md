@@ -258,3 +258,18 @@ No directory creation/deletion, native command/UI/session change, decoded/EL con
 stable importer, crash durability or hard physical I/O deadline is added. MacOS generated
 execution is exercised; Linux conditional compilation is not qualification. See
 OWNED-COMPANION-STAGE-EVIDENCE.md.
+
+
+D-104 adds a separate feature-gated, unbundled development companion writer executable
+and an explicit trusted development process caller. The bounded ready/start/staged
+protocol correlates an operation; controller-provided source/stage file identities
+must match before source component writes. The caller pins source/stage, requires
+strict receipt bounds and successful exit, rereads disk members and final identities,
+and terminates/joins its owned process before return on refusal/cancellation/deadline.
+It never deletes or publishes the stage. Independent D-101 semantic verification and
+D-099 exclusive publication remain required. No native caller, bundled reader command,
+UI/session change or dependency is added. Process cancellation terminates rather than
+cooperatively signalling the core; partial files remain owned by the caller. Generated
+checks establish ready-wait cancellation and late-completion refusal, not active physical
+copy interruption or native resource/signing/lease policy. See
+COMPANION-WRITER-PROCESS-EVIDENCE.md.

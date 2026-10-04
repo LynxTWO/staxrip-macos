@@ -61,3 +61,30 @@ the fixed-name stage writer, then independently validate their original semantic
 The writer's in-memory receipt and disk hash check do not replace this comparison.
 The version-zero manifest remains unchanged, including its false producer-path flag;
 no persisted provenance or stable import format is inferred from these tests.
+
+
+## Unbundled writer process qualification
+
+`test_writer.py` builds the separate feature-gated Rust executable and checks both
+retention modes through `writer.py`'s explicit trusted development process caller.
+It independently validates generated packages with this read-only semantic checker.
+
+```sh
+python3 Tools/DolbyCompanionCheck/test_writer.py -v
+```
+
+The caller pins a supplied source and empty owned0700 stage, passes their captured
+file IDs, correlates a bounded ready/start/staged protocol, requires exit zero and
+rereads exact disk members/source identity. Cancellation/deadline terminates its
+owned group and joins/closes its direct child/pipes; per-chunk disk verification also
+checks cancellation. The caller never cleans up or publishes a directory. Its stage
+receipt remains separate from independent semantic admission and D-099 publication.
+The unchanged prototype manifest is not persisted producer-execution binding.
+
+The executable must be supplied explicitly and trusted by the operator, not selected
+by an archive. This is not native signature/tool provenance, lease or resource policy.
+Generated lifecycle checks include real ready-wait cancellation, interruption, deadline,
+late-result cancellation, malformed/stale/nonzero/trailing receipts and a pipe-holding
+child. Active physical-copy interruption and archive-specific storage/crash behavior
+remain unqualified. Process deadline covers the owned process, not subsequent physical
+rereads or semantic verification; no physical I/O preemption guarantee is claimed.

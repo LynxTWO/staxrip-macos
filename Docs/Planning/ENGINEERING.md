@@ -408,3 +408,13 @@ Generated collision/corruption/link/special/cancel/cleanup/competition checks an
 app regression/build are required. Cancellation before commit admission refuses;
 admitted publication reports the syscall outcome after descriptors settle. This is
 content verification, not a complete archive or future-carriage qualification.
+
+
+D-100 retains original escaped RPU bytes, hvcC and selected TrackEntry payload with
+encoded packet ordering/indices/signed timestamps intact. Full mode copies the entire
+original container; metadata-only excludes picture payloads and outside-track metadata.
+Archive-specific track capture has a 1 MiB bound and is disabled for the native CLI.
+Component byte/hash receipts, independent content rehash and writer/flush refusals are
+required; source pathname identity and decoded frame/EL association remain external
+integration obligations. Prototype components/manifest are not a stable import format.
+No owner archive, queue, native admission or parked listening follows.

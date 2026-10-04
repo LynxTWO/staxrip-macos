@@ -104,3 +104,11 @@ All 319 tests finished in 449.741 s with one issue; preview packaging was skippe
 The AV1 matrix passed in 116.965 s within its unchanged 120 s limit. New geometry
 checks passed. Private failure log retained; cause stays unknown. No retry, new timing
 observer or deadline/assertion change. D-098 local qualification remains separate.
+
+
+PR 74 head 244f6b3 automatic app run
+[37182551067](https://github.com/LynxTWO/staxrip-macos/actions/runs/37182551067)
+failed the existing Fresh analysis cancellation assertion: 5.300514 s against five.
+All 331 tests finished in 436.882 s with one issue; preview packaging was skipped.
+New result-set tests passed. Private log retained; no retry, new timing observer,
+assertion/deadline change or causal repair follows.

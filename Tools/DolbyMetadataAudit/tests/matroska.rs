@@ -783,6 +783,57 @@ fn actual_hevc_packets_and_rpu_association_match_independent_ffprobe() {
     );
 
     assert_eq!(fs::read(&mkv).unwrap(), input);
+    // Apply the producer to these real generated reordered HEVC packets too.
+    // No new encode: exact retained container bytes bind the existing independent probe.
+    {
+        use staxrip_dolby_metadata_audit::companion::{Components, produce};
+        let (
+            mut track_payload,
+            mut configuration,
+            mut rpu,
+            mut rpu_index,
+            mut source_audit,
+            mut retained,
+        ) = (
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+            Vec::new(),
+        );
+        let receipt = produce(
+            &mut Cursor::new(&input),
+            Components {
+                track_payload: &mut track_payload,
+                configuration: &mut configuration,
+                rpu: &mut rpu,
+                rpu_index: &mut rpu_index,
+                source_audit: &mut source_audit,
+                original_container: Some(&mut retained),
+            },
+        )
+        .unwrap();
+        assert_eq!(retained, input);
+        assert_eq!(receipt.packets, 4);
+        assert_eq!(receipt.records, 5);
+        assert_eq!(receipt.original_container.as_ref().unwrap(), &receipt.input);
+        let mut check = Vec::new();
+        assert_eq!(
+            audit_rpu(&mut Cursor::new(&rpu), &mut check)
+                .unwrap()
+                .records,
+            5
+        );
+        let archived_packets: Vec<_> = lines(&source_audit)
+            .into_iter()
+            .filter(|r| r["kind"] == "packet")
+            .collect();
+        for (a, b) in archived_packets.iter().zip(&packets) {
+            assert_eq!(a["sha256"], b["sha256"]);
+            assert_eq!(a["pts_ns"], b["pts_ns"]);
+        }
+    }
     // Explicit development/test fixture export only. Never replace an existing file.
     if let Some(destination) = std::env::var_os("STAXRIP_GENERATED_DOLBY_FIXTURE") {
         let mut file = fs::OpenOptions::new()
@@ -1074,4 +1125,497 @@ fn original_block_offset_does_not_guess_track_vint_width() {
         assert_eq!(payload - start, prefix.len() + 3);
         assert_eq!(&input[payload..payload + p.len()], p);
     }
+}
+
+#[test]
+fn original_companions_preserve_raw_bytes_encoded_order_and_distinct_retention() {
+    use staxrip_dolby_metadata_audit::companion::{Components, manifest, produce};
+    for width in [1, 2, 4] {
+        for full in [false, true] {
+            let a = rpu_with_left(1);
+            let b = rpu_with_left(2);
+            let c = rpu_with_left(3);
+            let packets = [
+                packet(
+                    &[vec![2, 1, 0xaa], vec![126, 1, 0xbb], a.clone(), a.clone()],
+                    width,
+                ),
+                packet(&[vec![2, 1, 0xcc], b.clone()], width),
+                packet(&[vec![2, 1, 0xdd], c.clone()], width),
+                packet(&[vec![2, 1, 0xee], a.clone()], width),
+            ];
+            let raw_config = config(width);
+            // Unknown track metadata and a separate audio payload must survive the
+            // complete-container mode, without pretending the reader understands them.
+            let input = movie(
+                &raw_config,
+                &[
+                    block_group(-20, &packets[0], &[]),
+                    simple(2, 0, 0, b"generated other track bytes"),
+                    simple(1, 30, 0x08, &packets[1]),
+                    simple(1, -5, 0, &packets[2]),
+                    simple(1, 30, 0, &packets[3]),
+                ]
+                .concat(),
+                &element(0x41e4, b"generated unparsed track field"),
+                true,
+            );
+            let mut track_payload = Vec::new();
+            let (mut cfg, mut archive, mut index, mut audit, mut retained) =
+                (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+            let receipt = produce(
+                &mut Cursor::new(&input),
+                Components {
+                    track_payload: &mut track_payload,
+                    configuration: &mut cfg,
+                    rpu: &mut archive,
+                    rpu_index: &mut index,
+                    source_audit: &mut audit,
+                    original_container: full.then_some(&mut retained),
+                },
+            )
+            .unwrap();
+            assert_eq!(cfg, raw_config);
+            let start = receipt.track_payload_original_offset as usize;
+            assert_eq!(&input[start..start + track_payload.len()], track_payload);
+            assert!(
+                track_payload
+                    .windows(b"generated unparsed track field".len())
+                    .any(|w| w == b"generated unparsed track field")
+            );
+            assert_eq!(receipt.track_payload.sha256, digest(&track_payload));
+            assert_eq!(receipt.track_payload.bytes, track_payload.len() as u64);
+            let payloads = [&a[2..], &a[2..], &b[2..], &c[2..], &a[2..]];
+            let expected: Vec<_> = payloads
+                .iter()
+                .flat_map(|p| [vec![0, 0, 0, 1], p.to_vec()].concat())
+                .collect();
+            assert_eq!(archive, expected);
+            assert_eq!(receipt.packets, 4);
+            assert_eq!(receipt.records, 5); // Never deduplicate or assume one per packet.
+            assert_eq!(receipt.enhancement_nals, 1);
+            let refs = lines(&index);
+            let expected_packets = [0, 0, 1, 2, 3];
+            let expected_pts = [-10_000_000, -10_000_000, 40_000_000, 5_000_000, 40_000_000];
+            let mut offset = 0;
+            for (i, row) in refs.iter().enumerate() {
+                assert_eq!(row["index"], i);
+                assert_eq!(row["packet_index"], expected_packets[i]);
+                assert_eq!(row["nal_index"], [2, 3, 1, 1, 1][i]);
+                assert_eq!(row["payload_bytes"], payloads[i].len());
+                assert_eq!(row["pts_ns"], expected_pts[i]);
+                assert_eq!(row["archive_delimiter_offset"], offset);
+                let original_offset = row["original_payload_offset"].as_u64().unwrap() as usize;
+                assert_eq!(
+                    &input[original_offset..original_offset + payloads[i].len()],
+                    payloads[i]
+                );
+                assert_eq!(
+                    &archive[offset + 4..offset + 4 + payloads[i].len()],
+                    payloads[i]
+                );
+                assert_eq!(row["payload_sha256"], digest(payloads[i]));
+                offset += 4 + payloads[i].len();
+            }
+            let mut reread = Vec::new();
+            assert_eq!(
+                audit_rpu(&mut Cursor::new(&archive), &mut reread)
+                    .unwrap()
+                    .records,
+                5
+            );
+            for (row, payload) in lines(&reread)[1..].iter().zip(payloads) {
+                assert_eq!(row["sha256"], digest(payload));
+            }
+            let mut baseline = Vec::new();
+            let r =
+                audit_matroska_summary(&mut Cursor::new(&input), input.len() as u64, &mut baseline)
+                    .unwrap();
+            complete_matroska(&mut baseline, &r).unwrap();
+            assert_eq!(audit, baseline); // Native/library protocol remains byte-identical.
+            assert_eq!(receipt.input.sha256, digest(&input));
+            for (r, bytes) in [
+                (&receipt.configuration, &cfg),
+                (&receipt.rpu, &archive),
+                (&receipt.rpu_index, &index),
+                (&receipt.source_audit, &audit),
+            ] {
+                assert_eq!(r.bytes, bytes.len() as u64);
+                assert_eq!(r.sha256, digest(bytes));
+            }
+            if full {
+                assert_eq!(retained, input);
+                assert_eq!(receipt.original_container.as_ref().unwrap(), &receipt.input);
+            } else {
+                assert!(retained.is_empty() && receipt.original_container.is_none());
+            }
+            let mut manifest_bytes = Vec::new();
+            manifest(&receipt, &mut manifest_bytes).unwrap();
+            let m = &lines(&manifest_bytes)[0];
+            assert_eq!(
+                m["components"].as_array().unwrap().len(),
+                if full { 6 } else { 5 }
+            );
+            assert_eq!(m["source_path_identity_bound"], false);
+            assert_eq!(m["decoded_frame_association"], "not-established");
+            assert_eq!(m["metadata_rewritten"], false);
+            assert_eq!(
+                m["retention"],
+                if full {
+                    "entire-original-container"
+                } else {
+                    "rpu-and-original-track-metadata-only"
+                }
+            );
+        }
+    }
+}
+
+#[test]
+fn original_companion_errors_never_return_a_complete_receipt() {
+    use staxrip_dolby_metadata_audit::companion::{Components, produce};
+    let good = movie(
+        &config(4),
+        &simple(1, 0, 0, &packet(&[rpu()], 4)),
+        &[],
+        false,
+    );
+    let mut corrupt = good.clone();
+    let at = good.windows(rpu().len()).position(|w| w == rpu()).unwrap();
+    corrupt[at + 12] ^= 1;
+    for input in [
+        Vec::new(),
+        good[..good.len() - 1].to_vec(),
+        corrupt,
+        movie(
+            &config(4),
+            &simple(1, 0, 0, &packet(&[vec![2, 1, 0xaa]], 4)),
+            &[],
+            false,
+        ),
+    ] {
+        let mut track_payload = Vec::new();
+        let (mut cfg, mut archive, mut index, mut audit, mut full) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        assert!(
+            produce(
+                &mut Cursor::new(input),
+                Components {
+                    track_payload: &mut track_payload,
+                    configuration: &mut cfg,
+                    rpu: &mut archive,
+                    rpu_index: &mut index,
+                    source_audit: &mut audit,
+                    original_container: Some(&mut full)
+                }
+            )
+            .is_err()
+        );
+        assert!(!lines(&audit).iter().any(|r| r["kind"] == "complete"));
+    }
+}
+
+#[test]
+fn original_companion_writer_failures_and_flushes_refuse_each_component() {
+    use staxrip_dolby_metadata_audit::companion::{Components, manifest, produce};
+    struct Writer {
+        bytes: Vec<u8>,
+        fail_write: bool,
+        fail_flush: bool,
+    }
+    impl Write for Writer {
+        fn write(&mut self, b: &[u8]) -> io::Result<usize> {
+            if self.fail_write {
+                return Err(io::Error::other("generated output refusal"));
+            }
+            let n = b.len().min(7);
+            self.bytes.extend_from_slice(&b[..n]);
+            Ok(n)
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            if self.fail_flush {
+                Err(io::Error::other("generated flush refusal"))
+            } else {
+                Ok(())
+            }
+        }
+    }
+    let input = movie(
+        &config(4),
+        &simple(1, 0, 0, &packet(&[rpu()], 4)),
+        &[],
+        false,
+    );
+    for component in 0..6 {
+        for flush in [false, true] {
+            let mut writers: Vec<_> = (0..6)
+                .map(|i| Writer {
+                    bytes: Vec::new(),
+                    fail_write: i == component && !flush,
+                    fail_flush: i == component && flush,
+                })
+                .collect();
+            let [track_payload, cfg, rpu, index, audit, full] = writers.as_mut_slice() else {
+                unreachable!()
+            };
+            let result = produce(
+                &mut Cursor::new(&input),
+                Components {
+                    track_payload,
+                    configuration: cfg,
+                    rpu,
+                    rpu_index: index,
+                    source_audit: audit,
+                    original_container: Some(full),
+                },
+            );
+            assert!(
+                matches!(result, Err(Failure::OutputIO)),
+                "component {component}, flush {flush}"
+            );
+        }
+    }
+    let mut writers: Vec<_> = (0..6)
+        .map(|_| Writer {
+            bytes: Vec::new(),
+            fail_write: false,
+            fail_flush: false,
+        })
+        .collect();
+    let [track_payload, cfg, rpu, index, audit, full] = writers.as_mut_slice() else {
+        unreachable!()
+    };
+    let receipt = produce(
+        &mut Cursor::new(&input),
+        Components {
+            track_payload,
+            configuration: cfg,
+            rpu,
+            rpu_index: index,
+            source_audit: audit,
+            original_container: Some(full),
+        },
+    )
+    .unwrap();
+    assert_eq!(full.bytes, input); // Actual repeated short writes completed.
+    for flush in [false, true] {
+        let mut output = Writer {
+            bytes: Vec::new(),
+            fail_write: !flush,
+            fail_flush: flush,
+        };
+        assert!(matches!(
+            manifest(&receipt, &mut output),
+            Err(Failure::OutputIO)
+        ));
+    }
+}
+
+#[test]
+fn original_companion_source_recheck_refuses_rewritten_input() {
+    use staxrip_dolby_metadata_audit::companion::{Components, produce};
+    use std::io::{Seek, SeekFrom};
+    struct Mutating {
+        input: Cursor<Vec<u8>>,
+        rewinds: u8,
+        fail_read: bool,
+    }
+    impl Read for Mutating {
+        fn read(&mut self, b: &mut [u8]) -> io::Result<usize> {
+            if self.fail_read && self.input.position() > 20 {
+                return Err(io::Error::other("generated input refusal"));
+            }
+            let n = b.len().min(17);
+            self.input.read(&mut b[..n])
+        }
+    }
+    impl Seek for Mutating {
+        fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+            if pos == SeekFrom::Start(0) {
+                self.rewinds += 1;
+                if self.rewinds == 2 {
+                    self.input.get_mut()[20] ^= 1;
+                }
+            }
+            self.input.seek(pos)
+        }
+    }
+    let input = movie(
+        &config(4),
+        &simple(1, 0, 0, &packet(&[rpu()], 4)),
+        &[],
+        false,
+    );
+    for fail_read in [false, true] {
+        let mut source = Mutating {
+            input: Cursor::new(input.clone()),
+            rewinds: 0,
+            fail_read,
+        };
+        let mut track_payload = Vec::new();
+        let (mut cfg, mut rpu, mut index, mut audit, mut full) =
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        let result = produce(
+            &mut source,
+            Components {
+                track_payload: &mut track_payload,
+                configuration: &mut cfg,
+                rpu: &mut rpu,
+                rpu_index: &mut index,
+                source_audit: &mut audit,
+                original_container: Some(&mut full),
+            },
+        );
+        assert!(
+            matches!(result, Err(Failure::ChangedSource)) && !fail_read
+                || matches!(result, Err(Failure::InputIO)) && fail_read
+        );
+        assert!(!lines(&audit).iter().any(|r| r["kind"] == "complete"));
+    }
+}
+
+#[test]
+fn original_companion_actual_files_bind_manifest_and_refuse_replacing_outputs() {
+    use staxrip_dolby_metadata_audit::companion::{Components, manifest, produce};
+    use std::os::unix::fs::MetadataExt;
+    let folder = Temp::new();
+    let source_path = folder.0.join("generated-source.mkv");
+    let input = movie(
+        &config(4),
+        &simple(
+            1,
+            0,
+            0,
+            &packet(&[vec![2, 1, 0xaa], vec![126, 1, 0xbb], rpu()], 4),
+        ),
+        &element(0x41e4, b"supplementary generated configuration"),
+        false,
+    );
+    fs::write(&source_path, &input).unwrap();
+    let before = fs::metadata(&source_path).unwrap();
+    let names = [
+        "original-track-entry-payload.bin",
+        "hevc-configuration.bin",
+        "original-rpu.bin",
+        "rpu-index.jsonl",
+        "source-audit.jsonl",
+        "original-container.mkv",
+    ];
+    let mut writers: Vec<_> = names
+        .iter()
+        .map(|n| {
+            fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(folder.0.join(n))
+                .unwrap()
+        })
+        .collect();
+    let [
+        track_payload,
+        configuration,
+        rpu,
+        rpu_index,
+        source_audit,
+        original_container,
+    ] = writers.as_mut_slice()
+    else {
+        unreachable!()
+    };
+    let mut source = fs::OpenOptions::new()
+        .read(true)
+        .open(&source_path)
+        .unwrap();
+    let receipt = produce(
+        &mut source,
+        Components {
+            track_payload,
+            configuration,
+            rpu,
+            rpu_index,
+            source_audit,
+            original_container: Some(original_container),
+        },
+    )
+    .unwrap();
+    drop(writers);
+    let mut manifest_file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(folder.0.join("manifest.json"))
+        .unwrap();
+    manifest(&receipt, &mut manifest_file).unwrap();
+    drop(manifest_file);
+    let m = lines(&fs::read(folder.0.join("manifest.json")).unwrap()).remove(0);
+    for component in m["components"].as_array().unwrap() {
+        let path = folder.0.join(component["name"].as_str().unwrap());
+        let bytes = fs::read(&path).unwrap();
+        assert_eq!(component["bytes"], bytes.len());
+        assert_eq!(component["sha256"], digest(&bytes));
+        assert!(
+            fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .is_err()
+        );
+        assert_eq!(fs::read(&path).unwrap(), bytes);
+    }
+    let reread = fs::read(folder.0.join("original-container.mkv")).unwrap();
+    assert_eq!(reread, input);
+    assert_eq!(fs::read(&source_path).unwrap(), input);
+    let after = fs::metadata(&source_path).unwrap();
+    assert_eq!(
+        (
+            before.dev(),
+            before.ino(),
+            before.len(),
+            before.mtime(),
+            before.mtime_nsec(),
+            before.ctime(),
+            before.ctime_nsec()
+        ),
+        (
+            after.dev(),
+            after.ino(),
+            after.len(),
+            after.mtime(),
+            after.mtime_nsec(),
+            after.ctime(),
+            after.ctime_nsec()
+        )
+    );
+}
+
+#[test]
+fn original_track_capture_bound_refuses_without_changing_read_only_audit() {
+    use staxrip_dolby_metadata_audit::companion::{Components, produce};
+    let input = movie(
+        &config(4),
+        &simple(1, 0, 0, &packet(&[rpu()], 4)),
+        &element(0x41e4, &vec![42; 1024 * 1024]),
+        false,
+    );
+    let baseline = audit_matroska_summary(
+        &mut Cursor::new(&input),
+        input.len() as u64,
+        &mut Vec::new(),
+    )
+    .unwrap();
+    assert_eq!(baseline.records, 1);
+    let (mut track_payload, mut configuration, mut rpu, mut rpu_index, mut source_audit) =
+        (Vec::new(), Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    let result = produce(
+        &mut Cursor::new(&input),
+        Components {
+            track_payload: &mut track_payload,
+            configuration: &mut configuration,
+            rpu: &mut rpu,
+            rpu_index: &mut rpu_index,
+            source_audit: &mut source_audit,
+            original_container: None,
+        },
+    );
+    assert!(matches!(result, Err(Failure::Bounds)));
+    assert!(source_audit.is_empty());
 }

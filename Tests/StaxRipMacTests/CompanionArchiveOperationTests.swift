@@ -34,6 +34,10 @@ struct CompanionArchiveOperationTests {
         func expectActive(scoped: Bool = false) { lock.withLock { #expect(active == 1); checkPins(); if scoped { #expect(scopes == 2) } } }
         func expectEnded(scoped: Bool = false) { lock.withLock { #expect(active == 0 && ended == 1); if scoped { #expect(scopes == 0 && stopped == 2) } } }
         func expectRetained() { lock.withLock { #expect(scopes == 2 && stopped == 0); checkPins() } }
+        private var closedCount = 0
+        func closed(_ count: Int) { lock.withLock { #expect(closedCount == 0 && count == 2); closedCount = count } }
+        func expectClosed() { lock.withLock { #expect(closedCount == 2) } }
+        var latestPID: pid_t? { lock.withLock { launched.last } }
         func launch(_ p: pid_t) { expectActive(); lock.withLock { launched.append(p) } }
         func join(_ p: pid_t) { expectActive(); lock.withLock { joined.append(p) } }
         func expectJoined(count: Int) {
@@ -45,6 +49,8 @@ struct CompanionArchiveOperationTests {
     private final class Gate: @unchecked Sendable {
         let entered: AsyncStream<Void>, signal: AsyncStream<Void>.Continuation
         let release = DispatchSemaphore(value: 0)
+        private let lock = NSLock(); private var held = false
+        func holdFirst() { if lock.withLock({ if held { return false }; held = true; return true }) { hold() } }
         init() { let p = AsyncStream<Void>.makeStream(); entered = p.stream; signal = p.continuation }
         func hold() { signal.yield(()); signal.finish(); if release.wait(timeout: .now() + 30) != .success { Issue.record("Generated access gate expired") } }
     }
@@ -494,4 +500,288 @@ struct CompanionArchiveOperationTests {
         ledger.expectJoined(count: 1); _ = try b.admit()
         #expect(try Data(contentsOf: b.original.source) == original && snapshot(b.original.stage) == before)
     }
+    private nonisolated static var frozenDecoderDirectory: String? {
+        ProcessInfo.processInfo.environment["STAXRIP_TEST_FROZEN_DECODER_DIRECTORY"]
+    }
+    private func associationTool(in root: URL) throws -> DolbyDecoderProcess.Tool {
+        let hash = String(repeating: "a", count: 64)
+        return try .development(root.appendingPathComponent("Helpers/reference"), expectedSHA256: hash,
+            libraries: Dictionary(uniqueKeysWithValues: ["libavcodec.63.dylib", "libavformat.63.dylib", "libavutil.61.dylib"].map { ($0, hash) }), versions: [1, 1, 1])
+    }
+    private func associate(_ f: Fixture, tool: DolbyDecoderProcess.Tool) async throws -> CompanionDiskCheck.SourceFrameReceipt {
+        try await Operation.associateOriginalFrames(source: f.source, spoolDirectory: f.stage, tool: tool)
+    }
+    @Test func associationAcquisitionRollbackPrecancelAndActualReadWriteDenials() async throws {
+        let f = try await fixture(); defer { f.cleanup() }
+        let tool = try associationTool(in: f.root), original = try Data(contentsOf: f.source)
+        var requested: [URL] = [], stopped: [URL] = [], starts = 0, ends = 0
+        let failed = Operation.Environment(access: { url in
+            requested.append(url)
+            if url == f.stage { throw NativeExportError.invalid("Generated spool grant refusal") }
+            return { stopped.append(url) }
+        }, activity: { _ in starts += 1; return { ends += 1 } })
+        await Operation.$testEnvironment.withValue(failed) {
+            await #expect(throws: NativeExportError.self) { try await associate(f, tool: tool) }
+        }
+        #expect(requested == [f.source, f.stage] && stopped == [f.source] && starts == 0)
+        let task = Task { withUnsafeCurrentTask { $0?.cancel() }; return try await Operation.$testEnvironment.withValue(failed) { try await associate(f, tool: tool) } }
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(requested == [f.source, f.stage])
+        let env = Operation.Environment(activity: { _ in starts += 1; return { ends += 1 } })
+        if geteuid() != 0 {
+            var info = stat(); try #require(lstat(f.source.path, &info) == 0)
+            let mode = info.st_mode & 0o7777
+            defer { _ = chmod(f.source.path, mode); _ = chmod(f.stage.path, 0o700) }
+            for (url, deniedMode) in [(f.source, mode_t(0)), (f.stage, mode_t(0))] {
+                try #require(chmod(url.path, deniedMode) == 0)
+                await Operation.$testEnvironment.withValue(env) {
+                    await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Denied source/spool launched decoder") })) {
+                        await #expect(throws: NativeExportError.self) { try await associate(f, tool: tool) }
+                    }
+                }
+                try #require(chmod(url.path, url == f.source ? mode : 0o700) == 0)
+            }
+            #expect(starts == 0 && ends == 0)
+            // Keep strict private POSIX mode while actual generated ACL denies
+            // creation of the fixed member. Remove only this fixture's new ACL.
+            let acl = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/chmod"), arguments: ["+a", "everyone deny add_file", f.stage.path])
+            try #require(acl.status == 0)
+            defer { let result = chmod(f.stage.path, 0o700); #expect(result == 0) }
+            await Operation.$testEnvironment.withValue(env) {
+                await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Denied spool write launched decoder") })) {
+                    await #expect(throws: DolbyAssociationSpool.Failure.self) { try await associate(f, tool: tool) }
+                }
+            }
+            let removed = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/chmod"), arguments: ["-N", f.stage.path])
+            try #require(removed.status == 0)
+            #expect(starts == 1 && ends == 1)
+        }
+        #expect(try Data(contentsOf: f.source) == original && FileManager.default.contentsOfDirectory(atPath: f.stage.path).isEmpty)
+    }
+    @Test func associationSourceRefusalClosesPinsAndBalancesOnlyExplicitGrants() async throws {
+        let f = try await fixture(); defer { f.cleanup() }; let ledger = Ledger()
+        let tool = try associationTool(in: f.root), invalid = Data("Generated invalid source".utf8)
+        try invalid.write(to: f.source)
+        var requested: [URL] = [], stopped: [URL] = []
+        var env = environment(ledger, fakeScopes: true)
+        env.access = { url in requested.append(url); ledger.beginScope(); return { stopped.append(url); ledger.endScope() } }
+        await Operation.$testEnvironment.withValue(env) {
+            await Operation.$testBoundary.withValue(.init(phase: { phase in #expect(phase == "association"); ledger.expectActive(scoped: true) }, pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Invalid source launched decoder") })) {
+                    await #expect(throws: NativeExportError.self) { try await associate(f, tool: tool) }
+                }
+            }
+        }
+        #expect(requested == [f.source, f.stage] && stopped == [f.stage, f.source])
+        ledger.expectEnded(scoped: true); ledger.expectClosed()
+        #expect(!ownAssertion(try assertions(), reason: "StaxRip original source frame association"))
+        #expect(try Data(contentsOf: f.source) == invalid)
+        // A partial disposable SQLite file is still owned by this explicit caller.
+        #expect(FileManager.default.fileExists(atPath: f.stage.path))
+    }
+    @Test func controlledUnsettledAssociationRetainsAccessAndExcludesAllOperationKindsAfterExpiry() async throws {
+        struct ControlledUnsettled: CompanionUnsettledOwnership {}
+        let f = try await fixture(); defer { f.cleanup() }; let ledger = Ledger(), tool = try associationTool(in: f.root)
+        let original = try Data(contentsOf: f.source); var reviewID: UUID?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(phase: { _ in throw ControlledUnsettled() }, pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) { try await associate(f, tool: tool) }
+            }
+            Issue.record("Controlled uncertain association returned success")
+        } catch let e as Operation.ReviewFailure { reviewID = e.reviewID; #expect(e.intendedStage == f.stage) }
+        let id = try #require(reviewID); ledger.expectRetained(); ledger.expectActive(scoped: true)
+        await #expect(throws: NativeExportError.self) { try await execute(f) }
+        await #expect(throws: NativeExportError.self) { try await review(f) }
+        await #expect(throws: NativeExportError.self) { try await associate(f, tool: tool) }
+        try await Task.sleep(for: .milliseconds(100))
+        ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id))
+        Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+        #expect(try Data(contentsOf: f.source) == original && FileManager.default.contentsOfDirectory(atPath: f.stage.path).isEmpty)
+    }
+
+    @Test func activeSourcePassCancellationSettlesBeforeGrantAndPinRelease() async throws {
+        let f = try await fixture(); defer { f.cleanup() }; let ledger = Ledger(), gate = Gate(), tool = try associationTool(in: f.root)
+        let original = try Data(contentsOf: f.source)
+        let task = Task {
+            defer { gate.signal.finish() }
+            return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Cancelled source pass launched decoder") })) {
+                        try await CompanionDiskCheck.$testBoundary.withValue(.init(progress: { phase, _ in if phase == "source" { gate.holdFirst() } })) { try await associate(f, tool: tool) }
+                    }
+                }
+            }
+        }
+        for await _ in gate.entered { break }; ledger.expectActive(scoped: true)
+        task.cancel(); gate.release.signal()
+        await #expect(throws: CancellationError.self) { try await task.value }
+        ledger.expectEnded(scoped: true); ledger.expectClosed()
+        #expect(try Data(contentsOf: f.source) == original && FileManager.default.contentsOfDirectory(atPath: f.stage.path).isEmpty)
+    }
+    @Test func controlledActualOuterCloseRefusalRetainsGrantsWithoutRetryingDescriptor() async throws {
+        final class CloseFault: @unchecked Sendable {
+            private let lock = NSLock(); private var descriptors: [Int32] = []
+            func pins(_ fds: [Int32]) { lock.withLock { descriptors = fds } }
+            func removeOne() throws {
+                let fd = try lock.withLock { try #require(descriptors.first) }
+                try #require(Darwin.close(fd) == 0)
+            }
+        }
+        let f = try await fixture(); defer { f.cleanup() }; let fault = CloseFault(), tool = try associationTool(in: f.root)
+        try Data("Generated invalid source".utf8).write(to: f.source)
+        var scopes = 0, stops = 0, energy = 0
+        let env = Operation.Environment(access: { _ in scopes += 1; return { stops += 1 } }, activity: { _ in energy += 1; return { energy -= 1 } }, retainedActivitySeconds: 0.05)
+        var id: UUID?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(env) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { fault.pins($0) }, beforeAssociationRelease: { try fault.removeOne() })) { try await associate(f, tool: tool) }
+            }
+            Issue.record("Controlled close refusal released access")
+        } catch let e as Operation.ReviewFailure { id = e.reviewID; #expect(e.operationError is any CompanionUnsettledOwnership) }
+        let review = try #require(id)
+        #expect(scopes == 2 && stops == 0 && energy == 1 && Operation.retainedForTesting(review))
+        // The controller consumed both descriptor numbers. Controlled registry
+        // isolation must not retry close and affect a later independently owned FD.
+        let later = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
+        try #require(later >= 0); defer { #expect(Darwin.close(later) == 0) }
+        try await Task.sleep(for: .milliseconds(100)); #expect(energy == 0 && stops == 0)
+        Operation.releaseGeneratedReviewForTesting(review)
+        var info = stat(); #expect(fstat(later, &info) == 0 && stops == 2 && energy == 0)
+        #expect(FileManager.default.fileExists(atPath: f.stage.path))
+    }
+    @Test(.enabled(if: frozenDecoderDirectory != nil), .timeLimit(.minutes(2)))
+    func actualFrozenAssociationOwnsActivityBothThreadsCancellationAndFinalSelection() async throws {
+        let runtime = URL(fileURLWithPath: try #require(Self.frozenDecoderDirectory), isDirectory: true)
+        func digest(_ url: URL) throws -> String { DolbyInspection.hex(SHA256.hash(data: try Data(contentsOf: url))) }
+        let exe = runtime.appendingPathComponent("Helpers/reference"), originalExe = try digest(exe)
+        var hashes: [String: String] = [:]
+        for name in ["libavcodec.63.dylib", "libavformat.63.dylib", "libavutil.61.dylib"] { hashes[name] = try digest(runtime.appendingPathComponent("Frameworks/" + name)) }
+        let tool = try DolbyDecoderProcess.Tool.development(exe, expectedSHA256: originalExe, libraries: hashes, versions: [4129126,4129126,3998054])
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("native-association-access-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        var keep = true
+        defer { if keep { print("GENERATED_ASSOCIATION_ACCESS_REVIEW " + root.path) } else { try? FileManager.default.removeItem(at: root) } }
+        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let generated = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: ["STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY=" + root.path, "cargo", "test", "--locked", "--target-dir", repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-NativeFrameAccessTests").path, "--manifest-path", repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path, "actual_hevc_packets_and_rpu_association_match_independent_ffprobe"])
+        try #require(generated.status == 0)
+        let original = root.appendingPathComponent("single.mkv"), originalBytes = try Data(contentsOf: original)
+        let prior = root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8); try priorBytes.write(to: prior)
+        func folder() throws -> URL {
+            let url = root.appendingPathComponent("spool-" + UUID().uuidString)
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]); return url
+        }
+        for threads in [1, 4] {
+            let spool = try folder(), ledger = Ledger(); var requested: [URL] = [], stopped: [URL] = []
+            var env = environment(ledger, fakeScopes: threads == 1)
+            if threads == 1 { env.access = { url in requested.append(url); ledger.beginScope(); return { stopped.append(url); ledger.endScope() } } }
+            let result = try await Operation.$testEnvironment.withValue(env) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                        try await Operation.associateOriginalFrames(source: original, spoolDirectory: spool, tool: tool, threads: threads)
+                    }
+                }
+            }
+            #expect(result.independentSourceFrameAssociationVerified && !result.editedPictureSemanticsVerified && result.decoder.frames == 4)
+            if threads == 1 { #expect(requested == [original, spool] && stopped == [spool, original]) }
+            ledger.expectJoined(count: 1); ledger.expectEnded(scoped: threads == 1); ledger.expectClosed()
+            #expect(Set(try FileManager.default.contentsOfDirectory(atPath: spool.path)) == ["association.sqlite"])
+        }
+        // All these final selected-path refusals occur after the real decoder join.
+        for changeSource in [false, true] {
+            let source = root.appendingPathComponent("final-source-" + UUID().uuidString); try originalBytes.write(to: source)
+            let spool = try folder(), ledger = Ledger(), moved = root.appendingPathComponent("retained-selection-" + UUID().uuidString)
+            do {
+                _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                        try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await CompanionDiskCheck.$testBoundary.withValue(.init(beforeFinal: {
+                                do {
+                                    let selected = changeSource ? source : spool
+                                    try FileManager.default.moveItem(at: selected, to: moved)
+                                    if changeSource { try originalBytes.write(to: selected) }
+                                    else { try FileManager.default.createDirectory(at: selected, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]) }
+                                } catch { Issue.record("Generated association selection substitution failed") }
+                            })) { try await Operation.associateOriginalFrames(source: source, spoolDirectory: spool, tool: tool) }
+                        }
+                    }
+                }
+                Issue.record("Changed outer association selection returned success")
+            } catch let e as Operation.ReviewFailure {
+                #expect(e.intendedStage == spool); ledger.expectJoined(count: 1); ledger.expectRetained()
+                #expect(Operation.retainedForTesting(e.reviewID))
+                Operation.releaseGeneratedReviewForTesting(e.reviewID); ledger.expectEnded(scoped: true)
+            }
+            #expect(try Data(contentsOf: source) == originalBytes)
+            if changeSource { #expect(try Data(contentsOf: moved) == originalBytes) }
+            else { #expect(Set(try FileManager.default.contentsOfDirectory(atPath: moved.path)) == ["association.sqlite"]) }
+        }
+        // Cancellation after direct-child join is a refusal with balanced release.
+        let lateSpool = try folder(), lateLedger = Ledger(), lateGate = Gate()
+        let late = Task {
+            defer { lateGate.signal.finish() }
+            return try await Operation.$testEnvironment.withValue(environment(lateLedger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { lateLedger.pinned($0) }, associationClosed: { lateLedger.closed($0) })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { lateLedger.launch($0) }, settled: { lateLedger.join($0) }, beforeReceipt: { lateGate.hold() })) {
+                        try await Operation.associateOriginalFrames(source: original, spoolDirectory: lateSpool, tool: tool)
+                    }
+                }
+            }
+        }
+        for await _ in lateGate.entered { break }; lateLedger.expectJoined(count: 1); lateLedger.expectActive(scoped: true)
+        late.cancel(); lateGate.release.signal()
+        await #expect(throws: CancellationError.self) { try await late.value }
+        lateLedger.expectEnded(scoped: true); lateLedger.expectClosed()
+        // A long generated source keeps the actual decoder live at a frame gate.
+        let view = CompanionDiskCheck.ReadView(sourceBytes: Int64(originalBytes.count), source: { o, n in originalBytes.subdata(in: Int(o)..<(Int(o) + n)) }, component: { _ in throw NativeExportError.invalid("Generated source-only fixture") }, checkpoint: {})
+        let walker = CompanionOriginalTrackCheck.Walker(view), header = try walker.element(0, end: view.sourceBytes)
+        let segment = try walker.element(header.end, end: view.sourceBytes)
+        var prefix = Data(), clusters = Data(), offset = segment.payload
+        while offset < segment.end {
+            let element = try walker.element(offset, end: segment.end)
+            let bytes = originalBytes.subdata(in: Int(offset)..<Int(element.end))
+            if element.id == 0x1f43b675 { clusters.append(bytes) } else { prefix.append(bytes) }
+            offset = element.end
+        }
+        var longBytes = originalBytes.prefix(Int(header.end)) + Data([0x18,0x53,0x80,0x67,0xff]) + prefix
+        for _ in 0..<2000 { longBytes.append(clusters) }
+        let source = root.appendingPathComponent("live-source.mkv"); try longBytes.write(to: source)
+        let spool = try folder(), ledger = Ledger(), gate = Gate()
+        let task = Task {
+            defer { gate.signal.finish() }
+            return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, row: { d in if String(decoding: d, as: UTF8.self).contains("\"kind\":\"frame\"") { gate.holdFirst() } }, settled: { ledger.join($0) })) {
+                        try await Operation.associateOriginalFrames(source: source, spoolDirectory: spool, tool: tool)
+                    }
+                }
+            }
+        }
+        for await _ in gate.entered { break }
+        ledger.expectActive(scoped: true)
+        #expect(ownAssertion(try assertions(), reason: "StaxRip original source frame association"))
+        let pid = try #require(ledger.latestPID)
+        let state = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/ps"), arguments: ["-p", String(pid), "-o", "stat="])
+        #expect(state.status == 0 && !String(decoding: state.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("Z"))
+        await #expect(throws: NativeExportError.self) { try await Operation.associateOriginalFrames(source: original, spoolDirectory: spool, tool: tool) }
+        task.cancel(); ledger.expectActive(scoped: true); gate.release.signal()
+        var uncertain = false
+        do { _ = try await task.value; Issue.record("Cancelled live association returned success") }
+        catch is CancellationError { ledger.expectEnded(scoped: true); ledger.expectClosed() }
+        catch let e as Operation.ReviewFailure {
+            uncertain = true
+            #expect((e.operationError as? DolbyDecoderProcess.OwnershipFailure)?.reason == "group-1-joined-true")
+            ledger.expectJoined(count: 1); ledger.expectRetained(); #expect(Operation.retainedForTesting(e.reviewID))
+            // Controlled registry isolation after fixed-child join; retain files.
+            // This is not process-group settlement or production cleanup authority.
+            Operation.releaseGeneratedReviewForTesting(e.reviewID); ledger.expectEnded(scoped: true)
+        }
+        ledger.expectJoined(count: 1)
+        #expect(!ownAssertion(try assertions(), reason: "StaxRip original source frame association"))
+        #expect(try Data(contentsOf: original) == originalBytes && Data(contentsOf: source) == longBytes && Data(contentsOf: prior) == priorBytes)
+        #expect(try digest(exe) == originalExe)
+        for (name, hash) in hashes { #expect(try digest(runtime.appendingPathComponent("Frameworks/" + name)) == hash) }
+        keep = uncertain
+        print("Generated concrete association: both threads, six joined decoders, final/late/live refusal; uncertain group=\(uncertain)")
+    }
+
 }

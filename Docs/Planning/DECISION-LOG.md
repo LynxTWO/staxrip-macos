@@ -113,6 +113,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-102 | 2026-10-04 | Own a source-bound cancellable companion producer | Confirmed | |
 | D-103 | 2026-10-04 | Bind exclusive companion component creation to an owned stage | Confirmed | |
 | D-104 | 2026-10-04 | Qualify a separate development companion writer process | Confirmed | |
+| D-105 | 2026-10-04 | Settle original companion phases before exclusive publication | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1978,3 +1979,62 @@ AV1 deadline 132.370 s against 120 s, with no rerun/observer/assertion change. N
 independent semantic settlement and D-099 exclusive publication joined to writer/native
 worker ownership. Native review/lease/resource/signing, persisted execution binding,
 stable import, storage/crash and decoded association remain separate qualification.
+
+
+## D-105: Settle original companion phases before exclusive publication
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner original-preservation/companion request, R-059 / Slice 049 and standing
+autonomous delegation. Generated native internal ownership unit only; no owner archive/
+queue/full-film encode, native action or writer packaging, signing retry, merge/release
+or parked listening. Consequence local_only now, user_data for later native exposure.
+
+Need/product contract: the future owner chooses retention and reviews storage/privacy.
+A stage must remain private until its producer and independent semantic verifier have
+settled and agree about actual source, retention and disk members. Cancellation must
+join phases before cleanup; an admitted publication reports the actual syscall outcome.
+A failed cleanup needs an explicit retained-stage error, not silent success or recursion.
+
+Choice delegated to AI. Alternatives: expose the archive UI now; duplicate a Python
+publication primitive; or add an internal Swift transaction coordinator using D-099
+and trusted settled producer/verifier phases. Select the last option. The generated
+end-to-end test invokes the actual unbundled writer and independent semantic checker;
+no runtime Python dependency or bundled/native writer action is implied. Cost: trusted
+phase implementations must settle all their writers/processes before returning; callbacks
+cannot prove their own truth. Native phase provenance/lease/resource/signing is later.
+
+Scope: pin regular source identity, own a unique private ResultSetStaging, validate
+bounded fixed-name typed producer and independent semantic receipts, require agreement
+of source/stage IDs, size/hash, retention/counts and every member. Check source identity
+between phases and through a trusted D-099 precommit callback after content verification.
+Publish only after independent settlement. Cancel/refusal joins trusted phases before
+explicit owned-stage discard; substitution/cleanup failure retains a reviewable error.
+Keep manifests unchanged and no stable importer, immutable snapshot or decoded claim.
+
+Acceptance: generated both-mode actual writer/semantic/native publication preserves
+source and encoded duplicates/signed association. Writer/verifier failures, forged or
+mismatched receipts, changed source/stage, cancellation while a worker is outstanding,
+late destination collision and cleanup refusal leave prior results intact and no new
+published result. Cancellation after commit reports committed success without deletion.
+No untrusted session/script extension selects phase callbacks. Native UI and live owner
+session stay unchanged. Historical D-090 work remains completed without observer/retry/
+assertion changes. Archive crash/ENOSPC/volume and stable import remain separate gates.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04; bounded
+transaction prerequisite inside authorized original archival development.
+
+D-105 outcome: nine focused Swift transaction tests passed, including actual generated
+writer/independent semantic/native publication in both retention modes. Ordinary regression
+passed 340 tests / 79 suites in 205.719 s with unchanged assertions/default scheduling.
+All-feature Rust40/format/Clippy, independent companion19, writer11 and reference15 passed.
+No new native action, runtime validator or writer packaging follows. Trusted phase
+implementations must settle all workers before cleanup; callbacks cannot prove their own
+truth. Next prerequisite is a fixed trusted native writer process/worker bridge and actual
+cancellation ownership, then independent native semantic admission; the Python test adapter
+is not that bridge. Stable import/persisted binding, active physical-copy interruption,
+lease/resource/signing, storage/crash and decoded association remain gates. PR79 automatic
+reader passed; app failed unchanged Fresh analysis6.702383vs5 and AV1125.935vs120,
+331tests487.092s2issues. Private failure log retained and PR updated without retry,
+historical observer or relaxed assertions/deadlines. See
+COMPANION-TRANSACTION-SETTLEMENT-EVIDENCE.md for actual scope and final settlement.

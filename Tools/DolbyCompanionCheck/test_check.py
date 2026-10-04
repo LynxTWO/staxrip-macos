@@ -91,6 +91,12 @@ class CompanionTests(unittest.TestCase):
                 before = {p.name: p.read_bytes() for p in self.package.iterdir()}
                 result = self.validate()
                 self.assertEqual((result["packets"], result["records"]), (4, 5))
+                self.assertEqual(result["source_file_id"], [self.source.stat().st_dev, self.source.stat().st_ino])
+                self.assertEqual(result["stage_file_id"], [self.package.stat().st_dev, self.package.stat().st_ino])
+                self.assertEqual(result["source_bytes"], len(original))
+                self.assertEqual(result["source_sha256"], hashlib.sha256(original).hexdigest())
+                self.assertEqual({m["name"]: (m["bytes"], m["sha256"]) for m in result["components"]},
+                                 {name: (len(data), hashlib.sha256(data).hexdigest()) for name, data in before.items()})
                 self.assertTrue(result["source_identity_checked_at_boundaries"])
                 self.assertEqual(result["decoded_frame_association"], "not-established")
                 self.assertFalse(result["immutable_snapshot"] or result["stable_importer"])

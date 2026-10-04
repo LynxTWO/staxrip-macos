@@ -377,7 +377,13 @@ def validate(source, package, helper, *, timeout=120):
         return dict(kind="development-original-companion-verification", retention=mode,
                     packets=packet_count, records=record_count, original_components_match_source=True,
                     source_identity_checked_at_boundaries=True, decoded_frame_association="not-established",
-                    immutable_snapshot=False, stable_importer=False)
+                    immutable_snapshot=False, stable_importer=False,
+                    source_file_id=list(source_before[:2]), stage_file_id=list(directory_before[:2]),
+                    source_bytes=source_content[0], source_sha256=source_content[1],
+                    enhancement_nals=m["enhancement_nals"],
+                    components=[dict(name=name, bytes=actual[0], sha256=actual[1])
+                                for name, (_, _, actual) in components.items()]
+                               + [dict(name="manifest.json", bytes=manifest_content[0], sha256=manifest_content[1])])
 
 
 def main():

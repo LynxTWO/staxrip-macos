@@ -1116,3 +1116,69 @@ first failed image remains detached with private receipt/log. No owner queue/sou
 body/film archive/encode/listening/merge/release. Native access/resource ownership,
 release capability/packaging/hardened loading and owner review remain before archive UI;
 stable import/persisted binding/decoded edits/crash/volume-loss remain separate gates.
+
+
+## D-116: Own native companion access and temporary export activity
+
+Status: Confirmed
+
+Need trace: R-059 requires source/destination access through actual writer, complete
+native source-dependent verification, exclusive publication and settled cleanup. D115
+storage evidence does not establish this lifetime. Reuse Foundation security-scoped
+access and ExportActivity's idle-system-sleep-only request. Connect concrete D107,
+D114 and D105/D099 phases; no arbitrary producer/verifier admission in the new bridge.
+
+Scope: unused internal native operation with explicit trusted development tool
+capabilities, source/parent no-follow descriptor pins and balanced scope acquisitions.
+An unscoped ordinary URL may return false from startAccessing; that is not a permission
+failure. Actual descriptor opening/type/path checks and owned stage creation must still
+succeed. Reject pre-cancel/unsafe inputs before acquiring activity. Acquire scopes before
+opening source/parent; ordinary return closes pins and ends only successful scopes and
+activity after all phases/cleanup return. No source paths in activity names.
+
+On shared unsettled ownership or typed cleanup refusal, retain source/parent access and
+pins in a process-local review registry, even if the caller drops the error. Retain the
+activity only for a bounded additional120seconds, then end its idle-sleep request while
+keeping access retained. This cap is energy-policy expiry, NOT ownership settlement or
+permission to clean files. No production release-from-review API is admitted without a
+settlement design. DEBUG generated tests alone may release controlled injected review
+states after proving their owned phase has returned. No persistent security/sleep setting,
+manual-lock override, archive UI, release provenance capability or packaging is added.
+
+Acceptance: actual generated writer/full native verifier/publication both modes, source
+and prior output unchanged, activity/access present at writer/reader/publication/cleanup
+boundaries. Pre-cancel, real source/parent refusal, injected acquisition rollback, positive
+scope balance (explicit fake provider), real unscoped behavior, cancellation join and typed
+review retention/expiry. Observe actual PID-specific Foundation OS request independently;
+fake provider lifecycle checks do not prove sandbox grants or revocation behavior. Native
+lease scope counts are process-local observations, not a sandbox platform qualification.
+No resource peak/throughput/power guarantee. Reuse unchanged D115 Rust/reference evidence.
+Ordinary regression, optimized ad-hoc signatures, privacy/protection/planning checks and
+PR90 automatic outcome inspection without retry remain required.
+
+Approved for build by: owner standing autonomous generated non-audio delegation, 2026-10-04.
+
+
+D-116 final qualification: expanded ordinary433reported tests/90suites205.588s passed,
+26 opt-in skips unchanged; new access suite8tests14.273s including actual non-root
+POSIX read/write denials. No new warnings. Focused26tests/3suites3.807s passed before
+final generated permission-restoration cleanup adjustment; expanded ordinary run covers
+that final test code. Optimized unchanged product build/strict ad-hoc app/read-only helper
+signatures passed without warnings, minima14.0/11.0; writer absent. Actual live-reader
+PID-specific idle-sleep assertion present during ownership and absent after settled release,
+source/parent descriptor FileIDs held through phases and retained review. Positive scope
+counts are explicitly fake-provider lifecycle evidence; sandbox grants/revocation remain
+unqualified. Controlled retention persists across dropped errors and energy expiry; real
+joined-writer stage substitution retains cleanup review. Only one run/pending review is
+admitted. No production recovery-from-review API, release tool trust, archive UI or writer
+packaging follows. Rust/reference/APFS unchanged D115 evidence reused, not re-executed.
+PR90 reader passed; app three unchanged timing failures retained/PR updated; no retry or
+D090 observer/assertion/deadline/global scheduling change. Protection/privacy final below.
+
+
+Final seven-file public/nonignored change scan: three private source path/name/stem
+patterns have zero matches with positive decoded source-field sentinel. Owner source
+metadata and current recovery journal unchanged; full planning audit findings empty.
+No source-body read, owner queue, private film archive/encode/listening, merge or release.
+Initial missing-index planning finding retained and corrected. Existing bounded awake
+PID32011 exact command/start inspected; expiry16:01:07UTC, no renewal/security changes.

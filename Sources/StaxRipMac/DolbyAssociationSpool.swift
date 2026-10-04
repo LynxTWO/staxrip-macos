@@ -10,7 +10,7 @@ final class DolbyAssociationSpool {
     enum Failure: Error { case refused, storageFull }
     struct OwnershipFailure: CompanionUnsettledOwnership {}
     struct Counts: Equatable { let packets: Int64, rpus: Int64 }
-    struct Limits {
+    struct Limits: Sendable {
         var pages = 131_072 // 512 MiB at the required 4096-byte page size.
         var records: Int64 = 2_000_000
     }

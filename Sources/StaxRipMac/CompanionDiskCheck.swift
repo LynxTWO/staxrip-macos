@@ -3,7 +3,8 @@ import Darwin
 import CryptoKit
 
 /// Unused internal disk/source/component settlement, with explicit progressively
-/// stronger source-dependent checks. No writes, import or native archive action.
+/// stronger source-dependent checks. Source observation spooling is explicit;
+/// no import or native archive action.
 enum CompanionDiskCheck {
     typealias Transaction = OriginalCompanionTransaction
     struct Receipt: Sendable {
@@ -63,6 +64,75 @@ enum CompanionDiskCheck {
                                         tool: CompanionMetadataProcess.Tool) async throws -> Receipt {
         try await settle(source: source, stage: candidate, input: .candidate(retention), originalTrack: true,
                          originalPackets: true, originalIndex: true, originalAudit: true, metadataTool: tool)
+    }
+    struct SourceSpoolReceipt: Sendable {
+        let sourceID: Transaction.FileID
+        let sourceBytes: Int64
+        let sourceSHA256: String
+        let track: CompanionOriginalTrackCheck.Receipt
+        let packets: CompanionOriginalPacketCheck.Receipt
+        let timestampScale: UInt64
+        let unknownSegment: Bool
+        let independentSourceFrameAssociationVerified = false
+        let editedPictureSemanticsVerified = false
+    }
+    struct SourceOwnershipFailure: CompanionUnsettledOwnership {}
+    /// Source-only observations into an exclusive disposable database. Caller
+    /// owns the empty private folder/access and retains it on uncertain close.
+    /// Neither companion equality nor decoder association follows from this pass.
+    static func spoolOriginalSource(source: URL, in directory: URL,
+                                    limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceSpoolReceipt {
+        try Task.checkCancellation()
+        let cancelled = Cancellation()
+        #if DEBUG
+        let boundary = testBoundary
+        #else
+        let boundary = Boundary()
+        #endif
+        let result: SourceSpoolReceipt = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                DispatchQueue(label: "StaxRip.original-source-spool", qos: .userInitiated).async {
+                    continuation.resume(with: Result {
+                        try cancelled.check()
+                        let file = try File(url: source, maximum: 1 << 40)
+                        let outcome = Result {
+                            let hash = try file.hash(cancelled: cancelled, original: nil) { boundary.progress("source", $0) }
+                            try file.check(source)
+                            let view = ReadView(sourceBytes: file.bytes, source: { offset, count in
+                                try cancelled.check()
+                                guard offset >= 0, count >= 0, count <= 1 << 20,
+                                      offset <= file.bytes, Int64(count) <= file.bytes - offset else { throw failure() }
+                                boundary.originalTrackRead(offset, count)
+                                return try file.read(offset: offset, count: count, cancelled: cancelled)
+                            }, component: { _ in throw failure() }, checkpoint: cancelled.check)
+                            let receipt = try DolbyAssociationSpool.withSpool(in: directory, sourceBytes: file.bytes,
+                                                                            limits: limits, checkpoint: cancelled.check) { spool in
+                                let track = try CompanionOriginalTrackCheck.readSource(view)
+                                var timing: (UInt64, Bool)?
+                                let packets = try CompanionOriginalPacketCheck.readSource(view, track: track, begin: { scale, unknown in
+                                    guard timing == nil else { throw failure() }; timing = (scale, unknown)
+                                }, observe: { try spool.append($0) })
+                                _ = try spool.finishSourcePass(expected: .init(packets: packets.packets, rpus: packets.records))
+                                guard let timing else { throw failure() }
+                                let finalHash = try file.hash(cancelled: cancelled, original: nil) { boundary.progress("source-recheck", $0) }
+                                guard finalHash == hash else { throw failure() }
+                                boundary.beforeFinal()
+                                try file.check(source); try cancelled.check()
+                                return SourceSpoolReceipt(sourceID: file.id, sourceBytes: file.bytes, sourceSHA256: hash,
+                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1)
+                            }
+                            try file.check(source); try cancelled.check()
+                            return receipt
+                        }
+                        // An uncertain actual close supersedes success or ordinary
+                        // refusal. The caller must retain its owned folder/access.
+                        try file.closeChecked()
+                        return try outcome.get()
+                    })
+                }
+            }
+        } onCancel: { cancelled.cancel() }
+        try Task.checkCancellation(); return result
     }
     private enum Input: Sendable {
         case provided(Transaction.Contents), candidate(Transaction.Retention)
@@ -236,6 +306,7 @@ enum CompanionDiskCheck {
     }
     private final class File {
         let fd: Int32, initial: stat
+        private var closed = false
         var id: Transaction.FileID { .init(initial) }
         var bytes: Int64 { initial.st_size }
         init(url: URL, maximum: Int64) throws {
@@ -261,7 +332,12 @@ enum CompanionDiskCheck {
             }
             fd = descriptor; initial = info
         }
-        deinit { Darwin.close(fd) }
+        deinit { if !closed { Darwin.close(fd) } }
+        func closeChecked() throws {
+            guard !closed else { throw SourceOwnershipFailure() }
+            closed = true // Never retry a possibly reused descriptor after close failure.
+            guard Darwin.close(fd) == 0 else { throw SourceOwnershipFailure() }
+        }
         func check(_ url: URL) throws {
             var info = stat(), path = stat()
             guard fstat(fd, &info) == 0, lstat(url.path, &path) == 0, same(initial, info), same(initial, path) else { throw failure() }

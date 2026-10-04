@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import Darwin
+import SQLite3
 import Testing
 @testable import StaxRipMac
 
@@ -67,9 +68,9 @@ struct CompanionOriginalPacketCheckTests {
             let indexes = try rows(f.stage.appendingPathComponent("rpu-index.jsonl"))
             let v = try view(f), track = try CompanionOriginalTrackCheck.read(v)
             var packets: [CompanionOriginalPacketCheck.Packet] = [], rpus: [CompanionOriginalPacketCheck.RPU] = []
-            let direct = try CompanionOriginalPacketCheck.read(v, track: track) { observation in
+            let direct = try CompanionOriginalPacketCheck.read(v, track: track, observe: { observation in
                 switch observation { case .packet(let p): packets.append(p); case .rpu(let p): rpus.append(p) }
-            }
+            })
             let packetRows = audit.filter { $0["kind"] as? String == "packet" }
             #expect(packets.count == packetRows.count && rpus.count == indexes.count)
             for (p, row) in zip(packets, packetRows) {
@@ -106,7 +107,189 @@ struct CompanionOriginalPacketCheckTests {
                 Self.buildTarget.appendingPathComponent("release/staxrip-dolby-metadata-audit").path], stdoutLimit: 16384)
             try #require(oracle.status == 0 && !oracle.truncated) // Test-only independent original semantic oracle, never runtime admission.
             #expect(try await CompanionDiskCheck.verifyOriginalTrack(source: f.source, stage: f.stage, contents: c).originalPackets == nil)
+            // Remove only this fixture's completed companion. The new native
+            // pass must operate from the original source alone.
+            try FileManager.default.removeItem(at:f.stage)
+            let sourceStage=f.root.appendingPathComponent("source-only-spool")
+            try FileManager.default.createDirectory(at:sourceStage,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+            let original=try Data(contentsOf:f.source)
+            let sourceResult=try await CompanionDiskCheck.spoolOriginalSource(source:f.source,in:sourceStage)
+            #expect(sourceResult.packets.packetSequenceSHA256 == direct.packetSequenceSHA256)
+            #expect(sourceResult.packets.packets == 4 && sourceResult.packets.records == 5 && sourceResult.packets.enhancementNALs == 1)
+            #expect(!sourceResult.track.originalTrackAndConfigurationMatch && !sourceResult.packets.originalEscapedRPUBytesMatch)
+            let storedPackets=try storedRows(sourceStage,table:"packets"), storedRPUs=try storedRows(sourceStage,table:"rpus")
+            let expectedPackets: [[String?]]=packets.map { p in
+                [String(p.index),String(p.ptsNS),String(p.inputOffset),String(p.blockOffset),String(p.encodedBytes),p.sha256,
+                 p.durationNS.map { String($0,radix:16) },p.invisible ? "1" : "0",p.keyframe.map { $0 ? "1" : "0" },p.discardable.map { $0 ? "1" : "0" }]
+            }
+            let expectedRPUs: [[String?]]=rpus.map { r in
+                [String(r.index),String(r.packetIndex),String(r.nalIndex),String(r.ptsNS),String(r.inputOffset),String(r.archiveDelimiterOffset),String(r.payloadBytes),r.sha256]
+            }
+            #expect(storedPackets == expectedPackets && storedRPUs == expectedRPUs)
+            #expect(sourceResult.sourceSHA256 == DolbyInspection.hex(SHA256.hash(data:original)))
         }
+    }
+    // Test-only reread of a finished disposable spool. Not a runtime importer.
+    private func storedRows(_ directory: URL, table: String) throws -> [[String?]] {
+        var db: OpaquePointer?
+        // Test-only native descriptor path, preserving SQLite's no-follow flag.
+        let fd=open(directory.appendingPathComponent(DolbyAssociationSpool.name).path,O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+        try #require(fd >= 0); defer { #expect(Darwin.close(fd) == 0) }
+        var pathBytes=[CChar](repeating:0,count:Int(MAXPATHLEN))
+        try #require(fcntl(fd,F_GETPATH,&pathBytes) == 0)
+        let path=String(cString:pathBytes)
+        let opened=sqlite3_open_v2(path,&db,SQLITE_OPEN_READONLY | SQLITE_OPEN_NOFOLLOW,nil)
+        defer { if let db { #expect(sqlite3_close(db) == SQLITE_OK) } }
+        try #require(opened == SQLITE_OK)
+        var query: OpaquePointer?
+        try #require(sqlite3_prepare_v2(db, "SELECT * FROM " + table + " ORDER BY idx", -1, &query, nil) == SQLITE_OK)
+        defer { #expect(sqlite3_finalize(query) == SQLITE_OK) }
+        var rows: [[String?]] = []
+        while true {
+            let code = sqlite3_step(query)
+            if code == SQLITE_DONE { break }
+            try #require(code == SQLITE_ROW && rows.count < 10_000)
+            rows.append((0..<sqlite3_column_count(query)).map { i in
+                guard sqlite3_column_type(query,i) != SQLITE_NULL else { return nil }
+                return String(cString:sqlite3_column_text(query,i))
+            })
+        }
+        return rows
+    }
+    private func sourceOnlyView(_ data: Data) -> CompanionDiskCheck.ReadView {
+        .init(sourceBytes:Int64(data.count),source:{ offset,count in
+            guard offset >= 0, count >= 0, count <= 1 << 20, offset <= data.count,
+                  Int64(count) <= Int64(data.count)-offset else { throw NativeExportError.invalid("Generated source bounds") }
+            return data.subdata(in:Int(offset)..<(Int(offset)+count))
+        },component:{ _ in throw NativeExportError.invalid("No retained components") },checkpoint:{})
+    }
+    private func generatedRoot(_ data: Data) throws -> (URL, URL, URL) {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-observations-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+        let input=root.appendingPathComponent("generated.mkv"), stage=root.appendingPathComponent("spool")
+        try data.write(to:input)
+        try FileManager.default.createDirectory(at:stage,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+        return (root,input,stage)
+    }
+    private func generatedSource(repeated: Int = 1) -> Data {
+        let payload=nal(62,Data([0xaa,0,0,3,1,0xbb]),width:4)
+        let cluster=element(0x1f43b675,element(0xe7,unsigned(0))+block(payload,relative:-10))
+        return source(track(config()),clusters:Data((0..<repeated).flatMap { _ in Array(cluster) }))
+    }
+    @Test func sourceOnlyNativeWorkerPreservesAllWidthsSignedOrderAndNoCompanionClaims() async throws {
+        for width in 1...4 { for unknown in [false,true] {
+            let payload=nal(62,Data([0xaa,0,0,3,1,0xbb]),width:width)
+            let blocks=block(payload,relative:-10)+block(payload,relative:-10)+element(0xa0,block(payload,relative:-20,flags:8,id:0xa1)+element(0x9b,unsigned(7)))
+            let data=source(track(config(width)),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+blocks),unknown:unknown)
+            let (root,input,stage)=try generatedRoot(data); defer { try? FileManager.default.removeItem(at:root) }
+            let r=try await CompanionDiskCheck.spoolOriginalSource(source:input,in:stage)
+            #expect(r.timestampScale == 1_000_000 && r.unknownSegment == unknown)
+            #expect(r.sourceBytes == data.count && r.sourceSHA256 == DolbyInspection.hex(SHA256.hash(data:data)))
+            #expect(r.track.nalLengthBytes == width && !r.track.originalTrackAndConfigurationMatch)
+            #expect(r.packets.packets == 3 && r.packets.records == 3 && !r.packets.originalEscapedRPUBytesMatch)
+            #expect(!r.independentSourceFrameAssociationVerified && !r.editedPictureSemanticsVerified)
+            let packets=try storedRows(stage,table:"packets"), rpus=try storedRows(stage,table:"rpus")
+            #expect(packets.map { $0[1] } == ["-10000000","-10000000","-20000000"])
+            #expect(packets[2][6] == String(7_000_000,radix:16) && packets[2][8] == nil && packets[2][9] == nil)
+            #expect(rpus.map { $0[1] } == ["0","1","2"] && rpus.map { $0[0] } == ["0","1","2"])
+            #expect(try Data(contentsOf:input) == data)
+        } }
+    }
+    @Test func sourceOnlyWorkerPreservesSignedTimeExtremesAndUnsignedDuration() async throws {
+        let cases: [(UInt64,Int16,UInt64,UInt64,Int64)] = [(0,-1,1 << 63,1,.min),(UInt64(Int64.max)+10,-10,1,UInt64.max,.max)]
+        for (cluster,relative,scale,duration,pts) in cases {
+            let payload=nal(62,Data([0xaa]),width:4)
+            let group=element(0xa0,block(payload,relative:relative,flags:0,id:0xa1)+element(0x9b,unsigned(duration)))
+            let data=source(track(config(),extra:element(0x23e383,unsigned(UInt64.max))),
+                clusters:element(0x1f43b675,element(0xe7,unsigned(cluster))+group),
+                info:element(0x1549a966,element(0x2ad7b1,unsigned(scale))),unknown:true)
+            let (root,input,stage)=try generatedRoot(data); defer { try? FileManager.default.removeItem(at:root) }
+            let result=try await CompanionDiskCheck.spoolOriginalSource(source:input,in:stage)
+            let packets=try storedRows(stage,table:"packets"), rpus=try storedRows(stage,table:"rpus")
+            #expect(packets.count == 1 && packets[0][1] == String(pts) && rpus[0][3] == String(pts))
+            #expect(packets[0][6] == String(duration*scale,radix:16))
+            #expect(result.timestampScale == scale && result.unknownSegment)
+        }
+    }
+    @Test func sourceOnlyFramingDoesNotNeedComponentsAndRefusesForgedTrackSelection() throws {
+        let data=generatedSource(), view=sourceOnlyView(data), original=try CompanionOriginalTrackCheck.readSource(view)
+        let facts=try CompanionOriginalPacketCheck.readSource(view,track:original)
+        #expect(facts.records == 1 && !facts.originalEscapedRPUBytesMatch)
+        #expect(throws:(any Error).self) { try CompanionOriginalTrackCheck.read(view) }
+        #expect(throws:(any Error).self) { try CompanionOriginalPacketCheck.read(view,track:original) }
+        let changed=CompanionOriginalTrackCheck.Receipt(trackNumber:original.trackNumber,
+            originalPayloadOffset:original.originalPayloadOffset,payloadBytes:original.payloadBytes,
+            configurationBytes:original.configurationBytes,nalLengthBytes:original.nalLengthBytes,
+            payloadSHA256:String(repeating:"0",count:64),configurationSHA256:original.configurationSHA256,
+            originalTrackAndConfigurationMatch:false)
+        #expect(throws:(any Error).self) { try CompanionOriginalPacketCheck.readSource(view,track:changed) }
+    }
+    @Test func sourceOnlyWorkerCancellationUnwindsAtActualReadAndFinalBoundary() async throws {
+        for final in [false,true] {
+            let data=generatedSource(), (root,input,stage)=try generatedRoot(data), gate=Gate()
+            defer { try? FileManager.default.removeItem(at:root) }
+            let task=Task {
+                let boundary=final ? CompanionDiskCheck.Boundary(beforeFinal:{ gate.hold() }) :
+                    CompanionDiskCheck.Boundary(originalTrackRead:{ offset,_ in if offset == 0 { gate.hold() } })
+                return try await CompanionDiskCheck.$testBoundary.withValue(boundary) {
+                    try await CompanionDiskCheck.spoolOriginalSource(source:input,in:stage)
+                }
+            }
+            for await _ in gate.entered { break }; task.cancel(); gate.release.signal()
+            await #expect(throws:CancellationError.self) { try await task.value }
+            #expect(try Data(contentsOf:input) == data)
+            // Awaited refusal leaves a closed caller-owned partial database.
+            let db=stage.appendingPathComponent(DolbyAssociationSpool.name)
+            #expect(FileManager.default.fileExists(atPath:db.path))
+            #expect(unlink(db.path) == 0)
+        }
+    }
+    @Test func sourceOnlyFinalMutationAndConfiguredStorageFullCannotYieldReceipt() async throws {
+        for variant in 0..<4 {
+            let data=generatedSource(repeated:variant == 3 ? 1000 : 1), (root,input,stage)=try generatedRoot(data)
+            defer { try? FileManager.default.removeItem(at:root) }
+            let boundary=CompanionDiskCheck.Boundary(beforeFinal:{
+                do {
+                    switch variant {
+                    case 0: let file=try FileHandle(forWritingTo:input); try file.write(contentsOf:Data([0xff])); try file.close()
+                    case 1: try Data([0xff]).write(to:stage.appendingPathComponent("extra"))
+                    case 2:
+                        try FileManager.default.moveItem(at:stage.appendingPathComponent(DolbyAssociationSpool.name),to:stage.appendingPathComponent("retained.sqlite"))
+                        try Data("prior".utf8).write(to:stage.appendingPathComponent(DolbyAssociationSpool.name))
+                    default: Issue.record("storage-full source unexpectedly reached final boundary")
+                    }
+                } catch { Issue.record("Generated source/spool mutation failed") }
+            })
+            if variant == 3 {
+                await #expect(throws:DolbyAssociationSpool.Failure.storageFull) {
+                    try await CompanionDiskCheck.spoolOriginalSource(source:input,in:stage,limits:.init(pages:8))
+                }
+            } else {
+                await CompanionDiskCheck.$testBoundary.withValue(boundary) {
+                    await #expect(throws:(any Error).self) { try await CompanionDiskCheck.spoolOriginalSource(source:input,in:stage) }
+                }
+            }
+            if variant != 0 { #expect(try Data(contentsOf:input) == data) }
+            #expect(FileManager.default.fileExists(atPath:stage.path))
+        }
+    }
+    @Test func sourceOnlyPreCancelUnsafeSourceAndExistingSpoolRefuseWithoutOverwrite() async throws {
+        let data=generatedSource(), (root,input,stage)=try generatedRoot(data)
+        defer { try? FileManager.default.removeItem(at:root) }
+        let gate=Gate(), task=Task {
+            gate.hold(); return try await CompanionDiskCheck.spoolOriginalSource(source:input,in:stage)
+        }
+        for await _ in gate.entered { break }; task.cancel(); gate.release.signal()
+        await #expect(throws:CancellationError.self) { try await task.value }
+        #expect(try FileManager.default.contentsOfDirectory(atPath:stage.path).isEmpty)
+        let alias=root.appendingPathComponent("alias")
+        try FileManager.default.createSymbolicLink(at:alias,withDestinationURL:input)
+        await #expect(throws:(any Error).self) { try await CompanionDiskCheck.spoolOriginalSource(source:alias,in:stage) }
+        #expect(try FileManager.default.contentsOfDirectory(atPath:stage.path).isEmpty)
+        let file=stage.appendingPathComponent(DolbyAssociationSpool.name)
+        try Data("prior".utf8).write(to:file)
+        await #expect(throws:(any Error).self) { try await CompanionDiskCheck.spoolOriginalSource(source:input,in:stage) }
+        #expect(try Data(contentsOf:file) == Data("prior".utf8) && Data(contentsOf:input) == data)
     }
     @Test func rehashedRawForgeryPassesDiskIntegrityButFailsOriginalBytes() async throws {
         let (f, c) = try await staged(); defer { f.cleanup() }
@@ -304,6 +487,10 @@ struct CompanionOriginalPacketCheckTests {
         let cluster = element(0x1f43b675, timestamp + (b ?? block(p))) + extra
         let data = source(t, clusters: cluster, info: info, suffix: suffix, header: header)
         #expect(throws: (any Error).self) { try scan(data, track: t, cfg: cfg, raw: retained) }
+        if !["raw-trailing","raw-changed"].contains(change) {
+            let v=sourceOnlyView(data)
+            #expect(throws:(any Error).self) { try CompanionOriginalPacketCheck.readSource(v,track:CompanionOriginalTrackCheck.readSource(v)) }
+        }
     }
     @Test func otherDeclaredTrackPacketsDoNotBecomeVideoAndSelectedEnhancementIsCounted() throws {
         let cfg = config(), t = track(cfg), escaped = Data([0xaa]), raw = Data([0,0,0,1]) + escaped

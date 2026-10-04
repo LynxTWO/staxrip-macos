@@ -219,7 +219,7 @@ struct CompanionOriginalAuditCheckTests {
                 try #require(count <= 1 << 20)
                 return payload.subdata(in:Int(offset)..<(Int(offset)+count))
             },component: { _ in throw NativeExportError.invalid("No component read authorized") },checkpoint:{})
-            let track = Track.Receipt(trackNumber:1,originalPayloadOffset:0,payloadBytes:payload.count,configurationBytes:23,nalLengthBytes:4,payloadSHA256:"",configurationSHA256:"")
+            let track = Track.Receipt(trackNumber:1,originalPayloadOffset:0,payloadBytes:payload.count,configurationBytes:23,nalLengthBytes:4,payloadSHA256:"",configurationSHA256:"",originalTrackAndConfigurationMatch:false)
             return try CompanionOriginalAuditCheck.declarations(view,track:track)
         }
         let base = element(0xb0,unsigned(16384)) + element(0xba,unsigned(2))

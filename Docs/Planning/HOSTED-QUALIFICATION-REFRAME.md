@@ -242,3 +242,15 @@ causes are not identified; old timing/phase failures remain unknown. D125 guards
 new decoder diagnostic's waitpid(0) after absent launch, retaining its failed positive
 child/equal-joined assertion and0.25s bound. It does not prove those missed fault cases
 or diagnose D090. No global concurrency or historical observer follows.
+
+
+## D126 observation: PR100 automatic outcome
+
+Automatic run37232082456 failed without retry:468tests/1141.409s/98issues.
+There were42 unchanged60-second,34 unchanged120-second and3 unchanged180-second
+deadlines. Nineteen non-deadline issues include generated semantic/publication
+cancellation gates, nine decoder suite assertions (137.528s), motion message/mutation
+expectations and measuring-candidate EOF. Source-spool suite passed46.398s and static
+native host780.200s. Full failed log is retained privately and PR100 updated. No
+historical observer, manual rerun, assertion/deadline/global concurrency or scheduling
+change follows. These observations do not establish timing, phase or prelaunch causes.

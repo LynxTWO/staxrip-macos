@@ -153,3 +153,6 @@ PR 79 automatic app run [37190405469](https://github.com/LynxTWO/staxrip-macos/a
 
 
 PR80 automatic reader37192320483 passed in 1m26s. App [37192320472](https://github.com/LynxTWO/staxrip-macos/actions/runs/37192320472) failed the unchanged Fresh analysis cancellation assertion: 5.133918 s against five seconds. All340 tests finished in401.731 s with one issue, preview packaging skipped. The new actual writer/semantic/native transaction case passed in58.064 s and its suite58.066 s; AV1 passed its existing deadline. Private failed log retained; no rerun, historical observer or assertion/deadline change. Causes remain unknown.
+
+
+PR81 automatic reader37193191544 passed1m53s. App [37193191532](https://github.com/LynxTWO/staxrip-macos/actions/runs/37193191532) failed three unchanged timing checks: Fresh analysis cancellation6.648579 s against five; AV1 and ten-bit copy matrices each130.882 s after their120-second deadlines. All348tests finished468.176 s with three issues; preview packaging skipped. New native protocol suite passed79.448 s, actual writer row case79.446 s. Private failed log retained; no retry, historical observer or assertion/deadline/scheduling change. Causes remain unknown.

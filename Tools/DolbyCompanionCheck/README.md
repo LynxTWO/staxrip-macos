@@ -132,3 +132,22 @@ unknown fields refuse. Escaped/non-ASCII strings, signed/fraction/exponent numbe
 null refuse deliberately; future writer serialization changes require parser review.
 Native process joining, tool provenance, source/stage/disk checks and independent
 semantic admission remain separate requirements.
+
+
+## Native writer ownership prerequisite
+
+CompanionWriterProcessTests use the actual optional Rust writer through native POSIX
+spawn/stdin/pipes, not a Python adapter. A DEBUG-only generated executable capability
+requires the fixed basename and explicit expected SHA256; no release signature/tool
+capability or application action is installed. Generated C surrogates exercise failure
+ownership; only the operation-owned temporary binary is replaced.
+
+```sh
+swift test --filter CompanionWriterProcessTests
+```
+
+Actual readiness, partial128MiB generated whole-container copy and zero-exit late
+cancellation refuse receipts after owned child/pipes settle. This is generated process
+qualification, not physical I/O preemption, general archive storage/crash handling or
+native original-semantic verification. An ownership refusal requires retaining the stage
+for review, not cleanup permission. The writer remains absent from the default bundle.

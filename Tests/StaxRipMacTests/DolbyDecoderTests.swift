@@ -63,7 +63,15 @@ struct DolbyDecoderTests {
         let lock=NSLock();private var child:pid_t=0,joined:pid_t=0
         func launch(_ p:pid_t) { lock.withLock { child=p } };func settle(_ p:pid_t) { lock.withLock { joined=p } }
         var pid:pid_t { lock.withLock { child } }
-        func assertJoined() { let pair=lock.withLock { (child,joined) };#expect(pair.0 > 0 && pair.0 == pair.1);var s:Int32=0;#expect(waitpid(pair.0,&s,WNOHANG) == -1 && errno == ECHILD) }
+        func assertJoined() {
+            let pair=lock.withLock { (child,joined) }
+            #expect(pair.0 > 0 && pair.0 == pair.1)
+            // Refused pre-launch work owns no child. Keep the failed assertion,
+            // but never waitpid(0), which can reap another fixture's child.
+            guard pair.0 > 0, pair.0 == pair.1 else { return }
+            var status:Int32=0
+            #expect(waitpid(pair.0,&status,WNOHANG) == -1 && errno == ECHILD)
+        }
     }
     private final class Gate: @unchecked Sendable {
         let stream:AsyncStream<Void>, signal:AsyncStream<Void>.Continuation,release=DispatchSemaphore(value:0)

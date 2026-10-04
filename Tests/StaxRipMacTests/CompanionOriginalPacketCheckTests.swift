@@ -88,6 +88,14 @@ struct CompanionOriginalPacketCheckTests {
                 #expect(p.archiveDelimiterOffset == (row["archive_delimiter_offset"] as? NSNumber)?.int64Value)
                 #expect(p.payloadBytes == (row["payload_bytes"] as? NSNumber)?.intValue && p.sha256 == row["payload_sha256"] as? String)
             }
+            let spoolDirectory = f.root.appendingPathComponent("association-stage")
+            try FileManager.default.createDirectory(at: spoolDirectory, withIntermediateDirectories:false, attributes:[.posixPermissions:0o700])
+            try DolbyAssociationSpool.withSpool(in:spoolDirectory,sourceBytes:v.sourceBytes) { spool in
+                let reconstructed = try CompanionOriginalPacketCheck.read(v,track:track,observe:{ try spool.append($0) })
+                _ = try spool.finishSourcePass(expected:.init(packets:reconstructed.packets,rpus:reconstructed.records))
+                for p in packets { #expect(try spool.packet(p.index) == p) }
+                for r in rpus { #expect(try spool.rpu(r.index) == r) }
+            }
             #expect(direct.packetSequenceSHA256 == audit.last?["packet_sequence_sha256"] as? String)
             #expect(direct.packetSequenceSHA256 == facts.packetSequenceSHA256)
             #expect(Set(packets.map(\.ptsNS)).count < packets.count && packets.contains { $0.ptsNS < 0 })

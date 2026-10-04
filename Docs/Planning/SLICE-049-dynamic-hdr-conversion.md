@@ -1695,3 +1695,55 @@ matches and a positive sentinel; source metadata/current journal unchanged. Temp
 owned awake assertion renewed only after exact receipt/command/start inspection; no
 persistent locking/security changes. Independent native packet/frame/RPU association
 and resource/access/signing gates remain open; no UI action/release completion claim.
+
+
+## D-125: Native bounded association storage prerequisite
+Status: Confirmed. Approved for build by: owner standing autonomous generated non-audio
+delegation, 2026-10-04, R-059.
+
+Build unused native fixed SQLite packet/RPU spool in an explicit empty private owned
+folder, exclusively create its fixed component and pin folder/file descriptors. Record
+D110 observations without timestamp uniqueness or RPU deduplication. Enforce finite
+pages/rows/cache and cancellation at concrete operations; match source-pass counts and
+close statements/database before caller cleanup. Refusals invalidate the pass. No source
+path, media payload, helper execution or successful association receipt is persisted.
+
+Acceptance: generated actual D110 source observations, signed duplicate/nonmonotonic
+extremes and multiple RPUs, exclusive/mode/link/path substitution, actual configured
+SQLite-full/cancellation/refusal settlement, focused and ordinary tests, optimized build,
+privacy/planning and automatic PR99 outcome without rerun. Configured storage bounds are
+not OS heap measurements or physical ENOSPC qualification. Full native composition,
+clock equality/frame coverage and access/resource/signature/UI remain separate gates.
+
+D125 observed prerequisite corrections are retained: recursive new Testing macro
+compile refusal, APFS directory link count changing after own component creation,
+SQLite no-follow alias refusal resolved by descriptor F_GETPATH, requested OFF journal
+not established so checked MEMORY/autocommit selected, and one throwing Boolean compile
+expression corrected. Numeric descriptor-only test observation was inconclusive after
+close; final checks use actual owned close return values. No automatic partial-file
+cleanup, SQLite defensive-policy bypass or crash durability claim. Focus8tests13.144s
+plus measured six-test storage focus0.022s pass; actual page cap refuses after194rows
+at32768bytes with owned closes successful. Keep all partial/failed logs.
+
+First ordinary468tests/98suites222.982s failed two preceding decoder surrogate child/
+join assertions. PR99 automatic separately shows seven absent positive PIDs. Its
+new diagnostic could call waitpid(0) and observe another same-group fixture child.
+Guard that syscall without accepting missing launch, relaxing its assertion/deadline
+or changing product behavior. Changed focus13tests/4suites3.512s passed (one explicit
+private frozen-decoder skip). Changed ordinary qualification follows; no blind hosted
+rerun or claim about D090 historical causes.
+
+Changed ordinary468tests/98suites213.595s passed with28 unchanged explicit opt-in
+skips and no emitted warnings. The original failed468tests222.982s/two issues is
+retained. The changed run verifies the guarded diagnostic with current code; it does
+not identify why prior surrogate launches were absent or fix hosted deadline reliability.
+No known-crashing dynamic loader or private frozen decoder was enabled. Remaining
+source/spool/decoder composition and full association flags stay unqualified.
+
+Explicit release build observed Building for production and completed52.63s with no
+warnings. Current strict ad-hoc app/read-only helper signatures pass; minima14.0/11.0.
+Writer and decoder remain absent. Nine-file privacy scan has zero owner path/name/stem
+matches with positive sentinel; source metadata/current recovery journal unchanged,
+no owner media body read. Planning findings empty. Owned19716 temporary awake receipt/
+command/start remain matched, expires21:30:44UTC. No persistent security setting change,
+UI walkthrough, positive certificate loading, distribution or full association claim.

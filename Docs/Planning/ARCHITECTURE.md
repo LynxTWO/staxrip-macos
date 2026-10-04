@@ -118,6 +118,16 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
+Slice 049 / D-100 adds a development-only Rust companion component producer. Bounded
+observation hooks leave the native read-only CLI/protocol unchanged. Exact selected
+TrackEntry payload/hvcC and escaped RPU payloads retain unknown track fields and every
+original encoded association. Optional tee retention copies the entire original
+container, including other streams/metadata. Streamed component receipts plus content
+rehash support a prototype manifest; source pathname identity and decoded mapping are
+explicitly unqualified. No native archive writer command, import, saved format or
+conversion admission is added. ORIGINAL-COMPANION-PRODUCER-EVIDENCE.md is the scoped
+record; D-099 directory publication remains a separate integration prerequisite.
+
 Slice 049 / D-099 adds unused internal ResultSetStaging for original companion result
 publication. Owned same-parent staging and exact requested member size/SHA-256 checks
 precede one exclusive directory rename. Cancellation awaits the real worker outcome;

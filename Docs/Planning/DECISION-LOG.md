@@ -108,6 +108,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-097 | 2026-10-04 | Qualify minimal decoder runtime before native integration | Confirmed | |
 | D-098 | 2026-10-04 | Explicit Dolby edit coordinate proposals | Confirmed | |
 | D-099 | 2026-10-04 | Verify and publish a complete companion result set | Confirmed | |
+| D-100 | 2026-10-04 | Produce original companion components without metadata rewriting | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1675,3 +1676,62 @@ Original archive writers/semantics, storage/native review and volume/crash recov
 remain open. PR 73's automatic existing cancellation failure is retained; no timing
 repair or retry. Owner source/current recovery unchanged; no encode/archive/listening,
 new dependency, merge or release.
+
+
+## D-100: Produce original companion components without metadata rewriting
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: original companion request, standing autonomous delegation and R-059 /
+Slice 049. Development library/generated fixtures only. No owner archive, queue,
+full-film encode, new native choice, public stable archive API, parked listening,
+timing investigation, signing retry, merge or release. Choice delegated to AI.
+
+Need: directory publication verifies contents but cannot create or qualify original
+archive semantics. Extend the bounded reader with internal no-op observation hooks;
+keep native read-only CLI/protocol unchanged. Produce exact original escaped RPU
+payloads, HEVC configuration and full selected TrackEntry payload, ordered duplicate-preserving packet audit and archive
+index. Do not sort by timestamps, deduplicate RPUs or rewrite metadata.
+
+Metadata-only excludes original base/enhancement pictures and outside-track fields;
+it cannot preserve a complete master. Complete preservation copies the entire original
+container byte-for-byte during the same audited read, including other tracks and
+container metadata. This deliberate superset costs source-sized storage and may retain
+identifying embedded metadata. Native consent/estimates must explain it before admission.
+No partial selected-video demux is advertised as full preservation.
+
+Acceptance: exact bytes/configuration/index association and unchanged existing audit
+protocol on generated inputs, signed/reordered/duplicate timestamps and duplicate RPUs,
+opaque enhancement/other-container bytes retained only in complete mode, independent
+RPU reread, complete source-content rehash, component bounds and input/output/flush/
+mutation refusals. Streaming writer receipts bind byte counts/hashes; a development
+manifest labels encoded association and unbound source path identity. No decoded frame,
+EL reconstruction, future import/carriage or arbitrary picture edit claim follows.
+
+Keep all writers staged and require the caller to settle them before D-099 publication.
+Generic seekable-input content recheck is not pathname/descriptor stability; native
+integration must bind that identity separately. Native review/import/source identity,
+volume/space/crash recovery and distribution remain later gates. Reopen when integrating
+actual producer ownership or designing a stable user-facing archive format.
+
+
+D-100 configuration refinement before dependent integration: retain the selected
+TrackEntry payload byte-for-byte as well as hvcC. Dolby configuration can live in
+supplementary track fields which the reader does not interpret. Do not silently lose
+those fields in metadata-only retention. Archive capture bounds each track payload
+at 1 MiB while selecting the video entry; ordinary native audit capture is disabled.
+The raw outer TrackEntry EBML header is not included. Full mode additionally retains
+all original container bytes; field interpretation and a stable importer remain open.
+
+
+D-100 outcome: final 24 Rust tests, format and warnings-as-errors Clippy passed, along
+with fifteen existing generated decoder-reference tests. Exact original component
+bytes/associations, archive reread, actual exclusive file writes and every component's
+write/flush refusals are qualified within generated scope. New archive track capture
+retains supplementary fields and refuses its 1 MiB bound without changing ordinary
+audit admission. Final app regression passed 331 tests/78 suites in 202.819 s; optimized
+bundle/signatures passed. Actual app/helper minima are 14.0/11.0, not older-system
+execution qualification. ORIGINAL-COMPANION-PRODUCER-EVIDENCE.md retains source identity/
+native/import/resource and reconstruction limits. Owner source/current recovery
+unchanged; no owner archive/encode/listening, new native writer command, dependency,
+merge or release. PR 74 timing failure retained.

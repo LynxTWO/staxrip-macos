@@ -3,6 +3,7 @@ use std::io::{Read, Write};
 use dolby_vision::rpu::dovi_rpu::DoviRpu;
 use sha2::{Digest, Sha256};
 
+pub mod companion;
 pub mod matroska;
 
 pub const RECORD_LIMIT: usize = 64 * 1024;

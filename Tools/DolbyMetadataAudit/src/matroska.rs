@@ -26,6 +26,8 @@ struct Reader<R: Read> {
     length: u64,
     hash: Sha256,
     elements: u64,
+    track_capture: Option<Vec<u8>>,
+    retain_track_payload: bool,
 }
 struct Element {
     id: u32,
@@ -38,6 +40,12 @@ impl<R: Read> Reader<R> {
             return Err(Failure::Framing);
         }
         self.input.read_exact(out).map_err(|_| Failure::InputIO)?;
+        if let Some(capture) = &mut self.track_capture {
+            if out.len() > CONFIG_LIMIT - capture.len() {
+                return Err(Failure::Bounds);
+            }
+            capture.extend_from_slice(out);
+        }
         self.hash.update(&*out);
         self.position += out.len() as u64;
         Ok(())
@@ -145,6 +153,8 @@ struct Track {
     delay: u64,
     default_duration: Option<u64>,
     unsupported: bool,
+    original_payload: Option<Vec<u8>>,
+    original_payload_offset: u64,
 }
 fn once(seen: &mut HashSet<u32>, id: u32) -> Result<(), Failure> {
     if !seen.insert(id) {
@@ -186,6 +196,10 @@ fn tracks<R: Read>(r: &mut Reader<R>, end: u64) -> Result<(Track, HashSet<u64>),
                 return Err(Failure::Bounds);
             }
             let mut t = Track::default();
+            if r.retain_track_payload {
+                r.track_capture = Some(Vec::new());
+                t.original_payload_offset = r.position;
+            }
             let mut seen = HashSet::new();
             while let Some(field) = r.element(e.end, false)? {
                 match field.id {
@@ -230,6 +244,7 @@ fn tracks<R: Read>(r: &mut Reader<R>, end: u64) -> Result<(Track, HashSet<u64>),
                 }
                 r.finish(&field)?;
             }
+            t.original_payload = r.track_capture.take();
             if t.number == 0 || t.kind == 0 || !numbers.insert(t.number) {
                 return Err(Failure::Framing);
             }
@@ -373,13 +388,43 @@ pub struct ContainerReceipt {
     pub peak_record_bytes: usize,
     pub packet_sequence_sha256: String,
 }
-struct Census {
+pub(crate) struct OriginalRpu<'a> {
+    pub index: u64,
+    pub packet_index: u64,
+    pub nal_index: u64,
+    pub pts_ns: i64,
+    pub input_byte_offset: u64,
+    pub payload: &'a [u8],
+}
+pub(crate) trait OriginalObserver {
+    fn retain_track_payload(&self) -> bool;
+    fn track_payload(&mut self, bytes: &[u8], original_offset: u64) -> Result<(), Failure>;
+    fn configuration(&mut self, bytes: &[u8]) -> Result<(), Failure>;
+    fn rpu(&mut self, record: OriginalRpu<'_>) -> Result<(), Failure>;
+}
+struct NoOriginals;
+impl OriginalObserver for NoOriginals {
+    fn retain_track_payload(&self) -> bool {
+        false
+    }
+    fn track_payload(&mut self, _: &[u8], _: u64) -> Result<(), Failure> {
+        Ok(())
+    }
+    fn configuration(&mut self, _: &[u8]) -> Result<(), Failure> {
+        Ok(())
+    }
+    fn rpu(&mut self, _: OriginalRpu<'_>) -> Result<(), Failure> {
+        Ok(())
+    }
+}
+struct Census<'a, O: OriginalObserver> {
     packets: u64,
     records: u64,
     enhancement: u64,
     peak: usize,
     compact: bool,
     sequence: Sha256,
+    originals: &'a mut O,
 }
 
 fn compact_metadata(metadata: &serde_json::Value) -> Result<serde_json::Value, Failure> {
@@ -428,7 +473,7 @@ fn compact_metadata(metadata: &serde_json::Value) -> Result<serde_json::Value, F
         "cmv29_present":!dm["cmv29_metadata"].is_null(), "cmv40_present":!dm["cmv40_metadata"].is_null()}),
     )
 }
-impl Census {
+impl<O: OriginalObserver> Census<'_, O> {
     fn emit(
         &mut self,
         b: Block,
@@ -492,6 +537,14 @@ impl Census {
                         record["metadata"] = metadata;
                     }
                     write_json(output, &record)?;
+                    self.originals.rpu(OriginalRpu {
+                        index: self.records,
+                        packet_index: self.packets,
+                        nal_index: ordinal,
+                        pts_ns: pts,
+                        input_byte_offset: b.offset + pos as u64 + 2,
+                        payload,
+                    })?;
                     self.records += 1;
                     self.peak = self.peak.max(payload.len());
                 }
@@ -516,7 +569,7 @@ fn cluster<R: Read>(
     r: &mut Reader<R>,
     end: u64,
     context: &PacketContext<'_>,
-    counts: &mut Census,
+    counts: &mut Census<'_, impl OriginalObserver>,
     blocks: &mut u64,
     output: &mut impl Write,
 ) -> Result<(), Failure> {
@@ -598,7 +651,7 @@ pub fn audit_matroska(
     length: u64,
     output: &mut impl Write,
 ) -> Result<ContainerReceipt, Failure> {
-    audit_mode(input, length, output, false)
+    audit_mode(input, length, output, false, &mut NoOriginals)
 }
 
 pub fn audit_matroska_summary(
@@ -606,7 +659,16 @@ pub fn audit_matroska_summary(
     length: u64,
     output: &mut impl Write,
 ) -> Result<ContainerReceipt, Failure> {
-    audit_mode(input, length, output, true)
+    audit_mode(input, length, output, true, &mut NoOriginals)
+}
+
+pub(crate) fn audit_with_originals(
+    input: &mut impl Read,
+    length: u64,
+    output: &mut impl Write,
+    originals: &mut impl OriginalObserver,
+) -> Result<ContainerReceipt, Failure> {
+    audit_mode(input, length, output, true, originals)
 }
 
 fn audit_mode(
@@ -614,6 +676,7 @@ fn audit_mode(
     length: u64,
     output: &mut impl Write,
     compact: bool,
+    originals: &mut impl OriginalObserver,
 ) -> Result<ContainerReceipt, Failure> {
     if length == 0 || length > MOVIE_LIMIT {
         return Err(Failure::Bounds);
@@ -624,6 +687,8 @@ fn audit_mode(
         length,
         hash: Sha256::new(),
         elements: 0,
+        track_capture: None,
+        retain_track_payload: originals.retain_track_payload(),
     };
     let header = r.element(length, false)?.ok_or(Failure::Empty)?;
     if header.id != EBML {
@@ -671,6 +736,7 @@ fn audit_mode(
         peak: 0,
         compact,
         sequence: Sha256::new(),
+        originals,
     };
     let mut blocks = 0;
     let mut began = false;
@@ -710,6 +776,12 @@ fn audit_mode(
                 let scale = scale.ok_or(Failure::Framing)?;
                 let length_width = configuration(&t.config)?;
                 if !began {
+                    if let Some(payload) = &t.original_payload {
+                        counts
+                            .originals
+                            .track_payload(payload, t.original_payload_offset)?;
+                    }
+                    counts.originals.configuration(&t.config)?;
                     write_json(
                         output,
                         &serde_json::json!({"kind":"begin", "version":if compact { 3 } else { 2 },

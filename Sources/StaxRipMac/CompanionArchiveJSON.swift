@@ -5,7 +5,7 @@ import Foundation
 /// No escaped/non-ASCII strings, floating numbers, exponents, negative zero or null outside the audit-only nullable grammar.
 /// Signed integer PTS are distinct from booleans and preserve Int64.min exactly.
 struct CompanionArchiveJSON {
-    indirect enum Value { case object([String: Value]), array([Value]), string(String), unsigned(UInt64), signed(Int64), bool(Bool), null }
+    indirect enum Value: Equatable { case object([String: Value]), array([Value]), string(String), unsigned(UInt64), signed(Int64), bool(Bool), null }
     typealias Object = [String: Value]
     private let bytes: [UInt8]
     private var auditNullable = false

@@ -21,16 +21,18 @@ struct CompanionMetadataProcessTests {
             let generated = root.appendingPathComponent("generated")
             try FileManager.default.createDirectory(at: generated, withIntermediateDirectories: false)
             let cargo = repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml")
+            // Keep this suite's reader build out of app/writer/oracle release output.
+            let buildTarget = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-native-reader-fixtures")
             let f = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
                 "STAXRIP_GENERATED_COMPANION_FIXTURE_DIRECTORY=" + generated.path, "cargo", "test", "--locked",
-                "--manifest-path", cargo.path, "original_companions_preserve_raw_bytes_encoded_order_and_distinct_retention"])
+                "--target-dir",buildTarget.path,"--manifest-path", cargo.path, "original_companions_preserve_raw_bytes_encoded_order_and_distinct_retention"])
             try #require(f.status == 0)
             let b = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
                 "cargo", "build", "--release", "--locked", "--bin",
-                "staxrip-dolby-metadata-audit", "--manifest-path", cargo.path])
+                "staxrip-dolby-metadata-audit", "--target-dir",buildTarget.path,"--manifest-path", cargo.path])
             try #require(b.status == 0)
             let executable = root.appendingPathComponent("staxrip-dolby-metadata-audit")
-            try FileManager.default.copyItem(at: repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/release/staxrip-dolby-metadata-audit"), to: executable)
+            try FileManager.default.copyItem(at: buildTarget.appendingPathComponent("release/staxrip-dolby-metadata-audit"), to: executable)
             return .init(root:root,source:generated.appendingPathComponent("generated-source.mkv"),executable:executable)
         } catch { try? FileManager.default.removeItem(at: root); throw error }
     }

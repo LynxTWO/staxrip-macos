@@ -2,8 +2,8 @@ import Foundation
 import Darwin
 import CryptoKit
 
-/// Fixed internal read-only native controller. No release capability, package
-/// comparison, archive action or complete semantic admission is installed.
+/// Fixed internal read-only native controller. Its stream is consumed independently
+/// by the source-dependent package verifier; no release capability or archive action.
 enum CompanionMetadataProcess {
     typealias Transaction = OriginalCompanionTransaction
     struct Tool: Sendable {
@@ -54,11 +54,11 @@ enum CompanionMetadataProcess {
                 DispatchQueue(label: "StaxRip.companion-metadata-owner", qos: .userInitiated).async {
                     let result = Result {
                         #if DEBUG
-                        return try work(tool: tool, source: source, observe: observe,
-                                        timeout: timeout, cancellation: cancellation, boundary: boundary)
+                        return try runOwned(tool: tool, source: source, observe: observe,
+                                        timeout: timeout, checkCancellation: { try cancellation.check() }, boundary: boundary)
                         #else
-                        return try work(tool: tool, source: source, observe: observe,
-                                        timeout: timeout, cancellation: cancellation)
+                        return try runOwned(tool: tool, source: source, observe: observe,
+                                        timeout: timeout, checkCancellation: { try cancellation.check() })
                         #endif
                     }
                     continuation.resume(with: result)
@@ -68,10 +68,12 @@ enum CompanionMetadataProcess {
         try Task.checkCancellation()
         return result
     }
-    private static func work(tool: Tool, source: URL, observe: @escaping @Sendable (Data) throws -> Void,
-                             timeout: Double, cancellation: Cancellation, boundary: Boundary = .init()) throws -> CompanionMetadataStream.Receipt {
+    /// Called synchronously only on an already owned worker; never starts another worker.
+    static func runOwned(tool: Tool, source: URL, observe: @escaping (Data) throws -> Void,
+                             timeout: Double, checkCancellation: @escaping () throws -> Void, boundary: Boundary = .init()) throws -> CompanionMetadataStream.Receipt {
+        guard timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)
-        func check() throws { try cancellation.check(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
+        func check() throws { try checkCancellation(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
         try check()
         let input = try Pin(source), executable = try Pin(tool.url, executable: true)
         defer { withExtendedLifetime((input,executable)) {} }

@@ -127,6 +127,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-116 | 2026-10-04 | Own native companion access and temporary export activity | Confirmed | |
 | D-117 | 2026-10-04 | Qualify fixed Rust helper signatures before release admission | Confirmed | |
 | D-118 | 2026-10-04 | Abrupt native coordinator loss around companion commit | Confirmed | |
+| D-119 | 2026-10-04 | Read-only original companion candidate review | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -2961,3 +2962,69 @@ persisted recovery/adoption/deletion API or power-loss durability follows. Next 
 read-only native source-dependent candidate review without the lost coordinator's test
 frame. Packaging/signing, production review recovery and owner mode/privacy remain gates.
 See NATIVE-COMPANION-COORDINATOR-LOSS-EVIDENCE.md for actual coverage and limits.
+
+## D-119: Review original companion candidates without a producer receipt
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner standing autonomous generated non-audio development, R059 / Slice049.
+Need trace: after D118 process loss only original source and surviving files remain.
+Requiring a transient producer/test acknowledgment prevents real read-only examination.
+Consequence local_only in this unused generated scope, future user_data review gated.
+Preserve original media/session/current journal/outputs. No archive action or recovery
+adoption/deletion/republication, owner queue, film archive/encode, signing retry or release.
+
+Choice delegated to AI: extend the concrete D108 pinned read worker with explicit original
+source/candidate directory/retention and trusted fixed reader, instead of a receipt wrapper,
+Python app bridge, automatic stage discovery or stable importer claims. Hash original
+source and fixed components from pinned descriptors; bootstrap only bounded unsigned
+count claims from the existing version-zero manifest. Require existing full D109-D114
+source reconstruction/manifest/index/audit/fresh metadata checks to establish those claims.
+Persisted claims are untrusted until this complete composition/final observations passes.
+
+Scope: unused read-only candidate API sharing disk worker/read capabilities. No path or
+executable comes from a manifest. Fixed membership/permissions/single links/resource bounds,
+source/candidate identity and cooperative cancellation stay required. Ordinary returns
+join reader/worker and close descriptors; unsettled ownership propagates its typed marker.
+No stable import, immutable snapshot, persisted producer binding, decoded/edit association,
+access-release/discard/adoption authority or release provenance follows from review findings.
+
+Acceptance: actual generated before/after-loss candidates in both modes with no test-frame
+argument; full native reread from files/source only. Repaired plausible summary/count/hash/
+manifest forgeries and malformed/partial/missing/unsafe candidates refuse read-only. Active
+read cancellation and final source/candidate/member mutation refuse after owned settlement;
+source/prior/candidate unchanged on ordinary review/refusal. Existing receipt APIs preserve
+their narrower guarantees. Ordinary regression, explicit optimized build/strict ad-hoc
+signatures, protection/privacy/planning and automatic PR93 observation without retry.
+
+Approved for build by: owner standing autonomous generated non-audio delegation, 2026-10-04.
+
+D119 final local outcome: receiptless read-only review derives pinned source/component
+observations and admits bounded manifest count claims only after full D109-D114 native
+source-dependent reconstruction. Actual D118 before/after-loss candidates pass both modes
+after deleting the test acknowledgment files; no receipt/frame enters the API. Nineteen
+manifest forgeries, four malformed/oversized cases, repaired plausible metadata forgery,
+unsafe/missing/extra members, wrong retention, active cancellation and final mutations
+refuse. Fresh reader joins before semantic refusal; actual group EPERM/direct-child-joined
+ownership marker propagates with generated candidate retained, no cleanup authority.
+Initial focus15tests/3suites13.106s and expanded22tests/4suites4.175s passed; redundant test
+is-type warning removed before ordinary445reported tests/93suites206.832s passed with26
+unchanged opt-in skips and no new warnings. Candidate suite12.051s and receiptless loss
+suite4.603s passed ordinary. Explicit optimized product build and strict ad-hoc app/read-
+only helper signatures passed without warnings, minima14.0/11.0, writer absent. API unused,
+no UI walkthrough implied. Original version-zero archive schema unchanged; no importer,
+persisted producer binding, decoded association, adoption/delete/access-release/action or
+release Tool follows. PR93 automatic439tests765.145s13issues retained/PR updated; loss
+suite295.425s passed. One motion CancellationError/message mismatch recorded without
+root-cause claim; historical D090 timing causes unknown, no rerun/assertion/scheduling
+change. Protection/privacy/planning receipts follow before publication. Next qualify
+concrete original source/candidate access/activity ownership through read-only review,
+reusing D116 facilities and distinguishing candidate-folder grants from parent grants.
+See NATIVE-COMPANION-CANDIDATE-REVIEW-EVIDENCE.md for scope and remaining gates.
+
+Final seven-file privacy scan has zero private source path/name/stem matches and a
+positive sentinel. Source metadata/current recovery journal remain unchanged; full
+planning findings empty. Current owned55829 bounded awake command/start matches receipt,
+expiry17:46:06UTC, no persistent locking/security change. No owner media body/queue/film
+archive/encode/listening, signing retry, merge or release. Controlled generated candidate
+fixtures with typed unsettled group ownership remain retained outside Git.

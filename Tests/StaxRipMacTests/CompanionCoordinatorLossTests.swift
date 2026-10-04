@@ -219,7 +219,11 @@ struct CompanionCoordinatorLossTests {
                 try #require(Set(FileManager.default.contentsOfDirectory(atPath: parent.path)) == ["prior", phase == "before" ? stageName : "result"])
                 try #require(try Data(contentsOf: source) == original && Data(contentsOf: parent.appendingPathComponent("prior")) == prior)
                 let reader = try CompanionMetadataProcess.Tool.development(f.reader, expectedSHA256: readerHash)
-                let verified = try await CompanionDiskCheck.verifyOriginalMetadata(source: source, stage: location, contents: c, tool: reader)
+                // The lost coordinator frame is no longer available to review.
+                try FileManager.default.removeItem(at: root.appendingPathComponent("ready.json"))
+                try FileManager.default.removeItem(at: ready)
+                let verified = try await CompanionDiskCheck.reviewOriginalCandidate(source: source, candidate: location, retention: mode, tool: reader)
+                try #require(verified.contents.sourceID == c.sourceID && verified.contents.stageID == c.stageID)
                 try #require(verified.originalMetadataSemanticsVerified && verified.originalMetadata?.originalComponentsMatchSource == true)
                 if mode == .entireContainer { try #require(try Data(contentsOf: location.appendingPathComponent("original-container.mkv")) == original) }
                 print("GENERATED_COORDINATOR_LOSS mode=" + (mode == .metadataOnly ? "metadata" : "entire") + " phase=" + phase + " helper_joins=2 immediate_exit=86 native_semantics=true retained_identity=true")

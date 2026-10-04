@@ -11,15 +11,22 @@ enum DolbyDecoderProcess {
         fileprivate let sha256: String
         fileprivate let librarySHA256: [String:String]
         fileprivate let versions: [UInt64]
-        private init(url: URL, sha256: String, libraries: [String:String], versions: [UInt64]) { self.url=url; self.sha256=sha256; self.librarySHA256=libraries; self.versions=versions }
+        fileprivate let profile: DolbyDecoderStream.Profile
+        private init(url: URL, sha256: String, libraries: [String:String], versions: [UInt64], profile: DolbyDecoderStream.Profile) { self.url=url; self.sha256=sha256; self.librarySHA256=libraries; self.versions=versions; self.profile=profile }
         #if DEBUG
         /// Explicit generated-test trust only, not application signature provenance.
         static func development(_ url: URL, expectedSHA256: String, libraries: [String:String], versions: [UInt64]) throws -> Self {
-            guard url.isFileURL, url.lastPathComponent == "reference", url.deletingLastPathComponent().lastPathComponent == "Helpers",
+            try captured(url,expectedSHA256:expectedSHA256,libraries:libraries,versions:versions,profile:.metadata)
+        }
+        static func developmentSamples(_ url: URL, expectedSHA256: String, libraries: [String:String], versions: [UInt64]) throws -> Self {
+            try captured(url,expectedSHA256:expectedSHA256,libraries:libraries,versions:versions,profile:.baseSamples)
+        }
+        private static func captured(_ url: URL, expectedSHA256: String, libraries: [String:String], versions: [UInt64], profile: DolbyDecoderStream.Profile) throws -> Self {
+            guard url.isFileURL, url.lastPathComponent == (profile == .metadata ? "reference":"sample-probe"), url.deletingLastPathComponent().lastPathComponent == "Helpers",
                   !url.path.utf8.contains(0), Set(libraries.keys) == ["libavcodec.63.dylib","libavformat.63.dylib","libavutil.61.dylib"],
                   versions.count == 3, versions.allSatisfy({ (1...UInt64(UInt32.max)).contains($0) }) else { throw failure() }
             for digest in [expectedSHA256] + Array(libraries.values) { _ = try DolbyInspection.hash(digest) }
-            return .init(url:url,sha256:expectedSHA256,libraries:libraries,versions:versions)
+            return .init(url:url,sha256:expectedSHA256,libraries:libraries,versions:versions,profile:profile)
         }
         #endif
     }
@@ -45,7 +52,20 @@ enum DolbyDecoderProcess {
     private static func failure() -> NativeExportError { .invalid("Development decoder reader execution refused. No settled frame result.") }
     static func run(tool: Tool, source: URL, threads: Int = 4, timeout: Double = 120,
                     observe: @escaping @Sendable (Data) throws -> Void = { _ in }) async throws -> DolbyDecoderStream.Receipt {
-        guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        try await runProfile(tool:tool,source:source,threads:threads,timeout:timeout,profile:.metadata,observe:observe)
+    }
+    /// Distinct sample role/profile; summaries remain transient, source association unproved.
+    static func runSamples(tool: Tool, source: URL, threads: Int = 4, timeout: Double = 120,
+                           observeSamples: @escaping @Sendable (DolbyDecoderStream.BaseSampleFrame) throws -> Void = { _ in },
+                           observe: @escaping @Sendable (Data) throws -> Void = { _ in }) async throws -> DolbyDecoderStream.Receipt {
+        try await runProfile(tool:tool,source:source,threads:threads,timeout:timeout,profile:.baseSamples,
+                             observeSamples:observeSamples,observe:observe)
+    }
+    private static func runProfile(tool: Tool, source: URL, threads: Int, timeout: Double,
+                                   profile: DolbyDecoderStream.Profile,
+                                   observeSamples: @escaping @Sendable (DolbyDecoderStream.BaseSampleFrame) throws -> Void = { _ in },
+                                   observe: @escaping @Sendable (Data) throws -> Void) async throws -> DolbyDecoderStream.Receipt {
+        guard tool.profile == profile, [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         try Task.checkCancellation()
         let cancellation = Cancellation()
         #if DEBUG
@@ -57,11 +77,11 @@ enum DolbyDecoderProcess {
                 DispatchQueue(label: "StaxRip.development-decoder-owner", qos: .userInitiated).async {
                     let result = Result {
                         #if DEBUG
-                        return try runOwned(tool: tool, source: source, threads: threads, observe: observe,
+                        return try runOwnedProfile(tool: tool, source: source, threads: threads, profile:profile,observeSamples:observeSamples,observe: observe,
                                         timeout: timeout, checkCancellation: { try cancellation.check() }, boundary: boundary)
                         #else
-                        return try runOwned(tool: tool, source: source, threads: threads, observe: observe,
-                                        timeout: timeout, checkCancellation: { try cancellation.check() })
+                        return try runOwnedProfile(tool: tool, source: source, threads: threads, profile:profile,observeSamples:observeSamples,observe: observe,
+                                        timeout: timeout, checkCancellation: { try cancellation.check() }, boundary: .init())
                         #endif
                     }
                     continuation.resume(with: result)
@@ -74,7 +94,23 @@ enum DolbyDecoderProcess {
     /// Called synchronously only on an already owned worker; never starts another worker.
     static func runOwned(tool: Tool, source: URL, threads: Int, observe: @escaping (Data) throws -> Void,
                              timeout: Double, checkCancellation: @escaping () throws -> Void, boundary: Boundary = .init()) throws -> DolbyDecoderStream.Receipt {
-        guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        try runOwnedProfile(tool:tool,source:source,threads:threads,profile:.metadata,observe:observe,
+                            timeout:timeout,checkCancellation:checkCancellation,boundary:boundary)
+    }
+    static func runOwnedSamples(tool: Tool, source: URL, threads: Int,
+                               observeSamples: @escaping (DolbyDecoderStream.BaseSampleFrame) throws -> Void = { _ in },
+                               observe: @escaping (Data) throws -> Void = { _ in },
+                               timeout: Double, checkCancellation: @escaping () throws -> Void,
+                               boundary: Boundary = .init()) throws -> DolbyDecoderStream.Receipt {
+        try runOwnedProfile(tool:tool,source:source,threads:threads,profile:.baseSamples,observeSamples:observeSamples,
+                            observe:observe,timeout:timeout,checkCancellation:checkCancellation,boundary:boundary)
+    }
+    private static func runOwnedProfile(tool: Tool, source: URL, threads: Int, profile: DolbyDecoderStream.Profile,
+                                       observeSamples: @escaping (DolbyDecoderStream.BaseSampleFrame) throws -> Void = { _ in },
+                                       observe: @escaping (Data) throws -> Void,
+                                       timeout: Double, checkCancellation: @escaping () throws -> Void,
+                                       boundary: Boundary) throws -> DolbyDecoderStream.Receipt {
+        guard tool.profile == profile, [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)
         func check() throws { try checkCancellation(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
         try check()
@@ -92,7 +128,8 @@ enum DolbyDecoderProcess {
         }
         defer { withExtendedLifetime(libraries) {} }
         let fingerprint = SourceFingerprint(sha256: try input.digest(check: check), byteCount: input.bytes)
-        let parser = try DolbyDecoderStream(source: fingerprint, threads:threads, versions:tool.versions) { row in
+        let parser = try DolbyDecoderStream(source: fingerprint, threads:threads, versions:tool.versions,profile:profile,
+            observeSamples:{ frame in try check();try observeSamples(frame);try check() }) { row in
             #if DEBUG
             boundary.row(row)
             #endif

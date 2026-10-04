@@ -110,6 +110,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-099 | 2026-10-04 | Verify and publish a complete companion result set | Confirmed | |
 | D-100 | 2026-10-04 | Produce original companion components without metadata rewriting | Confirmed | |
 | D-101 | 2026-10-04 | Independently validate original companion components against source | Confirmed | |
+| D-102 | 2026-10-04 | Own a source-bound cancellable companion producer | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1783,3 +1784,65 @@ No owner archive, native command/protocol/UI admission, listening, dependency bu
 signing retry, merge or release. PR 75 automatic AV1 deadline failure retained.
 Native producer ownership/cancellation, semantic settlement and D-099 publication
 integration remain the next prerequisites; prototype import/reconstruction is open.
+
+
+## D-102: Own a source-bound cancellable companion producer
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner original preservation/companion request, standing autonomous
+delegation and R-059 / Slice 049. Build a generated-development prerequisite only;
+no owner archive/queue/full-film encode, native command/UI or stable importer,
+listening, decoder integration, signing retry, merge or release.
+
+Product contract: the future owner chooses metadata-only or complete retention and
+reviews its storage/privacy consequences. Before any result can be published, the
+producer must bind the opened original source, preserve its bytes and settle all
+owned writes when cancelled or refused. This unit tests that core on disposable
+files; consequence local_only for execution, user_data for future native integration.
+The authoritative outcome is a returned source-bound receipt, not a partial audit's
+complete row or the mere presence of component files.
+
+Choice delegated to AI. Alternatives: add a native writer command now, rely only on
+caller-owned writers, or first add an internal source-bound producer owning File
+handles. Select owned handles first: closes actual writes at return and permits
+source/cancel qualification without changing the read-only bundled CLI or exposing
+an unreviewed prototype format. Cost: caller must create exclusive staged files and
+later validate their path identity/semantics before D-099 publication.
+
+Scope: no-follow/nonblocking regular source open, length and descriptor/path identity
+before/after the existing streamed content recheck. Consume concrete File outputs;
+refuse nonempty, linked, duplicate, nonregular, read/write or source-alias descriptors
+before writing. A one-way cancellation token checks read/seek/write/flush boundaries
+and the final receipt boundary. Owned source/component handles close on every return.
+No shell, new dependency, executable or API/session schema is added. Original producer
+manifest flags remain unmodified; a separate receipt records narrower source binding.
+
+Acceptance: generated both-mode bytes pass existing independent semantic verifier;
+real source replacement/mutation and symlink/FIFO/directory/empty/oversize refuse;
+cancellation before work and during actual producer/recheck/write/flush refuses with
+no source-bound receipt. A generated owned worker cancels and joins before cleanup.
+Output descriptor errors/aliases/collisions preserve existing data. No hard physical
+I/O/CPU deadline, immutable snapshot, durability, source ancestry sandbox or protection
+from a malicious caller cloning descriptors is claimed. Native process ownership,
+output path binding, semantic settlement, publication and storage/crash review remain
+next gates. Historical D-090 timing assertions/observation remain unchanged.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04; this bounded
+source-bound producer prerequisite falls inside the authorized archival work.
+
+
+D-102 outcome: source-bound generated producer checks and descriptor settlement
+passed. Final Rust run passed 31 tests with zero failures/ignored tests; format/Clippy
+passed. Eighteen independent companion checks passed in 3.032 s and fifteen existing
+decoder-reference checks passed in 1.107 s. Ordinary regression passed 331 tests/
+78 suites in 203.087 s; optimized build/strict ad-hoc app/helper signatures passed.
+Actual app/helper minimum declarations remain 14.0/11.0, not older-OS execution or
+notarization. SOURCE-BOUND-COMPANION-EVIDENCE.md records scoped source identity,
+cooperative cancellation, unsafe descriptor refusals, partial-component behavior and
+ownership limits. Original source/current recovery unchanged; privacy scan of eleven
+changed/nonignored files has zero owner identifier matches and a positive sentinel.
+No native command/protocol/UI/session or dependency changed; no owner archive/queue/
+encode/listening, signing retry, merge or release. PR 76 automatic reader/app passed
+without retry; prior timing failure causes remain unknown. Native stage/path ownership,
+semantic settlement, worker/process integration and D-099 publication remain next.

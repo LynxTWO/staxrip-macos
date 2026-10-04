@@ -342,6 +342,25 @@ class CompanionTests(unittest.TestCase):
         self.assertNotIn(str(self.path), result.stdout + result.stderr)
         self.assertEqual(result.stdout, "")
 
+    def test_source_bound_producer_packages_pass_independent_semantic_verifier(self):
+        root = self.path / "source-bound"
+        root.mkdir()
+        environment = dict(os.environ, STAXRIP_GENERATED_BOUND_COMPANION_DIRECTORY=str(root))
+        subprocess.run(["cargo", "test", "--locked", "--manifest-path",
+                        str(ROOT / "Tools/DolbyMetadataAudit/Cargo.toml"),
+                        "source_bound_companion_packages_preserve_originals_and_settle_descriptors"],
+                       env=environment, check=True, stdout=subprocess.DEVNULL)
+        source = root / "generated-source.mkv"
+        before = source.read_bytes()
+        for mode in ("metadata", "full"):
+            package = root / mode
+            components = {p.name: p.read_bytes() for p in package.iterdir()}
+            result = check.validate(source, package, HELPER)
+            self.assertEqual((result["packets"], result["records"]), (1, 2))
+            self.assertEqual(components, {p.name: p.read_bytes() for p in package.iterdir()})
+            self.assertFalse(json.loads(components["manifest.json"])["source_path_identity_bound"])
+        self.assertEqual(source.read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

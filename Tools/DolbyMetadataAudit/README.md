@@ -6,6 +6,25 @@ copy admission or picture edit. Build with Cargo on macOS or another Unix platfo
 local qualification used macOS and Rust 1.98.1. Generated packet-reference tests also require FFmpeg/FFprobe (locally 9.0.2). The declared 1.88 minimum reflects
 the pinned dependency's let-chain syntax; that minimum compiler is not qualified.
 
+Development library modules also contain prototype companion production. They are
+not native CLI commands, stable import APIs or enabled app archive features. The
+new `companion_source::produce` opens an original source read-only with no-follow
+flags, consumes caller-created staged File handles, checks source identity around
+the existing content recheck, and supports one-way cooperative cancellation. All
+owned files close when the call returns. Partial components can remain on refusal;
+the caller owns cleanup after settlement. Concrete files exclude a buffered writer
+flushing later on drop. Reject unsafe/nonempty/linked/aliased/positioned output
+descriptors before writing. Trusted callers must still create outputs exclusively
+and establish their path ownership; descriptor checks do not prove creation history.
+
+The separate source-bound execution receipt is not a changed prototype manifest.
+The manifest still declares its original source-path flag false and decoded mapping
+unestablished. Cancellation checks I/O and receipt boundaries; it cannot preempt
+blocked physical I/O or parser CPU. A request arriving after the last receipt check
+does not revoke settled work. None of this publishes files, proves an immutable
+source, qualifies decoded/EL association or admits a native archive workflow. See
+`Docs/Planning/SOURCE-BOUND-COMPANION-EVIDENCE.md` at the repository root for scope.
+
 ```
 cargo test --locked --manifest-path Tools/DolbyMetadataAudit/Cargo.toml
 cargo build --release --locked --manifest-path Tools/DolbyMetadataAudit/Cargo.toml

@@ -121,3 +121,12 @@ finished in 519.513 s with one issue; preview packaging was skipped. Reader run
 37184199242 passed in 1m37s. The private failure log is retained. No retry, new timing
 observer, deadline/assertion relaxation or causal claim follows; local producer
 qualification stays separate from automatic app acceptance.
+
+
+PR 76 head 2e87238 automatic app run
+[37185702079](https://github.com/LynxTWO/staxrip-macos/actions/runs/37185702079)
+passed. All 331 tests finished in 427.221 s with unchanged assertions/default scheduling;
+preview bundle/icon packaging passed. Reader run 37185702106 passed in 2m29s including
+the seventeen original companion verifier checks. No rerun or historical timing
+observer/assertion/deadline changes were made. This one successful run does not resolve
+the unknown causes of prior hosted timing failures or establish reliable deadlines.

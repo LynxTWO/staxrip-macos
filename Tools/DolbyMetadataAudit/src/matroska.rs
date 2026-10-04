@@ -309,6 +309,7 @@ fn configuration(data: &[u8]) -> Result<usize, Failure> {
 struct Block {
     data: Vec<u8>,
     offset: u64,
+    block_offset: u64,
     ticks: i128,
     invisible: bool,
     keyframe: Option<bool>,
@@ -326,6 +327,7 @@ fn block<R: Read>(
         return Err(Failure::Bounds);
     }
     *blocks += 1;
+    let block_offset = r.position;
     let (number, unknown) = r.vint(false)?;
     if unknown || !numbers.contains(&number) || e.end.saturating_sub(r.position) < 3 {
         return Err(Failure::Framing);
@@ -352,6 +354,7 @@ fn block<R: Read>(
     Ok(Some(Block {
         data,
         offset,
+        block_offset,
         ticks: cluster as i128 + i16::from_be_bytes(relative) as i128,
         invisible: flags & 8 != 0,
         keyframe: (e.id == 0xa3).then_some(flags & 0x80 != 0),
@@ -451,7 +454,7 @@ impl Census {
         write_json(
             output,
             &serde_json::json!({"kind":"packet", "index":self.packets,
-            "input_byte_offset":b.offset, "pts_ns":pts, "duration_ns":duration,
+            "input_byte_offset":b.offset, "block_input_byte_offset":b.block_offset, "pts_ns":pts, "duration_ns":duration,
             "invisible":b.invisible, "keyframe":b.keyframe, "discardable":b.discardable,
             "encoded_bytes":b.data.len(), "sha256":hex(payload_hash)}),
         )?;

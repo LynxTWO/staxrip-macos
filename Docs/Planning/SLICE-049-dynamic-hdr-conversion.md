@@ -1,5 +1,5 @@
 # Slice 049: Measured dynamic HDR conversion
-Version: 0.1. Date: 2026-10-03. Status: complete source census and bounded HEVC/AV1 feasibility recorded; editable HEVC VBV prerequisite implemented and locally qualified; no new Dolby Vision admission.
+Version: 0.1. Date: 2026-10-03. Status: native encoded inspection, editable HEVC VBV and development base-frame association locally qualified; bounded encoder feasibility recorded; no new Dolby Vision conversion admission.
 
 ## Outcome and authority
 
@@ -69,3 +69,42 @@ checks, ordinary regression, licensed nested-helper build and a focused native
 walkthrough are the required boundary; evidence is recorded separately. This does
 not close conversion, decoded-picture/POC, brightness, archive publication,
 crop/resize, rendering or hosted timing-reliability gates.
+
+D-096 adds a separate unbundled installed-FFmpeg base-picture reference with raw RPU
+digests, original packet provenance and unapplied codec conformance cropping. A
+bounded on-disk checker requires packet/raw-buffer agreement and complete one-to-one
+coverage, rather than infer it from PTS sorting or opaque propagation alone. Generated
+codec cropping, B-frame reorder, surplus/missing RPU and CRA/nonoutput cases precede
+private complete-source verification. DECODED-DOLBY-ASSOCIATION-EVIDENCE.md records
+the outcome and scope; original EL pairing, general POC mapping and runtime conversion
+remain separate gates.
+
+## Edited-picture analysis prerequisites
+
+Dolby's creation guidance specifies the active image before analysis, permits it to
+vary by shot and distinguishes measured L1 analysis from artistic target trims.
+MaxCLL/MaxFALL normally require separate calculation. Therefore removing only verified
+blanking might preserve the analyzed picture region, but removing active content or
+resampling it cannot be assumed to preserve those values. That distinction is a
+design inference requiring resulting-picture checks, not a generic metadata rewrite.
+See [Dolby active-image guidance](https://professionalsupport.dolby.com/s/article/Dolby-Vision-Content-Creation-Best-Practices-Guide?language=en_US)
+and [metadata levels](https://professionalsupport.dolby.com/s/article/Dolby-Vision-Metadata-Levels?language=en_US).
+
+For a later edited workflow, declare the source active-area coordinate basis before
+transforming it. Bind every per-picture/shot region to the verified timeline; intersect
+it with the effective crop, translate, then apply the same rational scale/padding and
+explicit integer-edge rounding used by the picture pipeline. Refuse empty/ambiguous
+regions, unresolved orientation and changing geometry. Odd luma metadata coordinates
+remain valid; chroma sample alignment and the actual pixel crop/resampling policy are
+separate decisions. Container display ratios do not substitute for sample dimensions.
+
+The edit record must retain kernel, chroma siting, border treatment, sample aspect,
+bit depth and color/transfer/range. Verify active-area bounds and sample actual edited
+pictures with correct transfer/color handling; resampling can change peaks and mix
+blanking near boundaries. Do not multiply brightness by the area ratio or relabel
+original L1 as newly measured HDR10+ statistics. Burned-in subtitles/graphics are
+picture edits too; variable aspect scenes cannot be collapsed to one global crop.
+Preserve original metadata and matching original BL/EL independently of all transformed
+results. Decoder conformance cropping, crop-only blanking removal, active-picture crop,
+down/upscale, padding, subtitle overlays and variable-aspect sequences need separate
+generated/output/reference tests before a native edited-Dolby choice is enabled.

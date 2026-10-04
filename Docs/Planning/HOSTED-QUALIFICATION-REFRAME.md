@@ -60,3 +60,19 @@ Independent container-header results remain usable at their exact source identit
 ## Automatic regression recurrence during HDR prerequisites
 
 Automatic ordinary run [37164120623](https://github.com/LynxTWO/staxrip-macos/actions/runs/37164120623), docs-only head `140861c185ad03f6d2df3ece639e268eb112582f`, failed the AV1 matrix's unchanged 120-second limit: 146.177 seconds. All 303 tests settled in 620.802 seconds with one issue; the subsequent preview build was skipped. Product/test sources were unchanged from the preceding passing code-head run 37163446273. No original-mastering cancellation issue was reported in this run. This is an automatic implementation PR workflow, not a newly authorized D-090 investigation; keep the failure and unknown cause. Do not rerun to obtain green, expand observation or relax assertions/deadlines. The separate Rust reader run 37164120576 passed.
+
+
+PR 70 native inspector code head c830d89 and documentation head c205a88 ran ordinary
+hosted checks automatically. Reader docs-head run 37172237376 passed (1m32s). App
+docs-head run 37172237391 failed three existing timing assertions: AV1 matrix
+128.883 s and ten-bit copy matrix 128.884 s exceeded their unchanged 120 s bounds;
+Fresh analysis cancellation took 5.670801 s against the unchanged 5 s assertion.
+All 311 tests finished in 592.932 s with three issues; preview packaging was skipped.
+New Dolby core/lifecycle suites passed (102.608 s / 30.347 s), much slower than local,
+without establishing a cause for the hosted failures. Code-head run 37172171872
+also failed: HDR10 cancellation 5.063968 s, Fresh analysis cancellation 5.979875 s
+against 5 s; AV1 matrix 122.239 s against 120 s. All 311 tests finished in
+529.350 s with three issues; new Dolby suites passed (72.077 s / 30.277 s).
+Its private log is retained with this separate result. No blind retry,
+new diagnostic observer, deadline/assertion change or production qualification
+follows. Native local 311-test/optimized/full-source evidence remains local scope.

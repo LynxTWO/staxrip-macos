@@ -429,3 +429,15 @@ interruption and a bounded helper deadline settle owned processes before returni
 The producer manifest remains unmodified and unbound; a separate result records the
 validator boundary. No stable importer, native archive feature, publication, decoded
 picture/EL reconstruction, future carriage or signed-distribution admission follows.
+
+
+D-102 adds a generated-development source-bound companion producer core. It owns
+concrete File handles, opens the original source read-only/no-follow, validates
+empty distinct regular write-only output descriptors before writing, and compares
+source descriptor/path identity after the existing streamed content recheck. One-way
+cooperative cancellation checks I/O and final receipt boundaries. Owned handles close
+on return; partial files remain owned by the staging caller for settled cleanup.
+Source-bound receipts remain separate from unmodified prototype manifests. Trusted
+caller exclusive creation, output pathname ownership, semantic disk reread, native
+worker/process policy and D-099 publication integration remain required. No new
+native CLI command, UI/session schema, decoded/EL admission or dependency follows.

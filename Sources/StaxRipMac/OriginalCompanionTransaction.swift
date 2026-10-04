@@ -7,7 +7,7 @@ protocol CompanionUnsettledOwnership: Error {}
 
 /// Internal phase ownership only. Trusted implementations settle workers/processes
 /// before ordinary return/throw, or explicitly mark unsettled ownership for retention.
-/// No native archive action or original semantic verifier is installed.
+/// No native archive action is installed; generated tests supply explicit trusted phases.
 enum OriginalCompanionTransaction {
     enum Retention: Sendable {
         case metadataOnly, entireContainer

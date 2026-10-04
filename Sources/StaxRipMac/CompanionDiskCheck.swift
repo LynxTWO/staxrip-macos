@@ -2,8 +2,8 @@ import Foundation
 import Darwin
 import CryptoKit
 
-/// Unused internal integrity settlement. Original track/RPU/index semantics remain
-/// independent. No file writes, publication, import or native archive action.
+/// Unused internal disk/source/component settlement, with explicit progressively
+/// stronger source-dependent checks. No writes, import or native archive action.
 enum CompanionDiskCheck {
     typealias Transaction = OriginalCompanionTransaction
     struct Receipt: Sendable {
@@ -13,7 +13,8 @@ enum CompanionDiskCheck {
         let originalPackets: CompanionOriginalPacketCheck.Receipt?
         let originalIndex: CompanionOriginalIndexCheck.Receipt?
         let originalAudit: CompanionOriginalAuditCheck.Receipt?
-        let originalMetadataSemanticsVerified = false
+        let originalMetadata: CompanionOriginalMetadataCheck.Receipt?
+        var originalMetadataSemanticsVerified: Bool { originalMetadata != nil }
     }
     struct Boundary: Sendable {
         var progress: @Sendable (String, Int64) -> Void = { _, _ in }
@@ -50,6 +51,12 @@ enum CompanionDiskCheck {
     static func verifyOriginalAudit(source: URL, stage: URL, contents: Transaction.Contents) async throws -> Receipt {
         try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: true, originalIndex: true, originalAudit: true)
     }
+    /// Complete source-dependent original component comparison; not a portable importer or release action.
+    static func verifyOriginalMetadata(source: URL, stage: URL, contents: Transaction.Contents,
+                                       tool: CompanionMetadataProcess.Tool) async throws -> Receipt {
+        try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: true,
+                         originalIndex: true, originalAudit: true, metadataTool: tool)
+    }
     struct ReadView {
         let sourceBytes: Int64
         let source: (Int64, Int) throws -> Data
@@ -58,19 +65,21 @@ enum CompanionDiskCheck {
         var componentBytes: (String) throws -> Int64 = { _ in throw failure() }
         var componentRead: (String, Int64, Int) throws -> Data = { _, _, _ in throw failure() }
     }
-    private static func settle(source: URL, stage: URL, contents: Transaction.Contents, originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool) async throws -> Receipt {
+    private static func settle(source: URL, stage: URL, contents: Transaction.Contents, originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool, metadataTool: CompanionMetadataProcess.Tool? = nil) async throws -> Receipt {
         try Task.checkCancellation()
         let cancelled = Cancellation()
         #if DEBUG
         let boundary = testBoundary
+        let metadataBoundary = CompanionMetadataProcess.testBoundary
         #else
         let boundary = Boundary()
+        let metadataBoundary = CompanionMetadataProcess.Boundary()
         #endif
         let result: Receipt = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue(label: "StaxRip.companion-disk-check", qos: .userInitiated).async {
                     continuation.resume(with: Result {
-                        try check(source: source, stage: stage, contents: contents, originalTrack: originalTrack, originalPackets: originalPackets, originalIndex: originalIndex, originalAudit: originalAudit, cancelled: cancelled, boundary: boundary)
+                        try check(source: source, stage: stage, contents: contents, originalTrack: originalTrack, originalPackets: originalPackets, originalIndex: originalIndex, originalAudit: originalAudit, metadataTool: metadataTool, metadataBoundary: metadataBoundary, cancelled: cancelled, boundary: boundary)
                     })
                 }
             }
@@ -78,7 +87,7 @@ enum CompanionDiskCheck {
         try Task.checkCancellation(); return result
     }
     private static func check(source url: URL, stage urlStage: URL, contents: Transaction.Contents,
-                              originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool, cancelled: Cancellation, boundary: Boundary) throws -> Receipt {
+                              originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool, metadataTool: CompanionMetadataProcess.Tool?, metadataBoundary: CompanionMetadataProcess.Boundary, cancelled: Cancellation, boundary: Boundary) throws -> Receipt {
         try cancelled.check()
         let source = try File(url: url, maximum: 1 << 40), directory = try Directory(urlStage)
         let limits = contents.retention.limits, expected = Set(limits.keys)
@@ -114,6 +123,7 @@ enum CompanionDiskCheck {
         let packets: CompanionOriginalPacketCheck.Receipt?
         let index: CompanionOriginalIndexCheck.Receipt?
         let audit: CompanionOriginalAuditCheck.Receipt?
+        let metadata: CompanionOriginalMetadataCheck.Receipt?
         if originalTrack {
             let view = ReadView(sourceBytes: source.bytes, source: { offset, count in
                 guard offset >= 0, count >= 0, count <= 1 << 20, offset <= source.bytes,
@@ -145,18 +155,21 @@ enum CompanionDiskCheck {
             if originalAudit {
                 let checked = try CompanionOriginalAuditCheck.read(view, track: selected, contents: contents)
                 audit = checked; index = checked.index; packets = checked.index.packets
+                if let tool = metadataTool {
+                    metadata = try CompanionOriginalMetadataCheck.read(view, source: url, contents: contents, audit: checked, tool: tool, boundary: metadataBoundary)
+                } else { metadata = nil }
             } else if originalIndex {
-                audit = nil
+                metadata = nil; audit = nil
                 let checked = try CompanionOriginalIndexCheck.read(view, track: selected, contents: contents)
                 index = checked; packets = checked.packets
             } else if originalPackets {
-                audit = nil; index = nil
+                metadata = nil; audit = nil; index = nil
                 let result = try CompanionOriginalPacketCheck.read(view, track: selected)
                 guard result.packets == contents.packets, result.records == contents.records,
                       result.enhancementNALs == contents.enhancementNALs else { throw failure() }
                 packets = result
-            } else { packets = nil; index = nil; audit = nil }
-        } else { track = nil; packets = nil; index = nil; audit = nil }
+            } else { packets = nil; index = nil; audit = nil; metadata = nil }
+        } else { track = nil; packets = nil; index = nil; audit = nil; metadata = nil }
         #if DEBUG
         boundary.beforeFinal()
         #endif
@@ -164,7 +177,7 @@ enum CompanionDiskCheck {
         guard try directory.names() == expected else { throw failure() }
         for (name, file) in opened { try cancelled.check(); try file.check(name: name, directory: directory.fd) }
         try cancelled.check()
-        return .init(contents: contents, fullContainerMatchesOriginalBytes: contents.retention == .entireContainer, originalTrack: track, originalPackets: packets, originalIndex: index, originalAudit: audit)
+        return .init(contents: contents, fullContainerMatchesOriginalBytes: contents.retention == .entireContainer, originalTrack: track, originalPackets: packets, originalIndex: index, originalAudit: audit, originalMetadata: metadata)
     }
     private static func same(_ a: stat, _ b: stat) -> Bool {
         Transaction.FileID(a) == Transaction.FileID(b) && a.st_mode == b.st_mode && a.st_uid == b.st_uid &&

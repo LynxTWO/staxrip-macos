@@ -925,3 +925,103 @@ journal unchanged; planning findings empty. No native UI/action, owner queue/sou
 processing/private film archive/encode/listening, merge or release. Stored audit/fresh
 summary comparison and complete semantic transaction admission remain next; no full
 semantic flags or release reader capability claimed.
+
+
+## D-114: Compare original companion summaries with fresh owned native metadata
+
+Status: Confirmed
+
+Need/product contract: a plausible forged compact summary passes D112 shape-only
+admission. Require an actual fresh owned libdovi stream to match the entire stored
+audit after independent native source/raw/index/manifest validation, then settle
+final source/stage/member observations before returning semantic success.
+
+Alternatives: trust summary shape/hash claims, reuse Python test oracle at runtime,
+queue full arrays/nested async adapters, or compose actual owned reader on D108's
+pinned worker with streaming fixed-member comparison. Select the last.
+
+Scope: invoke D113 owned synchronous process core on existing pinned read worker,
+propagating external cooperative cancellation/shared unsettled ownership. Exact native
+JSON types/value relationships (field order/whitespace irrelevant), every non-resource
+fresh row and exact stored EOF. Record mismatch, drain bounded reader to joined exit,
+then refuse; cancellation/I/O ownership errors still unwind truthfully. D112 source
+framing/declared geometry, D111 manifest/index and D108 actual disk/source checks remain
+mandatory. Only complete settled composition can report original component metadata
+matching source; narrower receipts stay partial. Generated actual writer/native verifier/
+D105 exclusive publication may exercise both retention modes internally, no native UI.
+
+No release tool authentication/capability, portable importer/immutable snapshot/persisted
+producer provenance, codec-parameter/picture/decoded-frame/edit conversion qualification,
+owner source processing, writer packaging, queue/film archive/encode or listening work.
+
+Acceptance: both generated modes fresh metadata/source match; repaired plausible summary
+forgeries pass partial framing then fail full native comparison. Exact nullable/boolean/
+integer types, row order/EOF, source hash/count/resource settlement and independent
+source relationships required. Actual integrated row-read/child cancellation and late
+source/stage/component mutation refuse after unwind; shared unsettled group/phase error
+retains stage. Actual generated native writer/validator/exclusive transaction publishes
+once, refuses prior destination, preserves source/prior bytes. Ordinary regression,
+optimized ad-hoc bundle/protection/privacy/planning checks. Inspect automatic PR88 without
+retry; retain historical failures/no D090 observer/assertion/deadline/scheduling change.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+
+D-114 focused native composition:36tests/4suites passed4.663s; new comparison suite
+3.756s. Both-mode source admission0.796s, six repaired plausible summary forgeries
+0.360s, actual native writer/validator/exclusive publication0.644s and actual transaction
+cancellation0.296s passed. Final source/stage/audit mutation and exact typed/whitespace
+comparison pass. Full source-dependent composed metadata flag only follows pinned final
+settlement; narrower APIs stay false, decoded/import/immutable/provenance remain separate.
+Initial compile failures repaired (escaping checkpoint closure and test Published member),
+logs retained. First ordinary424tests/88suites208.896s failed one missing generated writer
+artifact in an existing index fixture. New fixture target ownership is isolated; existing
+suite concurrency/deadlines remain unchanged. Changed focused/regression follows, no
+D090 scheduling workaround or historical timing causal claim. PR88 automatic compiled
+changed fixture, then failed unchanged AV1 deadline:417tests537.172s one issue, native
+reader suite66.047s passed, preview skipped. Private log retained/PR updated; no retry.
+
+
+D-114 changed-fixture focus:7tests/1suite passed13.632s including cold owned Cargo
+target compilation; prior36tests/4suites4.663s retained. Intermediate ordinary424tests/
+88suites209.223s passed; new metadata comparison suite12.762s, actual both-mode native
+publication1.699s, transaction cancellation0.537s. Existing index fixture also passed;
+no global scheduling/deadline/assertion change. Initial failed424test log retained.
+Full original component admission remains source-dependent version-zero development
+verification, not portable import/immutable/persisted provenance/decoded qualification.
+No new warnings in final focused or ordinary logs. Optimized build/protection follow.
+
+
+The first optimized build exposed Swift6 captured mutable state warnings because the
+synchronous worker callback was unnecessarily typed Sendable. The synchronous core
+now accepts an ordinary callback; the async entry still requires Sendable across its
+worker boundary. No execution ownership/scheduling changes. That focused run passed
+new metadata checks but two existing test-only oracle phases refused while D113's
+reader fixture still rebuilt shared release artifacts. A new discriminator verified
+the same generated source/package with both settled default and isolated readers;
+no persistent metadata disagreement was found, and the precise transient refusal
+cause is not claimed. D113's serialized reader fixture now also owns a separate Cargo
+target, leaving app/writer/oracle release output untouched. Failed logs retained;
+changed ownership focus/ordinary/build settlement follows. No global concurrency,
+assertion/deadline or D090 observer/scheduling changes.
+
+
+D-114 final owned-fixture/synchronous-callback focus:36tests/4suites passed14.562s
+including cold isolated reader compilation; comparison suite4.242s. Final ordinary
+424tests/88suites207.288s passed with no new warnings; comparison suite11.786s,
+actual native publication both modes2.463s and transaction cancellation0.577s.
+The intermediate209.223s pass and failed208.896s/4.873s receipts are retained as
+separate states. Existing assertions/concurrency/deadlines unchanged. No owner source
+body read or film archive; final optimized bundle and protection settlement follows.
+
+
+D-114 optimized development build passed without new warnings; strict ad-hoc app and
+read-only helper signatures passed, minimum versions14.0/11.0, writer absent. No
+DeveloperID/notarization/older-OS runtime qualification. Twelve changed public/nonignored
+untracked files checked against three private source path/name/stem patterns: zero
+matches with positive decoded private source-field sentinel. Source metadata/current
+recovery journal unchanged; planning findings empty. No native action/owner queue/film
+archive/encode/listening, merge or release. Resource/access ownership, release helper
+provenance/packaging and owner-review gates remain before any archive UI; source-dependent
+prototype semantic matching does not qualify stable import, decoded association or edit
+conversion. Historical hosted timing failures remain retained/unknown, no retry.

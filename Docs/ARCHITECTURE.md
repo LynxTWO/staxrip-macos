@@ -120,3 +120,17 @@ returns a process receipt, never independent semantic/disk admission, cleanup or
 OwnershipFailure requires retaining stage for review; D105 must not clean up an unsettled
 phase. Native semantic admission/transaction integration, leases/resources/signing and
 stable/crash/storage gates remain. See NATIVE-COMPANION-PROCESS-EVIDENCE.md.
+
+
+D-114 composes unused native source-dependent original-companion verification on the
+existing pinned disk worker. Independent track/configuration/raw encoded packet/index/
+manifest/audit facts remain prerequisites, followed by actual owned read-only helper
+rows compared incrementally with fixed stored audit using exact native JSON types and
+EOF. Semantic mismatch drains/joins before refusal; cooperative cancellation and shared
+unsettled ownership propagate so D105 retains uncertain stages. Only final settled
+source/stage/member observations admit the complete composed receipt. Generated tests
+join actual native writer/verifier/exclusive publication in both retention modes;
+production native action, release capabilities/resource/security leases and writer
+packaging remain absent. Source-dependent prototype verification does not establish
+portable import, persisted provenance, immutable snapshots, independent libdovi decoding
+or decoded/edit picture association. See NATIVE-ORIGINAL-METADATA-EVIDENCE.md.

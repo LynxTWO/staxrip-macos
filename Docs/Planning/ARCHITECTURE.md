@@ -118,6 +118,13 @@ No source overwrite. No silent fallback between engines or preservation modes. N
 
 ## 15. Current Build Boundary
 
+Slice 049 / D-097 currently checks an unbundled minimal FFmpeg development runtime.
+The development builder and private dependency explicitly target macOS 14; generated
+relocation is qualified for ordinary ad-hoc development only. Complete compatible
+source association, hardened signed loading and native process/resource integration
+remain open. MINIMAL-DECODER-RUNTIME-EVIDENCE.md is the scoped evidence record; existing
+app behavior and admission rules are unchanged.
+
 Current approved implementation: Slice 004, implemented within HDR10-EVIDENCE.md limits; hosted run 36607764563 passed at 16a889c. Native cleanup and Slice 003 hosted checks also passed. No merge or release is authorized. Latest accepted build boundary: SLICE-023-native-preset-accessibility.md under D-036/D-037, product head 543b991 and hosted run 36808673370. Slice 024 is accepted at daf27e6 under D-038 / R-028 with hosted run 36811284038. Slice 025 is accepted at 42c8c07 under D-039 / R-029 with hosted run 36812490982. Slice 026 is accepted at f06d431 under D-040 / R-030, hosted run 36813735721. Slice 027 is accepted at 70d0ac6 under D-041 / R-031, hosted run 36815249560. Slice 028 is accepted at 70c17da under D-042 / R-032, hosted run 36817176434. Slice 029 is accepted at 485ea85 under D-043 / R-033, hosted run 36818937608. Slice 030 has scoped acceptance at 0105d5c plus diagnostic-only ded74f6 under D-044 / R-034, hosted run 36824096245. Earlier intermittent hosted destination-review timing remains unresolved in CHAPTER-EDITOR-EVIDENCE.md. Slices 014 through 022 have scoped acceptance receipts linked from the planning index. Slice 005 has local evidence in PICTURE-PREVIEW-EVIDENCE.md. Owner approved it and delegated subsequent reversible non-audio slice decisions on 2026-09-29.
 
 Slice 001 remains accepted with evidence in MEASURED-ANALYSIS-EVIDENCE.md. Slice 002 remains paused by owner request, not accepted. Preserve MASTERING-EVIDENCE.md, the verified v2 listening pack and unresolved D-015 findings. Audio resumes when the owner can review it with headphones.

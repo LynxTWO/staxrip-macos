@@ -374,6 +374,13 @@ not close conversion, decoded-picture/POC, brightness, archive publication,
 crop/resize, rendering or hosted timing-reliability gates.
 
 
+D-097 requires explicit macOS 14 compile/link declarations and actual Mach-O inspection
+for the development executable and candidate libraries. Generated relocation validates
+loader paths and runtime identities separately from hardened signed loading. No
+whole-process memory guarantee is inferred from per-allocation bounds or resource
+observations. Complete compatible source association remains pending; dependency/native
+distribution is not admitted. See MINIMAL-DECODER-RUNTIME-EVIDENCE.md.
+
 D-096 adds the unbundled development Tools/DolbyFrameReference. An installed-FFmpeg
 software decoder exposes opaque packet provenance and raw frame-RPU digests without
 automatic codec cropping. A bounded disk spool requires source/configuration/packet

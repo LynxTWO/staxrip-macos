@@ -105,6 +105,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-094 | 2026-10-03 | Bound Matroska HEVC packet association | Confirmed | |
 | D-095 | 2026-10-03 | Native read-only complete Dolby metadata inspection | Confirmed | |
 | D-096 | 2026-10-03 | Bounded decoded base-picture packet association | Confirmed | |
+| D-097 | 2026-10-04 | Qualify minimal decoder runtime before native integration | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1527,3 +1528,53 @@ and bundling stay open. DECODED-DOLBY-ASSOCIATION-EVIDENCE.md retains scope, cro
 resize distinctions and prior hosted failures. Rendering, enhancement pairing,
 edited statistics, runtime conversion/archive publication and distribution remain
 separate gates; no merge/release.
+
+
+## D-097: Qualify minimal decoder runtime before native integration
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: standing autonomous development/tool-install delegation and continuation
+of R-059 / Slice 049. This bounded prerequisite evaluates the already built minimal
+LGPL-only FFmpeg runtime without adding an app dependency or new conversion choice.
+Original source, owner session/current recovery and previous outputs remain protected.
+No owner queue/full-film encode, audio listening, timing diagnosis, merge or release.
+
+Need: generated associations passed on the minimal build, but complete source parity,
+relocatable dependencies, runtime resources and distribution materials remain unproved.
+Run the existing complete source checker once on the pinned minimal backend, with the
+same four-thread configuration, limits and final source checks. Record measured resource
+use separately from enforced limits; no whole-process memory ceiling is inferred.
+Privately stage only owned copies of the executable and three libraries, rewrite their
+local loader references, sign inside-out for development, move the stage and execute
+generated association/refusal cases with ambient loader overrides removed. Inspect all
+load commands and preserve original installed binaries. Pin source/configuration and
+notice inventory; qualification does not authorize distribution or certify legal status.
+
+Acceptance: complete source associations agree with D-096; generated relocation tests
+pass with verified nested signatures and only relocated/system dependencies; source
+archive and build configuration remain bound to the evidence. No source filenames,
+paths, media payloads or binaries enter public code/evidence. Runtime ownership/native
+integration, enforced process-memory policy, calibrated rendering, edits and signed
+public distribution remain later gates. Preserve PR 71's automatic hosted failures;
+no blind rerun or changed assertion/deadline.
+
+
+D-097 compatibility refinement: actual Mach-O inspection found macOS 27 minimum
+on the initial private dependency, while the native app supports macOS 14. Interrupt
+and retain its incomplete source trial; rebuild with explicit macOS 14 compile/link
+flags and expose the supported target in the development builder. Qualify its actual
+Mach-O minimum and generated cases before the replacement complete source check.
+This is a changed dependency condition, not a retry to hide a failure. Add generated
+reference checks to the existing reader workflow; no app scheduling/deadline change.
+
+D-097 development checkpoint: both installed and minimal-compatible reference suites
+pass 15 tests. Fifteen relocated accepted/refusal cases pass, all five copied object
+signatures verify and actual loader identities remain within the owned stage. Pinned
+source and five upstream license files are prepared privately; all 10,399 source
+contents remain unchanged. An ad-hoc hardened load failed library validation, and a
+Developer ID signing child was deliberately stopped when it did not settle; hardened
+loading remains open. The successful ordinary ad-hoc stage has no production admission.
+The compatible complete source check is running, not passed. Evidence and retained
+failures are in MINIMAL-DECODER-RUNTIME-EVIDENCE.md. No owner/native workspace mutation,
+merge or release.

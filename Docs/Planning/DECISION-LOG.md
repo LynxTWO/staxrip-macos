@@ -130,6 +130,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-119 | 2026-10-04 | Read-only original companion candidate review | Confirmed | |
 | D-120 | 2026-10-04 | Read-only candidate access ownership | Confirmed | |
 | D-121 | 2026-10-04 | Relocated sealed generated reader-host bundle | Confirmed | |
+| D-122 | 2026-10-04 | Hardened Swift host loading discriminator | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -3138,3 +3139,50 @@ positive sentinel. Owner source metadata/current recovery journal remain unchang
 full planning findings empty. Prior owned55829 was stopped only after exact receipt/
 command/start inspection; current owned84530 temporary capped assertion expires19:37UTC
 and exact command/start matches receipt. No persistent locking/security changes.
+
+## D-122: Discriminate hardened Swift host/test-module loading
+Date: 2026-10-04
+Status: Confirmed
+
+Authority/Approved for build: owner standing autonomous generated non-audio delegation,
+R059 / Slice049. D121 Rust reader-host success is not Swift loading. Local inspection
+shows SwiftPM's installed host has get-task-allow, while the ad-hoc test module needs
+XCTest/Testing SDK frameworks. Qualify only owned COPIES: remove existing signatures,
+explicit ad-hoc runtime signing without any entitlements, fixed installed SDK test-framework
+rpath if needed (no DYLD override), sealed owned bundle/fixed helpers and selected native
+test entry. No original tool/module edits, app startup/Preview change or redistribution.
+
+Use D118-style sole-owner POSIX caller, exclusive generated root, bounded log/deadline,
+owned PID/group and direct join. If module actually loads, require actual D116/D120 both-
+mode native operation/semantics, fixed helper joins and source/prior preservation before
+finite test-only completion marker. If loader refuses, require its concrete library/team/
+signature or missing-dependency diagnostic, joined host, absent entry/completion/candidates
+and unchanged source/prior. Unknown crashes/timeouts are failed qualification with retained
+fixture, never expected success. No generic runtime bridge or source-selected executable.
+
+Do not disable library validation, broaden entitlements, unsigned fallback, Developer ID
+retry, repurpose HOME/CODEX_HOME, owner media/queue/archive/encode/listening, merge/release
+or D090 observer/assertion/deadline/concurrency change. A refused new fixture establishes
+only scoped loading limitation, not the whole program blocked. Full ordinary/focused
+checks, unchanged product optimized receipt/signature reuse, privacy/protection/planning
+and PR96 automatic observation without retry.
+
+Outcome: concrete copied hardened Swift host/test-module loading refused with different
+Team IDs. Native Security outer/module/helper admission passed, but no native entry or
+helper ran; sole host joined, source/prior/root identities preserved. Signed copied
+artifacts and diagnostics retained. Initial compilation and first too-narrow diagnostic
+classification failures retained/corrected within this new fixture. Ordinary455tests/
+94suites208.327s passed26unchanged skips; final focused1test1.300s passed without warnings
+after test-only post-join check sequencing. Native success branch remains unexercised.
+Product unchanged; D120 explicit optimized build reused, current strict ad-hoc app/read-only
+helper signatures/minima14.0/11.0 pass, writer absent. PR96 automatic454tests732.817s27issues
+retained/PR updated; timing/phase causes unknown, no rerun or historical change.
+Next assess a separately compiled statically linked hardened Swift native host using real
+native implementations and fixed generated helpers, independent of XCTest/plugin loading.
+This scoped harness limitation is not a statically linked app failure or whole-program
+blocker. See HARDENED-SWIFT-HOST-LOADING-EVIDENCE.md for limits.
+
+Final five-file privacy scan has zero private source path/name/stem matches and a
+positive sentinel. Owner source metadata/current recovery journal remain unchanged;
+full planning findings empty. Current owned84530 bounded awake assertion exact command/
+start matches receipt and expires19:37UTC; no persistent locking/security changes.

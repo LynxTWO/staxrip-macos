@@ -1,8 +1,13 @@
 import Foundation
 import Darwin
 
-/// Internal phase ownership only. Trusted implementations must settle all workers
-/// and processes before returning. No native archive action or verifier is installed.
+/// Trusted phases use this marker when ordinary cleanup cannot yet be authorized.
+/// It conveys unsettled ownership, never permission to delete a located directory.
+protocol CompanionUnsettledOwnership: Error {}
+
+/// Internal phase ownership only. Trusted implementations settle workers/processes
+/// before ordinary return/throw, or explicitly mark unsettled ownership for retention.
+/// No native archive action or original semantic verifier is installed.
 enum OriginalCompanionTransaction {
     enum Retention: Sendable {
         case metadataOnly, entireContainer
@@ -47,6 +52,11 @@ enum OriginalCompanionTransaction {
         let cleanupError: Error
         let intendedStage: URL
         var errorDescription: String? { "Companion operation failed; its temporary stage needs cleanup review." }
+    }
+    struct UnsettledPhaseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: Error
+        let intendedStage: URL
+        var errorDescription: String? { "Companion ownership is unsettled. Its temporary stage needs review." }
     }
     typealias Producer = @Sendable (URL) async throws -> Contents
     typealias Verifier = @Sendable (URL, Contents) async throws -> Verification
@@ -114,6 +124,10 @@ enum OriginalCompanionTransaction {
             return try await stage.publish(as: destinationName, members: produced.members, preCommit: { try source.check() })
         } catch {
             let operation = error
+            if operation is CompanionUnsettledOwnership {
+                // Do not delete files while an owned writer may still be active.
+                throw UnsettledPhaseFailure(operationError: operation, intendedStage: directory)
+            }
             do { try stage.discard() }
             catch {
                 // Return a reviewable ownership error; never follow a substituted stage.

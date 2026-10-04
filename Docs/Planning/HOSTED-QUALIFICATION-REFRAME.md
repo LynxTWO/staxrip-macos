@@ -156,3 +156,6 @@ PR80 automatic reader37192320483 passed in 1m26s. App [37192320472](https://gith
 
 
 PR81 automatic reader37193191544 passed1m53s. App [37193191532](https://github.com/LynxTWO/staxrip-macos/actions/runs/37193191532) failed three unchanged timing checks: Fresh analysis cancellation6.648579 s against five; AV1 and ten-bit copy matrices each130.882 s after their120-second deadlines. All348tests finished468.176 s with three issues; preview packaging skipped. New native protocol suite passed79.448 s, actual writer row case79.446 s. Private failed log retained; no retry, historical observer or assertion/deadline/scheduling change. Causes remain unknown.
+
+
+PR82 automatic reader37195350536 passed1m41s. App [37195350567](https://github.com/LynxTWO/staxrip-macos/actions/runs/37195350567) failed21 unchanged120-second integration deadline cases: chapters2, external captions6, trimmed captions3, ten-bit copy1, video copy8 and AV1 copy1. All355tests finished594.627s with21issues; preview packaging skipped. New native process suite passed123.267s. Private failed log retained; no rerun, historical observer, assertion/deadline or scheduling change. Causes remain unknown.

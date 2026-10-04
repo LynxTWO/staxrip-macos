@@ -116,6 +116,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-105 | 2026-10-04 | Settle original companion phases before exclusive publication | Confirmed | |
 | D-106 | 2026-10-04 | Admit companion writer protocol natively before process integration | Confirmed | |
 | D-107 | 2026-10-04 | Own actual native companion writer process and pipes | Confirmed | |
+| D-108 | 2026-10-04 | Retain unsettled ownership and verify native companion disk receipts | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -2150,3 +2151,69 @@ persisted binding, ENOSPC/volume/crash/blocked-I/O/decoded gates remain. PR81 ho
 passed; appfailed unchanged cancellation6.648579vs5 and two copy matrices130.882vs120,
 348tests468.176s3issues; protocolsuite79.448s passed, no retry/observer/assertion changes.
 See NATIVE-COMPANION-PROCESS-EVIDENCE.md for actual coverage and limitations.
+
+## D-108: Retain unsettled ownership and verify native companion disk receipts
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: owner original-companion/autonomous development, R059 / Slice049. Bounded
+internal generated prerequisite, no owner media/queue/archive/full-film encode/action,
+writer packaging/signing retry/listening/merge/release. Consequence local_only now,
+future user_data for original archival. Preserve source/current journal/prior outputs.
+
+Need/product contract: actual native writer execution is insufficient to admit claimed
+component/source hashes. Reread source and exclusive stage files independently, retain
+all file descriptors through final observations, and refuse cancellation or mutations.
+An unsettled phase is never permission for transaction cleanup. The future owner must
+review mode/storage/privacy; no archive UI or native original-semantic claim follows.
+
+Choice delegated to AI. Alternatives: trust parsed writer receipts; expose archive UI;
+or qualify native descriptor-relative disk settlement plus transaction ownership refusal.
+Select the last. Original metadata/configuration/index semantic validation is larger and
+remains separate; hashes alone do not establish it. Reuse D106 fixed component bounds
+and D105 publication; do not duplicate a publisher or use Python as native writer bridge.
+
+Scope: shared internal unsettled-ownership error marker, native process conformance,
+transaction retained-stage refusal before discard for that marker; worker-owned native
+source/stage/component descriptors, strict membership/mode/single-link bounds, independent
+chunked SHA256 and exact source/full-container bytes when selected, before/after identity
+observations, cancellation and source/retention receipt matching. No file writes/deletion,
+semantic receipt fabrication, immutable snapshot/stable import/persisted binding claim.
+A generated transaction integration uses actual native writer and disk check, then the
+existing independent Python checker only as an explicit test semantic phase; that is
+not native original semantic integration or an application runtime dependency.
+
+Acceptance: both actual native producer modes independently match disk/source and exact
+whole-container bytes; forged source/member/retention receipts, unsafe/extra/missing/link/
+permissions, source/stage/component mutation and cancellation refuse after readers settle.
+Unsettled marker retains stage even with pending generated worker; ordinary settled errors
+still allow owned cleanup. Actual generated writer/disk/test-only independent semantic/
+native exclusive publication preserves source/prior results. Native original semantic,
+lease/resource/signature/import/storage/crash/decoded gates remain next. Existing D090
+investigation stays completed; no blind rerun/historical observer/assertion change.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+D-108 focused outcome: native actual writer/disk checks plus independent test-only
+original semantic oracle reach exclusive publication in both generated modes. Nineteen
+focused tests in two suites passed4.569s. Source/component reread hashes and exact whole-
+container bytes agree, including a later-chunk corruption refusal despite a matching
+forged component hash. Forged receipts, unsafe membership/link/mode/bytes and final
+source/component/stage mutations refuse. Read/late/pre-cancellation refuses after worker
+unwind. Explicit descriptor lifetime covers final settlement. Unsettled producer/verifier
+errors and a pending generated worker retain stage for review; ordinary settled cleanup
+remains. No forced OS signal-denial or native original-semantic claim. Baseline364tests
+passed204.365s before explicit lifetime and multichunk qualification; final regression
+and optimized build settlement follow. Native original semantic admission, release fixed
+capability/packaging/lease/resource/signing/import/storage/decoded gates remain.
+See NATIVE-COMPANION-DISK-EVIDENCE.md for actual scope and limitations.
+
+D-108 final ordinary regression:365tests/82suites passed205.194s after descriptor lifetime and multichunk qualification. No product assertion/deadline or ordinary scheduling change.
+
+Final optimized development build and strict ad-hoc app/read-only helper signatures passed.
+Actual minimum declarations remain14.0/11.0; default bundle excludes writer. No hardened
+DeveloperID/notarization/older-OS runtime qualification. Source metadata/current recovery
+bytes unchanged. Ten changed/nonignored-untracked public files scanned for three exact
+private source path/name/stem patterns: zero matches with a positive private sentinel;
+private media/receipts/ignored binaries excluded. Scoped absence, not certification.
+Planning audit findings empty. No native UI change or owner session/queue execution.

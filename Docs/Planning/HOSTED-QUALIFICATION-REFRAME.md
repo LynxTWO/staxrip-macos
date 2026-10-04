@@ -112,3 +112,12 @@ failed the existing Fresh analysis cancellation assertion: 5.300514 s against fi
 All 331 tests finished in 436.882 s with one issue; preview packaging was skipped.
 New result-set tests passed. Private log retained; no retry, new timing observer,
 assertion/deadline change or causal repair follows.
+
+
+PR 75 head 6c91cf4 automatic app run
+[37184199252](https://github.com/LynxTWO/staxrip-macos/actions/runs/37184199252)
+failed the unchanged AV1 matrix: 140.150 s against the 120 s deadline. All 331 tests
+finished in 519.513 s with one issue; preview packaging was skipped. Reader run
+37184199242 passed in 1m37s. The private failure log is retained. No retry, new timing
+observer, deadline/assertion relaxation or causal claim follows; local producer
+qualification stays separate from automatic app acceptance.

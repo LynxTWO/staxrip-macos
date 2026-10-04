@@ -162,3 +162,52 @@ checks. ORIGINAL-COMPANION-PRODUCER-EVIDENCE.md states metadata-only losses and 
 container retention costs. Native source identity/cancellation/review, semantic reread,
 result publication/import integration and signed distribution remain open. No native
 archive choice or dynamic-HDR conversion is admitted by this library prerequisite.
+
+
+## D-101: Independently validate original companion components against source
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: original archival request, standing autonomous delegation and R-059 /
+Slice 049. Generated development fixtures only, no owner archive/encode/queue, native
+choice/importer, stable public format, listening, signing retry, merge or release.
+Choice delegated to AI. Historical timing investigation remains completed and parked.
+
+Need: producer hashes cannot establish that a manifest, raw TrackEntry/configuration,
+RPU archive and packet index describe the same source. Build a standalone development
+validator that safely opens an exact prototype component set, checks actual size/hash,
+locates the selected original TrackEntry independently, and compares a fresh fixed
+reader audit with the stored ordered source audit/index/RPU bytes. Preserve duplicates
+and signed PTS; no uniqueness or one-RPU-per-frame assumption.
+
+Bind original regular-file path/descriptor/content identity at before/after boundaries;
+recheck package identities after semantic verification. Do not advertise an immutable
+snapshot or protection from adversarial same-user writers. Full container bytes must
+match the original content identity. Keep manifest pathname/decoded flags unchanged;
+a separate verification result records its narrower observed identity binding.
+
+Acceptance: both retention modes, actual generated packages, component corruption and
+self-consistent forged manifest/index/configuration/track/count/flags/timing refusals;
+unsafe paths/links/special entries, source replacement/mutation and failed/incomplete/
+bounded helper settlement refuse. Source and prior outputs stay unchanged. A new
+120-second generated-development helper bound and owned process cleanup are limited
+to this semantic validator, not a historical cancellation observer or relaxed deadline.
+No native admission follows; original BL/EL reconstruction, decoded mapping, storage
+review, stable importer and D-099 publication integration remain later prerequisites.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04; bounded generated development prerequisite only.
+
+
+D-101 outcome: final generated companion suite passed 17 checks in 2.025 s without
+resource warnings; 24 Rust tests, format and Clippy plus 15 existing decoder-reference
+checks passed. Ordinary app regression passed 331 tests/78 suites in 202.422 s.
+Optimized build and strict ad-hoc app/helper signatures passed; actual minimum
+macOS declarations remain 14.0/11.0, not older-OS execution qualification. Independent
+configuration location, fresh source audit, exact duplicate-preserving encoded RPU
+relationships and observed source/package identity checks are qualified in generated
+scope. ORIGINAL-COMPANION-VALIDATION-EVIDENCE.md retains limits and cleanup repair.
+Source/current recovery unchanged; scoped privacy scan has zero owner identifier hits.
+No owner archive, native command/protocol/UI admission, listening, dependency bundling,
+signing retry, merge or release. PR 75 automatic AV1 deadline failure retained.
+Native producer ownership/cancellation, semantic settlement and D-099 publication
+integration remain the next prerequisites; prototype import/reconstruction is open.

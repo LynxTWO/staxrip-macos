@@ -358,3 +358,15 @@ RPU observations and actual disk members. Signed encoded order and exact full in
 consumption are required. Narrower APIs retain their prior scope. Native source-audit
 semantics and RPU metadata/geometry remain open; full semantic flags stay false, no D105
 publication or archive action. NATIVE-ORIGINAL-INDEX-EVIDENCE.md records limits/evidence.
+
+
+D-112 adds unused CompanionOriginalAuditCheck on D108's pinned read worker. It reads
+original declared Video/default-duration fields, receives actual source Info/Segment
+facts at the first cluster and matches exact stored begin/packet/RPU-association/
+complete rows alongside D111 index consumption during one D110 source walk. Fixed
+source-audit.jsonl is streamed with typed audit-only nulls; index/manifest grammar
+remains narrower and D106 writer pipe protocol unchanged. Full semantics remain false:
+compact summary fields are shape-checked but not independently decoded. Native source
+geometry means container declarations, not decoded parameter sets or edited-picture
+statistics. No full transaction publication/action/release writer capability is added.
+See NATIVE-ORIGINAL-AUDIT-EVIDENCE.md for actual checks and limits.

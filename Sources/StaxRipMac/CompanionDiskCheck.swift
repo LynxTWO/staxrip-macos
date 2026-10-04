@@ -12,6 +12,7 @@ enum CompanionDiskCheck {
         let originalTrack: CompanionOriginalTrackCheck.Receipt?
         let originalPackets: CompanionOriginalPacketCheck.Receipt?
         let originalIndex: CompanionOriginalIndexCheck.Receipt?
+        let originalAudit: CompanionOriginalAuditCheck.Receipt?
         let originalMetadataSemanticsVerified = false
     }
     struct Boundary: Sendable {
@@ -31,19 +32,23 @@ enum CompanionDiskCheck {
     private static func failure() -> NativeExportError { .invalid("Companion disk verification refused. No successful integrity receipt.") }
     /// Integrity only. Original track/configuration/packet/RPU semantics are not inferred.
     static func verify(source: URL, stage: URL, contents: Transaction.Contents) async throws -> Receipt {
-        try await settle(source: source, stage: stage, contents: contents, originalTrack: false, originalPackets: false, originalIndex: false)
+        try await settle(source: source, stage: stage, contents: contents, originalTrack: false, originalPackets: false, originalIndex: false, originalAudit: false)
     }
     /// Partial native semantic prerequisite, never full original-components admission.
     static func verifyOriginalTrack(source: URL, stage: URL, contents: Transaction.Contents) async throws -> Receipt {
-        try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: false, originalIndex: false)
+        try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: false, originalIndex: false, originalAudit: false)
     }
     /// Source packet/raw-RPU prerequisite only; index/audit/manifest semantics remain false.
     static func verifyOriginalPackets(source: URL, stage: URL, contents: Transaction.Contents) async throws -> Receipt {
-        try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: true, originalIndex: false)
+        try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: true, originalIndex: false, originalAudit: false)
     }
     /// Persisted original index/manifest prerequisite; audit/metadata semantics remain false.
     static func verifyOriginalIndexAndManifest(source: URL, stage: URL, contents: Transaction.Contents) async throws -> Receipt {
-        try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: true, originalIndex: true)
+        try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: true, originalIndex: true, originalAudit: false)
+    }
+    /// Stored audit framing/source facts; compact metadata truth remains unverified.
+    static func verifyOriginalAudit(source: URL, stage: URL, contents: Transaction.Contents) async throws -> Receipt {
+        try await settle(source: source, stage: stage, contents: contents, originalTrack: true, originalPackets: true, originalIndex: true, originalAudit: true)
     }
     struct ReadView {
         let sourceBytes: Int64
@@ -53,7 +58,7 @@ enum CompanionDiskCheck {
         var componentBytes: (String) throws -> Int64 = { _ in throw failure() }
         var componentRead: (String, Int64, Int) throws -> Data = { _, _, _ in throw failure() }
     }
-    private static func settle(source: URL, stage: URL, contents: Transaction.Contents, originalTrack: Bool, originalPackets: Bool, originalIndex: Bool) async throws -> Receipt {
+    private static func settle(source: URL, stage: URL, contents: Transaction.Contents, originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool) async throws -> Receipt {
         try Task.checkCancellation()
         let cancelled = Cancellation()
         #if DEBUG
@@ -65,7 +70,7 @@ enum CompanionDiskCheck {
             try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue(label: "StaxRip.companion-disk-check", qos: .userInitiated).async {
                     continuation.resume(with: Result {
-                        try check(source: source, stage: stage, contents: contents, originalTrack: originalTrack, originalPackets: originalPackets, originalIndex: originalIndex, cancelled: cancelled, boundary: boundary)
+                        try check(source: source, stage: stage, contents: contents, originalTrack: originalTrack, originalPackets: originalPackets, originalIndex: originalIndex, originalAudit: originalAudit, cancelled: cancelled, boundary: boundary)
                     })
                 }
             }
@@ -73,7 +78,7 @@ enum CompanionDiskCheck {
         try Task.checkCancellation(); return result
     }
     private static func check(source url: URL, stage urlStage: URL, contents: Transaction.Contents,
-                              originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, cancelled: Cancellation, boundary: Boundary) throws -> Receipt {
+                              originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool, cancelled: Cancellation, boundary: Boundary) throws -> Receipt {
         try cancelled.check()
         let source = try File(url: url, maximum: 1 << 40), directory = try Directory(urlStage)
         let limits = contents.retention.limits, expected = Set(limits.keys)
@@ -108,6 +113,7 @@ enum CompanionDiskCheck {
         let track: CompanionOriginalTrackCheck.Receipt?
         let packets: CompanionOriginalPacketCheck.Receipt?
         let index: CompanionOriginalIndexCheck.Receipt?
+        let audit: CompanionOriginalAuditCheck.Receipt?
         if originalTrack {
             let view = ReadView(sourceBytes: source.bytes, source: { offset, count in
                 guard offset >= 0, count >= 0, count <= 1 << 20, offset <= source.bytes,
@@ -122,10 +128,10 @@ enum CompanionDiskCheck {
                       let file = opened[name], file.bytes <= 1 << 20 else { throw failure() }
                 return try file.read(offset: 0, count: Int(file.bytes), cancelled: cancelled)
             }, checkpoint: { try cancelled.check() }, componentBytes: { name in
-                guard ["original-rpu.bin", "rpu-index.jsonl", "manifest.json"].contains(name), let file = opened[name] else { throw failure() }
+                guard ["original-rpu.bin", "rpu-index.jsonl", "manifest.json", "source-audit.jsonl"].contains(name), let file = opened[name] else { throw failure() }
                 return file.bytes
             }, componentRead: { name, offset, count in
-                guard ["original-rpu.bin", "rpu-index.jsonl", "manifest.json"].contains(name), let file = opened[name], offset >= 0,
+                guard ["original-rpu.bin", "rpu-index.jsonl", "manifest.json", "source-audit.jsonl"].contains(name), let file = opened[name], offset >= 0,
                       count >= 0, count <= 1 << 20, offset <= file.bytes,
                       Int64(count) <= file.bytes - offset else { throw failure() }
                 let data = try file.read(offset: offset, count: count, cancelled: cancelled)
@@ -136,17 +142,21 @@ enum CompanionDiskCheck {
             })
             let selected = try CompanionOriginalTrackCheck.read(view)
             track = selected
-            if originalIndex {
+            if originalAudit {
+                let checked = try CompanionOriginalAuditCheck.read(view, track: selected, contents: contents)
+                audit = checked; index = checked.index; packets = checked.index.packets
+            } else if originalIndex {
+                audit = nil
                 let checked = try CompanionOriginalIndexCheck.read(view, track: selected, contents: contents)
                 index = checked; packets = checked.packets
             } else if originalPackets {
-                index = nil
+                audit = nil; index = nil
                 let result = try CompanionOriginalPacketCheck.read(view, track: selected)
                 guard result.packets == contents.packets, result.records == contents.records,
                       result.enhancementNALs == contents.enhancementNALs else { throw failure() }
                 packets = result
-            } else { packets = nil; index = nil }
-        } else { track = nil; packets = nil; index = nil }
+            } else { packets = nil; index = nil; audit = nil }
+        } else { track = nil; packets = nil; index = nil; audit = nil }
         #if DEBUG
         boundary.beforeFinal()
         #endif
@@ -154,7 +164,7 @@ enum CompanionDiskCheck {
         guard try directory.names() == expected else { throw failure() }
         for (name, file) in opened { try cancelled.check(); try file.check(name: name, directory: directory.fd) }
         try cancelled.check()
-        return .init(contents: contents, fullContainerMatchesOriginalBytes: contents.retention == .entireContainer, originalTrack: track, originalPackets: packets, originalIndex: index)
+        return .init(contents: contents, fullContainerMatchesOriginalBytes: contents.retention == .entireContainer, originalTrack: track, originalPackets: packets, originalIndex: index, originalAudit: audit)
     }
     private static func same(_ a: stat, _ b: stat) -> Bool {
         Transaction.FileID(a) == Transaction.FileID(b) && a.st_mode == b.st_mode && a.st_uid == b.st_uid &&

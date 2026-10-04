@@ -31,8 +31,9 @@ enum CompanionOriginalPacketCheck {
     }
     private static func refused() -> NativeExportError { .invalid("Original packet/raw-RPU verification refused. No complete semantic receipt.") }
     static func read(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt,
+                     begin: @escaping (UInt64, Bool) throws -> Void = { _, _ in },
                      observe: @escaping (Observation) throws -> Void = { _ in }) throws -> Receipt {
-        let scan = Scanner(view, track, observe)
+        let scan = Scanner(view, track, observe, begin)
         return try scan.read()
     }
     /// Exact integer arithmetic, including Int64.min and cluster timestamps above
@@ -57,10 +58,11 @@ enum CompanionOriginalPacketCheck {
     private final class Scanner {
         let view: CompanionDiskCheck.ReadView, track: Track.Receipt, walker: Track.Walker
         let observe: (Observation) throws -> Void
+        let begin: (UInt64, Bool) throws -> Void
         var packets: Int64 = 0, records: Int64 = 0, enhancement: Int64 = 0, archive: Int64 = 0
         var blocks = 0, peak = 0, sequence = SHA256()
-        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void) {
-            self.view = view; self.track = track; self.observe = observe
+        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void) {
+            self.view = view; self.track = track; self.observe = observe; self.begin = begin
             walker = Track.Walker(view, elementLimit: 128_000_000)
         }
         func children(_ e: Element, _ body: (Element) throws -> Void) throws {
@@ -116,7 +118,8 @@ enum CompanionOriginalPacketCheck {
                           try Track.configuration(fresh.configuration, checkpoint: view.checkpoint) == track.nalLengthBytes else { throw refused() }
                     try timing(fresh); selected = true
                 case 0x1f43b675:
-                    guard selected, let scale else { throw refused() }; began = true
+                    guard selected, let scale else { throw refused() }
+                    if !began { try begin(scale, segment.unknown) }; began = true
                     try cluster(e, scale: scale)
                 case 0x1a45dfa3, 0x18538067, 0xa3, 0xa1, 0xa0: throw refused()
                 default: break

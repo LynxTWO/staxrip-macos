@@ -786,3 +786,73 @@ private source-field sentinel. Private owner media/logs/receipts/ignored binarie
 excluded; scoped absence only. Planning findings empty. No native UI/action or owner
 session/queue execution. PR85 automatic two unchanged AV1/ten-bit timing failures
 retained without retry; causes remain unknown.
+
+
+## D-112: Match stored source-audit framing to independent native source facts
+
+Status: Confirmed
+
+Need/product contract: hash-correct source-audit rows can still contradict original
+geometry, timing, packet flags, encoded RPU order or completion claims. Independently
+reconstruct these facts on the existing pinned native disk worker, consuming the
+fixed stored audit in source order alongside index validation.
+
+Alternatives: trust producer summaries, integrate metadata decoding and every archive
+gate at once, or admit actual audit framing/source relationships first. Select the
+last bounded prerequisite; no generic receipt wrapper or Python runtime bridge.
+
+Scope: original declared pixel/crop/display/default-duration values, actual Info
+scale/Segment size mode, exact version-three begin/packet/RPU/complete schema and
+source associations, typed nullable audit fields, bounded fixed streaming rows and
+compact-summary shape checks. Nullable grammar is audit-only; index/manifest retain
+previous refusals. Existing narrower APIs remain narrower. Compact metadata values
+are NOT independently decoded or verified; full semantic flags remain false and the
+matching partial result must still refuse D105 publication. Declared geometry is
+not decoded parameter-set geometry or an edited-picture conversion qualification.
+
+Acceptance: actual generated native writer both modes matches the independent
+original test oracle. Rehashed audit substitutions pass index/manifest integrity
+but refuse native source audit comparison; signed duplicate/nonmonotonic order,
+null/boolean/integer distinctions, missing/extra/reordered/unfinished rows and
+source geometry boundaries are checked. Actual audit-read cancellation and late
+mutation refuse after worker unwind. A plausible substituted compact summary must
+remain explicitly unqualified, not turn full flags true. Ordinary regression,
+optimized development build, protection/privacy/planning checks required. No D090
+retry or deadline/assertion/scheduling change, native archive UI, owner queue or
+private full-film operation.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+
+D-112 focused outcome:52tests in5suites passed12.602s; new audit suite3.011s.
+Actual native writer both modes and independent test-only oracle pass0.780s;
+actual generated signed Int64.min/max audit sources with unknown-size Segment,
+nonzero crop/display and UInt64.max default duration pass0.450s. Matching partial
+D105 transaction refuses0.213s. Repaired audit forgeries pass index/manifest source
+admission then fail audit-source comparison. Geometry bounds/duplicates/overflow,
+nullable type grammar, bounded fixed audit chunks/LF, active audit-read cancellation
+and final source/stage/audit mutation refuse after reader unwind. A plausible changed
+compact summary intentionally remains shape-only/unverified; full semantic flags false.
+Final ordinary regression and optimized development bundle settlement follows.
+
+
+D-112 final ordinary regression:409tests in86suites passed206.948s. Native audit
+suite11.006s passed in that ordinary run. Focused52tests/5suites12.602s receipt retained;
+54 repaired audit-forgery cases and25 malformed geometry cases checked. No new compile
+warnings in final focus/regression and no legacy assertion/deadline/scheduling change.
+PR86 automatic all399 tests471.151s and preview passed without retry; prior hosted
+unknown-cause failures retained. Full metadata semantics/publication remain unavailable.
+
+
+Final optimized development build and strict ad-hoc app/read-only helper signatures
+passed; minimum declarations14.0/11.0 and development writer absent. No DeveloperID,
+notarization or older-OS runtime qualification. No native UI/action, owner session/
+queue/archive/encode or listening operation. Owner source metadata/current journal
+unchanged. Eleven changed public/nonignored-untracked files scanned against three
+exact private source path/name/stem patterns: zero matches with positive decoded
+private source-field sentinel; private media/logs/receipts/ignored binaries excluded.
+Planning findings empty. Next: qualify an actual fixed trusted owned native metadata
+reader/library and compare fresh compact RPU metadata to stored summaries before
+complete semantic transaction admission. Existing ToolRunner drains/joins direct
+child and readers but does not qualify group/descendant ownership for this archive
+bridge; do not treat a test oracle or current summaries as native metadata proof.

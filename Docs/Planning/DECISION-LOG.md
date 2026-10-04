@@ -117,6 +117,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-106 | 2026-10-04 | Admit companion writer protocol natively before process integration | Confirmed | |
 | D-107 | 2026-10-04 | Own actual native companion writer process and pipes | Confirmed | |
 | D-108 | 2026-10-04 | Retain unsettled ownership and verify native companion disk receipts | Confirmed | |
+| D-109 | 2026-10-04 | Independently admit original track and HEVC configuration natively | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -2217,3 +2218,68 @@ bytes unchanged. Ten changed/nonignored-untracked public files scanned for three
 private source path/name/stem patterns: zero matches with a positive private sentinel;
 private media/receipts/ignored binaries excluded. Scoped absence, not certification.
 Planning audit findings empty. No native UI change or owner session/queue execution.
+
+## D-109: Independently admit original track and HEVC configuration natively
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: standing owner original-companion/autonomous development, R059 / Slice049.
+Bounded unused native original-track semantic prerequisite on generated fixtures only.
+No owner media/queue/full-film archive/encode, app action, writer packaging, signing retry,
+listening, merge or release. Consequence local_only now, future user_data. Source/session/
+current journal/prior outputs protected. Choice delegated to AI recommendation.
+
+Need/product contract: matching producer/component hashes do not prove that retained
+TrackEntry/hvcC came from the selected original video stream. Independently locate that
+track in bounded original EBML bytes and compare exact original payload/configuration.
+The native result is partial; it cannot assert originalComponentsMatchSource or admit a
+transaction until RPU/index/audit relationships are independently checked natively.
+
+Alternatives: trust component hashes, port every original semantic/process surface at
+once, or qualify an independent native original track/configuration reader with existing
+native disk settlement first. Select the last to isolate real source parsing/refusal,
+not another generic receipt wrapper. No executable/Python runtime bridge is introduced.
+
+Scope: D108 read worker retains its source/stage/component descriptors through final
+settlement and gives a synchronous read-only bounded capability to a native EBML walker.
+Bounded finite EBML IDs/sizes/children, unknown size only for Segment, single Tracks and
+single selected HEVC video, unique critical fields/track numbers, bounded exact TrackEntry/
+hvcC bytes, native structural hvcC NAL-array validation and selected-track receipts.
+No packet/NAL/RPU temporal association, metadata interpretation, stable manifest/import,
+persisted producer binding or immutable snapshot. Existing disk API remains integrity-only;
+new entry explicitly returns a partial original-track result and no full semantic claim.
+
+Acceptance: actual generated Rust writer both modes matches independent native selection
+and exact original TrackEntry/hvcC, with independent Python original checker retained as
+explicit test oracle. Rehashed substituted track/configuration refuses despite valid disk
+receipts. EBML parent overflow/truncation/unknown child, duplicate critical fields/Tracks/
+video/track number, unsupported selected codec and malformed hvcC arrays/NAL headers refuse.
+Native cancellation/source/stage/component mutation refuses after owned read worker unwind;
+no stage writes/deletion/publication. Descriptor and final observations retain D108 contract.
+Full native original RPU/index/audit semantic admission and D105 integration remain next.
+No D090 rerun/historical observer/assertion/deadline/scheduling workaround.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+D-109 focused outcome: thirty tests in three suites passed4.439s after empty-array
+compatibility qualification. Actual native writer both modes matches independently
+located original TrackEntry/hvcC and independent test-only Python original checker.
+Rehashed substituted components pass integrity-only checks but refuse original matching;
+a matching partial result cannot admit D105 full semantics. Actual native read cancellation
+and final source/stage/component changes refuse after owned reader unwind. EBML ambiguity/
+framing/count/payload and hvcC framing/header/array faults refuse; empty type62 arrays and
+all1...4 NAL length widths match existing reader semantics. No full native RPU/index/audit/
+manifest or decoded claim. Earlier375tests/83suites passed206.025s before empty-array
+compatibility change; final regression/build/protection settlement follows. See
+NATIVE-ORIGINAL-TRACK-EVIDENCE.md.
+
+D-109 final ordinary regression:376tests/83suites passed204.602s after empty-array compatibility qualification. Earlier375-test baseline206.025s is retained separately, not reused as final acceptance. Final thirty-test focused compile had no new warnings; existing older async-main-thread/optional-Bool macro warnings were observed separately. No legacy assertion/deadline/default scheduling change.
+
+Final optimized development build and strict ad-hoc app/read-only helper signatures passed.
+Minimum declarations remain14.0/11.0, writer absent; no hardened DeveloperID/notarization/
+older-OS runtime qualification. Actual both-mode native original track case0.674s and
+partial transaction refusal0.182s passed. Source metadata/current recovery bytes unchanged.
+Eight changed public/nonignored-untracked files scanned for three exact private source
+path/name/stem patterns: zero matches with positive private sentinel; private media/logs/
+receipts/ignored binaries excluded. Scoped absence, not certification. Planning findings
+empty. No native UI action or owner session/queue execution.

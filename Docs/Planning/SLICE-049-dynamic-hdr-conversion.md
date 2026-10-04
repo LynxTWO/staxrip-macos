@@ -84,7 +84,7 @@ remain separate gates.
 D-097 qualifies a compatible development dependency before native decoded-frame
 integration. The first private dependency inherited a macOS 27 minimum; the rebuilt
 candidate and development reference explicitly target macOS 14. Generated and
-relocated development checks pass. Complete compatible source association is running;
+relocated development checks pass. Complete compatible source association passed;
 Developer ID hardened loading and native resource/ownership integration stay open.
 MINIMAL-DECODER-RUNTIME-EVIDENCE.md records the bounded effect and failures. No native
 conversion, edit or new dependency is admitted by these observations.
@@ -116,3 +116,13 @@ Preserve original metadata and matching original BL/EL independently of all tran
 results. Decoder conformance cropping, crop-only blanking removal, active-picture crop,
 down/upscale, padding, subtitle overlays and variable-aspect sequences need separate
 generated/output/reference tests before a native edited-Dolby choice is enabled.
+
+
+D-098 implements only an internal geometry proposal seam. Explicit coded/codec/
+container/decoder bases, composite crop, rational scale/padding and sample shape are
+validated. Integer proposals refuse fractional edges; clipping/resizing facts do not
+qualify original analysis values. Generated actual luma-grid and ordinary app checks
+are required. Per-picture association, physical color/chroma/brightness, general
+rounding/resampling and metadata authoring still precede any native edited admission.
+See DOLBY-EDIT-GEOMETRY-EVIDENCE.md. Source/session/queue and parked listening remain
+protected; no conversion/archive or signed-distribution qualification is inferred.

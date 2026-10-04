@@ -378,7 +378,7 @@ D-097 requires explicit macOS 14 compile/link declarations and actual Mach-O ins
 for the development executable and candidate libraries. Generated relocation validates
 loader paths and runtime identities separately from hardened signed loading. No
 whole-process memory guarantee is inferred from per-allocation bounds or resource
-observations. Complete compatible source association remains pending; dependency/native
+observations. Complete compatible source association passed; dependency/native
 distribution is not admitted. See MINIMAL-DECODER-RUNTIME-EVIDENCE.md.
 
 D-096 adds the unbundled development Tools/DolbyFrameReference. An installed-FFmpeg
@@ -389,3 +389,12 @@ and final source rehash; no native execution/admission or new dependency is bund
 DECODED-DOLBY-ASSOCIATION-EVIDENCE.md retains the generated and private outcome.
 Codec conformance/container/user/Dolby active-area transforms stay separate; original
 EL pairing, general POC, picture statistics, rendering and edited conversion stay open.
+
+
+D-098 adds a bounded pure geometry prerequisite under R-059. Input coordinate origins,
+orientation/progressive sampling, actual decoder raster, sample aspect and output
+raster are explicit and validated. Coded/container declarations and decoder-applied
+windows do not silently become duplicate pixel crops. Preserve rational edges and
+refuse integer proposals without qualified rounding. Clipping/resizing facts do not
+certify brightness. Generated actual pixel and ordinary regression/build gates are
+recorded in DOLBY-EDIT-GEOMETRY-EVIDENCE.md; no edited export or metadata write follows.

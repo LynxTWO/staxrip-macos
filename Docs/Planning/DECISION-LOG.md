@@ -106,6 +106,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-095 | 2026-10-03 | Native read-only complete Dolby metadata inspection | Confirmed | |
 | D-096 | 2026-10-03 | Bounded decoded base-picture packet association | Confirmed | |
 | D-097 | 2026-10-04 | Qualify minimal decoder runtime before native integration | Confirmed | |
+| D-098 | 2026-10-04 | Explicit Dolby edit coordinate proposals | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1578,3 +1579,55 @@ loading remains open. The successful ordinary ad-hoc stage has no production adm
 The compatible complete source check is running, not passed. Evidence and retained
 failures are in MINIMAL-DECODER-RUNTIME-EVIDENCE.md. No owner/native workspace mutation,
 merge or release.
+
+
+## D-098: Explicit Dolby edit coordinate proposals
+Date: 2026-10-04
+Status: Confirmed
+
+Authority: standing autonomous implementation delegation, explicit crop/resize
+request and R-059 / Slice 049. While D-097's compatible complete-source check runs,
+build an independent internal geometry prerequisite. It neither invokes the decoder
+nor enables edited Dolby exports or writes metadata. Original preservation and native
+refusal remain unchanged; no owner queue/media/session edit, audio listening, timing
+investigation, signing retry, merge or release.
+
+Need: coded raster, decoder-applied codec windows, container crop and user crop have
+different origins. A metadata region must declare its coordinate basis and intersect
+with the composite picture crop before rational scaling/padding. No guessed basis,
+double cropping, silently rounded fractional edges or area-ratio brightness correction.
+
+Implement a bounded pure geometry proposal with explicit decoder raster/basis,
+conformance/container/user windows, actual output raster/padding and sample aspect.
+Reject malformed/empty/out-of-bounds geometry, unsupported chroma-grid crop and
+unresolved bases. Keep odd metadata offsets valid independently of pixel cropping.
+Retain rational mapped edges; integer proposals require integral edges. No proposal
+claims brightness, kernel/chroma-phase, artistic trim, timeline or rendering validity.
+
+Acceptance: analytical coordinate cases and failure mutations; an actual generated
+raw-picture crop/nearest-scale check binds output pixels to the proposed region.
+Default app regression and build remain required for internal Swift changes. No UI
+change requires a new owner-source walkthrough. Every-frame/shot binding, physical
+color/statistics, general resampling/rounding and metadata authoring remain later gates.
+
+
+D-097 complete-source outcome: the explicit macOS 14 minimal build passed all 120,552
+packet/base-picture/raw-RPU associations through successful producer exits and final
+source fingerprint. Result/geometry/spool match D-096's complete reference outcome;
+source descriptor/current recovery bytes stayed unchanged. Complete pipeline took
+2,059.908 s with a 24,592,384-byte owned spool, removed on settlement. Timed command
+maximum RSS 283,443,200 bytes and peak footprint 26,968,520 bytes are observations,
+not a combined process-memory ceiling. Executable/checker identities match receipts.
+MINIMAL-DECODER-RUNTIME-EVIDENCE.md closes this source-association prerequisite only;
+hardened signed loading, resource/native ownership, sample/rendering fidelity and
+production distribution remain open. Interrupted/signing failures remain retained.
+
+
+D-098 outcome: eight geometry tests, including actual generated luma crop/nearest-
+scale/padding sample agreement, passed. Final ordinary regression passed 319 tests/
+77 suites in 217.521 s after a small refinement reporting declared-region clipping
+and requested raster resizing separately. Optimized development build and outer/app-
+helper signature checks passed; no FFmpeg dependency was bundled or native control/
+session/queue behavior changed. DOLBY-EDIT-GEOMETRY-EVIDENCE.md records validated origins,
+fractional-edge refusal and unresolved physical/timeline/metadata-writing gates.
+No edited-Dolby admission, owner encode, audio listening, merge or release follows.

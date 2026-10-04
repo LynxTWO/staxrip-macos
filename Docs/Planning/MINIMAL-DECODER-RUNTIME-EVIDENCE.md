@@ -1,7 +1,7 @@
 # Minimal decoder runtime prerequisite
 Version: 0.1. Date: 2026-10-04. Scope: D-097 / R-059 / Slice 049.
-Status: macOS 14 deployment declarations and development relocation qualified;
-complete compatible-build source check running; hardened signing/native admission open.
+Status: macOS 14 deployment declarations, development relocation and complete
+compatible-build source association qualified; hardened signing/native admission open.
 
 ## Need and effect
 
@@ -87,13 +87,21 @@ license remain distribution obligations. This is preparation, not a blanket comp
 claim. See [FFmpeg's build/license guidance](https://ffmpeg.org/legal.html) and
 [Apple's code-signing guidance](https://developer.apple.com/library/archive/technotes/tn2206/_index.html).
 
-The complete source check on the compatible build is still running with D-096's
-unchanged four-thread configuration, association contract, source checks and bounds.
-It has no accepted result until both producers exit successfully and the final
-source fingerprint agrees. Timed resource results are observations, not enforced
-whole-process memory guarantees or combined simultaneous process-footprint bounds.
+The compatible four-thread complete-source check passed all 120,552 packet/base-frame/
+raw-RPU associations, with both producers completing/exiting successfully and final
+source fingerprint agreement. Its result matches the prior D-096 complete result,
+including 3840x2160 yuv420p10le, zero codec crop, square samples and a 24,592,384-byte
+owned spool. The spool was removed on settlement. Complete pipeline time is 2,059.908 s,
+including whole-source hashes/census/decoding; this is not a general performance claim.
+Input executable/checker identities match their private receipts. Source descriptor
+and current recovery bytes remained unchanged; no owner queue/media output was run.
 
-Open gates: completed compatible source association, native process ownership and
+The timed Python command reported maximum RSS 283,443,200 bytes and peak memory
+footprint 26,968,520 bytes. These are different command-accounting observations,
+not a combined simultaneous parent/child footprint, enforced memory ceiling or
+arbitrary-input resource qualification. Native process/resource policy remains open.
+
+Open gates: native process ownership and
 resource policy, hardened signed loading, older-platform execution, actual decoded
 sample/rendering parity, EL pairing/reconstruction, crop/resize brightness/statistics,
 conversion/companion publication and distribution. D-096's completed source association

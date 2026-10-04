@@ -124,7 +124,7 @@ enum CompanionOriginalAuditCheck {
             switch (v,n) { case (.null,nil): break; case (.unsigned(let actual),.some(let expected)) where actual == expected: break; default: throw refused() }
         }
     }
-    private static func summaryShape(_ o: JSON.Object) throws {
+    static func summaryShape(_ o: JSON.Object) throws {
         guard case .object(let s)? = o["summary"], Set(s.keys) == ["mapping_profile","enhancement_type","scene_refresh","active_areas_left_right_top_bottom","cmv29_present","cmv40_present"],
               try number(s,"mapping_profile") <= 10, case .array(let areas)? = s["active_areas_left_right_top_bottom"], areas.count <= 4 else { throw refused() }
         switch s["enhancement_type"] { case .null?: break; case .string(let v)? where ["MEL","FEL"].contains(v): break; default: throw refused() }

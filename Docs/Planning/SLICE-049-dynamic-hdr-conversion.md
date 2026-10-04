@@ -856,3 +856,72 @@ reader/library and compare fresh compact RPU metadata to stored summaries before
 complete semantic transaction admission. Existing ToolRunner drains/joins direct
 child and readers but does not qualify group/descendant ownership for this archive
 bridge; do not treat a test oracle or current summaries as native metadata proof.
+
+
+## D-113: Own fixed native metadata reader execution and bounded stream settlement
+
+Status: Confirmed
+
+Need/product contract: archive metadata comparison needs freshly decoded compact RPU
+metadata from a known owned reader, with no late/partial result or live child/pipe
+left for transaction cleanup. Existing general ToolRunner lacks process-group ownership.
+
+Alternatives: trust stored summaries, use test-only Python as runtime bridge, change
+all ToolRunner users, or qualify a fixed internal read-only native controller. Select
+the last. This is an actual executable/process prerequisite, not generic receipt wrapping.
+
+Scope: development-only explicitly trusted fixed helper digest/observed identity,
+fixed mkv-summary argv/environment, source pin/content observations, one dedicated
+worker owns PID/group/EOF/status, bounded typed exact-schema stdout rows and stderr,
+finite configured deadline and cancellation/group termination/direct-child reaping.
+No arbitrary executable action, stage writes/publication/UI or release capability.
+Full original semantic flags remain false: no package/audit comparison is inferred
+from a fresh stream. Source observations are not immutable snapshots or executable
+signature authentication. Descendants are signalled in the owned group; non-child
+orphans cannot be portably joined, blocked I/O cannot be preempted.
+
+Acceptance: actual generated Rust read-only helper stream yields original counts/hash
+and source unchanged. Strict row schema/order/count/nullable/int bounds and partial,
+malformed/nonzero/stderr overflow/EOF-live-child/pipe-holder outcomes refuse. Actual
+prelaunch/row/late cancellation and post-result path/content changes refuse after
+owned child/pipes settle. Generated native surrogates establish process cases, never
+metadata authenticity. Unsettled signal/join errors retain shared ownership marker.
+Ordinary regression, optimized development bundle/signatures and protection/privacy/
+planning checks required. No D090 rerun/timing/assertion/scheduling changes, owner queue,
+private film read/archive/encode or audio listening.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+
+D-113 focused settlement:25tests in3suites passed4.651s; new metadata process
+suite4.650s. Actual fixed Rust reader/source report0.451s; generated signed Int64
+extremes with unsigned scale/duration0.386s; observed live repeated-cluster reader
+cancellation/direct-child join0.181s;24 repaired protocol refusal cases0.193s. Nine
+native C surrogate process cases cover deadline/silence, EOF-live-child, malformed,
+stderr/row overflow, pipe-holding descendant and complete output from live/nonzero
+process. Prelaunch/row/late cancellation and source/executable mutation refuse.
+
+Initial22-focused3.906s and one-case discriminator0.862s failed the new test's
+CancellationError-only expectation at begin/complete: group SIGKILL returned EPERM
+while direct-child join succeeded. Keep this typed CompanionUnsettledOwnership
+refusal; never translate uncertain group settlement into success or ordinary stage
+cleanup. New test accepts exactly cancellation or observed EPERM/joined marker before
+reap, still requires refusal/direct-child join/source unchanged; late after-join
+cancellation remains ordinary cancellation. This is a new process case/spec correction,
+not D090 deadline/assertion relaxation. Earlier24-focused4.557s passed but retained
+new captured-variable warnings; final fixture uses locked state, no new final warnings.
+Final ordinary regression follows; no package metadata comparison/full flags/UI added.
+
+
+D-113 final ordinary regression:417tests in87suites passed206.698s; native metadata
+process suite13.000s, actual live cancellation0.360s in that run. Focused25tests/
+3suites4.651s retained. No new warnings in final focused/regression logs. Optimized
+development build/strict ad-hoc app/read-only helper signatures passed; minima14.0/
+11.0, writer absent. No DeveloperID/notarization/older-OS runtime qualification.
+Ten changed public/nonignored-untracked files scanned against three exact private
+source path/name/stem patterns: zero matches with positive decoded private source-field
+sentinel; private media/logs/receipts/ignored binaries excluded. Source metadata/current
+journal unchanged; planning findings empty. No native UI/action, owner queue/source
+processing/private film archive/encode/listening, merge or release. Stored audit/fresh
+summary comparison and complete semantic transaction admission remain next; no full
+semantic flags or release reader capability claimed.

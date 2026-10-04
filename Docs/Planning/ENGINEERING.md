@@ -398,3 +398,13 @@ windows do not silently become duplicate pixel crops. Preserve rational edges an
 refuse integer proposals without qualified rounding. Clipping/resizing facts do not
 certify brightness. Generated actual pixel and ordinary regression/build gates are
 recorded in DOLBY-EDIT-GEOMETRY-EVIDENCE.md; no edited export or metadata write follows.
+
+
+D-099 selects a bounded original-companion publication prerequisite under R-059.
+Callers establish semantic media/archive/manifest receipts and settle producers before
+an owned stage streams exact file membership/size/hash verification. Only a same-parent
+exclusive directory rename commits; no fallback or existing-result replacement.
+Generated collision/corruption/link/special/cancel/cleanup/competition checks and default
+app regression/build are required. Cancellation before commit admission refuses;
+admitted publication reports the syscall outcome after descriptors settle. This is
+content verification, not a complete archive or future-carriage qualification.

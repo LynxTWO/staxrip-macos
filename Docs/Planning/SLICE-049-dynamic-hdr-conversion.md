@@ -126,3 +126,21 @@ are required. Per-picture association, physical color/chroma/brightness, general
 rounding/resampling and metadata authoring still precede any native edited admission.
 See DOLBY-EDIT-GEOMETRY-EVIDENCE.md. Source/session/queue and parked listening remain
 protected; no conversion/archive or signed-distribution qualification is inferred.
+
+
+D-099 selects the original-companion publication prerequisite: a private owned result
+stage, exact requested member size/hash checks and one same-parent exclusive directory
+rename. Generated refusal/cancel/cleanup/competition checks plus ordinary regression
+and build qualify the primitive only. Existing flat exports and dynamic-HDR refusal
+remain unchanged. Archive writers, original BL/EL/RPU/configuration/timeline semantics,
+space estimates, result review and signed distribution remain unimplemented gates.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04, limited to
+D-099's generated internal publication prerequisite. No owner archive write or native
+companion execution is authorized by this build checkpoint.
+
+
+D-099's internal publication prerequisite passed focused generated filesystem cases,
+331-test ordinary local regression and optimized development build/signature checks.
+RESULT-SET-PUBLICATION-EVIDENCE.md scopes the observed content/ownership outcomes. No
+archive writer, native choice, HDR semantic admission or production completion follows.

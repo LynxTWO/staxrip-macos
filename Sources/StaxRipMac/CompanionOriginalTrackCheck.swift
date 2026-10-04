@@ -15,8 +15,8 @@ enum CompanionOriginalTrackCheck {
         let originalTrackAndConfigurationMatch = true
         let originalPacketRPUSemanticsVerified = false
     }
-    private struct Element { let id: UInt64, payload: Int64, end: Int64, unknown: Bool }
-    private struct Selected { let number: UInt64, offset: Int64, payload: Data, configuration: Data }
+    struct Element { let id: UInt64, payload: Int64, end: Int64, unknown: Bool }
+    struct Selected { let number: UInt64, offset: Int64, payload: Data, configuration: Data }
     private static func refused() -> NativeExportError { .invalid("Original companion track verification refused. No complete semantic receipt.") }
     static func read(_ view: CompanionDiskCheck.ReadView) throws -> Receipt {
         let walker = Walker(view)
@@ -46,13 +46,15 @@ enum CompanionOriginalTrackCheck {
                      nalLengthBytes: width, payloadSHA256: DolbyInspection.hex(SHA256.hash(data: track.payload)),
                      configurationSHA256: DolbyInspection.hex(SHA256.hash(data: track.configuration)))
     }
-    private final class Walker {
+    final class Walker {
         let view: CompanionDiskCheck.ReadView
         private var elements = 0
-        init(_ view: CompanionDiskCheck.ReadView) { self.view = view }
+        private let elementLimit: Int
+        private(set) var trackNumbers: Set<UInt64> = []
+        init(_ view: CompanionDiskCheck.ReadView, elementLimit: Int = 100_000) { self.view = view; self.elementLimit = elementLimit }
         func element(_ offset: Int64, end: Int64) throws -> Element {
             try view.checkpoint()
-            guard offset >= 0, offset < end, end <= view.sourceBytes, elements < 100_000 else { throw refused() }
+            guard offset >= 0, offset < end, end <= view.sourceBytes, elements < elementLimit else { throw refused() }
             elements += 1
             let bytes = try view.source(offset, Int(min(12, end - offset)))
             func vint(_ at: Int, identifier: Bool) throws -> (UInt64, Int, Bool) {
@@ -112,10 +114,10 @@ enum CompanionOriginalTrackCheck {
                 }
                 cursor = entry.end
             }
-            guard let selected else { throw refused() }; return selected
+            guard let selected else { throw refused() }; trackNumbers = numbers; return selected
         }
     }
-    private static func configuration(_ data: Data, checkpoint: () throws -> Void) throws -> Int {
+    static func configuration(_ data: Data, checkpoint: () throws -> Void) throws -> Int {
         guard data.count >= 23, data[0] == 1 else { throw refused() }
         let width = Int(data[21] & 3) + 1
         var position = 23

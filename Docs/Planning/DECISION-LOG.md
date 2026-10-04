@@ -118,6 +118,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-107 | 2026-10-04 | Own actual native companion writer process and pipes | Confirmed | |
 | D-108 | 2026-10-04 | Retain unsettled ownership and verify native companion disk receipts | Confirmed | |
 | D-109 | 2026-10-04 | Independently admit original track and HEVC configuration natively | Confirmed | |
+| D-110 | 2026-10-04 | Reconstruct original encoded packets and retained raw RPUs natively | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -2283,3 +2284,68 @@ Eight changed public/nonignored-untracked files scanned for three exact private 
 path/name/stem patterns: zero matches with positive private sentinel; private media/logs/
 receipts/ignored binaries excluded. Scoped absence, not certification. Planning findings
 empty. No native UI action or owner session/queue execution.
+
+
+## D-110: Reconstruct original encoded packets and retained raw RPUs natively
+
+Status: Confirmed
+
+Need/product contract: component hashes and partial original track matching do not
+establish original packet order, signed timestamps or exact escaped RPU origin.
+Independently walk original finite clusters and selected HEVC blocks, reconstruct
+packet/NAL observations and compare the retained raw RPU stream byte for byte.
+
+Alternatives: trust producer counts and index, implement every remaining semantic
+surface in one change, or qualify native source packet/raw-RPU reconstruction first.
+Select the last bounded prerequisite. No generic receipt wrapper or Python app bridge.
+
+Scope: reuse native bounded EBML framing under the existing pinned disk worker;
+validate container/header/Info/Tracks/Cluster/Block framing and selected timing
+modifiers, preserve signed and duplicate/nonmonotonic encoded PTS, stream packet
+SHA256 and canonical sequence, walk bounded length-prefixed NALs and compare original
+escaped layer-zero RPU bytes/delimiters with exact fixed raw component membership.
+No RPU metadata decoding, geometry interpretation, stored index/audit/manifest
+admission or decoded-frame association. Full semantic flags stay false. No archive
+action, release writer packaging or transaction publication is introduced.
+
+Acceptance: actual generated Rust writer in both retention modes matches independently
+read native source counts, sequence and packet/RPU observations against the explicit
+test-only independent oracle. Generated signed extremes, block/group duration, track
+selection, NAL widths, malformed framing and changed/rehashed raw bytes refuse or
+match as appropriate. Native read cancellation and final source/component mutations
+refuse after worker unwind; partial results cannot claim full D105 admission. Retain
+D108 fixed descriptor-relative reads and final identity checks. Ordinary tests and
+optimized ad-hoc bundle checks required, no D090 retry or timing changes.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+
+D-110 focused outcome:42tests in4suites passed4.573s after receipt field clarification.
+The earlier focused run passed42tests4.411s and the earlier ordinary baseline passed
+388tests/84suites207.319s before field clarification; those are retained separately.
+Actual native writer both modes and independent test oracle match source packet/RPU
+observations. Rehashed raw forgery and independent count disagreement refuse. Signed
+extremes/duplicates/nonmonotonic order, all NAL widths, BlockGroup duration, other-track
+skipping and >2MiB packet hashing with maximum65536-byte escaped RPU pass. Thirty-nine
+malformed/unsupported source/raw cases refuse. Actual packet-read cancellation and late
+raw-member mutation unwind the read worker before refusal. Matching partial packet/raw
+results cannot admit D105 transaction; rehashed index/manifest remains explicitly
+unqualified and full semantic flags false. Final ordinary/build settlement follows.
+
+
+D-110 final ordinary regression:388tests in84suites passed205.711s after receipt field
+clarification. Earlier207.319s baseline remains separately recorded. Final42focused
+checks passed4.573s; actual both-mode source/oracle case0.718s, partial D105 refusal
+0.196s and actual packet-read cancellation0.196s. No new compile warnings in final
+focused/regression logs. No legacy assertion/deadline/default scheduling change.
+
+
+Final optimized development build and strict ad-hoc app/read-only helper signatures
+passed. Minimum declarations remain14.0/11.0; development writer absent. No hardened
+DeveloperID/notarization or older-OS runtime qualification. Source metadata/current
+recovery bytes unchanged. Nine changed public/nonignored-untracked files scanned for
+three exact private source path/name/stem patterns: zero matches, positive decoded
+private source-field sentinel. Private owner media/logs/receipts/ignored binaries
+excluded; scoped absence only. Planning findings empty. No native UI/action or owner
+session/queue execution. PR84 automatic three timing failures retained without retry;
+HDR10/Fresh-analysis cancellation and AV1 deadline causes remain unknown.

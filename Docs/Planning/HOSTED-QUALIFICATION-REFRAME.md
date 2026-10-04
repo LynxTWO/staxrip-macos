@@ -162,3 +162,6 @@ PR82 automatic reader37195350536 passed1m41s. App [37195350567](https://github.c
 
 
 PR83 automatic app [37197046205](https://github.com/LynxTWO/staxrip-macos/actions/runs/37197046205) failed two unchanged120-second deadlines: AV1 and ten-bit copy matrices. All365tests finished566.630s with two issues; native disk suite passed104.138s, preview packaging skipped. Private failed log retained/PR updated; no retry, historical observer, assertion/deadline or scheduling change. Causes remain unknown.
+
+
+PR84 automatic app [37198728775](https://github.com/LynxTWO/staxrip-macos/actions/runs/37198728775) failed three unchanged timing limits: HDR10 cancellation7.187678s against5s, Fresh analysis cancellation5.760683s against5s, and AV1 copy120-second deadline. All376tests finished508.217s with three issues; native original track suite passed81.103s, preview packaging skipped. Private failed log retained/PR updated; no retry, historical observer, assertion/deadline or scheduling change. Causes remain unknown.

@@ -703,3 +703,45 @@ Eight changed public/nonignored-untracked files scanned for three exact private 
 path/name/stem patterns: zero matches with positive private sentinel; private media/logs/
 receipts/ignored binaries excluded. Scoped absence, not certification. Planning findings
 empty. No native UI action or owner session/queue execution.
+
+
+D-110 active bounded prerequisite: independent native encoded packet and raw-RPU
+source reconstruction under the existing owned read worker. Reuse exact track/hvcC
+matching and bounded EBML framing, stream original packet hashes and preserve signed
+encoded order, then compare escaped raw RPU bytes and archive delimiters. Generated
+fixtures only. Stored index/source-audit/manifest and metadata decoding remain gates;
+full native semantic flags must stay false and no archive UI or publication action
+is enabled. Acceptance and limits are recorded in D-110.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+
+D-110 focused outcome:42tests in4suites passed4.573s after receipt field clarification.
+The earlier focused run passed42tests4.411s and the earlier ordinary baseline passed
+388tests/84suites207.319s before field clarification; those are retained separately.
+Actual native writer both modes and independent test oracle match source packet/RPU
+observations. Rehashed raw forgery and independent count disagreement refuse. Signed
+extremes/duplicates/nonmonotonic order, all NAL widths, BlockGroup duration, other-track
+skipping and >2MiB packet hashing with maximum65536-byte escaped RPU pass. Thirty-nine
+malformed/unsupported source/raw cases refuse. Actual packet-read cancellation and late
+raw-member mutation unwind the read worker before refusal. Matching partial packet/raw
+results cannot admit D105 transaction; rehashed index/manifest remains explicitly
+unqualified and full semantic flags false. Final ordinary/build settlement follows.
+
+
+D-110 final ordinary regression:388tests in84suites passed205.711s after receipt field
+clarification. Earlier207.319s baseline remains separately recorded. Final42focused
+checks passed4.573s; actual both-mode source/oracle case0.718s, partial D105 refusal
+0.196s and actual packet-read cancellation0.196s. No new compile warnings in final
+focused/regression logs. No legacy assertion/deadline/default scheduling change.
+
+
+Final optimized development build and strict ad-hoc app/read-only helper signatures
+passed. Minimum declarations remain14.0/11.0; development writer absent. No hardened
+DeveloperID/notarization or older-OS runtime qualification. Source metadata/current
+recovery bytes unchanged. Nine changed public/nonignored-untracked files scanned for
+three exact private source path/name/stem patterns: zero matches, positive decoded
+private source-field sentinel. Private owner media/logs/receipts/ignored binaries
+excluded; scoped absence only. Planning findings empty. No native UI/action or owner
+session/queue execution. PR84 automatic three timing failures retained without retry;
+HDR10/Fresh-analysis cancellation and AV1 deadline causes remain unknown.

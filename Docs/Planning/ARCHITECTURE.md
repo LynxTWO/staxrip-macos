@@ -339,3 +339,13 @@ A matching partial result therefore cannot admit D105 publication. Source/compon
 final observations and cancellation remain shared with D108. No new process, Python app
 bridge, native action or writer packaging. Manifest semantics/offset binding and full
 original packet/RPU/index/audit admission remain next. See NATIVE-ORIGINAL-TRACK-EVIDENCE.md.
+
+
+D-110 adds unused native CompanionOriginalPacketCheck after D109 track matching on
+D108's same pinned read worker. It reconstructs selected encoded packet framing/hashes/
+signed order and compares escaped RPU bytes/delimiters with fixed original-rpu.bin.
+Bounded source/component read capabilities expose no arbitrary package paths or raw
+descriptors. Native counts/sequence are source facts; stored index/audit/manifest and
+RPU metadata validity/geometry remain unchecked. Full semantic flags stay false and
+matching partial receipts cannot admit D105 publication. No native archive action or
+release writer packaging. NATIVE-ORIGINAL-PACKET-EVIDENCE.md records limits/evidence.

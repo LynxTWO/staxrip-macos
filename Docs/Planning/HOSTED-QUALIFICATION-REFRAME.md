@@ -231,3 +231,14 @@ The known-crashing dynamic fixture explicitly skipped; actual static native-host
 passed416.871s. Logs retained privately and PR98 updated without retry. The loader guard
 corrects an owner-observed desktop side effect, not hosted timing. No timing/phase cause,
 historical observer, assertion/deadline or global scheduling change follows.
+
+
+PR99 automatic37229721475 failed462tests924.970s56issues. Forty-eight are existing
+bounds:20at60s,26at120s,2at180s. Seven new decoder surrogate assertions report child>0
+false; one mastering Measuring encoded candidate observer received EOF. Decoder
+suite112.016s failed7issues; static host623.023s passed, preview skipped. Failed log
+retained privately and PR99 updated, without manual hosted retry. Pre-launch refusal
+causes are not identified; old timing/phase failures remain unknown. D125 guards the
+new decoder diagnostic's waitpid(0) after absent launch, retaining its failed positive
+child/equal-joined assertion and0.25s bound. It does not prove those missed fault cases
+or diagnose D090. No global concurrency or historical observer follows.

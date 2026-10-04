@@ -202,3 +202,8 @@ Automatic hosted qualification [37217896269](https://github.com/LynxTWO/staxrip-
 
 
 Automatic [37219515075](https://github.com/LynxTWO/staxrip-macos/actions/runs/37219515075) failed451reported tests799.399s35issues:19existing60-second and14existing120-second deadline issues, motion CancellationError/frame-bound message mismatch, and an FFmpeg cancellation-test observation of Inspecting instead of Encoding. Expanded access suite320.347s passed; preview skipped/no reader workflow. Log retained without retry, historic observer, assertion/deadline or scheduling change; causes unknown. Current native/local success does not erase this failure.
+
+## D-122 observation of PR96 automatic qualification
+
+
+Automatic [37221710621](https://github.com/LynxTWO/staxrip-macos/actions/runs/37221710621) failed454reported tests732.817s27issues:16existing60-second and10existing120-second deadlines, plus the mastering cancellation test observed EOF instead of its expected Measuring encoded candidate phase. Signature suite434.771s and access suite435.537s passed; preview skipped/no reader workflow. Log retained without retry, causal attribution, historical observer, assertion/deadline or scheduling change. Causes remain unknown.

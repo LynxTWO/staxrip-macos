@@ -93,7 +93,7 @@ fn element(id: u32, bytes: &[u8]) -> Vec<u8> {
 fn uint(id: u32, n: u64) -> Vec<u8> {
     element(id, &n.to_be_bytes())
 }
-fn fixture() -> Vec<u8> {
+pub(crate) fn fixture() -> Vec<u8> {
     let config: GenerateConfig = serde_json::from_value(serde_json::json!({
         "cm_version":"V29", "length":1,"profile":"8.1","level6":null,
         "shots":[{"start":0,"duration":1}],

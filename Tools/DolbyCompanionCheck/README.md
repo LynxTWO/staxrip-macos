@@ -54,3 +54,10 @@ bounds child counts and selected track payload. The trusted helper has its exist
 kills the owned group and joins the direct child on refusal, timeout or interruption.
 This is not a full-file validation wall-clock, whole-process memory or physical I/O
 deadline guarantee. No historical timing test assertion/deadline is changed.
+
+
+Generated checks also export both retention modes from the source-bound core and from
+the fixed-name stage writer, then independently validate their original semantics.
+The writer's in-memory receipt and disk hash check do not replace this comparison.
+The version-zero manifest remains unchanged, including its false producer-path flag;
+no persisted provenance or stable import format is inferred from these tests.

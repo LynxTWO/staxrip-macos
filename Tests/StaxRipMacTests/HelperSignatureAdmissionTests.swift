@@ -131,4 +131,27 @@ struct HelperSignatureAdmissionTests {
             let h = try FileHandle(forWritingTo: f.url(.reader)); try h.seek(toOffset: 4096); try h.write(contentsOf: Data([0xff])); try h.close()
         })) { #expect(throws: NativeExportError.self) { try Admission.verify(bundle: f.bundle, role: .reader, policy: p) } }
     }
+
+    @Test func relocatedOuterBundleNoticesAndHelpersRefuseSubstitutionBeforeExecution() async throws {
+        let b = try await HardenedReaderBundleFixture.make(); defer { b.cleanup() }
+        _ = try b.admit()
+        let notice = b.bundle.appendingPathComponent("Contents/Resources/THIRD-PARTY-NOTICES.md")
+        let prior = try Data(contentsOf: notice), source = try Data(contentsOf: b.original.source)
+        try Data("Generated tampered notice".utf8).write(to: notice)
+        #expect(throws: NativeExportError.self) { try b.admit() }
+        try prior.write(to: notice); _ = try b.admit()
+        let info = b.bundle.appendingPathComponent("Contents/Info.plist"), infoBytes = try Data(contentsOf: info)
+        try Data("Generated tampered bundle information".utf8).write(to: info)
+        #expect(throws: (any Error).self) { try b.admit() }
+        try infoBytes.write(to: info); _ = try b.admit()
+        let path = b.helper(.reader), saved = try Data(contentsOf: path)
+        try FileManager.default.removeItem(at: path)
+        try FileManager.default.copyItem(at: b.helper(.writer), to: path)
+        #expect(throws: NativeExportError.self) { try b.admit() }
+        #expect(throws: NativeExportError.self) { try Admission.verify(bundle: b.bundle, role: .reader, policy: b.readerPolicy) }
+        try FileManager.default.removeItem(at: path); try saved.write(to: path); try #require(chmod(path.path, 0o755) == 0)
+        _ = try b.admit()
+        #expect(try Data(contentsOf: b.original.source) == source)
+        #expect(try FileManager.default.contentsOfDirectory(atPath: b.original.stage.path).isEmpty)
+    }
 }

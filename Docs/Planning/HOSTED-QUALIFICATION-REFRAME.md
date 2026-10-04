@@ -197,3 +197,8 @@ PR93 automatic app [37216344134](https://github.com/LynxTWO/staxrip-macos/action
 
 
 Automatic hosted qualification [37217896269](https://github.com/LynxTWO/staxrip-macos/actions/runs/37217896269) failed: 445 reported tests in 734.974 seconds, 47 issues. Seventeen existing 60-second, twenty-five 120-second and two 180-second deadline issues; three motion expectations observed CancellationError or did not observe the intended generated source mutation. Candidate review suite313.611s and access operation suite320.415s passed. Preview skipped; no reader workflow for Swift-only changes. Failure log retained privately without retry, observer, assertion/deadline or scheduling change. Timing and motion failure causes remain unknown; local success does not erase this outcome.
+
+## D-121 observation of PR95 automatic qualification
+
+
+Automatic [37219515075](https://github.com/LynxTWO/staxrip-macos/actions/runs/37219515075) failed451reported tests799.399s35issues:19existing60-second and14existing120-second deadline issues, motion CancellationError/frame-bound message mismatch, and an FFmpeg cancellation-test observation of Inspecting instead of Encoding. Expanded access suite320.347s passed; preview skipped/no reader workflow. Log retained without retry, historic observer, assertion/deadline or scheduling change; causes unknown. Current native/local success does not erase this failure.

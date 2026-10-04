@@ -1434,3 +1434,62 @@ outer seal/notice checks and refusal on substitution. This is ad-hoc generated p
 evidence, not Developer ID positive trust or release capability. Do not touch Preview
 writer packaging or retry D097/D117 signing without changed condition/new discriminator.
 See NATIVE-CANDIDATE-ACCESS-EVIDENCE.md.
+
+## D-121: Relocated sealed generated Rust reader-host bundle
+Date: 2026-10-04
+Status: Confirmed
+
+Authority/Approved for build: owner standing autonomous generated non-audio delegation,
+R059 / Slice049. Need: D117 verified individual hardened helper signatures/execution but
+not a sealed relocated outer bundle or its notices. Assess host feasibility concretely: a
+generated bundle uses the actual read-only Rust reader as its main executable, with fixed
+reader/writer helper roles and complete locked dependency/toolchain notices. This avoids
+a wrapper or changes to app startup. It is NOT hardened SwiftUI host qualification.
+
+Scope: test-only owned generated bundle, ad-hoc runtime signatures/no entitlements, creator-
+captured hashes and fixed role identifiers, actual outer nested/strict seal, relocation and
+notice inventory. Actual D116/D120 native operations execute writer helper and reader main
+against generated source/candidates. Default Preview remains unchanged/read-only. No
+release factory, Developer ID retry, library-validation bypass, unsigned fallback, broadened
+entitlements, app action/UI, owner media/queue/archive/encode, merge or release.
+
+Acceptance: relocated outer/role admission and unchanged notices, actual both-mode native
+preservation then read-only review with joined workers/children and preserved source/prior
+bytes. Outer resource/helper/role substitution refuse before execution. Actual reader-host
+active cancellation settles or retains typed ownership/access/fixture. Fake scope providers
+are not sandbox grants. Ordinary regression, existing optimized product/signature reuse
+(product unchanged), final privacy/protection/planning and PR95 observation without retry.
+
+D121 final local outcome: test-only owned ad-hoc/runtime Rust reader-host bundle has a
+strict nested outer seal, fixed D117 helper-role admission, exact repository lock/license
+text hashes and active Rust toolchain library notices. Moving it to an owned folder with
+spaces preserves admission and actual D116 preservation/D120 read-only review in both
+retention modes with source/prior/candidate bytes preserved and native direct children
+joined. Notice/Info/helper-role substitutions refuse before capability use. Actual hardened
+reader-host cancellation settled ordinarily in all new runs; its typed-retention branch
+is not a newly observed OS fault (D120 retention evidence reused). This is not hardened
+SwiftUI host, Developer ID or release capability qualification. Product/default Preview
+unchanged and read-only; no UI walkthrough. Initial new fixture compilation and test-only
+redundant nested require warning retained/corrected without assertion/policy changes.
+Expanded focus22tests17.725s passed with that warning; ordinary454reported tests/93suites
+210.177s passed26 unchanged skips/no new emitted warnings, then final22tests/2suites5.701s
+passed without warnings covering exact local-unwrapping correction. Ordinary native both-
+mode pipeline0.749s, substitution2.363s and cancellation0.498s passed. Reuse D120 explicit
+optimized product build, current strict ad-hoc app/read-only helper signatures verified,
+minima14.0/11.0, writer absent. Original protection/privacy/planning receipts follow before
+publication. PR95 automatic451tests799.399s35issues retained/PR updated without retry;
+access320.347s passed, causes unknown.
+Next assess an actually hardened owned Swift native host/test-module loading fixture,
+using existing D118 POSIX caller and fixed helpers, before claiming app-host qualification.
+Inspect host/test Mach-O dependencies and signatures first. If same-team/library-validation
+requirements refuse ad-hoc test-module loading, retain that discrimination; do not disable
+validation, broaden entitlements, fall back unsigned or blindly retry Developer ID. Static
+Rust reader-host success is not SwiftUI loading/provenance. A refused host qualification
+does not block independent generated edited-picture or stable-archive prerequisites.
+See RELOCATED-HARDENED-READER-BUNDLE-EVIDENCE.md for actual checks and limitations.
+
+Final seven-file privacy scan has zero private source path/name/stem matches and a
+positive sentinel. Owner source metadata/current recovery journal remain unchanged;
+full planning findings empty. Prior owned55829 was stopped only after exact receipt/
+command/start inspection; current owned84530 temporary capped assertion expires19:37UTC
+and exact command/start matches receipt. No persistent locking/security changes.

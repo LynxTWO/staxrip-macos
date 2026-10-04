@@ -14,6 +14,7 @@ struct CompanionOriginalPacketCheckTests {
         func cleanup() { try? FileManager.default.removeItem(at: root) }
     }
     private static var repo: URL { URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent() }
+    private static var buildTarget: URL { repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-CompanionOriginalPacketCheckTests") }
     private static func fixture() async throws -> Fixture {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("native-companion-process-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
@@ -23,14 +24,14 @@ struct CompanionOriginalPacketCheckTests {
             let cargo = repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml")
             let f = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
                 "STAXRIP_GENERATED_COMPANION_FIXTURE_DIRECTORY=" + generated.path, "cargo", "test", "--locked",
-                "--manifest-path", cargo.path, "original_companions_preserve_raw_bytes_encoded_order_and_distinct_retention"])
+                "--target-dir", buildTarget.path, "--manifest-path", cargo.path, "original_companions_preserve_raw_bytes_encoded_order_and_distinct_retention"])
             try #require(f.status == 0)
             let b = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
                 "cargo", "build", "--release", "--locked", "--features", "development-companion-writer", "--bin",
-                "staxrip-dolby-companion-writer", "--manifest-path", cargo.path])
+                "staxrip-dolby-companion-writer", "--bin", "staxrip-dolby-metadata-audit", "--target-dir", buildTarget.path, "--manifest-path", cargo.path])
             try #require(b.status == 0)
             let executable = root.appendingPathComponent("staxrip-dolby-companion-writer")
-            try FileManager.default.copyItem(at: repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/release/staxrip-dolby-companion-writer"), to: executable)
+            try FileManager.default.copyItem(at: buildTarget.appendingPathComponent("release/staxrip-dolby-companion-writer"), to: executable)
             let stage = root.appendingPathComponent("stage")
             try FileManager.default.createDirectory(at: stage, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
             return .init(root: root, source: generated.appendingPathComponent("generated-source.mkv"), stage: stage, executable: executable)
@@ -94,7 +95,7 @@ struct CompanionOriginalPacketCheckTests {
             let oracle = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: ["python3",
                 Self.repo.appendingPathComponent("Tools/DolbyCompanionCheck/native_transaction_fixture.py").path,
                 "verify", f.source.path, f.stage.path, mode == .metadataOnly ? "metadata" : "full", f.executable.path,
-                Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/release/staxrip-dolby-metadata-audit").path], stdoutLimit: 16384)
+                Self.buildTarget.appendingPathComponent("release/staxrip-dolby-metadata-audit").path], stdoutLimit: 16384)
             try #require(oracle.status == 0 && !oracle.truncated) // Test-only independent original semantic oracle, never runtime admission.
             #expect(try await CompanionDiskCheck.verifyOriginalTrack(source: f.source, stage: f.stage, contents: c).originalPackets == nil)
         }

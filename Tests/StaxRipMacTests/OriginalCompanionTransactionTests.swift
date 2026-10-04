@@ -286,18 +286,19 @@ struct OriginalCompanionTransactionTests {
         let generated = root.appendingPathComponent("generated")
         try FileManager.default.createDirectory(at: generated, withIntermediateDirectories: false)
         let cargo = repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml")
+        let buildTarget = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-OriginalCompanionTransactionTests")
         let fixture = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
             "STAXRIP_GENERATED_STAGED_COMPANION_DIRECTORY=" + generated.path,
-            "cargo", "test", "--locked", "--manifest-path", cargo.path,
+            "cargo", "test", "--locked", "--target-dir", buildTarget.path, "--manifest-path", cargo.path,
             "owned_stage_packages_preserve_originals_and_match_disk_receipts"])
         try #require(fixture.status == 0, "Generated Rust source fixture failed")
         let built = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
             "cargo", "build", "--release", "--locked", "--features", "development-companion-writer",
-            "--bin", "staxrip-dolby-companion-writer", "--manifest-path", cargo.path])
+            "--bin", "staxrip-dolby-companion-writer", "--bin", "staxrip-dolby-metadata-audit", "--target-dir", buildTarget.path, "--manifest-path", cargo.path])
         try #require(built.status == 0, "Generated writer build failed")
         let src = generated.appendingPathComponent("generated-source.mkv"), original = try Data(contentsOf: src)
-        let executable = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/release/staxrip-dolby-companion-writer")
-        let reader = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/release/staxrip-dolby-metadata-audit")
+        let executable = buildTarget.appendingPathComponent("release/staxrip-dolby-companion-writer")
+        let reader = buildTarget.appendingPathComponent("release/staxrip-dolby-metadata-audit")
         let adapter = repo.appendingPathComponent("Tools/DolbyCompanionCheck/native_transaction_fixture.py")
         for (mode, name) in [(Transaction.Retention.metadataOnly, "metadata"), (.entireContainer, "full")] {
             let phase: @Sendable (String, URL) async throws -> Wire = { role, directory in

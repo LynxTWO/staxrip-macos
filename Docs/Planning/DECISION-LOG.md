@@ -132,6 +132,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-121 | 2026-10-04 | Relocated sealed generated reader-host bundle | Confirmed | |
 | D-122 | 2026-10-04 | Hardened Swift host loading discriminator | Confirmed | |
 | D-123 | 2026-10-04 | Static hardened native Swift host | Confirmed | |
+| D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -3288,3 +3289,50 @@ cancellation/seven joined helpers. No copied SwiftPM host launched and no new
 SwiftNativeHost diagnostic report appeared. Prior full ordinary456tests208.749s/26skips
 evidence predates this guard-only change; the final default focus checks changed behavior.
 No known-refusal opt-in rerun or new positive dynamic-loading claim follows.
+
+
+## D-124: Own the development decoder and bounded frame stream
+Status: Confirmed
+Date: 2026-10-04. Owner standing autonomous delegation, R-059 / Slice049.
+
+Need: completed D097 source association lacks a native owning worker and incremental
+frame protocol. Build an unused native development controller for the fixed C reference
+and three fixed sibling FFmpeg libraries, with explicit caller-captured content identity.
+Use strict native JSON, finite lines/counts/geometry and incremental packet/frame rows;
+no whole stream or picture capture. One worker owns PID/group/pipes/EOF/reaping, checks
+cancellation/deadline and source/library/executable final observations. Ordinary refusals
+settle; unresolved ownership propagates the shared retained-access marker.
+
+Choose a concrete decoder controller using proven D113 ownership mechanics over a
+generic subprocess adapter or Python runtime bridge. Duplicate concrete mechanics are
+scoped to this prerequisite; consolidate only after actual contracts justify it.
+Generated C process faults and actual generated frozen-compatible decoder trials are
+required. The actual frozen decoder test is explicit opt-in when its development folder
+is supplied; no fixture downloads/builds a replacement FFmpeg or uses owner media.
+
+This is ordinary ad-hoc unbundled DEVELOPMENT, not hardened loading, release signature
+authentication or default app dependency. Do not repeat D097 hardened ad-hoc Team-ID
+refusal, D122 dynamic loader traps, incomplete certificate signing or PR73 full-source
+association. Stream validity/counts alone cannot establish independent packet/raw-RPU
+association, edit conversion, rendering, EL reconstruction or enforced total memory.
+Revisit after native association spool, release provenance and resource qualification.
+
+D124 qualification exposed helper ENOENT after successful Cargo builds in two different
+native fixture suites using shared release output. Exact removal cause is unknown. Scoped
+artifact ownership correction covers eight writer fixture owners: writer-process plus
+remaining disk/track/packet/index/audit/protocol/transaction suites. Each uses its own Cargo
+target for generation/build/copy; source-dependent oracle callers build their own reader
+with the same feature set. No generic receipt adapter, product/Rust semantics, assertion,
+deadline or global test concurrency changes. Changed seven-suite focus71tests52.431s
+passed; first writer-only focus7tests13.374s passed. All failed runs remain retained.
+
+Final ordinary462reported tests/97suites215.532s passed with28 explicit opt-in skips and
+no emitted warnings. Actual frozen decoder was separately exercised above; its private
+fixture and known-crashing dynamic module remain skipped in normal runs. New decoder
+suite6.015s, isolated writer suite14.410s and actual92-source static host32.310s passed.
+Optimized product/signature checks remain valid because subsequent changes only affect
+test artifact ownership/docs. Sixteen-file privacy scan has zero owner-path/name/stem
+matches and a positive sentinel; source metadata/current journal unchanged. Temporary
+owned awake assertion renewed only after exact receipt/command/start inspection; no
+persistent locking/security changes. Independent native packet/frame/RPU association
+and resource/access/signing gates remain open; no UI action/release completion claim.

@@ -145,13 +145,14 @@ struct CompanionWriterProtocolTests {
         let generated = root.appendingPathComponent("generated")
         try FileManager.default.createDirectory(at: generated, withIntermediateDirectories: false)
         let cargo = repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml")
+        let buildTarget = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-CompanionWriterProtocolTests")
         let fixture = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
             "STAXRIP_GENERATED_STAGED_COMPANION_DIRECTORY=" + generated.path, "cargo", "test", "--locked",
-            "--manifest-path", cargo.path, "owned_stage_packages_preserve_originals_and_match_disk_receipts"])
+            "--target-dir", buildTarget.path, "--manifest-path", cargo.path, "owned_stage_packages_preserve_originals_and_match_disk_receipts"])
         try #require(fixture.status == 0)
         let built = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
             "cargo", "build", "--release", "--locked", "--features", "development-companion-writer",
-            "--bin", "staxrip-dolby-companion-writer", "--manifest-path", cargo.path])
+            "--bin", "staxrip-dolby-companion-writer", "--target-dir", buildTarget.path, "--manifest-path", cargo.path])
         try #require(built.status == 0)
         let source = generated.appendingPathComponent("generated-source.mkv"), original = try Data(contentsOf: source)
         var src = stat(); try #require(lstat(source.path, &src) == 0)
@@ -162,7 +163,7 @@ struct CompanionWriterProtocolTests {
             var st = stat(); try #require(lstat(stage.path, &st) == 0); let stageID = Transaction.FileID(st)
             let actual = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
                 "python3", repo.appendingPathComponent("Tools/DolbyCompanionCheck/protocol_fixture.py").path,
-                repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/release/staxrip-dolby-companion-writer").path,
+                buildTarget.appendingPathComponent("release/staxrip-dolby-companion-writer").path,
                 modeName, source.path, stage.path, Self.operation,
                 String(sourceID.device), String(sourceID.inode), String(stageID.device), String(stageID.inode)], stdoutLimit: 32768)
             try #require(actual.status == 0 && !actual.truncated)

@@ -218,3 +218,16 @@ binary/Info layouts with unchanged original module hashes. Both generated layout
 concrete Team-ID refusal; no positive dynamic loading follows. Compatibility focused2tests/
 2suites12.497s passed (static12.497s, two-layout refusal2.302s), no warnings. This is a scoped
 new fixture format correction, not a D090 historical assertion/deadline relaxation.
+
+## D-124 observation of PR98 automatic qualification
+
+First head [37226678243](https://github.com/LynxTWO/staxrip-macos/actions/runs/37226678243)
+failed456reported tests962.808s54issues:26existing60s/23existing120s deadlines, motion
+message mismatch, Fresh-analysis6.711647vs5, two copied dynamic-fixture command refusals
+and Measuring encoded candidate EOF. Final opt-in guard head
+[37227095832](https://github.com/LynxTWO/staxrip-macos/actions/runs/37227095832) failed456
+reported tests768.076s6issues: five existing120s deadlines and the mastering phase EOF.
+The known-crashing dynamic fixture explicitly skipped; actual static native-host suite
+passed416.871s. Logs retained privately and PR98 updated without retry. The loader guard
+corrects an owner-observed desktop side effect, not hosted timing. No timing/phase cause,
+historical observer, assertion/deadline or global scheduling change follows.

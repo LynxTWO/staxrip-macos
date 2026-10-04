@@ -1838,3 +1838,28 @@ warnings. New actor-trait/error-type/finite-Segment/gate/descriptor-number fixtu
 failures retained with scoped corrections, no global policy change. PR102 automatic
 479tests1218.685s129issues retained/PR updated without retry; causes unknown. See
 NATIVE-SOURCE-FRAME-ACCESS-EVIDENCE.md for concrete scope and remaining gates.
+
+
+## D-129: Actual base-picture sample prerequisite
+Status: Confirmed. Approved for build by: owner standing autonomous generated non-audio
+delegation,2026-10-04,R059.
+
+Build the separate DEVELOPMENT C plane-measurement/sample probe in D129, bounded
+coded versus codec-visible10-bit420 views. Qualification uses actual generated planes
+and row-streaming test-only oracle, no full-picture parent capture. Never change five
+frozen D097 objects or original metadata protocol. No native sample/edited admission,
+colorimetric/HDR conversion, EL, resampling or app action follows. Acceptance/effects
+match D129; preserve source/session/journal/prior outputs and retained artifacts.
+
+
+D129 acceptance: generated five-group installed sample suite4.958s and compatible
+minimal LGPL-prefix suite17.034s pass, including ten actual both-thread coded/codec-
+visible plane trials, sanitizer bounds/maximum arithmetic, live cancel/path substitution
+and exclusive builder refusal. Separate sample artifact min14.0 and original-prefix
+libraries observed; frozen five objects unchanged. Ordinary485tests/98suites211.948s
+failed one existing writer-surrogate child-settlement assertion,30 unchanged opt-in
+skips, no warnings; retained without retry/relaxation/cause claim. Product unchanged,
+D128 explicit optimized receipt reused and current strict ad-hoc signatures pass.
+PR103 automatic113issues retained/PR updated, no retry. Source metadata/current
+journal/privacy/planning checks pass. See DECODED-BASE-SAMPLE-EVIDENCE.md; native
+sample/source binding, rendering/color/EL/resize/edited flags remain unqualified.

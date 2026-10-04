@@ -349,3 +349,12 @@ descriptors. Native counts/sequence are source facts; stored index/audit/manifes
 RPU metadata validity/geometry remain unchecked. Full semantic flags stay false and
 matching partial receipts cannot admit D105 publication. No native archive action or
 release writer packaging. NATIVE-ORIGINAL-PACKET-EVIDENCE.md records limits/evidence.
+
+
+D-111 adds unused native CompanionOriginalIndexCheck and a bounded emitted archive JSON
+grammar, leaving D106 pipe protocol unchanged. Actual fixed manifest/index components
+are read through D108's pinned worker and matched against D109 track offset/D110 native
+RPU observations and actual disk members. Signed encoded order and exact full index
+consumption are required. Narrower APIs retain their prior scope. Native source-audit
+semantics and RPU metadata/geometry remain open; full semantic flags stay false, no D105
+publication or archive action. NATIVE-ORIGINAL-INDEX-EVIDENCE.md records limits/evidence.

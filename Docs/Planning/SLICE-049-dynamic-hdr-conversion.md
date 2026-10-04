@@ -745,3 +745,44 @@ private source-field sentinel. Private owner media/logs/receipts/ignored binarie
 excluded; scoped absence only. Planning findings empty. No native UI/action or owner
 session/queue execution. PR84 automatic three timing failures retained without retry;
 HDR10/Fresh-analysis cancellation and AV1 deadline causes remain unknown.
+
+
+D-111 active bounded prerequisite: match fixed original rpu-index and manifest claims
+to D110 native source observations and D108 settled actual disk contents. Exact emitted
+JSON integer/type/schema admission, signed encoded order, original offsets, source/
+component relations and complete bounded index consumption are required. Generated
+fixtures only; source-audit semantics and RPU metadata validity remain gates. Full
+semantic flags stay false and D105 publication remains unavailable. Acceptance and
+limits recorded in D-111.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+
+D-111 focused outcome:53tests in5suites passed12.500s. Actual native writer both modes
+and independent test-only original oracle pass0.792s; actual signed-extreme source writer/
+index admission pass0.415s. Matching partial D105 refusal passes0.191s. Rehashed manifest
+27-case and index20-case forgeries pass narrower integrity/packet checks but refuse
+actual native source admission. Cancellation during manifest/index reads and late
+source/stage/index/manifest changes refuse after worker unwind. Fixed chunk/row bounds,
+integer/type grammar and permitted whitespace/component order pass. A repaired audit
+forgery remains explicitly outside partial semantic admission; full flags stay false.
+Earlier51-focused12.106s receipt before signed-extreme/whitespace qualification retained
+separately. Final ordinary/build/protection/privacy/planning settlement follows.
+
+
+D-111 final ordinary regression:399tests in85suites passed204.805s. Native original
+index suite passed20.427s in that unchanged ordinary run; focused53tests/5suites passed
+12.500s. No new compile warnings in final focused/regression logs and no legacy
+assertion/deadline/default scheduling change. Full source-audit/metadata/geometry
+semantics and publication remain unavailable. Final optimized build settlement follows.
+
+
+Final optimized development build and strict ad-hoc app/read-only helper signatures
+passed. Minimum declarations remain14.0/11.0; development writer absent. No hardened
+DeveloperID/notarization or older-OS runtime qualification. Source metadata/current
+recovery bytes unchanged. Nine changed public/nonignored-untracked files scanned for
+three exact private source path/name/stem patterns: zero matches, positive decoded
+private source-field sentinel. Private owner media/logs/receipts/ignored binaries
+excluded; scoped absence only. Planning findings empty. No native UI/action or owner
+session/queue execution. PR85 automatic two unchanged AV1/ten-bit timing failures
+retained without retry; causes remain unknown.

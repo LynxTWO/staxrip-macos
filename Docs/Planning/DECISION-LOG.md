@@ -119,6 +119,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-108 | 2026-10-04 | Retain unsettled ownership and verify native companion disk receipts | Confirmed | |
 | D-109 | 2026-10-04 | Independently admit original track and HEVC configuration natively | Confirmed | |
 | D-110 | 2026-10-04 | Reconstruct original encoded packets and retained raw RPUs natively | Confirmed | |
+| D-111 | 2026-10-04 | Match original RPU index and manifest to native source observations | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -2349,3 +2350,74 @@ private source-field sentinel. Private owner media/logs/receipts/ignored binarie
 excluded; scoped absence only. Planning findings empty. No native UI/action or owner
 session/queue execution. PR84 automatic three timing failures retained without retry;
 HDR10/Fresh-analysis cancellation and AV1 deadline causes remain unknown.
+
+
+## D-111: Match original RPU index and manifest to native source observations
+
+Status: Confirmed
+
+Need/product contract: matching raw bytes does not establish that persisted signed
+encoded associations, original offsets or manifest claims match the original source.
+Independently read bounded original index rows and the fixed version-zero manifest,
+matching native D110 observations and D108 actual source/component disk settlement.
+
+Alternatives: trust producer hashes/index counts, qualify every audit/metadata surface
+at once, or first admit actual index and manifest relationships natively. Select the
+last bounded prerequisite. This introduces actual parsing/source comparison, not
+a generic receipt wrapper or Python runtime bridge.
+
+Scope: bounded duplicate-rejecting ASCII JSON grammar for the fixed emitted integer/
+boolean/string schema, exact manifest/index key sets, signed64-bit PTS, fixed names,
+retention/qualification flags, independently located track offset, actual source and
+component content/membership, streaming index rows consumed in exact native original
+RPU order, no extra/incomplete rows. All parsing stays on the pinned native read worker
+with bounded fixed descriptor-relative reads, cooperative cancellation and final
+observations. Existing integrity/track/packet APIs keep their narrower receipts.
+
+No RPU metadata decoding/validity, compact libdovi summary, source-audit semantics,
+geometry or decoded association. Full semantic flags stay false; no D105 publication
+action, stable importer or release writer packaging. Version-zero manifest remains
+unbound despite checked claims, not immutable snapshot or persisted execution proof.
+
+Acceptance: actual generated native writer both modes and independent test-only oracle
+match native index/manifest admission. Rehashed index/manifest forgeries pass narrower
+integrity/packet checks but refuse actual source admission; signed duplicate/nonmonotonic
+order and integer boundaries are retained. Exact schema/types/flags/retention/names/
+source/counts/track-offset/member relations and bounded JSONL truncation/extra/order
+faults refuse. Actual native index-read cancellation and late component mutations
+refuse after worker unwind. Matching partial admission still cannot publish through
+D105; repaired audit substitutions remain explicitly unqualified. Ordinary regression,
+optimized ad-hoc bundle/protection/privacy/planning checks required, no D090 retry or
+timing/deadline/assertion/scheduling changes.
+
+Approved for build by: owner standing autonomous delegation, 2026-10-04.
+
+
+D-111 focused outcome:53tests in5suites passed12.500s. Actual native writer both modes
+and independent test-only original oracle pass0.792s; actual signed-extreme source writer/
+index admission pass0.415s. Matching partial D105 refusal passes0.191s. Rehashed manifest
+27-case and index20-case forgeries pass narrower integrity/packet checks but refuse
+actual native source admission. Cancellation during manifest/index reads and late
+source/stage/index/manifest changes refuse after worker unwind. Fixed chunk/row bounds,
+integer/type grammar and permitted whitespace/component order pass. A repaired audit
+forgery remains explicitly outside partial semantic admission; full flags stay false.
+Earlier51-focused12.106s receipt before signed-extreme/whitespace qualification retained
+separately. Final ordinary/build/protection/privacy/planning settlement follows.
+
+
+D-111 final ordinary regression:399tests in85suites passed204.805s. Native original
+index suite passed20.427s in that unchanged ordinary run; focused53tests/5suites passed
+12.500s. No new compile warnings in final focused/regression logs and no legacy
+assertion/deadline/default scheduling change. Full source-audit/metadata/geometry
+semantics and publication remain unavailable. Final optimized build settlement follows.
+
+
+Final optimized development build and strict ad-hoc app/read-only helper signatures
+passed. Minimum declarations remain14.0/11.0; development writer absent. No hardened
+DeveloperID/notarization or older-OS runtime qualification. Source metadata/current
+recovery bytes unchanged. Nine changed public/nonignored-untracked files scanned for
+three exact private source path/name/stem patterns: zero matches, positive decoded
+private source-field sentinel. Private owner media/logs/receipts/ignored binaries
+excluded; scoped absence only. Planning findings empty. No native UI/action or owner
+session/queue execution. PR85 automatic two unchanged AV1/ten-bit timing failures
+retained without retry; causes remain unknown.

@@ -72,7 +72,7 @@ enum DolbyDecoderProcess {
         return result
     }
     /// Called synchronously only on an already owned worker; never starts another worker.
-    private static func runOwned(tool: Tool, source: URL, threads: Int, observe: @escaping (Data) throws -> Void,
+    static func runOwned(tool: Tool, source: URL, threads: Int, observe: @escaping (Data) throws -> Void,
                              timeout: Double, checkCancellation: @escaping () throws -> Void, boundary: Boundary = .init()) throws -> DolbyDecoderStream.Receipt {
         guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)

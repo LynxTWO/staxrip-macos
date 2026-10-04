@@ -254,3 +254,13 @@ expectations and measuring-candidate EOF. Source-spool suite passed46.398s and s
 native host780.200s. Full failed log is retained privately and PR100 updated. No
 historical observer, manual rerun, assertion/deadline/global concurrency or scheduling
 change follows. These observations do not establish timing, phase or prelaunch causes.
+
+
+## D127 observation: PR101 automatic outcome
+
+Run37233860856 failed474tests/1271.833s/68issues, no retry. Twenty-six unchanged
+60-second and33 unchanged120-second deadlines; four decoder surrogate absent-positive-
+child assertions, three motion expectations, existing owned static compiler/host
+bound and measuring-candidate EOF. Source packet suite714.516s and spool57.787s
+passed. Full log retained privately/PR101 updated. Timing, phase and prelaunch causes
+remain unknown; no observer, assertion/deadline/global concurrency or scheduling change.

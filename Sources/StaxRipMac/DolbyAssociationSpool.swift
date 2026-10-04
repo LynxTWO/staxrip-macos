@@ -21,6 +21,9 @@ final class DolbyAssociationSpool {
     private var db: OpaquePointer?
     private var packets: Int64 = 0, rpus: Int64 = 0, archiveOffset: Int64 = 0, lastNAL: Int64 = -1
     private var sealed = false, poisoned = false
+    private var decoderStarted = false, decoderBegan = false, decoderComplete = false
+    private var decoderPackets: Int64 = 0, decoderFrames: Int64 = 0
+    private var decoderTimeBase = [Int]()
     private let ownerThread = pthread_self()
     private static let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
@@ -194,6 +197,101 @@ final class DolbyAssociationSpool {
                 try integer(s,1,index); guard sqlite3_step(s) == SQLITE_ROW else { throw Failure.refused }
                 return try .init(index:index,packetIndex:sqlite3_column_int64(s,0),nalIndex:sqlite3_column_int64(s,1),ptsNS:sqlite3_column_int64(s,2),inputOffset:sqlite3_column_int64(s,3),archiveDelimiterOffset:sqlite3_column_int64(s,4),payloadBytes:Int(sqlite3_column_int64(s,5)),sha256:text(s,6))
             }
+        }
+    }
+    /// Exact rational ticks, reducing before multiplication. No rounding or
+    /// overflowing multiply-then-divide, including signed magnitude extremes.
+    static func nanoseconds(_ ticks: Int64, timeBase: [Int]) throws -> Int64 {
+        guard timeBase.count == 2, timeBase.allSatisfy({ (1...Int(Int32.max)).contains($0) }) else { throw Failure.refused }
+        var factors = [ticks.magnitude, UInt64(timeBase[0]), UInt64(1_000_000_000)]
+        var divisor = UInt64(timeBase[1])
+        func gcd(_ a: UInt64, _ b: UInt64) -> UInt64 {
+            var x=a, y=b; while y != 0 { let r=x%y; x=y; y=r }; return x
+        }
+        for i in factors.indices { let common=gcd(factors[i],divisor); factors[i]/=common; divisor/=common }
+        guard divisor == 1 else { throw Failure.refused }
+        var magnitude: UInt64 = 1
+        for f in factors { let product=magnitude.multipliedReportingOverflow(by:f); guard !product.overflow else { throw Failure.refused }; magnitude=product.partialValue }
+        let maximum=UInt64(Int64.max)+(ticks < 0 ? 1 : 0)
+        guard magnitude <= maximum else { throw Failure.refused }
+        if ticks < 0 { return magnitude == UInt64(Int64.max)+1 ? .min : -Int64(magnitude) }
+        return Int64(magnitude)
+    }
+    /// Additional fixed disposable coverage only after source settlement. Source
+    /// rows remain intact; unsupported multiplicity is refusal, never deduplication.
+    func startDecoderPass() throws {
+        try operation(false) {
+            guard sealed, !decoderStarted, packets > 0, rpus == packets else { throw Failure.refused }
+            try sql("CREATE TABLE checked(idx INTEGER PRIMARY KEY, frame INTEGER NOT NULL)")
+            decoderStarted=true
+        }
+    }
+    /// Called synchronously by D124's strict owning stream parser. This checks
+    /// source relationships, not executable authenticity or joined EOF/status.
+    func acceptDecoderRow(_ data: Data, track: CompanionOriginalTrackCheck.Receipt) throws {
+        try operation(false) {
+            guard sealed, decoderStarted, !decoderComplete else { throw Failure.refused }
+            typealias J = CompanionArchiveJSON
+            let row=try J.object(data,maximum:65_535), kind=try J.string(row,"kind")
+            func n(_ key: String) throws -> Int64 {
+                Int64(try J.unsigned(row,key,0...UInt64(Int64.max)))
+            }
+            func time(_ key: String) throws -> Int64 { try Self.nanoseconds(J.signed(row,key),timeBase:decoderTimeBase) }
+            switch kind {
+            case "begin":
+                guard !decoderBegan, try n("input_bytes") == sourceBytes,
+                      try n("configuration_bytes") == track.configurationBytes,
+                      try J.digest(row,"configuration_sha256") == track.configurationSHA256,
+                      case .array(let base)? = row["time_base"], base.count == 2 else { throw Failure.refused }
+                decoderTimeBase=try base.map { item in
+                    guard case .unsigned(let v)=item, (1...UInt64(Int32.max)).contains(v) else { throw Failure.refused }; return Int(v)
+                }
+                decoderBegan=true
+            case "packet":
+                guard decoderBegan, decoderPackets < packets, try n("index") == decoderPackets else { throw Failure.refused }
+                let original=try loadPacket(decoderPackets)
+                guard !original.invisible, try time("pts") == original.ptsNS,
+                      try n("block_input_byte_offset") == original.blockOffset,
+                      try n("encoded_bytes") == original.encodedBytes,
+                      try J.digest(row,"sha256") == original.sha256 else { throw Failure.refused }
+                try statement("INSERT INTO checked VALUES(?,0)") { q in
+                    try integer(q,1,decoderPackets); try checked(sqlite3_step(q))
+                }
+                decoderPackets += 1
+            case "frame":
+                guard decoderBegan, decoderFrames < packets, try n("index") == decoderFrames else { throw Failure.refused }
+                let index=try n("packet_index")
+                guard index >= 0, index < decoderPackets else { throw Failure.refused }
+                let original=try loadPacket(index), raw=try rpu(index)
+                guard !original.invisible, raw.packetIndex == index, raw.ptsNS == original.ptsNS,
+                      try time("pts") == original.ptsNS, try time("packet_pts") == original.ptsNS,
+                      try time("best_effort_pts") == original.ptsNS,
+                      try n("block_input_byte_offset") == original.blockOffset,
+                      try n("packet_size") == original.encodedBytes,
+                      try n("rpu_bytes") == raw.payloadBytes,
+                      try J.digest(row,"rpu_sha256") == raw.sha256 else { throw Failure.refused }
+                try statement("UPDATE checked SET frame=1 WHERE idx=? AND frame=0") { q in
+                    try integer(q,1,index); try checked(sqlite3_step(q)); guard let db, sqlite3_changes(db) == 1 else { throw Failure.refused }
+                }
+                decoderFrames += 1
+            case "complete":
+                guard decoderBegan, decoderPackets == packets, decoderFrames == packets,
+                      try n("packets") == packets, try n("frames") == packets,
+                      try scalar("SELECT COUNT(*) FROM checked") == packets,
+                      try scalar("SELECT COUNT(*) FROM checked WHERE frame!=1") == 0 else { throw Failure.refused }
+                decoderComplete=true
+            default: throw Failure.refused
+            }
+        }
+    }
+    /// The owning caller must additionally require actual joined decoder result,
+    /// matching source fingerprint/configuration and final source/tool settlement.
+    func finishDecoderPass(_ result: DolbyDecoderStream.Receipt) throws {
+        try operation(false) {
+            guard decoderComplete, result.packets == packets, result.frames == packets,
+                  result.timeBase == decoderTimeBase,
+                  try scalar("SELECT COUNT(*) FROM checked") == packets,
+                  try scalar("SELECT COUNT(*) FROM checked WHERE frame!=1") == 0 else { throw Failure.refused }
         }
     }
     private func identities() throws {

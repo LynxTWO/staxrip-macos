@@ -326,3 +326,16 @@ tests compose actual native writer/disk checks with the independent Python seman
 checker only as a test oracle through native publication. No native runtime original
 semantic validator, app action, release writer capability/packaging or lease/resource/
 signing admission follows. See NATIVE-COMPANION-DISK-EVIDENCE.md.
+
+
+D-109 adds unused native CompanionOriginalTrackCheck. D108 verifyOriginalTrack keeps
+its existing pinned source/stage/component read worker and gives the synchronous parser
+bounded read-only source/selected-component capabilities. The independent EBML selector
+reads finite pre-cluster structures, exactly matches selected original TrackEntry/hvcC
+and validates hvcC NAL-array framing. Integrity-only verify continues to report no track
+semantic result. The optional partial track receipt explicitly leaves packet/RPU/index/
+audit semantics unverified and the enclosing originalMetadataSemanticsVerified=false.
+A matching partial result therefore cannot admit D105 publication. Source/component/stage
+final observations and cancellation remain shared with D108. No new process, Python app
+bridge, native action or writer packaging. Manifest semantics/offset binding and full
+original packet/RPU/index/audit admission remain next. See NATIVE-ORIGINAL-TRACK-EVIDENCE.md.

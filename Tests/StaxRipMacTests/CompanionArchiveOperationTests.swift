@@ -429,4 +429,69 @@ struct CompanionArchiveOperationTests {
         }
         #expect(try Data(contentsOf: f.source) == original)
     }
+
+    @Test func relocatedSealedRustReaderHostRunsBothNativeModesAndReadOnlyReviewWithJoinedAccess() async throws {
+        let b = try await HardenedReaderBundleFixture.make(targetName: "native-relocated-access-bundle-fixtures"); defer { b.cleanup() }
+        let original = try Data(contentsOf: b.original.source), (writer, reader) = try b.admit()
+        let prior = b.original.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior output".utf8)
+        try priorBytes.write(to: prior)
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+            let ledger = Ledger()
+            let result = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: false)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await Operation.execute(source: b.original.source, in: b.original.root,
+                                destinationName: mode == .metadataOnly ? "metadata-result" : "container-result", retention: mode, writer: writer, reader: reader)
+                        }
+                    }
+                }
+            }
+            ledger.expectJoined(count: 2); ledger.expectEnded()
+            let before = try snapshot(result.directory), reviewLedger = Ledger()
+            let reviewed = try await Operation.$testEnvironment.withValue(environment(reviewLedger, fakeScopes: false)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { reviewLedger.pinned($0) })) {
+                    try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { reviewLedger.launch($0) }, settled: { reviewLedger.join($0) })) {
+                        try await Operation.reviewCandidate(source: b.original.source, candidate: result.directory, retention: mode, reader: reader)
+                    }
+                }
+            }
+            #expect(reviewed.originalMetadataSemanticsVerified && reviewed.fullContainerMatchesOriginalBytes == (mode == .entireContainer))
+            reviewLedger.expectJoined(count: 1); reviewLedger.expectEnded()
+            #expect(try snapshot(result.directory) == before)
+            #expect(try Data(contentsOf: b.original.source) == original && Data(contentsOf: prior) == priorBytes)
+        }
+        _ = try b.admit()
+        let osState = try assertions()
+        #expect(!ownAssertion(osState) && !ownAssertion(osState, reason: "StaxRip original companion review"))
+    }
+    @Test func relocatedHardenedReaderHostCancellationKeepsAccessUntilJoinOrTypedReview() async throws {
+        let b = try await HardenedReaderBundleFixture.make(targetName: "native-relocated-access-bundle-fixtures"); var keep = false
+        defer { if keep { print("GENERATED_HARDENED_BUNDLE_REVIEW " + b.original.root.path) } else { b.cleanup() } }
+        let (writer, reader) = try b.admit()
+        _ = try await CompanionWriterProcess.run(tool: writer, source: b.original.source, stage: b.original.stage, retention: .metadataOnly)
+        let ledger = Ledger(), gate = Gate(), original = try Data(contentsOf: b.original.source), before = try snapshot(b.original.stage)
+        let task = Task {
+            try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: false)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) })) {
+                    try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0); gate.hold() }, settled: { ledger.join($0) })) {
+                        try await Operation.reviewCandidate(source: b.original.source, candidate: b.original.stage, retention: .metadataOnly, reader: reader)
+                    }
+                }
+            }
+        }
+        for await _ in gate.entered { break }; ledger.expectActive()
+        task.cancel(); gate.release.signal()
+        do { _ = try await task.value; Issue.record("Cancelled hardened reader-host review succeeded") }
+        catch is CancellationError { ledger.expectEnded() }
+        catch let e as Operation.ReviewFailure {
+            keep = true
+            #expect((e.operationError as? CompanionMetadataProcess.OwnershipFailure)?.reason == "group-1-joined-true")
+            ledger.expectJoined(count: 1); #expect(Operation.retainedForTesting(e.reviewID))
+            // Controlled registry isolation only; uncertain generated files survive.
+            Operation.releaseGeneratedReviewForTesting(e.reviewID); ledger.expectEnded()
+        }
+        ledger.expectJoined(count: 1); _ = try b.admit()
+        #expect(try Data(contentsOf: b.original.source) == original && snapshot(b.original.stage) == before)
+    }
 }

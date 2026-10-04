@@ -24,6 +24,9 @@ final class DolbyAssociationSpool {
     private var decoderStarted = false, decoderBegan = false, decoderComplete = false
     private var decoderPackets: Int64 = 0, decoderFrames: Int64 = 0
     private var decoderTimeBase = [Int]()
+    private var decoderProfile: DolbyDecoderStream.Profile = .metadata
+    private var sampleObservations: Int64 = 0
+    private var pendingSample: (index: Int64, packet: Int64)?
     private let ownerThread = pthread_self()
     private static let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
@@ -219,11 +222,23 @@ final class DolbyAssociationSpool {
     }
     /// Additional fixed disposable coverage only after source settlement. Source
     /// rows remain intact; unsupported multiplicity is refusal, never deduplication.
-    func startDecoderPass() throws {
+    func startDecoderPass(profile: DolbyDecoderStream.Profile = .metadata) throws {
         try operation(false) {
             guard sealed, !decoderStarted, packets > 0, rpus == packets else { throw Failure.refused }
             try sql("CREATE TABLE checked(idx INTEGER PRIMARY KEY, frame INTEGER NOT NULL)")
-            decoderStarted=true
+            decoderProfile=profile; decoderStarted=true
+        }
+    }
+    /// Typed sample callback precedes its raw frame on the same owning worker.
+    /// Hold only indices; values remain transient fixed-decoder observations.
+    func acceptSampleObservation(_ frame: DolbyDecoderStream.BaseSampleFrame) throws {
+        try operation(false) {
+            guard decoderProfile == .baseSamples, decoderStarted, decoderBegan, !decoderComplete,
+                  pendingSample == nil, frame.index == decoderFrames,
+                  frame.packetIndex >= 0, frame.packetIndex < decoderPackets,
+                  sampleObservations == decoderFrames, frame.coded.count == 3,
+                  frame.codecVisible.count == 3 else { throw Failure.refused }
+            pendingSample = (frame.index, frame.packetIndex); sampleObservations += 1
         }
     }
     /// Called synchronously by D124's strict owning stream parser. This checks
@@ -232,14 +247,14 @@ final class DolbyAssociationSpool {
         try operation(false) {
             guard sealed, decoderStarted, !decoderComplete else { throw Failure.refused }
             typealias J = CompanionArchiveJSON
-            let row=try J.object(data,maximum:65_535), kind=try J.string(row,"kind")
+            let row=try J.object(data,maximum:65_535,decoderSampleFields:decoderProfile == .baseSamples), kind=try J.string(row,"kind")
             func n(_ key: String) throws -> Int64 {
                 Int64(try J.unsigned(row,key,0...UInt64(Int64.max)))
             }
             func time(_ key: String) throws -> Int64 { try Self.nanoseconds(J.signed(row,key),timeBase:decoderTimeBase) }
             switch kind {
-            case "begin":
-                guard !decoderBegan, try n("input_bytes") == sourceBytes,
+            case "begin", "sample-begin":
+                guard kind == (decoderProfile == .metadata ? "begin" : "sample-begin"), !decoderBegan, try n("input_bytes") == sourceBytes,
                       try n("configuration_bytes") == track.configurationBytes,
                       try J.digest(row,"configuration_sha256") == track.configurationSHA256,
                       case .array(let base)? = row["time_base"], base.count == 2 else { throw Failure.refused }
@@ -258,10 +273,14 @@ final class DolbyAssociationSpool {
                     try integer(q,1,decoderPackets); try checked(sqlite3_step(q))
                 }
                 decoderPackets += 1
-            case "frame":
-                guard decoderBegan, decoderFrames < packets, try n("index") == decoderFrames else { throw Failure.refused }
+            case "frame", "sample-frame":
+                guard kind == (decoderProfile == .metadata ? "frame" : "sample-frame"), decoderBegan, decoderFrames < packets, try n("index") == decoderFrames else { throw Failure.refused }
                 let index=try n("packet_index")
                 guard index >= 0, index < decoderPackets else { throw Failure.refused }
+                if decoderProfile == .baseSamples {
+                    guard pendingSample?.index == decoderFrames, pendingSample?.packet == index else { throw Failure.refused }
+                    pendingSample = nil
+                } else { guard pendingSample == nil, sampleObservations == 0 else { throw Failure.refused } }
                 let original=try loadPacket(index), raw=try rpu(index)
                 guard !original.invisible, raw.packetIndex == index, raw.ptsNS == original.ptsNS,
                       try time("pts") == original.ptsNS, try time("packet_pts") == original.ptsNS,
@@ -274,8 +293,9 @@ final class DolbyAssociationSpool {
                     try integer(q,1,index); try checked(sqlite3_step(q)); guard let db, sqlite3_changes(db) == 1 else { throw Failure.refused }
                 }
                 decoderFrames += 1
-            case "complete":
-                guard decoderBegan, decoderPackets == packets, decoderFrames == packets,
+            case "complete", "sample-complete":
+                guard kind == (decoderProfile == .metadata ? "complete" : "sample-complete"), pendingSample == nil,
+                      sampleObservations == (decoderProfile == .baseSamples ? packets : 0), decoderBegan, decoderPackets == packets, decoderFrames == packets,
                       try n("packets") == packets, try n("frames") == packets,
                       try scalar("SELECT COUNT(*) FROM checked") == packets,
                       try scalar("SELECT COUNT(*) FROM checked WHERE frame!=1") == 0 else { throw Failure.refused }
@@ -288,7 +308,9 @@ final class DolbyAssociationSpool {
     /// matching source fingerprint/configuration and final source/tool settlement.
     func finishDecoderPass(_ result: DolbyDecoderStream.Receipt) throws {
         try operation(false) {
-            guard decoderComplete, result.packets == packets, result.frames == packets,
+            guard decoderComplete, pendingSample == nil,
+                  result.sampleFrameSummaryCount == sampleObservations,
+                  (result.sampleColorDeclarations != nil) == (decoderProfile == .baseSamples), result.packets == packets, result.frames == packets,
                   result.timeBase == decoderTimeBase,
                   try scalar("SELECT COUNT(*) FROM checked") == packets,
                   try scalar("SELECT COUNT(*) FROM checked WHERE frame!=1") == 0 else { throw Failure.refused }

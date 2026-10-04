@@ -137,6 +137,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-128 | 2026-10-04 | Own source/frame association access and activity | Confirmed | |
 | D-129 | 2026-10-04 | Measure actual coded and codec-visible base samples | Confirmed | |
 | D-130 | 2026-10-04 | Own explicit development base-sample decoder profile | Confirmed | |
+| D-131 | 2026-10-04 | Bind native samples to original source | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3590,3 +3591,40 @@ passes after it, DEBUG behavior unchanged. Fixed role/profile remains developmen
 only; source-frame/sample-source and edited flags stay false. PR104 reader
 passed/app105issues failed; retained without retry or timing policy changes. See
 NATIVE-BASE-SAMPLE-PROCESS-EVIDENCE.md for actual scope/limits and next source binding.
+
+
+## D-131: Bind native sample observations to original source facts
+Status: Confirmed
+Date:2026-10-04, owner standing autonomous generated non-audio delegation,R059.
+
+Use distinct sample entry on the existing pinned source/open SQLite owning worker.
+Explicit sample coverage accepts typed summaries and raw original frame relationships;
+no metadata normalization, closed-store adoption, second worker or Python runtime bridge.
+Require original source/config/packet/hash/escaped-RPU/timing/one-picture coverage and
+complete sample counts, joined helper/EOF/zero result/final observations/checked spool
+and source closes before returning source-dependent sample agreement. Fixed decoder
+statistics are not independently remeasured pixels, linear luminance, rendering, EL,
+container/user crop, resize or edited metadata; all edited/value-proof flags stay false.
+
+Acceptance: actual generated compatible sample tool both threads/source variants,
+repaired plausible source/coverage/summary forgeries, reordered/duplicate/missing/surplus
+and invisible records, resource/storage/cancel/late/substitution refusal and settled
+worker/database/helper ownership. Preserve typed unsettled retention and owner/frozen/
+artifact/session/journal/prior bytes. No action/UI/release/default packaging/signing/movie/
+listening work; focused/ordinary/optimized/privacy/planning checks, automatic outcomes
+without rerun. Resource/access integration and every rendered/edit gate stay separate.
+
+
+D131 acceptance: final focus28tests/5suites3.451s passes, actual native ten generated
+source/sample trials/15helper joins with ordinary observed live cancellation. Short
+fault3 group-1-joined-true uncertainty propagates and retains generated files. Twelve
+plausible source forgeries, both-profile missing/ambiguous/invisible coverage and typed
+sample coverage refusals close the open store. Initial new macro compile/status-format
+failures retained with exact scoped corrections. Ordinary496tests/100suites209.636s
+passes32opt-in skips/no warnings; explicit production/current strict signatures/minima
+14.0/11.0 pass with sample/decoder/writer absent. Seven-file privacy/owner metadata/
+journal/old sample-prefix-frozen-runtime/planning checks pass. PR105 automatic80issues
+retained/PR updated without retry or historical timing policy change. See
+NATIVE-SOURCE-SAMPLE-ASSOCIATION-EVIDENCE.md. Source agreement true only on the new
+complete composition; independent sample values/rendering/edited flags remain false.
+Resource/access/checked helper close and release qualification remain separate gates.

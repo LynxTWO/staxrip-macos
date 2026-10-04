@@ -102,6 +102,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-090 | 2026-10-03 | Observe bounded hosted lifecycle settlement | Confirmed | |
 | D-092 | 2026-10-03 | Editable HEVC VBV suggestions and companion archive requirements | Confirmed | |
 | D-093 | 2026-10-03 | Bound complete RPU archive parsing | Confirmed | |
+| D-094 | 2026-10-03 | Bound Matroska HEVC packet association | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
 
 ## D-001: Native offline product
@@ -1446,3 +1447,21 @@ Need: the source/encoder feasibility relies on complete RPU validity, including 
 Authority: standing autonomous implementation/tool-install direction plus the owner's explicit dynamic-HDR, archive and picture-edit requests. Implement a separate development-only read-only RPU archive reader using pinned MIT libdovi, one bounded record at a time. Verify every record and CRC, preserve full parsed metadata and wire hashes, report completion only after complete EOF and stable source identity, propagate input/output errors and bound record/file/count/JSON resources. No paths or payload in errors. Generated malformed/truncated and injected I/O failures must fail; duplicate records remain observable rather than silently dropped. No native app integration, new copy/transcode admission, owner media edits, bundled dependency, timing diagnostic, merge or release.
 
 Alternative: directly integrate the existing CLI and monitor its output size. Rejected for this prerequisite because that would not bound its parsed sequence or establish that failed reads were not silently shortened. Reuse the MIT metadata parser rather than reimplementing Dolby syntax; pinned code and explicit limits still require generated tests. CRC-valid metadata does not prove frame association, picture fidelity, correct crop/resize statistics or future reattachment. Native integration and AV1 framing require separate acceptance.
+
+
+## D-094: Retain bounded Matroska HEVC packet association
+Date: 2026-10-03
+Status: Confirmed
+
+Authority: standing autonomous development/tool-install delegation and explicit original-preservation, dynamic-HDR and crop/resize requests. This is the next development-only prerequisite of R-059 / Slice 049, with no runtime admission or bundled dependency.
+
+Need: an RPU archive has no container packet timestamps; duplicate-dropping extraction cannot prove future reattachment. The evaluated matroska-demuxer 0.8.1 returns end-of-stream for some I/O errors in next_frame, and its unsigned timestamp representation does not retain negative block presentation timestamps. A wrapper would need independent element-boundary and timing proof. Instead implement a small bounded read-only Matroska/HEVC packet scanner under the existing reader's resource ceiling, using primary Matroska/EBML definitions. No new crate is admitted. This is deliberately a declared subset, not a replacement playback demuxer or complete Matroska validator.
+
+Support one unambiguous HEVC video track with validated length-prefixed configuration, finite clusters and selected-video unlaced SimpleBlock/BlockGroup packets. Signed timestamps and explicit durations remain container observations, not decoded-frame identity. Reject unsupported selected-video transformations, compression/encryption, codec-state changes, additional block payloads, lacing and ambiguous tracks. Preserve every RPU, full metadata, wire digest, packet ordinal and timestamp; count enhancement NAL declarations separately from decoded residual validation. Consume the complete source, propagate read/output errors, verify syntax/CRC and independently rescan the source/hash/identity before completion. Generated corruption, valid-prefix read failure, timestamp/packet mutations, duplicate retention and resource refusals are required, with independent FFprobe packet/timestamp/digest comparisons on generated and private existing source. No owner queue execution/full-film encode, source/journal edits, runtime/copy bypass, timing observer/rerun, audio listening, merge or release.
+
+Native read-only UI and helper packaging follow only after this boundary is qualified. Crop/resize still require exact effective raster/crop/rounding, active-area mapping and resulting-picture statistics; a complete packet census does not qualify an edit or rendering. Unknown-size clusters and other containers require a separate framed reader rather than a silent extraction fallback.
+
+Hosted status update: automatic PR 68 app run 37164120623 at docs-only 140861c failed the unchanged AV1 matrix limit (146.177 seconds versus 120); 303 tests finished in 620.802 seconds with one issue. Reader run 37164120576 passed. Earlier code-head app run 37163446273 passed. The failure is retained separately in HOSTED-QUALIFICATION-REFRAME.md; no blind diagnostic or deadline change follows.
+
+
+D-094 outcome: all 15 generated Rust tests, formatting, warnings-denied Clippy and optimized helper build passed. The final complete private-source pass consumed/rechecked the source in 287.646 seconds; every one of 120,552 video payloads/PTS matched the independent complete manifest. All RPUs matched the prior archive under verified unique-PTS presentation ordering, and complete source/configuration hashes and enhancement/RPU NAL counts matched. All RPUs classify P7 MEL; peak tracked heap 3,132,901 bytes. BOUNDED-MATROSKA-DOLBY-EVIDENCE.md retains the source-specific order distinction, failures and limits. This closes the bounded packet-read prerequisite only; native/helper distribution, frame/POC/general-container mapping, archive publication, edits and rendering remain open.

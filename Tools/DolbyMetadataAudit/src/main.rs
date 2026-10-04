@@ -4,7 +4,10 @@ use std::{
     os::unix::fs::{MetadataExt, OpenOptionsExt},
 };
 
-use staxrip_dolby_metadata_audit::{FILE_LIMIT, Failure, audit_rpu, complete, fingerprint};
+use staxrip_dolby_metadata_audit::{
+    FILE_LIMIT, Failure, audit_rpu, complete, fingerprint_with_limit,
+    matroska::{MOVIE_LIMIT, audit_matroska, complete_matroska},
+};
 
 mod heap;
 #[cfg(not(test))]
@@ -33,30 +36,44 @@ fn run() -> Result<(), Failure> {
         return Err(Failure::Bounds);
     }
     let args: Vec<_> = std::env::args_os().collect();
-    if args.len() != 3 || args[1] != "rpu-json" {
-        eprintln!("Usage: staxrip-dolby-metadata-audit rpu-json <local RPU archive>");
+    if args.len() != 3 || (args[1] != "rpu-json" && args[1] != "mkv-json") {
+        eprintln!("Usage: staxrip-dolby-metadata-audit <rpu-json|mkv-json> <local input>");
         return Err(Failure::Framing);
     }
+    let movie = args[1] == "mkv-json";
+    let limit = if movie { MOVIE_LIMIT } else { FILE_LIMIT };
     let mut input = OpenOptions::new()
         .read(true)
         .custom_flags(libc::O_NONBLOCK | libc::O_CLOEXEC | libc::O_NOCTTY)
         .open(&args[2])
         .map_err(|_| Failure::InputIO)?;
     let before = input.metadata().map_err(|_| Failure::InputIO)?;
-    if !before.is_file() || before.len() == 0 || before.len() > FILE_LIMIT {
+    if !before.is_file() || before.len() == 0 || before.len() > limit {
         return Err(Failure::Bounds);
     }
     let stdout = io::stdout();
     let mut output = io::BufWriter::new(stdout.lock());
-    let receipt = audit_rpu(&mut input, &mut output)?;
+    let archive_receipt;
+    let movie_receipt;
+    let (bytes, digest) = if movie {
+        movie_receipt = Some(audit_matroska(&mut input, before.len(), &mut output)?);
+        archive_receipt = None;
+        let r = movie_receipt.as_ref().unwrap();
+        (r.bytes, r.sha256.clone())
+    } else {
+        archive_receipt = Some(audit_rpu(&mut input, &mut output)?);
+        movie_receipt = None;
+        let r = archive_receipt.as_ref().unwrap();
+        (r.bytes, r.sha256.clone())
+    };
     input.rewind().map_err(|_| Failure::InputIO)?;
-    let rechecked = fingerprint(&mut input)?;
+    let rechecked = fingerprint_with_limit(&mut input, limit)?;
     let after = input.metadata().map_err(|_| Failure::InputIO)?;
     let path = std::fs::metadata(&args[2]).map_err(|_| Failure::InputIO)?;
     if identity(&before) != identity(&after)
         || identity(&before) != identity(&path)
-        || rechecked != (receipt.bytes, receipt.sha256.clone())
-        || receipt.bytes != before.len()
+        || rechecked != (bytes, digest)
+        || bytes != before.len()
     {
         return Err(Failure::ChangedSource);
     }
@@ -68,7 +85,11 @@ fn run() -> Result<(), Failure> {
         heap::peak()
     )
     .map_err(|_| Failure::OutputIO)?;
-    complete(&mut output, &receipt)
+    if let Some(r) = movie_receipt {
+        complete_matroska(&mut output, &r)
+    } else {
+        complete(&mut output, archive_receipt.as_ref().unwrap())
+    }
 }
 
 fn main() {

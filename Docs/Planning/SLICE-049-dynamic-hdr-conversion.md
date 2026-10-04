@@ -56,3 +56,6 @@ A result directory containing media, companion and manifest can be published wit
 Source/encoder research: DYNAMIC-HDR-FEASIBILITY-EVIDENCE.md. Implemented VBV prerequisite: HEVC-BUFFER-LIMITS-EVIDENCE.md. Source metadata counts and bounded semantic preservation do not close complete runtime conversion, original preservation, companion publication, picture edits or calibrated rendering gates.
 
 D-093 adds a locally qualified development-only bounded RPU archive reader. BOUNDED-DOLBY-READER-EVIDENCE.md records generated failures and the full original archive comparison. This closes an archive-read prerequisite only; native integration, container extraction completeness, frame mapping and edited-picture qualification remain open.
+
+
+D-094 adds a development-only bounded Matroska HEVC packet reader with signed timestamps, duplicate-preserving RPU association and strict read failure boundaries. BOUNDED-MATROSKA-DOLBY-EVIDENCE.md records generated FFprobe comparisons and complete private source agreement. This is an extraction/association prerequisite, not native admission, decoded-frame/POC qualification, crop/resize validity or rendering. Presentation-order archives and decoding-order packets must remain distinct in edit manifests.

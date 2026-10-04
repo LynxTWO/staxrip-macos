@@ -168,3 +168,6 @@ PR84 automatic app [37198728775](https://github.com/LynxTWO/staxrip-macos/action
 
 
 PR85 automatic app [37200378605](https://github.com/LynxTWO/staxrip-macos/actions/runs/37200378605) failed two unchanged120-second deadlines: AV1 and ten-bit copy matrices. All388tests finished508.689s with two issues; native original packet suite passed98.880s, preview packaging skipped. Private failed log retained/PR updated; no retry, historical observer, assertion/deadline or scheduling change. Causes remain unknown.
+
+
+PR86 automatic app [37201922436](https://github.com/LynxTWO/staxrip-macos/actions/runs/37201922436) passed without retry: all399 tests471.151s; native index suite83.675s; preview bundle/icon fallback passed. Private automatic log retained. This successful run does not resolve previous unknown-cause timing failures. No historical observer, assertion/deadline or scheduling change.

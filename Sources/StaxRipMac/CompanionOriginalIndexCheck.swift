@@ -15,7 +15,9 @@ enum CompanionOriginalIndexCheck {
     }
     private static func refused() -> NativeExportError { .invalid("Original index/manifest verification refused. No complete semantic receipt.") }
     static func read(_ view: CompanionDiskCheck.ReadView, track: CompanionOriginalTrackCheck.Receipt,
-                     contents: Transaction.Contents) throws -> Receipt {
+                     contents: Transaction.Contents,
+                     observe: @escaping (PacketCheck.Observation) throws -> Void = { _ in },
+                     begin: @escaping (UInt64, Bool) throws -> Void = { _, _ in }) throws -> Receipt {
         try view.checkpoint()
         guard (1...(1 << 40)).contains(contents.sourceBytes), view.sourceBytes == contents.sourceBytes,
               (1...2_000_000).contains(contents.packets), (1...2_000_000).contains(contents.records),
@@ -25,12 +27,13 @@ enum CompanionOriginalIndexCheck {
         let m = try JSON.object(view.componentRead("manifest.json", 0, Int(manifestBytes)), maximum: 1 << 20)
         try manifest(m, track: track, contents: contents)
         let rows = try Rows(view)
-        let source = try PacketCheck.read(view, track: track) { observation in
+        let source = try PacketCheck.read(view, track: track, begin: begin, observe: { observation in
             if case .rpu(let rpu) = observation {
                 guard let row = try rows.next() else { throw refused() }
                 try index(row, original: rpu)
             }
-        }
+            try observe(observation)
+        })
         guard try rows.next() == nil, source.packets == contents.packets, source.records == contents.records,
               source.enhancementNALs == contents.enhancementNALs else { throw refused() }
         try view.checkpoint(); return .init(packets: source)
@@ -84,11 +87,16 @@ enum CompanionOriginalIndexCheck {
     /// One fixed pinned component, bounded row count/line/chunk; no arbitrary file
     /// names, seekable archive-selected paths or unbounded whole-file capture.
     final class Rows {
-        private let view: CompanionDiskCheck.ReadView, size: Int64
+        enum Fixed { case index, audit
+            var name: String { self == .index ? "rpu-index.jsonl" : "source-audit.jsonl" }
+            var maximum: Int64 { self == .index ? 1 << 29 : 1 << 30 }
+            var rows: Int { self == .index ? 2_000_000 : 4_000_002 }
+        }
+        private let view: CompanionDiskCheck.ReadView, size: Int64, fixed: Fixed
         private var offset: Int64 = 0, buffer: [UInt8] = [], position = 0, count = 0
-        init(_ view: CompanionDiskCheck.ReadView) throws {
-            self.view = view; size = try view.componentBytes("rpu-index.jsonl")
-            guard (1...(1 << 29)).contains(size) else { throw refused() }
+        init(_ view: CompanionDiskCheck.ReadView, fixed: Fixed = .index) throws {
+            self.view = view; self.fixed = fixed; size = try view.componentBytes(fixed.name)
+            guard (1...fixed.maximum).contains(size) else { throw refused() }
         }
         func next() throws -> JSON.Object? {
             try view.checkpoint(); var line = Data()
@@ -99,14 +107,14 @@ enum CompanionOriginalIndexCheck {
                     }
                     try view.checkpoint()
                     let n = Int(min(65_536, size - offset))
-                    let data = try view.componentRead("rpu-index.jsonl", offset, n)
+                    let data = try view.componentRead(fixed.name, offset, n)
                     guard data.count == n else { throw refused() }
                     buffer = Array(data); position = 0; offset += Int64(n)
                 }
                 let byte = buffer[position]; position += 1
                 if byte == 10 {
-                    guard count < 2_000_000, !line.isEmpty else { throw refused() }; count += 1
-                    try view.checkpoint(); return try JSON.object(line, maximum: 65_535)
+                    guard count < fixed.rows, !line.isEmpty else { throw refused() }; count += 1
+                    try view.checkpoint(); return try JSON.object(line, maximum: 65_535, auditNullable: fixed == .audit)
                 }
                 guard line.count < 65_535 else { throw refused() }; line.append(byte)
             }

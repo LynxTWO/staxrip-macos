@@ -2,17 +2,18 @@ import Foundation
 
 /// Bounded grammar for fixed version-zero index/manifest fields emitted by the
 /// trusted producer. This is deliberately not a general JSON/session importer.
-/// No escaped/non-ASCII strings, floating numbers, exponents, negative zero or null.
+/// No escaped/non-ASCII strings, floating numbers, exponents, negative zero or null outside the audit-only nullable grammar.
 /// Signed integer PTS are distinct from booleans and preserve Int64.min exactly.
 struct CompanionArchiveJSON {
-    indirect enum Value { case object([String: Value]), array([Value]), string(String), unsigned(UInt64), signed(Int64), bool(Bool) }
+    indirect enum Value { case object([String: Value]), array([Value]), string(String), unsigned(UInt64), signed(Int64), bool(Bool), null }
     typealias Object = [String: Value]
     private let bytes: [UInt8]
+    private var auditNullable = false
     private var position = 0, nodes = 0
     static func refused() -> NativeExportError { .invalid("Original index/manifest JSON refused. No complete semantic receipt.") }
-    static func object(_ data: Data, maximum: Int) throws -> Object {
+    static func object(_ data: Data, maximum: Int, auditNullable: Bool = false) throws -> Object {
         guard !data.isEmpty, data.count <= maximum, maximum <= 1 << 20 else { throw refused() }
-        var reader = Self(bytes: Array(data)); let value = try reader.value(depth: 0); reader.space()
+        var reader = Self(bytes: Array(data), auditNullable: auditNullable); let value = try reader.value(depth: 0); reader.space()
         guard reader.position == reader.bytes.count, case .object(let object) = value else { throw refused() }; return object
     }
     static func string(_ object: Object, _ key: String) throws -> String {
@@ -69,6 +70,7 @@ struct CompanionArchiveJSON {
         for (word, b) in [(Array("true".utf8), true), (Array("false".utf8), false)] {
             if bytes[position...].starts(with: word) { position += word.count; return .bool(b) }
         }
+        if auditNullable, bytes[position...].starts(with: Array("null".utf8)) { position += 4; return .null }
         let negative = bytes[position] == 45
         if negative { position += 1 }
         let start = position

@@ -64,5 +64,6 @@ unfinished.
 Dependency license declarations are inventoried in DEPENDENCY-LICENSES.json. The
 libdovi MIT notice is in LICENSE-libdovi. No GPL reconstruction code is used.
 This is source/development tooling; collect the complete transitive license text
-set before distributing a binary (the crc-catalog crate omits license files in
-its published package). No app/distribution dependency change is claimed here.
+set with binary packaging. Follow-up inspection found 69 supplied texts across
+all 37 dependency packages, including crc-catalog's nested LICENSES directory;
+they are captured privately and their names/hashes are inventoried. No app/distribution dependency change is claimed here.

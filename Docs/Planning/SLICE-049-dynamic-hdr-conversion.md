@@ -1025,3 +1025,94 @@ archive/encode/listening, merge or release. Resource/access ownership, release h
 provenance/packaging and owner-review gates remain before any archive UI; source-dependent
 prototype semantic matching does not qualify stable import, decoded association or edit
 conversion. Historical hosted timing failures remain retained/unknown, no retry.
+
+
+## D-115: Qualify native original companion ENOSPC settlement on owned APFS
+
+Status: Confirmed
+
+Need trace/product contract: R-059's original companion cannot publish complete-looking
+partial files when its destination fills. D114 generated semantic success does not
+establish storage failure behavior. Use the actual writer/native validator/D105/D099
+pipeline with generated media and a uniquely owned bounded APFS image. Owner source,
+volumes, session and prior results remain protected. No app archive UI or release action.
+
+Alternatives: mock writes/errno, fill an existing destination, reuse the generic queue
+capacity result as archive proof, or qualify actual archive production in an owned image.
+Select the last; the existing queue/APFS assertions and D090 timings remain unchanged.
+
+Scope: opt-in generated fixture/harness, fixed64MiB image with image/mount/marker/device
+identity observations before filling and detach. Generated original container with32MiB
+Void padding, an admitted prior metadata result, bounded filler and2MiB reservation.
+Observe actual ENOSPC then release only reservation so stage/producer can start. Require
+actual partial original-container bytes, joined writer refusal, no verifier/publication,
+source/prior bytes unchanged, settled owned-stage cleanup. Reclaim only filler and retry
+actual full native validation/exclusive publication. No private film archive or queue.
+
+Harness owns direct test process/group and image receipt; timeout/interruption or unknown
+worker ownership retains mounted fixture for review, never forced detach/deletion. Ordinary
+settled failure can detach after image/mount identity revalidation and retain its image.
+No owner or unrelated device detach. Configured bounds do not establish general resource,
+crash/durability/volume-loss/blocked-I/O or universal descendant supervision guarantees.
+No native writer protocol/production helper capabilities or runtime controller changes.
+
+Acceptance: actual APFS filesystem/device/capacity/unique marker, ENOSPC write/fsync
+observation and distinct active partial-copy refusal before phase cleanup. Source/hash/
+prior result/absence/fixed membership and joined child assertions. Actual native retry
+succeeds with source-matching semantic receipt and whole-container original bytes; prior
+destination refuses. Owned detach and protection/privacy/planning plus ordinary regression/
+optimized ad-hoc build checks. Inspect automatic PR89 without retry; retain all failures.
+
+Approved for build by: owner standing autonomous generated non-audio delegation, 2026-10-04.
+
+
+D-115 acceptance correction before further build: initial actual APFS test produced an
+incomplete container and settled refusal, but its4096byte post-writer probe succeeded.
+The actual initial fill ENOSPC does not establish the later writer's errno. Do not
+accept or weaken that assertion. The unbundled writer currently collapses all producer
+I/O errors, so retain a sanitized first actual output write/flush ENOSPC classification
+in the source-bound core, propagate it through the existing stage error, and reserve
+nonzero development writer exit28 for that classification. Native controller returns
+a typed storage-full refusal only after EOF/child/pin settlement. stdout ready/start/
+staged protocol and archive schema remain unchanged; status28 is never success. No
+private errno detail/path/payload is emitted. Cancellation keeps precedence. Source
+reads, unrelated I/O, metadata-open failures and capacity estimates must not acquire
+this output-full classification. This is an internal development error contract, not
+a new public/native UI API or release capability. Actual APFS test will require that
+classification plus matching partial original bytes instead of inferring writer errno
+from a later probe. Failed probe log and safely detached image remain retained.
+
+
+D-115 actual changed APFS case passed4.664s: bounded filesystem67067904bytes,
+generated source33555889bytes/filler62193664bytes/partial container2162688bytes,
+actual component ENOSPC typed refusal after writer join, no verifier/publication,
+source/prior bytes preserved and full native verified retry. Direct test child joined,
+phase settlement observed, image/mount identity revalidated and non-forced detach
+confirmed; successful image removed. Initial failed probe image remains safely detached.
+Rust41all-feature tests/format/Clippy and three no-disk harness ownership guards passed.
+Initial Checked test-field compile failure retained/repaired. Focused26tests/4suites
+8.357s passed, new opt-in case skipped in that ordinary focus and executed separately.
+Final ordinary425reported tests/89suites207.903s passed;26 opt-in tests skipped (same
+previous25 plus new APFS), no new warnings. Actual new APFS receipt remains separate.
+Independent companion30tests6.482s passed. Frame/build/protection settlement follows.
+No D090 timing observer/assertion/deadline/global scheduling changes. PR89 automatic
+nine unchanged60/120second timing failures retained/PR updated,424tests566.001s;
+metadata192.150s/reader188.686s passed, preview skipped, no rerun/causal claim.
+
+
+Independent frame-reference15tests1.568s passed. Its installed Homebrew FFmpeg dylibs
+reported macOS27 minimum-version linker warnings against the generated14.0 compile;
+this is current-runtime generated reference evidence, not older-OS qualification or
+bundling of the separate minimal LGPL decoder. No complete owner-source run repeated.
+
+
+D-115 final optimized development build passed without warnings; strict ad-hoc app/
+read-only helper signatures passed, minima14.0/11.0, writer absent. No DeveloperID/
+notarization/older-OS runtime proof. Twelve changed public/nonignored untracked files
+scanned against three private source path/name/stem patterns: zero matches with positive
+decoded source-field sentinel. Source metadata/current recovery journal unchanged,
+planning findings empty. Successful owned APFS image removed after verified detach;
+first failed image remains detached with private receipt/log. No owner queue/source
+body/film archive/encode/listening/merge/release. Native access/resource ownership,
+release capability/packaging/hardened loading and owner review remain before archive UI;
+stable import/persisted binding/decoded edits/crash/volume-loss remain separate gates.

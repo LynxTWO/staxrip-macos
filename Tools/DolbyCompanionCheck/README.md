@@ -88,3 +88,27 @@ late-result cancellation, malformed/stale/nonzero/trailing receipts and a pipe-h
 child. Active physical-copy interruption and archive-specific storage/crash behavior
 remain unqualified. Process deadline covers the owned process, not subsequent physical
 rereads or semantic verification; no physical I/O preemption guarantee is claimed.
+
+
+## Generated native transaction integration
+
+The Swift OriginalCompanionTransactionTests call native_transaction_fixture.py only
+as an explicit test adapter. It invokes the actual development writer or independent
+checker and returns bounded observations to the internal Swift stage coordinator.
+The checker now returns actual source/stage file IDs, source size/digest/counts and disk
+member hashes including the manifest, without changing that manifest. This transient
+receipt is not stable import or persisted producer provenance. The native app neither
+packages nor calls this adapter, Python validator or optional writer.
+
+With the standard locked release reader built (as in the app workflow), run the
+generated native sequencing and end-to-end checks with:
+
+```sh
+cargo build --locked --release --manifest-path Tools/DolbyMetadataAudit/Cargo.toml
+swift test --filter OriginalCompanionTransactionTests
+```
+
+The real both-mode fixture preserves duplicate raw RPU/signed encoded associations;
+separate opaque-component phase tests qualify sequencing and cleanup only. Source
+observations are not immutable snapshots. Trusted settled callbacks and a read-only
+precommit source guard are necessary; callbacks cannot prove their own authenticity.

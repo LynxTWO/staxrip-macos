@@ -147,3 +147,6 @@ finished in 543.636 s with one issue; preview packaging was skipped. Reader run
 37188875102 passed in 1m51s, including nineteen companion checks. Private failure
 log retained; no rerun, historical observer or assertion/deadline change. Earlier
 successful automatic runs did not resolve timing reliability or the unknown causes.
+
+
+PR 79 automatic app run [37190405469](https://github.com/LynxTWO/staxrip-macos/actions/runs/37190405469) failed two unchanged timing checks: Fresh analysis cancellation 6.702383 s against five seconds, and AV1 matrix 125.935 s after its 120-second deadline. All 331 tests finished in 487.092 s with two issues; preview packaging skipped. Reader run 37190405516 passed in 1m30s. Private failed log retained; no rerun, historical observer or assertion/deadline change. Causes remain unknown.

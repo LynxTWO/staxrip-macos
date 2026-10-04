@@ -44,6 +44,10 @@ final class ResultSetStaging: @unchecked Sendable {
         }
     }
 
+    static func validateDestinationName(_ value: String) throws {
+        guard safeName(value) else { throw failure("Invalid destination name.") }
+    }
+
     static func create(in parent: URL) throws -> ResultSetStaging {
         guard parent.isFileURL, !parent.path.utf8.contains(0) else { throw failure("Invalid parent directory.") }
         let p = Darwin.open(parent.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
@@ -70,6 +74,9 @@ final class ResultSetStaging: @unchecked Sendable {
     }
     // Cleanup is explicit so a failed removal cannot be silently described as success.
     deinit { Darwin.close(directoryFD); Darwin.close(parentFD) }
+
+    // A review locator only, never authorization to delete an unverified path.
+    var originalDirectoryURL: URL { parent.appendingPathComponent(name) }
 
     func fileURL(_ filename: String) throws -> URL {
         try lock.withLock {
@@ -157,7 +164,8 @@ final class ResultSetStaging: @unchecked Sendable {
         }
     }
 
-    func publish(as destinationName: String, members: [Member]) async throws -> Published {
+    /// Trusted read-only guard after disk verification; it must not mutate stage contents.
+    func publish(as destinationName: String, members: [Member], preCommit: @escaping @Sendable () throws -> Void = {}) async throws -> Published {
         guard Self.safeName(destinationName), (3...16).contains(members.count),
               members.contains(where: { $0.name == "manifest.json" && $0.byteCount <= 1_048_576 }),
               Set(members.map(\.name)).count == members.count,
@@ -182,7 +190,7 @@ final class ResultSetStaging: @unchecked Sendable {
                 worker.async {
                     let result = Result {
                         try self.verifyAndCommit(destinationName: destinationName, members: members, cancellation: cancellation,
-                            progress: { count in
+                            preCommit: preCommit, progress: { count in
                                 #if DEBUG
                                 try boundary.progress(count)
                                 #endif
@@ -210,7 +218,7 @@ final class ResultSetStaging: @unchecked Sendable {
     }
 
     private func verifyAndCommit(destinationName: String, members: [Member], cancellation: Cancellation,
-                                 progress: (Int64) throws -> Void, beforeCommit: () throws -> Void,
+                                 preCommit: () throws -> Void, progress: (Int64) throws -> Void, beforeCommit: () throws -> Void,
                                  afterCommit: () -> Void) throws -> Published {
         try cancellation.check(); try checkIdentity()
         let expected = Set(members.map(\.name))
@@ -262,6 +270,7 @@ final class ResultSetStaging: @unchecked Sendable {
                 throw Self.failure("Component changed during verification. Nothing published.")
             }
         }
+        try preCommit()
         try cancellation.commit {
             guard renameatx_np(parentFD, name, parentFD, destinationName, UInt32(RENAME_EXCL)) == 0 else {
                 let code = errno

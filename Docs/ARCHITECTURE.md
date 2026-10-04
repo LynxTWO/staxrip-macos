@@ -80,3 +80,17 @@ cooperatively signalling the core; partial files remain owned by the caller. Gen
 checks establish ready-wait cancellation and late-completion refusal, not active physical
 copy interruption or native resource/signing/lease policy. See
 COMPANION-WRITER-PROCESS-EVIDENCE.md.
+
+
+D-105 adds an unused internal Swift original-companion transaction coordinator. It pins
+source identity, owns a unique private stage, awaits trusted settled producer and
+independent semantic phases, validates matching bounded source/stage/member receipts,
+and rechecks source identity immediately before exclusive publication. Cancel/refusal
+awaits phase settlement before owned cleanup; a substituted stage yields a reviewable
+cleanup error without recursive deletion. An admitted commit reports its actual outcome
+including late cancellation. Trusted callbacks must settle their workers and supply true
+receipts; no runtime validator or native writer is installed. A test-only adapter runs
+the actual development writer and independent checker on generated fixtures through
+native publication. Native lease/provenance/resource/signing, owner review, stable import,
+crash/storage and decoded association remain gates. See
+COMPANION-TRANSACTION-SETTLEMENT-EVIDENCE.md.

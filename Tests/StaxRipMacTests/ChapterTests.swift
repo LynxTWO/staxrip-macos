@@ -2,7 +2,59 @@ import Foundation
 import Testing
 @testable import StaxRipMac
 
+final class VideoCopyStageDiagnosis: @unchecked Sendable {
+    enum Case: String { case av1, tenBit, qualification }
+    enum Stage: String { case entered, sourceEncoding, sourceRemux, sourceProbe, sourceFrames, sourceHash, sourceSamples, preflight, startingBatch, waitingBatch, outputHash, outputFrames, outputProbe, outputSubtitle, facts, completed, catchEntered, batchWaitEnded }
+    private let lock = NSLock()
+    private let id: Case
+    private var stage = Stage.entered
+    private var events: [ChapterPlan.WriteEvent] = []
+    private var fixture = 0, batch = 0
+    init(_ id: Case) { self.id = id }
+    func enter(_ next: Stage) {
+        lock.withLock {
+            stage = next
+            if next == .sourceEncoding { fixture += 1 }
+            if next == .startingBatch { batch += 1 }
+            print("VIDEO_COPY_CASE id=\(id.rawValue) fixture=\(fixture) batch=\(batch) stage=\(stage.rawValue) chapter=none")
+        }
+    }
+    func chapter(_ event: ChapterPlan.WriteEvent) {
+        lock.withLock { events.append(event); print("VIDEO_COPY_CASE id=\(id.rawValue) fixture=\(fixture) batch=\(batch) stage=\(stage.rawValue) chapter=\(event.rawValue)") }
+    }
+    var chapterEvents: [ChapterPlan.WriteEvent] { lock.withLock { events } }
+}
+
 struct ChapterTests {
+    @Test func metadataWriteEventsFollowActualExclusiveWriteAndRefusal() async throws {
+        let directory = try root()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let plan = try ChapterPlan.make(probe: probe(), configuration: configuration())
+        let normal = VideoCopyStageDiagnosis(.qualification)
+        try await ChapterPlan.$observeMetadataWrite.withValue({ normal.chapter($0) }) {
+            try await plan.writeMetadata(to: directory)
+        }
+        #expect(normal.chapterEvents == [.bodyEntered,.submitting,.workerEntered,.writeReturned,.bodyResumed])
+        let file = directory.appendingPathComponent("chapters.ffmetadata")
+        let original = try Data(contentsOf: file)
+        let refused = VideoCopyStageDiagnosis(.qualification)
+        await #expect(throws: (any Error).self) {
+            try await ChapterPlan.$observeMetadataWrite.withValue({ refused.chapter($0) }) {
+                try await plan.writeMetadata(to: directory)
+            }
+        }
+        #expect(refused.chapterEvents == [.bodyEntered,.submitting,.workerEntered,.writeRefused])
+        #expect(try Data(contentsOf: file) == original)
+        let absent = VideoCopyStageDiagnosis(.qualification)
+        var noChapters = configuration(); noChapters.chapterEdits = ChapterEdits(mode: .remove)
+        let empty = try ChapterPlan.make(probe: probe(), configuration: noChapters)
+        try await ChapterPlan.$observeMetadataWrite.withValue({ absent.chapter($0) }) {
+            try await empty.writeMetadata(to: directory)
+        }
+        #expect(absent.chapterEvents == [.bodyEntered,.noMetadata])
+    }
+
+
     private func entries() -> [ChapterEntry] {
         [.init(startMilliseconds: 0, endMilliseconds: 2000, title: "Opening = #1; \\ [CHAPTER]"),
          .init(startMilliseconds: 2000, endMilliseconds: 4000, title: "Conversation 日本語"),

@@ -2321,3 +2321,16 @@ provenance, independent values, rendering/edit admission, default SAR, app actio
 or cleanup/recovery authority follows. Source SPS/active parameter-set geometry still needs
 independent syntax/selection qualification before origin policy; other finite resource/
 retirement/recovery/distribution and rendered/edited gates remain open.
+
+
+### D150 original source SPS geometry prefix
+
+Unused source-only worker reads selected original hvcC SPS prefix after fresh Track/config
+binding and complete source-table/final checked settlement. Exactly one base-layer10-bit420
+SPS and no selected packet VPS/SPS/PPS is a finite subset; active picture selection and full
+SPS conformance are not established. PTL constraints/suffix remain opaque, no progressive/
+SAR/color/source ROI/value/rendered/edited admission. See D-150 and
+SOURCE-SPS-GEOMETRY-PREFIX-EVIDENCE.md. Existing narrower APIs remain unchanged; actual
+source-generated conformance prefix is read independently of decoder declarations. Active
+VPS/PPS/slice selection and full joint coverage still precede coordinate-origin policy;
+explicit access/retention and other retirement/recovery/distribution gates remain open.

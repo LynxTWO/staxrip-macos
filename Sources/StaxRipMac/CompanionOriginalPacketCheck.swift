@@ -40,8 +40,9 @@ enum CompanionOriginalPacketCheck {
     /// the potential concatenated size/positions, not a written or matched file.
     static func readSource(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt,
                            begin: @escaping (UInt64, Bool) throws -> Void = { _, _ in },
-                           observe: @escaping (Observation) throws -> Void = { _ in }) throws -> Receipt {
-        let scan = Scanner(view, track, observe, begin, compareRetained: false)
+                           observe: @escaping (Observation) throws -> Void = { _ in },
+                           refuseInBandParameterSets: Bool = false) throws -> Receipt {
+        let scan = Scanner(view, track, observe, begin, compareRetained: false, refuseInBandParameterSets: refuseInBandParameterSets)
         return try scan.read()
     }
     /// Exact integer arithmetic, including Int64.min and cluster timestamps above
@@ -67,12 +68,12 @@ enum CompanionOriginalPacketCheck {
         let view: CompanionDiskCheck.ReadView, track: Track.Receipt, walker: Track.Walker
         let observe: (Observation) throws -> Void
         let begin: (UInt64, Bool) throws -> Void
-        let compareRetained: Bool
+        let compareRetained: Bool, refuseInBandParameterSets: Bool
         var packets: Int64 = 0, records: Int64 = 0, enhancement: Int64 = 0, archive: Int64 = 0
         var blocks = 0, peak = 0, sequence = SHA256()
-        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void, compareRetained: Bool) {
+        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void, compareRetained: Bool, refuseInBandParameterSets: Bool = false) {
             self.view = view; self.track = track; self.observe = observe; self.begin = begin
-            self.compareRetained = compareRetained
+            self.compareRetained = compareRetained; self.refuseInBandParameterSets = refuseInBandParameterSets
             walker = Track.Walker(view, elementLimit: 128_000_000)
         }
         func children(_ e: Element, _ body: (Element) throws -> Void) throws {
@@ -259,7 +260,9 @@ enum CompanionOriginalPacketCheck {
                 guard length >= 2, length <= UInt64(b.end - cursor) else { throw refused() }
                 let h = try view.source(cursor, 2)
                 guard h[0] & 0x80 == 0, h[1] & 7 != 0 else { throw refused() }
-                switch h[0] >> 1 & 0x3f {
+                let type = h[0] >> 1 & 0x3f
+                guard !refuseInBandParameterSets || ![32,33,34].contains(type) else { throw refused() }
+                switch type {
                 case 62:
                     guard h[0] & 1 == 0, h[1] >> 3 == 0, length > 2, length - 2 <= 65_536,
                           records < 2_000_000 else { throw refused() }

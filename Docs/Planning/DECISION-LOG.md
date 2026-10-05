@@ -167,6 +167,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-158 | 2026-10-05 | Expose decoder CI case and admission refusal | Confirmed | |
 | D-159 | 2026-10-05 | Explain missing mastering phase terminal outcomes | Confirmed | |
 | D-160 | 2026-10-05 | Identify sample/crop CI invocation and admission category | Confirmed | |
+| D-161 | 2026-10-05 | Locate video-copy timeout and awaited chapter-write stages | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4976,3 +4977,49 @@ sentinel/protected owner metadata-journal-original-frozen-D130/D142/D143 unchang
 audit empty. No new compile/test failure or ordinary retry/owner body/runtime rebuild/UI.
 Private bounds-regex/cwd/repo lookup mistakes corrected before execution rerun or remote
 mutation; actual retained logs parsed without changing tests. Source-only review, no full exit.
+
+
+## D-161: Locate video-copy stages before repair
+Status: Confirmed
+Date: 2026-10-05.
+
+M5 consumes finite DEBUG ChapterPlan events and fixed stages in the two historical video
+copy tests. Same original guard/cancellation/utility queue/continuation/exclusive write/
+error, case bodies/assertions/order120s bounds/10ms polls/cancel-wait. Selected TaskLocal
+captured into existing queue and inherited by existing batch Task, no new owner-worker.
+No paths/error descriptions/body/clock added. writeReturned is API return not durability/
+settlement; bodyResumed before final cancellation check; batchWaitEnded is polling end not
+an awaited task/group/access receipt. Stage not exact stall cause/timing equivalence.
+See VIDEO-COPY-CI-STAGE-EVIDENCE.md. One new actual exclusive write/refusal preserving
+existing bytes/no-metadata qualification. Focus8tests3suites2.969s passed; eight AV1/four
+Main10 existing batch cases expose five write boundaries. Existing AV1asyncThread warning
+at40 emitted, no new warning site. Independent source-only review/no execution/full exit.
+
+Parent PR135 exactfda620e35295f749d2222e4a1d6abf5a6fa746de automatic37334321502/attempt1/
+job111845100293 FAILED625tests542.626s5issues: two120s AV1/TenBit/Fresh5.165524vs<5/
+Rendering-Measuring EOF. All22samplecrop calls launch/callback/assertions pass THISrun,
+earlier causes unknown. Fresh receivedphase/cancelled; EOFmatchedready/candidateReturned/
+receivedfalse. Writer104.849s/source107.587s/access258.145s/static242.217s/fixture46s pass.
+Full log retained/parent updated without rerun. New changed-head actual stages before repair,
+no global starvation attribution or weakened assertion/deadline/skip/CI workaround.
+Active-work gate/timer-arm/close repair pending approval and unchanged. All M1-M5 OPEN,
+no cleanup/access/syntax/activation/origin/value/rendered/edit/UI/release/completion upgrade.
+
+Final ordinary626reported tests/105suites215.871s PASSED40 unchanged opt-in skips/no emitted
+warnings. Access39.569s/source-prefix20.592s/static34.969s/Recovery49.353s
+pass. No ordinary retry/new compile-test failure. Focus retains one existing AV1asyncThread
+warning site; no new warning site. Product96of97files unchanged; only ChapterEdits DEBUG
+observer addition/control-text after conditional/whitespace/statement-separator normalization
+unchanged, a source check not compiler/timing equivalence. OriginalMastering bytes unchanged.
+Static exact94-source host compiles changed file but executes prior companion preservation/
+review, not the new video-case context/decoder/sample/crop/SPS/VCL loading. Seven-file privacy
+zero/positive sentinel/protected owner metadata-journal-original-frozen-D130/D142/D143
+unchanged; planning audit empty. No owner body/runtime build-copy/C/sanitizer/pixel oracle/
+APFS/DeveloperID/UI qualification, new default packaging/cleanup/release. Private fixed-log
+record/DEBUG-indent/statement-separator regex corrections retained without test rerun or
+product mutation; initial downstream parent-body edit had no file and made no remote write.
+
+Explicit production22.75s compiler-reported and current strict ad-hoc app/read-only helper
+signatures/minima14.0/11.0 pass, writer/decoder/sample/crop absent. This is a new release
+compilation/ordinary bundle check, not DeveloperID/hardened loading/clean-machine/UI release
+qualification or a cold/elapsed benchmark. No runtime artifact was recreated/copied.

@@ -42,6 +42,7 @@ struct AV1CopyTests {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("av1-copy-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         let batch = await MainActor.run { BatchController(journalURL: root.appendingPathComponent("journal.json")) }
+        let diagnosis = VideoCopyStageDiagnosis(.av1)
         var passed = false
         defer { if passed { try? FileManager.default.removeItem(at: root) } }
         do {
@@ -56,19 +57,25 @@ struct AV1CopyTests {
                 let mp4 = root.appendingPathComponent("source-\(bits).mp4"), mkv = root.appendingPathComponent("source-\(bits).mkv")
                 let pattern = bits == 8 ? "testsrc2=size=160x96:rate=24:duration=3" :
                     "nullsrc=size=160x96:rate=24:duration=3,format=yuv420p10le,geq=lum='64+mod(X*5+Y*7+N*3,877)':cb='512+mod(X,17)':cr='512-mod(Y,19)'"
+                diagnosis.enter(.sourceEncoding)
                 _ = try await encode(["-f", "lavfi", "-i", pattern, "-c:v", "libsvtav1", "-preset", "10", "-crf", "20",
                     "-pix_fmt", pixel, "-threads", "2", "-svtav1-params",
                     "lp=2:color-primaries=1:transfer-characteristics=1:matrix-coefficients=1:color-range=0", mp4.path], tools: tools)
+                diagnosis.enter(.sourceRemux)
                 _ = try await encode(["-i", mp4.path, "-map", "0:v:0", "-c:v", "copy", mkv.path], tools: tools)
                 let originals = try [Data(contentsOf: mp4), Data(contentsOf: mkv)]
                 for source in [mp4, mkv] {
+                    diagnosis.enter(.sourceProbe)
                     let before = try await MediaProbe.read(source, tools: tools)
                     let video = try #require(before.video)
                     try #require(video.codec_name == "av1" && video.profile == "Main" && video.pix_fmt == pixel)
                     try #require(video.color_primaries == "bt709" && video.color_transfer == "bt709" && video.color_space == "bt709" && video.color_range == "tv")
+                    diagnosis.enter(.sourceFrames)
                     let referenceFrames = try await frames(source, pixel: pixel, tools: tools)
+                    diagnosis.enter(.sourceHash)
                     let referenceHash = try await pictureHash(source, pixel: pixel, tools: tools)
                     if bits == 10 {
+                        diagnosis.enter(.sourceSamples)
                         let raw = try await encode(["-i", source.path, "-map", "0:v:0", "-frames:v", "1", "-c:v", "rawvideo",
                             "-pix_fmt", pixel, "-f", "rawvideo", "pipe:1"], tools: tools)
                         try #require(raw.count == 160 * 96 * 3)
@@ -86,22 +93,30 @@ struct AV1CopyTests {
                             ChapterEntry(startMilliseconds: 1500, endMilliseconds: 3000, title: "Second")])
                         let output = root.appendingPathComponent("\(bits)-\(source.pathExtension)-to-\(container.lowercased()).\(container.lowercased())")
                         let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: output.path, configuration: c, created: Date())
+                        diagnosis.enter(.preflight)
                         let preflight = try await QueuePreflight.inspect(job, tools: tools, encoders: [])
                         try #require(preflight.kind == .deferred && preflight.detail.contains("packet verification"))
-                        await batch.start([job])
+                        diagnosis.enter(.startingBatch)
+                        await ChapterPlan.$observeMetadataWrite.withValue({ diagnosis.chapter($0) }) { await batch.start([job]) }
+                        diagnosis.enter(.waitingBatch)
                         while await batch.running { try await Task.sleep(for: .milliseconds(10)) }
                         let status = try #require(await batch.statuses[job.id])
                         try #require(status.phase == "Completed", Comment(rawValue: status.detail))
                         #expect(status.detail.contains("Verified copied video: 72 encoded packets"))
+                        diagnosis.enter(.outputHash)
                         #expect(try await pictureHash(output, pixel: pixel, tools: tools) == referenceHash)
+                        diagnosis.enter(.outputFrames)
                         let actualFrames = try await frames(output, pixel: pixel, tools: tools)
                         for (a, b) in zip(referenceFrames, actualFrames) { #expect(abs(a - b) <= 0.001001) }
+                        diagnosis.enter(.outputProbe)
                         let after = try await MediaProbe.read(output, tools: tools)
                         _ = try VideoCopyContract.make(probe: before, configuration: c).verifyMetadata(after)
                         #expect(after.streams.filter { $0.codec_type == "video" }.count == 1)
                         #expect(after.streams.filter { $0.codec_type == "audio" }.isEmpty)
                         let subtitle = try #require(after.streams.first { $0.codec_type == "subtitle" })
+                        diagnosis.enter(.outputSubtitle)
                         #expect(try await encode(["-i", output.path, "-map", "0:\(subtitle.index)", "-c:s", "srt", "-f", "srt", "pipe:1"], tools: tools) == text)
+                        diagnosis.enter(.facts)
                         let chapters = try ContainerPreservation.readChapters(after)
                         try #require(chapters.count == 2)
                         #expect(chapters.map(\.title) == ["First", "Second"])
@@ -115,12 +130,15 @@ struct AV1CopyTests {
                     }
                 }
             }
+            diagnosis.enter(.completed)
             passed = true
         } catch {
+            diagnosis.enter(.catchEntered)
             if await batch.running { await batch.cancel() }
             await Task { @MainActor in
                 while batch.running { try? await Task.sleep(for: .milliseconds(10)) }
             }.value
+            diagnosis.enter(.batchWaitEnded)
             throw error
         }
     }

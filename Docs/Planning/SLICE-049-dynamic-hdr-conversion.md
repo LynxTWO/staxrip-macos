@@ -2492,3 +2492,35 @@ sentinel/protected owner metadata-journal-original-frozen-D130/D142/D143 unchang
 audit empty. No new compile/test failure or ordinary retry/owner body/runtime rebuild/UI.
 Private bounds-regex/cwd/repo lookup mistakes corrected before execution rerun or remote
 mutation; actual retained logs parsed without changing tests. Source-only review, no full exit.
+
+
+### D161 bounded video-copy awaited-write stage diagnosis
+Status: Approved for build by owner standing autonomous generated non-audio heartbeat.
+M5 consumer: actual remaining AV1/TenBit120s stages before repair. PR135 has five issues,
+all22sample/crop invocations launch/callback/assertions pass THISrun; not prior cause.
+Need trace: finite existing ChapterPlan write DEBUG enum events/captured TaskLocal observer,
+fixed generated-case stages in the two historical tests, same original queue/continuation/
+checks/error/polls/assertions/120s bounds/order/cancel-await cleanup. One actual normal and
+exclusive-refusal write qualification, no mirrored test. No raw path/error/payload/clock,
+new worker or scheduling changes. Existing BatchController Task inherits selected boundary;
+TaskLocal capture explicit into existing utility closure. Live-work gates/timer/close repair
+remain pending approval, no implementation. Exact stage alone not underlying stall proof.
+
+Final ordinary626reported tests/105suites215.871s PASSED40 unchanged opt-in skips/no emitted
+warnings. Access39.569s/source-prefix20.592s/static34.969s/Recovery49.353s
+pass. No ordinary retry/new compile-test failure. Focus retains one existing AV1asyncThread
+warning site; no new warning site. Product96of97files unchanged; only ChapterEdits DEBUG
+observer addition/control-text after conditional/whitespace/statement-separator normalization
+unchanged, a source check not compiler/timing equivalence. OriginalMastering bytes unchanged.
+Static exact94-source host compiles changed file but executes prior companion preservation/
+review, not the new video-case context/decoder/sample/crop/SPS/VCL loading. Seven-file privacy
+zero/positive sentinel/protected owner metadata-journal-original-frozen-D130/D142/D143
+unchanged; planning audit empty. No owner body/runtime build-copy/C/sanitizer/pixel oracle/
+APFS/DeveloperID/UI qualification, new default packaging/cleanup/release. Private fixed-log
+record/DEBUG-indent/statement-separator regex corrections retained without test rerun or
+product mutation; initial downstream parent-body edit had no file and made no remote write.
+
+Explicit production22.75s compiler-reported and current strict ad-hoc app/read-only helper
+signatures/minima14.0/11.0 pass, writer/decoder/sample/crop absent. This is a new release
+compilation/ordinary bundle check, not DeveloperID/hardened loading/clean-machine/UI release
+qualification or a cold/elapsed benchmark. No runtime artifact was recreated/copied.

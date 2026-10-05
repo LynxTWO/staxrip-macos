@@ -63,6 +63,11 @@ struct ChapterEdits: Codable, Equatable, Sendable {
 }
 
 struct ChapterPlan: Sendable {
+    #if DEBUG
+    enum WriteEvent: String, Sendable { case bodyEntered, noMetadata, submitting, workerEntered, writeReturned, writeRefused, bodyResumed }
+    @TaskLocal static var observeMetadataWrite: (@Sendable (WriteEvent) -> Void)?
+    #endif
+
     enum MetadataTimeline { case source, output }
     let expected: [ContainerPreservation.Chapter]
     let metadata: Data?
@@ -151,15 +156,43 @@ struct ChapterPlan: Sendable {
         }
     }
     func writeMetadata(to directory: URL) async throws {
-        guard let metadata else { return }
+        #if DEBUG
+        let observe = Self.observeMetadataWrite
+        observe?(.bodyEntered)
+        #endif
+        guard let metadata else {
+            #if DEBUG
+            observe?(.noMetadata)
+            #endif
+            return
+        }
         try Task.checkCancellation()
         let file = directory.appendingPathComponent("chapters.ffmetadata")
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            #if DEBUG
+            observe?(.submitting)
+            #endif
             DispatchQueue.global(qos: .utility).async {
-                do { try metadata.write(to: file, options: .withoutOverwriting); continuation.resume() }
-                catch { continuation.resume(throwing: error) }
+                #if DEBUG
+                observe?(.workerEntered)
+                #endif
+                do {
+                    try metadata.write(to: file, options: .withoutOverwriting)
+                    #if DEBUG
+                    observe?(.writeReturned)
+                    #endif
+                    continuation.resume()
+                } catch {
+                    #if DEBUG
+                    observe?(.writeRefused)
+                    #endif
+                    continuation.resume(throwing: error)
+                }
             }
         }
+        #if DEBUG
+        observe?(.bodyResumed)
+        #endif
         try Task.checkCancellation()
     }
 }

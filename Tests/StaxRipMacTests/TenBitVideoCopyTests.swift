@@ -42,16 +42,19 @@ struct TenBitVideoCopyTests {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("ten-bit-copy-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         let batch = BatchController(journalURL: root.appendingPathComponent("journal.json"))
+        let diagnosis = VideoCopyStageDiagnosis(.tenBit)
         var passed = false
         defer { if passed && !batch.running { try? FileManager.default.removeItem(at: root) } }
         do {
             let mp4 = root.appendingPathComponent("source.mp4"), mkv = root.appendingPathComponent("source.mkv")
             let pattern = "nullsrc=size=160x96:rate=24:duration=3,format=yuv420p10le,geq=lum='64+mod(X*5+Y*7+N*3,877)':cb='512+mod(X,17)':cr='512-mod(Y,19)'"
+            diagnosis.enter(.sourceEncoding)
             _ = try await encode(["-f", "lavfi", "-i", pattern, "-c:v", "libx265", "-preset", "fast", "-crf", "20",
                 "-pix_fmt", "yuv420p10le", "-threads", "4", "-x265-params",
                 "pools=2:frame-threads=2:log-level=error:colorprim=bt709:transfer=bt709:colormatrix=bt709:range=limited",
                 "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709", "-color_range", "tv",
                 "-fps_mode:v", "passthrough", "-enc_time_base:v", "filter", mp4.path], tools: tools)
+            diagnosis.enter(.sourceRemux)
             _ = try await encode(["-i", mp4.path, "-map", "0:v:0", "-c:v", "copy", mkv.path], tools: tools)
             let originals = try [Data(contentsOf: mp4), Data(contentsOf: mkv)]
             let caption = root.appendingPathComponent("captions.srt"), prior = root.appendingPathComponent("prior.mkv")
@@ -61,12 +64,16 @@ struct TenBitVideoCopyTests {
             try sentinel.write(to: prior, options: .withoutOverwriting)
             batch.tools = tools; batch.encoders = []
             for source in [mp4, mkv] {
+                diagnosis.enter(.sourceProbe)
                 let before = try await MediaProbe.read(source, tools: tools)
                 let video = try #require(before.video)
                 try #require(video.codec_name == "hevc" && video.profile == "Main 10" && video.pix_fmt == "yuv420p10le")
                 try #require(video.color_primaries == "bt709" && video.color_transfer == "bt709" && video.color_space == "bt709" && video.color_range == "tv")
+                diagnosis.enter(.sourceFrames)
                 let referenceFrames = try await frames(source, tools: tools)
+                diagnosis.enter(.sourceHash)
                 let referenceHash = try await pictureHash(source, tools: tools)
+                diagnosis.enter(.sourceSamples)
                 let raw = try await encode(["-i", source.path, "-map", "0:v:0", "-frames:v", "1", "-c:v", "rawvideo",
                     "-pix_fmt", "yuv420p10le", "-f", "rawvideo", "pipe:1"], tools: tools)
                 try #require(raw.count == 160 * 96 * 3)
@@ -83,16 +90,22 @@ struct TenBitVideoCopyTests {
                         ChapterEntry(startMilliseconds: 1500, endMilliseconds: 3000, title: "Second")])
                     let output = root.appendingPathComponent(source.pathExtension + "-to-" + container.lowercased() + "." + container.lowercased())
                     let job = QueueJob(id: UUID(), source: source.path, isDemo: false, destination: output.path, configuration: c, created: Date())
+                    diagnosis.enter(.preflight)
                     let preflight = try await QueuePreflight.inspect(job, tools: tools, encoders: [])
                     try #require(preflight.kind == .deferred && preflight.detail.contains("packet verification"))
-                    batch.start([job])
+                    diagnosis.enter(.startingBatch)
+                    ChapterPlan.$observeMetadataWrite.withValue({ diagnosis.chapter($0) }) { batch.start([job]) }
+                    diagnosis.enter(.waitingBatch)
                     while batch.running { try await Task.sleep(for: .milliseconds(10)) }
                     let status = try #require(batch.statuses[job.id])
                     try #require(status.phase == "Completed", Comment(rawValue: status.detail))
                     #expect(status.detail.contains("Verified copied video: 72 encoded packets"))
+                    diagnosis.enter(.outputHash)
                     #expect(try await pictureHash(output, tools: tools) == referenceHash)
+                    diagnosis.enter(.outputFrames)
                     let actualFrames = try await frames(output, tools: tools)
                     for (a, b) in zip(referenceFrames, actualFrames) { #expect(abs(a - b) <= 0.001001) }
+                    diagnosis.enter(.outputProbe)
                     let after = try await MediaProbe.read(output, tools: tools)
                     #expect(after.streams.filter { $0.codec_type == "video" }.count == 1)
                     #expect(after.streams.filter { $0.codec_type == "audio" }.isEmpty)
@@ -101,7 +114,9 @@ struct TenBitVideoCopyTests {
                     let subtitles = after.streams.filter { $0.codec_type == "subtitle" }
                     let subtitle = try #require(subtitles.first)
                     #expect(subtitles.count == 1)
+                    diagnosis.enter(.outputSubtitle)
                     #expect(try await encode(["-i", output.path, "-map", "0:\(subtitle.index)", "-c:s", "srt", "-f", "srt", "pipe:1"], tools: tools) == text)
+                    diagnosis.enter(.facts)
                     let chapters = try ContainerPreservation.readChapters(after)
                     try #require(chapters.count == 2)
                     #expect(chapters.map(\.title) == ["First", "Second"])
@@ -114,12 +129,15 @@ struct TenBitVideoCopyTests {
                     #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).allSatisfy { !$0.hasPrefix(".staxrip-batch-") })
                 }
             }
+            diagnosis.enter(.completed)
             passed = true
         } catch {
+            diagnosis.enter(.catchEntered)
             if batch.running { batch.cancel() }
             await Task { @MainActor in
                 while batch.running { try? await Task.sleep(for: .milliseconds(10)) }
             }.value
+            diagnosis.enter(.batchWaitEnded)
             throw error
         }
     }

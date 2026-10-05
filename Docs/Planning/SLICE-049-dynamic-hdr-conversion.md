@@ -2376,3 +2376,13 @@ See D-154 and NATIVE-PARAMETER-CROP-ACCESS-EVIDENCE.md. Full parameter/slice/act
 ROI/value/rendered/edited remain false. Local ordinary metadata pipe-holder failure is retained
 without retry or cause claim. Next finite source SPS coding-tree-block/grid readback is only
 a read-only selection pending primary verification, not non-first slice/origin qualification.
+
+
+### D155 source SPS coding-tree grid prefix
+
+An unused source-only worker entry binds finite original SPS ordering/coding-tree grid after
+fresh source configuration/parameter references. Uncropped coded grid and raw present records
+remain separate from full SPS/VPS/level/transform/slice validity or active picture use. See
+D-155 and SOURCE-SPS-CODING-TREE-PREFIX-EVIDENCE.md. No decoder/controller/action is added;
+explicit caller access remains required. Non-first/dependent slice-address admission and
+full conformance/active/origin/value/rendered/edited remain later separate prerequisites.

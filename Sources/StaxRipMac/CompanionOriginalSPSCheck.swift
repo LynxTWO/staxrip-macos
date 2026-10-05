@@ -34,6 +34,64 @@ enum CompanionOriginalSPSCheck {
         let independentSampleValuesVerified = false
         let editedPictureSemanticsVerified = false
     }
+    /// Finite SPS coding-tree prefix; ordering records retain only present syntax.
+    /// Complete SPS/VPS/level constraints, transform suffix and active use remain opaque.
+    struct CodingTreePrefix: Sendable, Equatable {
+        struct Ordering: Sendable, Equatable {
+            let subLayer, bufferingMinus1, reorderPictures, latencyIncreasePlus1: Int
+        }
+        let parameters: ParameterReferences
+        let pocLSBBits, prefixBitCount: Int
+        let orderingInfoPresentForAllSubLayers: Bool
+        let presentOrdering: [Ordering]
+        let minCbLog2Size, ctbLog2Size, columns, rows, ctbs, addressBits: Int
+        let completeSPSConformanceVerified = false
+        let activePictureParameterSetSelectionVerified = false
+        let independentSourceROIProvenanceVerified = false
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+    }
+    static func readSourceCodingTreePrefix(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt) throws -> CodingTreePrefix {
+        try readConfigurationCodingTreePrefix(sourceConfiguration(view, track: track), checkpoint: view.checkpoint)
+    }
+    static func readConfigurationCodingTreePrefix(_ data: Data, checkpoint: () throws -> Void = {}) throws -> CodingTreePrefix {
+        let parameters = try readConfigurationReferences(data, checkpoint: checkpoint)
+        let entry = try arrays(data, checkpoint: checkpoint).filter { $0.type == 33 }
+        guard entry.count == 1, entry[0].units.count == 1 else { throw refused() }
+        var bits = Bits(data: try rbsp(entry[0].units[0], type: 33, checkpoint: checkpoint))
+        try bits.skip(parameters.geometry.prefixBitCount)
+        let poc = try bits.ue(maximum: 12) + 4, all = try bits.read(1) == 1
+        let highest = parameters.geometry.maxSubLayersMinus1
+        var ordering: [CodingTreePrefix.Ordering] = []
+        for layer in (all ? 0 : highest)...highest {
+            try checkpoint()
+            // Explicit finite subset; not normative VPS/level DPB qualification.
+            let buffering = try bits.ue(maximum: 15), reorder = try bits.ue(maximum: 15)
+            let latency = try bits.ue(maximum: 65_534)
+            guard reorder <= buffering else { throw refused() }
+            if let previous = ordering.last {
+                guard buffering >= previous.bufferingMinus1, reorder >= previous.reorderPictures else { throw refused() }
+            }
+            ordering.append(.init(subLayer: layer, bufferingMinus1: buffering,
+                                  reorderPictures: reorder, latencyIncreasePlus1: latency))
+        }
+        let minCb = try bits.ue(maximum: 3) + 3, diff = try bits.ue(maximum: 3)
+        let ctb = minCb + diff, geometry = parameters.geometry
+        guard (4...6).contains(ctb), geometry.codedWidth.isMultiple(of: 1 << minCb),
+              geometry.codedHeight.isMultiple(of: 1 << minCb), bits.position < bits.data.count*8 else { throw refused() }
+        let size = 1 << ctb
+        // Subtraction first avoids width+size-1 overflow; crop never changes this grid.
+        let columns = (geometry.codedWidth-1)/size+1, rows = (geometry.codedHeight-1)/size+1
+        let product = columns.multipliedReportingOverflow(by: rows)
+        guard !product.overflow, product.partialValue > 0, product.partialValue <= 1 << 20 else { throw refused() }
+        let count = product.partialValue
+        let addressBits = count == 1 ? 0 : Int.bitWidth-(count-1).leadingZeroBitCount
+        try checkpoint()
+        return .init(parameters: parameters, pocLSBBits: poc, prefixBitCount: bits.position,
+            orderingInfoPresentForAllSubLayers: all, presentOrdering: ordering,
+            minCbLog2Size: minCb, ctbLog2Size: ctb, columns: columns, rows: rows,
+            ctbs: count, addressBits: addressBits)
+    }
     private static func refused() -> NativeExportError {
         .invalid("Original configuration SPS geometry prefix refused. Active picture geometry is not established.")
     }

@@ -22,7 +22,7 @@ struct CompanionOriginalSPSCheckTests {
     }
     private func nal(width: Int = 176, height: Int = 112, crop: [Int]? = [0,7,0,7],
                      sub: Int = 0, id: Int = 0, chroma: Int = 1, depth: Int = 2,
-                     reserved: Int = 0, vpsID: Int = 0) -> Data {
+                     reserved: Int = 0, vpsID: Int = 0, codingTail: ((inout Writer) -> Void)? = nil) -> Data {
         var w = Writer(); w.put(vpsID,4); w.put(sub,3); w.put(1,1)
         w.put(2,8); w.put(0,32); w.put(0,16); w.put(0,32); w.put(120,8)
         for _ in 0..<sub { w.put(1,1); w.put(1,1) }
@@ -31,6 +31,7 @@ struct CompanionOriginalSPSCheckTests {
         w.ue(id); w.ue(chroma); if chroma == 3 { w.put(0,1) }
         w.ue(width); w.ue(height); w.put(crop == nil ? 0 : 1,1)
         if let crop { for n in crop { w.ue(n) } }; w.ue(depth); w.ue(depth)
+        codingTail?(&w)
         var escaped = Data([0x42,1]), zeros = 0
         for b in w.bytes() {
             if zeros == 2 && b <= 3 { escaped.append(3); zeros = 0 }
@@ -387,4 +388,137 @@ struct CompanionOriginalSPSCheckTests {
             retain=true;#expect(try Data(contentsOf:input) == bytes)
         }
     }
+    private func codingNAL(width: Int = 176, height: Int = 112, sub: Int = 0,
+        all: Bool = false, poc: Int = 8, minCb: Int = 0, diff: Int = 3,
+        records: [[Int]]? = nil, cropped: Bool = true) -> Data {
+        nal(width: width, height: height, crop: cropped ? [0,7,0,7] : nil, sub: sub, codingTail: { w in
+            w.ue(poc); w.put(all ? 1 : 0,1)
+            for row in records ?? [[Int]](repeating:[3,2,0],count:all ? sub+1 : 1) {
+                for value in row { w.ue(value) }
+            }
+            w.ue(minCb); w.ue(diff)
+            // Deliberately opaque suffix; these are not complete valid SPS vectors.
+            w.put(255,8)
+        })
+    }
+    @Test func codingTreePrefixReadsFiniteOrderingAndCodedGridIndependentOfCrop() throws {
+        for width in 1...4 { for sub in 0...6 { for all in [false,true] {
+            let cfg=referenceConfiguration([(32,true,[vps(sub:sub)]),(33,true,[codingNAL(sub:sub,all:all)]),(34,true,[pps()])],width:width)
+            let r=try SPS.readConfigurationCodingTreePrefix(cfg)
+            #expect(r.columns == 3 && r.rows == 2 && r.ctbs == 6 && r.addressBits == 3 && r.pocLSBBits == 12)
+            #expect(r.minCbLog2Size == 3 && r.ctbLog2Size == 6 && r.parameters.geometry.visibleWidth == 162)
+            #expect(r.orderingInfoPresentForAllSubLayers == all && r.presentOrdering.count == (all ? sub+1:1))
+            #expect(r.presentOrdering.first?.subLayer == (all ? 0:sub) && r.presentOrdering.last?.subLayer == sub)
+            #expect(r.presentOrdering.allSatisfy{$0.bufferingMinus1 == 3 && $0.reorderPictures == 2 && $0.latencyIncreasePlus1 == 0})
+            #expect(!r.completeSPSConformanceVerified && !r.activePictureParameterSetSelectionVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+        }}}
+        for minCb in 0...3 {for diff in 0...3 where (4...6).contains(minCb+3+diff) {
+            let r=try SPS.readConfigurationCodingTreePrefix(references(nil,codingNAL(width:192,height:128,minCb:minCb,diff:diff),nil))
+            let side=1<<(minCb+3+diff)
+            #expect(r.columns == 192/side && r.rows == 128/side && r.ctbs == (192/side)*(128/side))
+        }}
+        let one=try SPS.readConfigurationCodingTreePrefix(references(nil,codingNAL(width:16,height:16,cropped:false),nil))
+        #expect(one.ctbs == 1 && one.addressBits == 0)
+        let max=try SPS.readConfigurationCodingTreePrefix(references(nil,codingNAL(width:16384,height:16384,minCb:0,diff:1,records:[[15,15,65534]]),nil))
+        #expect(max.ctbs == 1<<20 && max.addressBits == 20 && max.presentOrdering[0].latencyIncreasePlus1 == 65534)
+        let noCrop=try SPS.readConfigurationCodingTreePrefix(references(nil,codingNAL(cropped:false),nil))
+        #expect(noCrop.ctbs == 6 && !noCrop.completeSPSConformanceVerified)
+    }
+    @Test func codingTreePrefixRefusesAmbiguityTruncationOrderingAndGridBoundsWithoutWideningOldAPI() throws {
+        let cases=[codingNAL(poc:13),codingNAL(minCb:4),codingNAL(diff:4),codingNAL(minCb:0,diff:0),
+            codingNAL(minCb:3,diff:1),codingNAL(width:174),codingNAL(height:110),
+            codingNAL(records:[[16,0,0]]),codingNAL(records:[[3,4,0]]),codingNAL(records:[[3,2,65535]]),
+            codingNAL(sub:1,all:true,records:[[3,2,0],[2,1,0]]),codingNAL(sub:1,all:true,records:[[3,2,0],[3,1,0]])]
+        for n in cases {#expect(throws:(any Error).self){try SPS.readConfigurationCodingTreePrefix(references(nil,n,nil))}}
+        let n=codingNAL(),cfg=references(nil,n,nil)
+        for bad in [configuration([n]),referenceConfiguration([(32,true,[vps()]),(33,true,[n,n]),(34,true,[pps()])]),
+            referenceConfiguration([(32,true,[vps()]),(33,true,[n]),(33,false,[]),(34,true,[pps()])]),
+            references(nil,n+Data([0,0,3,4]),nil),references(vps(id:1),n,nil)] {
+            #expect(throws:(any Error).self){try SPS.readConfigurationCodingTreePrefix(bad)}
+        }
+        for tail in 0...4 {
+            let partial=nal(codingTail:{w in
+                w.ue(8)
+                if tail>0{w.put(0,1)}
+                if tail>1{w.ue(3)}
+                if tail>2{w.ue(2)}
+                if tail>3{w.ue(0)}
+            })
+            #expect(throws:(any Error).self){try SPS.readConfigurationCodingTreePrefix(references(nil,partial,nil))}
+        }
+        let geometry=try SPS.readConfigurationReferences(cfg).geometry
+        for count in 2...Int(geometry.prefixBitCount/8) {#expect(throws:(any Error).self){try SPS.readConfigurationCodingTreePrefix(references(nil,Data(n.prefix(count)),nil))}}
+        #expect(throws:CancellationError.self){try SPS.readConfigurationCodingTreePrefix(cfg,checkpoint:{throw CancellationError()})}
+        let old=try SPS.readConfigurationReferences(references())
+        #expect(old.geometry.codedWidth == 176 && !old.completeParameterSetConformanceVerified)
+        #expect(throws:(any Error).self){try SPS.readConfigurationCodingTreePrefix(references())}
+    }
+    @Test func sourceCodingTreePrefixBindsFreshTrackAndRepairedConfigurationOnly() throws {
+        let bytes=source(references(nil,codingNAL(),nil)),v=view(bytes),t=try CompanionOriginalTrackCheck.readSource(v)
+        let r=try SPS.readSourceCodingTreePrefix(v,track:t);#expect(r.ctbs == 6)
+        for field in 0..<7 {
+            let bad=CompanionOriginalTrackCheck.Receipt(trackNumber:t.trackNumber+(field == 0 ? 1:0),originalPayloadOffset:t.originalPayloadOffset+(field == 1 ? 1:0),payloadBytes:t.payloadBytes+(field == 2 ? 1:0),configurationBytes:t.configurationBytes+(field == 3 ? 1:0),nalLengthBytes:field == 4 ? 1:t.nalLengthBytes,payloadSHA256:field == 5 ? String(repeating:"a",count:64):t.payloadSHA256,configurationSHA256:field == 6 ? String(repeating:"b",count:64):t.configurationSHA256,originalTrackAndConfigurationMatch:true)
+            #expect(throws:(any Error).self){try SPS.readSourceCodingTreePrefix(v,track:bad)}
+        }
+        let changed=source(references(nil,codingNAL(diff:2),nil)),cv=view(changed)
+        #expect(throws:(any Error).self){try SPS.readSourceCodingTreePrefix(cv,track:t)}
+        let fresh=try CompanionOriginalTrackCheck.readSource(cv),actual=try SPS.readSourceCodingTreePrefix(cv,track:fresh)
+        #expect(actual.ctbLog2Size == 5 && actual.ctbs == 24 && !actual.activePictureParameterSetSelectionVerified)
+    }
+    @Test func sourceCodingTreeWorkerKeepsSignedDuplicatesInBandRefusalAndStorageCancellation() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-ctb-bounds-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);defer{print("GENERATED_CTB_BOUNDS_REVIEW "+root.path)}
+        func folder(_ name:String)throws->URL{let f=root.appendingPathComponent(name);try FileManager.default.createDirectory(at:f,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);return f}
+        let cfg=references(nil,codingNAL(),nil),signed=source(cfg,times:[2,-1,2,0],rpuCopies:2),input=root.appendingPathComponent("source.mkv")
+        try signed.write(to:input)
+        let r=try await CompanionDiskCheck.spoolOriginalSourceCodingTreePrefix(source:input,in:folder("signed"))
+        #expect(r.source.packets.packets == 4 && r.source.packets.records == 8 && r.codingTree.ctbs == 6)
+        #expect(r.originalCodingTreePrefixBoundToSource && r.selectedPacketParameterSetNALsAbsent && !r.independentSourceFrameAssociationVerified && !r.completeSPSConformanceVerified && !r.activePictureParameterSetSelectionVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+        for type in [UInt8(32),33,34] {
+            let bytes=source(cfg,inBand:type);try bytes.write(to:input)
+            _ = try await CompanionDiskCheck.spoolOriginalSource(source:input,in:folder("old-"+String(type)))
+            await #expect(throws:(any Error).self){try await CompanionDiskCheck.spoolOriginalSourceCodingTreePrefix(source:input,in:folder("new-"+String(type)))}
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+        let bytes=source(cfg,repeats:2000);try bytes.write(to:input)
+        for kind in ["records","pages","read-cancel","final-cancel"] {
+            let stage=try folder(kind),gate=DolbySampleProcessTests.Gate(),cancel=kind.hasSuffix("cancel")
+            let limits=DolbyAssociationSpool.Limits(pages:kind == "pages" ? 8:131072,records:kind == "records" ? 1:2_000_000)
+            let task=Task{defer{gate.signal.finish()};return try await CompanionDiskCheck.$testBoundary.withValue(.init(beforeFinal:{if kind == "final-cancel"{gate.hold()}},originalTrackRead:{_,_ in if kind == "read-cancel"{gate.hold()}})){
+                try await CompanionDiskCheck.spoolOriginalSourceCodingTreePrefix(source:input,in:stage,limits:limits)
+            }}
+            if cancel{for await _ in gate.stream{break};task.cancel();gate.release.signal()}
+            do{_ = try await task.value;Issue.record("CTB bounded source refusal admitted")}catch is CancellationError{#expect(cancel)}catch{#expect(!cancel)}
+            if kind == "pages"{let size=(try FileManager.default.attributesOfItem(atPath:stage.appendingPathComponent(DolbyAssociationSpool.name).path)[.size] as? NSNumber)?.intValue;#expect(size == 8*4096)}
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+    }
+    @Test func actualGeneratedHEVCCodingTreeSourceReadbackAndFinalIdentity() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-ctb-native-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);defer{print("GENERATED_CTB_NATIVE_REVIEW "+root.path)}
+        _ = try await RustFixtureBuild.generate(.reference,at:root,copiesIn:root)
+        func folder(_ name:String)throws->URL{let f=root.appendingPathComponent(name);try FileManager.default.createDirectory(at:f,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);return f}
+        for name in ["single","group","wide-vint","conformance","whole-gop"] {
+            let input=root.appendingPathComponent(name+".mkv"),bytes=try Data(contentsOf:input)
+            let r=try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{_ in Issue.record("CTB source-only path launched decoder")})){
+                try await CompanionDiskCheck.spoolOriginalSourceCodingTreePrefix(source:input,in:folder("spool-"+name))
+            }
+            let g=r.codingTree,geometry=g.parameters.geometry
+            #expect(geometry.codedWidth == (name == "conformance" ? 176:160) && geometry.codedHeight == (name == "conformance" ? 112:96))
+            #expect(g.minCbLog2Size == 4 && g.ctbLog2Size == 5 && g.columns == (name == "conformance" ? 6:5) && g.rows == (name == "conformance" ? 4:3) && g.ctbs == (name == "conformance" ? 24:15) && g.addressBits == (name == "conformance" ? 5:4))
+            #expect(r.source.packets.packets == (name == "whole-gop" ? 24:4) && r.source.packets.records == r.source.packets.packets)
+            #expect(geometry.configurationSHA256 == r.source.track.configurationSHA256 && r.source.sourceSHA256 == DolbyInspection.hex(SHA256.hash(data:bytes)))
+            #expect(!r.completeSPSConformanceVerified && !r.activePictureParameterSetSelectionVerified && !r.independentSourceFrameAssociationVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+            #expect(try Data(contentsOf:input) == bytes)
+            print("Generated CTB "+name+" min="+String(g.minCbLog2Size)+" ctb="+String(g.ctbLog2Size)+" grid="+String(g.columns)+"x"+String(g.rows))
+        }
+        for extra in [false,true] {
+            let input=root.appendingPathComponent("final-"+String(extra)),bytes=try Data(contentsOf:root.appendingPathComponent("single.mkv")),stage=try folder("final-spool-"+String(extra));try bytes.write(to:input)
+            await CompanionDiskCheck.$testBoundary.withValue(.init(beforeFinal:{do{if extra{try Data([1]).write(to:stage.appendingPathComponent("extra"))}else{try FileManager.default.moveItem(at:input,to:input.appendingPathExtension("original"));try bytes.write(to:input)}}catch{Issue.record("CTB final substitution failed")}})){
+                await #expect(throws:(any Error).self){try await CompanionDiskCheck.spoolOriginalSourceCodingTreePrefix(source:input,in:stage)}
+            }
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+    }
+
 }

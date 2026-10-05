@@ -161,6 +161,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-152 | 2026-10-05 | Original first-slice VCL PPS prefix binding | Confirmed | |
 | D-153 | 2026-10-05 | Joint source parameter/VCL and fixed-decoder crop readback | Confirmed | |
 | D-154 | 2026-10-05 | Concrete joint parameter/crop access ownership | Confirmed | |
+| D-155 | 2026-10-05 | Bind finite source SPS coding-tree grid prefix | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4673,3 +4674,53 @@ causes unestablished; no assertion/deadline/skip/global scheduling workaround. N
 selection is finite original SPS coding-tree-block/grid prefix, requiring primary verification
 before implementation; not non-first slice, full SPS or active origin proof. All remaining
 parameter/activation/origin/value/rendered/edited/resource/recovery/distribution gates stay open.
+
+
+## D-155: Read a finite original SPS coding-tree grid prefix without picture activation
+
+Status: Confirmed
+
+Unused source-only entry reuses selected Track/configuration/parameter reference binding,
+bounded SPS geometry/EPB/bit facilities and the same pinned source/open SQLite worker.
+Finite present ordering records and uncropped coded-grid derivation precede original
+source/packet/RPU/source-table counts/final observations/qualified normal closes/awaited
+worker. Narrower APIs unchanged; no decoder, controller, second worker or protocol/action/
+default packaging/recovery authority. Explicit caller access/retention remains required;
+D154 does not automatically qualify a new source-only entry.
+
+See SOURCE-SPS-CODING-TREE-PREFIX-EVIDENCE.md for primary H.265 syntax/formulas, configured
+ordering subset versus full VPS/level constraints and five new tests. Only finite source
+prefix binding becomes true; complete SPS/PTL/parameter/slice/SEI activation/active picture/
+source-frame/ROI/value/rendered/edited remain false. No non-first/dependent VCL address is
+admitted yet. Source grid derives from coded raster, not crop or container/user origin.
+Initial five new fixture expectation failures retained/corrected to actual CTB32/minimum16;
+final44tests15.767s pass. Generated ordinary5x3/conformance6x4 source readback is not new
+decoder comparison or independent pixels. Static exact94-source host runs prior pipeline.
+Other ownership/retirement/recovery/distribution and full interpretation gates remain open.
+
+
+Final ordinary613reported tests/105suites217.748s PASSED40 unchanged explicit opt-in skips/
+no emitted warnings. Source prefix16.877s/access36.014s/static33.773s passed. Explicit
+production21.89s compiler-reported/current strict ad-hoc app/read-only helper
+signatures/minima14.0/11.0 pass; writer/decoder/sample/crop absent. SwiftPM waited for the
+ordinary process before production compilation; reported duration is not elapsed waiting
+or a cold benchmark. Six-file privacy zero/positive sentinel/protected owner metadata/
+current journal/original sample-prefix-frozen-D130/D142/D143 unchanged/planning empty.
+Exact static94-source closure unchanged; it executes prior preservation/review only.
+
+Parent PR129 automatic37309067026 FAILED608tests482.649s32issues: zero60s/21 unchanged120s/
+seven180s bounds plus two decoder-surrogate absent-positive-child and Fresh-analysis/
+Rendering-candidate EOF assertions. Exact shared fixture preparation passed35s; source
+prefix70.564s/access259.421s/static242.064s/fixture50.415s passed, preview skipped. Full
+failed log/summary retained/parent updated without retry or individual cause attribution.
+Earlier D154 local metadata pipe-holder failure independently retained. Local passes do
+not resolve hosted failures; D136 duplicate compilation correction is not every-residual/
+all-starvation/no-logic-defect proof. No historical observer/CI margin/assertion/deadline/
+skip/global suite-job scheduling/concurrency workaround.
+
+Next read-only selection is finite non-first/dependent VCL prefix/address source readback;
+PRIMARY address semantics/EPB bound verification and implementation remain pending. The
+first-slice no-EPB rationale does not apply after first flag0. Prefix/reference/address
+facts alone cannot establish complete slice/picture grouping/activation/origin/value or
+rendered/edited semantics. Explicit source/spool caller/controller access remains required
+for any new entry. Other finite resource/deinit/retirement/recovery/distribution gates open.

@@ -279,6 +279,7 @@ final class BatchController: ObservableObject {
         }
         let preservingHDR = job.configuration.colorMode == "Preserve static HDR10"
         try SessionDocument.validate(job.configuration)
+        try DolbyConversionIntent.requireRunnable(job.configuration)
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         if preservingHDR { try EncodePlan.validateHDRSettings(job.configuration) }
         let fingerprint = try await fingerprint(source, jobID: job.id, label: "Checking source content before inspection")

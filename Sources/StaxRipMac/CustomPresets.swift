@@ -11,12 +11,14 @@ struct CustomPreset: Codable, Equatable, Identifiable {
         var c = current
         c.cropTop = 0; c.cropBottom = 0
         c.picture = PictureOptions(deinterlace: current.picture.deinterlace)
+        c.dolbyLossAcknowledgement = nil
         c.audioTracks = nil; c.subtitleTracks = nil; c.externalCaptions = []; c.chapterEdits = nil
         return c
     }
     func applying(to current: EncodeConfiguration) throws -> EncodeConfiguration {
         try validate()
         var next = configuration
+        next.dolbyLossAcknowledgement = nil
         next.cropTop = current.cropTop; next.cropBottom = current.cropBottom
         var picture = current.picture; picture.deinterlace = configuration.picture.deinterlace
         next.picture = picture
@@ -35,7 +37,7 @@ struct CustomPreset: Codable, Equatable, Identifiable {
         let p = configuration.picture
         guard configuration.cropTop == 0, configuration.cropBottom == 0, p.cropLeft == 0, p.cropRight == 0,
               p.start == 0, p.end == 0, configuration.audioTracks == nil, configuration.subtitleTracks == nil,
-              configuration.externalCaptions.isEmpty, configuration.chapterEdits == nil else {
+              configuration.externalCaptions.isEmpty, configuration.chapterEdits == nil, configuration.dolbyLossAcknowledgement == nil else {
             throw SessionError.invalid("A reusable preset cannot contain crop, trim, source track selections external caption files or chapter edits. Save those in a session instead.")
         }
     }
@@ -47,11 +49,14 @@ struct CustomPreset: Codable, Equatable, Identifiable {
 
 struct PresetDocument: Codable {
     var format = "staxrip-mac-preset-library"
-    var version = 2
+    var version = 3
     var presets: [CustomPreset]
     func validated() throws -> Self {
-        guard format == "staxrip-mac-preset-library", [1, 2].contains(version), presets.count <= 100 else {
+        guard format == "staxrip-mac-preset-library", [1, 2, 3].contains(version), presets.count <= 100 else {
             throw SessionError.invalid("Unsupported preset library version or more than 100 presets.")
+        }
+        guard version >= 3 || presets.allSatisfy({ $0.configuration.colorMode != DolbyConversionIntent.hdr10Copy }) else {
+            throw SessionError.invalid("Dolby conversion intent requires preset library version 3.")
         }
         var names = Set<String>(), ids = Set<UUID>()
         guard version >= 2 || presets.allSatisfy({ $0.configuration.hevcBufferLimits == nil }) else {

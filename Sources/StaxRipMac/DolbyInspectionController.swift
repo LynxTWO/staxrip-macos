@@ -5,6 +5,11 @@ import SwiftUI
     @Published private(set) var running = false
     @Published private(set) var stage = ""
     @Published private(set) var report: DolbySourceReport?
+    private(set) var reportSource: URL?
+    func report(for source: URL) -> DolbySourceReport? {
+        guard !running, reportSource == source.standardizedFileURL else { return nil }
+        return report
+    }
     @Published private(set) var error: String?
     typealias Reader = @Sendable (URL, MediaProbe, @escaping @Sendable (String) -> Void) async throws -> DolbySourceReport
     private let reader: Reader
@@ -20,7 +25,7 @@ import SwiftUI
     @discardableResult func start(source: URL, probe: MediaProbe) -> Task<Void, Never> {
         let previous = task; previous?.cancel()
         let id = UUID(); generation = id
-        running = true; stopping = false; report = nil; error = nil; stage = "Preparing full-source inspection…"
+        running = true; stopping = false; report = nil; reportSource = nil; error = nil; stage = "Preparing full-source inspection…"
         task = Task { [weak self] in
             await previous?.value
             guard let self, self.generation == id else { return }
@@ -33,7 +38,7 @@ import SwiftUI
                     }
                 }
                 try Task.checkCancellation()
-                if self.generation == id { self.report = value; self.stage = "Metadata and encoded packet checks completed." }
+                if self.generation == id { self.report = value; self.reportSource = source.standardizedFileURL; self.stage = "Metadata and encoded packet checks completed." }
             } catch is CancellationError {
                 if self.generation == id { self.stage = "Inspection cancelled." }
             } catch {
@@ -48,7 +53,7 @@ import SwiftUI
     @discardableResult func reset() -> Task<Void, Never> {
         let previous = task; previous?.cancel()
         let id = UUID(); generation = id
-        report = nil; error = nil; stopping = previous != nil; running = stopping
+        report = nil; reportSource = nil; error = nil; stopping = previous != nil; running = stopping
         stage = stopping ? "Stopping the previous inspection…" : ""
         let replacement = Task { [weak self] in
             await previous?.value

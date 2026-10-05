@@ -8,6 +8,8 @@ struct VideoRateOptions: Codable, Equatable {
 
 struct VideoRateOptionsView: View {
     @Binding var configuration: EncodeConfiguration
+    @EnvironmentObject private var dolby: DolbyInspectionController
+    @State private var acknowledgementError: String?
     var source: URL? = nil
     private var hdrIssue: String? {
         do { try EncodePlan.validateHDRSettings(configuration); return nil }
@@ -19,8 +21,33 @@ struct VideoRateOptionsView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            settingPicker("Color workflow", selection: $configuration.colorMode, values: ["SDR", "Preserve static HDR10"])
+            settingPicker("Color workflow", selection: $configuration.colorMode, values: ["SDR", "Preserve static HDR10", DolbyConversionIntent.hdr10Copy])
                 .accessibilityHint("Choose standard dynamic range or verified static H D R ten preservation. This does not change your other settings.")
+            Text("Dolby Vision P8.1 — unavailable: metadata transformation and final output verification are not yet qualified.")
+                .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dolby.p81.unavailable")
+            Text("Tone-mapped SDR — unavailable: a verified pixel tone and gamut transform is required. The SDR setting above does not tone-map HDR.")
+                .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dolby.sdr.unavailable")
+            if configuration.colorMode == DolbyConversionIntent.hdr10Copy {
+                Text("Prepare HDR10 base-layer copy · MKV · no video re-encoding or tone mapping. Dolby Vision metadata and the enhancement layer will be removed; static HDR10 remains. The original source is kept.")
+                    .font(.caption).fixedSize(horizontal: false, vertical: true)
+                Text(DolbyConversionIntent.unavailable).font(.caption).foregroundStyle(Color.warning)
+                    .accessibilityIdentifier("dolby.hdr10.unavailable")
+                Toggle("I acknowledge Dolby Vision loss for this inspected source", isOn: Binding(get: {
+                    guard let source, let report = dolby.report(for: source) else { return false }
+                    return configuration.dolbyLossAcknowledgement?.matches(source: source, fingerprint: report.source) == true
+                }, set: { acknowledged in
+                    acknowledgementError = nil
+                    guard acknowledged else { configuration.dolbyLossAcknowledgement = nil; return }
+                    guard let source, let report = dolby.report(for: source) else { return }
+                    do { configuration.dolbyLossAcknowledgement = try DolbyLossAcknowledgement(source: source, fingerprint: report.source) }
+                    catch { acknowledgementError = error.localizedDescription }
+                }))
+                .disabled(source.flatMap { dolby.report(for: $0) } == nil)
+                .accessibilityIdentifier("dolby.hdr10.acknowledge")
+                Text("Inspect the complete Dolby metadata first. Acknowledgement is tied to the inspected source content; it does not qualify conversion. Changing sources clears it. Saved intent must be checked against fresh source content before execution.")
+                    .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                if let acknowledgementError { Text(acknowledgementError).font(.caption).foregroundStyle(Color.warning) }
+            }
             if !configuration.copiesVideo && configuration.colorMode == "Preserve static HDR10" {
                 if let hdrIssue { Text(hdrIssue).font(.caption).foregroundStyle(Color.warning).fixedSize(horizontal: false, vertical: true) }
                 Text("Requires software HEVC, MKV and original picture settings. Every source and output frame is decoded for verification, adding two full scans plus source identity checks. FFmpeg 9.0.x only.")
@@ -31,12 +58,14 @@ struct VideoRateOptionsView: View {
             if configuration.copiesVideo {
                 Text("Copy the original encoded picture without another video encoding pass. Audio and subtitle choices still apply; AAC and Opus still re-encode audio.")
                     .font(.caption).fixedSize(horizontal: false, vertical: true)
+                if configuration.colorMode != DolbyConversionIntent.hdr10Copy {
                 if let copyIssue { Text(copyIssue).font(.caption).foregroundStyle(Color.warning).fixedSize(horizontal: false, vertical: true) }
                 Text("Supports 8-bit SDR H.264/HEVC, 10-bit HEVC Main 10 with declared BT.709 limited-range SDR, or 8/10-bit AV1 Main with declared BT.709 limited-range SDR. First video only: upright, progressive and square-pixel in MP4/QuickTime or Matroska. Requires original size and no picture filters or trim.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     .accessibilityLabel("Supports eight-bit standard dynamic range H two six four or H E V C, ten-bit H E V C Main ten with declared B T seven zero nine, limited-range standard dynamic range, or eight or ten-bit A V one Main with declared B T seven zero nine, limited-range standard dynamic range. First video only: upright, progressive and square-pixel in M P four, QuickTime or Matroska. Requires original size and no picture filters or trim.")
                 Text("Video packets and presentation timing are checked before saving. This adds source/output scans and up to 128 MiB of temporary audit storage, limited to two million video packets. Conversions that cannot preserve packet timing are refused, including some variable-frame-rate Matroska sources. Stored video quality, speed and engine settings are inactive.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                }
             } else {
                 settingPicker("Encoding engine", selection: Binding(get: { configuration.rate.backend }, set: { value in
                     var next = configuration

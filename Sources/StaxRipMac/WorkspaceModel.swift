@@ -13,10 +13,14 @@ struct EncodeConfiguration: Codable, Equatable {
     var audio = "AAC"
     var audioBitrate = "192 kb/s"
     var subtitleMode = "Keep embedded tracks"
+    var dolbyLossAcknowledgement: DolbyLossAcknowledgement?
     private var colorIntent: String?
     var colorMode: String {
         get { colorIntent ?? "SDR" }
-        set { colorIntent = newValue }
+        set {
+            if colorMode != newValue { dolbyLossAcknowledgement = nil }
+            colorIntent = newValue
+        }
     }
     private var videoRateOptions: VideoRateOptions?
     var rate: VideoRateOptions {
@@ -113,7 +117,9 @@ final class WorkspaceModel: ObservableObject {
         notice = "\(preset.name) applied. Source-specific crop, trim, tracks and external captions retained."
     }
     @Published var sourceURL: URL? {
-        didSet { if oldValue != sourceURL { clearSettingsHistory() } }
+        didSet {
+            if oldValue != sourceURL { config.dolbyLossAcknowledgement = nil; clearSettingsHistory() }
+        }
     }
     @Published var player: AVPlayer?
     @Published var sourceName = "Alpine escape.mov"
@@ -359,7 +365,6 @@ final class WorkspaceModel: ObservableObject {
 
     func restoreSession(_ document: SessionDocument) {
         showDemo()
-        config = document.configuration
         outputFolder = URL(fileURLWithPath: document.outputFolder)
         outputStem = document.outputStem
         jobs = document.jobs
@@ -370,6 +375,9 @@ final class WorkspaceModel: ObservableObject {
             sourceUnavailable = true
             sourceNeedsReview = true
         }
+        // Establish the validated source first; replacing a source clears old consent.
+        // Saved acknowledgement remains intent and still requires fresh execution checks.
+        config = document.configuration
         clearSettingsHistory()
         savedSnapshot = document
         notice = sourceNeedsReview ? "Session restored. Review the saved source when you are ready to load its preview." : "Session restored"
@@ -494,6 +502,7 @@ final class WorkspaceModel: ObservableObject {
     private func resetSourceSelections() {
         var next = config
         next.audioTracks = nil; next.subtitleTracks = nil; next.externalCaptions = []; next.chapterEdits = nil
+        next.dolbyLossAcknowledgement = nil
         config = next
         // Reselecting the same source also clears old source-specific intent;
         // settings undo must not resurrect its discarded caption reference.

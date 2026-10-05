@@ -24,6 +24,7 @@ struct EncodePlan: Sendable {
     static func make(job: QueueJob, probe: MediaProbe, encoders: Set<String>, staged: URL, hdr: HDR10Contract? = nil,
                      externalDocument: SubRipDocument? = nil, externalSnapshots: [ExternalCaptionSnapshot]? = nil) throws -> EncodePlan {
         try SessionDocument.validate(job.configuration)
+        try DolbyConversionIntent.requireRunnable(job.configuration)
         guard !job.isDemo else { throw NativeExportError.invalid("Demo configurations cannot be encoded. Open a real source first.") }
         guard let video = probe.video else { throw NativeExportError.invalid("This queue currently requires a video source.") }
         let c = job.configuration

@@ -26,6 +26,9 @@ enum CompanionArchiveOperation {
         var pinned: @Sendable ([Int32]) -> Void = { _ in }
         var beforeAssociationRelease: @Sendable () throws -> Void = {}
         var associationClosed: @Sendable (Int) -> Void = { _ in }
+        // Report uncertainty only after both actual outer closes succeed.
+        var refuseAssociationClose: @Sendable () -> Bool = { false }
+        var acquisitionClosed: @Sendable (Int) -> Void = { _ in }
     }
     @TaskLocal static var testBoundary = Boundary()
     static func retainedForTesting(_ id: UUID) -> Bool { retained[id] != nil }
@@ -51,7 +54,7 @@ enum CompanionArchiveOperation {
               environment.retainedActivitySeconds > 0, environment.retainedActivitySeconds <= 120 else { throw refused() }
         executing = true
         defer { executing = false }
-        let access = try Access(source: source, directory: parent, reason: "StaxRip original companion preservation", environment: environment)
+        let access = try acquire(source: source, directory: parent, reason: "StaxRip original companion preservation", environment: environment)
         let pins = access.pins
         #if DEBUG
         boundary.pinned(pins.descriptors)
@@ -104,7 +107,7 @@ enum CompanionArchiveOperation {
               environment.retainedActivitySeconds > 0, environment.retainedActivitySeconds <= 120 else { throw refused() }
         executing = true
         defer { executing = false }
-        let access = try Access(source: source, directory: candidate, reason: "StaxRip original companion review", environment: environment)
+        let access = try acquire(source: source, directory: candidate, reason: "StaxRip original companion review", environment: environment)
         let pins = access.pins
         #if DEBUG
         boundary.pinned(pins.descriptors)
@@ -149,7 +152,7 @@ enum CompanionArchiveOperation {
               environment.retainedActivitySeconds > 0, environment.retainedActivitySeconds <= 120 else { throw refused() }
         executing = true
         defer { executing = false }
-        let access = try Access(source: source, directory: spoolDirectory,
+        let access = try acquire(source: source, directory: spoolDirectory,
                                 reason: "StaxRip original source frame association", environment: environment)
         let pins = access.pins
         #if DEBUG
@@ -198,6 +201,93 @@ enum CompanionArchiveOperation {
             throw error
         }
     }
+    /// Development original base-sample association. The caller owns an explicit
+    /// empty private spool folder. This operation neither removes nor publishes it.
+    static func associateOriginalSamples(source: URL, spoolDirectory: URL,
+                                        tool: DolbyDecoderProcess.Tool, threads: Int = 4,
+                                        timeout: Double = 120,
+                                        limits: DolbyAssociationSpool.Limits = .init()) async throws -> CompanionDiskCheck.SourceSampleReceipt {
+        try Task.checkCancellation()
+        guard [source, spoolDirectory].allSatisfy({ $0.isFileURL && !$0.path.utf8.contains(0) }),
+              [1, 4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw refused() }
+        #if DEBUG
+        let environment = testEnvironment, boundary = testBoundary
+        #else
+        let environment = Environment()
+        #endif
+        guard !executing, retained.isEmpty, environment.retainedActivitySeconds.isFinite,
+              environment.retainedActivitySeconds > 0, environment.retainedActivitySeconds <= 120 else { throw refused() }
+        executing = true
+        defer { executing = false }
+        let access = try acquire(source: source, directory: spoolDirectory,
+                                reason: "StaxRip original source sample association", environment: environment)
+        let pins = access.pins
+        #if DEBUG
+        boundary.pinned(pins.descriptors)
+        #endif
+        do {
+            try pins.check()
+            #if DEBUG
+            try boundary.phase("sample-association")
+            #endif
+            let result = try await CompanionDiskCheck.associateOriginalSamples(source: source, in: spoolDirectory,
+                tool: tool, threads: threads, timeout: timeout, limits: limits)
+            try pins.check()
+            try Task.checkCancellation()
+            #if DEBUG
+            try boundary.beforeAssociationRelease()
+            #endif
+            let closed = try access.finishChecked()
+            #if DEBUG
+            boundary.associationClosed(closed)
+            #else
+            _ = closed
+            #endif
+            return result
+        } catch {
+            // D131/D132 return after its worker/database/source/helper unwind except
+            // for the shared uncertainty marker. Keep grants on either that marker
+            // or loss of the explicit outer path identity. No file cleanup follows.
+            if error is any CompanionUnsettledOwnership {
+                throw retain(access, error: error, locator: spoolDirectory, environment: environment)
+            }
+            do { try pins.check() }
+            catch { throw retain(access, error: error, locator: spoolDirectory, environment: environment) }
+            do {
+                #if DEBUG
+                try boundary.beforeAssociationRelease()
+                #endif
+                let closed = try access.finishChecked()
+                #if DEBUG
+                boundary.associationClosed(closed)
+                #else
+                _ = closed
+                #endif
+            }
+            catch { throw retain(access, error: error, locator: spoolDirectory, environment: environment) }
+            throw error
+        }
+    }
+    /// Concrete rollback ownership exists before scopes or descriptors are tried.
+    /// An uncertain partial close retains grants even before activity begins.
+    private static func acquire(source: URL, directory: URL, reason: String,
+                                environment: Environment) throws -> Access {
+        let access = Access(source: source, directory: directory)
+        do { try access.acquire(source: source, directory: directory, reason: reason, environment: environment) }
+        catch {
+            do {
+                let closed = try access.finishChecked()
+                #if DEBUG
+                testBoundary.acquisitionClosed(closed)
+                #else
+                _ = closed
+                #endif
+            }
+            catch { throw retain(access, error: error, locator: directory, environment: environment) }
+            throw error
+        }
+        return access
+    }
     private static func retain(_ access: Access, error: Error, locator: URL, environment: Environment) -> ReviewFailure {
         let id = UUID(); retained[id] = access
         // Expiry ends only temporary energy. Dropped errors do not release access
@@ -209,18 +299,15 @@ enum CompanionArchiveOperation {
     }
     private nonisolated static func refused() -> NativeExportError { .invalid("Native companion access refused. No result was published.") }
 
-    private final class Access {
+    @MainActor private final class Access {
         let pins: Pins
-        private var ends: [() -> Void]
+        private var ends: [() -> Void] = []
         private var activityEnd: (() -> Void)?
-        init(source: URL, directory: URL, reason: String, environment: Environment) throws {
-            var acquired: [() -> Void] = []
-            do {
-                if let end = try environment.access(source) { acquired.append(end) }
-                if let end = try environment.access(directory) { acquired.append(end) }
-                pins = try Pins(source: source, directory: directory)
-            } catch { for end in acquired.reversed() { end() }; throw error }
-            ends = acquired
+        init(source: URL, directory: URL) { pins = Pins(source: source, directory: directory) }
+        func acquire(source: URL, directory: URL, reason: String, environment: Environment) throws {
+            if let end = try environment.access(source) { ends.append(end) }
+            if let end = try environment.access(directory) { ends.append(end) }
+            try pins.open()
             activityEnd = environment.activity(reason)
         }
         func endActivity() { let end = activityEnd; activityEnd = nil; end?() }
@@ -229,8 +316,11 @@ enum CompanionArchiveOperation {
             for end in ends.reversed() { end() }; ends.removeAll()
             endActivity()
         }
-        func finishChecked() throws -> Int {
+        @MainActor func finishChecked() throws -> Int {
             let closed = try pins.closeChecked()
+            #if DEBUG
+            if closed > 0 && CompanionArchiveOperation.testBoundary.refuseAssociationClose() { throw Pins.CloseFailure() }
+            #endif
             for end in ends.reversed() { end() }; ends.removeAll()
             endActivity()
             return closed
@@ -245,20 +335,18 @@ enum CompanionArchiveOperation {
         #if DEBUG
         var descriptors: [Int32] { fds }
         #endif
-        init(source: URL, directory: URL) throws {
-            self.source = source; self.directory = directory
-            do {
-                for (url, directory) in [(source, false), (directory, true)] {
-                    let fd = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY | O_CLOEXEC | (directory ? O_DIRECTORY : 0))
-                    guard fd >= 0 else { throw refused() }
-                    fds.append(fd)
-                    var s = stat(), p = stat()
-                    guard fstat(fd, &s) == 0, lstat(url.path, &p) == 0,
-                          s.st_mode & mode_t(S_IFMT) == mode_t(directory ? S_IFDIR : S_IFREG),
-                          directory || (1...Int64(1 << 40)).contains(s.st_size), Self.same(s, p, directory: directory) else { throw refused() }
-                    identities.append(s)
-                }
-            } catch { close(); throw error }
+        init(source: URL, directory: URL) { self.source = source; self.directory = directory }
+        func open() throws {
+            for (url, directory) in [(source, false), (directory, true)] {
+                let fd = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_NOCTTY | O_CLOEXEC | (directory ? O_DIRECTORY : 0))
+                guard fd >= 0 else { throw refused() }
+                fds.append(fd)
+                var s = stat(), p = stat()
+                guard fstat(fd, &s) == 0, lstat(url.path, &p) == 0,
+                      s.st_mode & mode_t(S_IFMT) == mode_t(directory ? S_IFDIR : S_IFREG),
+                      directory || (1...Int64(1 << 40)).contains(s.st_size), Self.same(s, p, directory: directory) else { throw refused() }
+                identities.append(s)
+            }
         }
         func check() throws {
             guard fds.count == 2 else { throw refused() }

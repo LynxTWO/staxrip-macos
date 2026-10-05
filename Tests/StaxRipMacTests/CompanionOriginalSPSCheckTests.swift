@@ -22,8 +22,8 @@ struct CompanionOriginalSPSCheckTests {
     }
     private func nal(width: Int = 176, height: Int = 112, crop: [Int]? = [0,7,0,7],
                      sub: Int = 0, id: Int = 0, chroma: Int = 1, depth: Int = 2,
-                     reserved: Int = 0) -> Data {
-        var w = Writer(); w.put(0,4); w.put(sub,3); w.put(1,1)
+                     reserved: Int = 0, vpsID: Int = 0) -> Data {
+        var w = Writer(); w.put(vpsID,4); w.put(sub,3); w.put(1,1)
         w.put(2,8); w.put(0,32); w.put(0,16); w.put(0,32); w.put(120,8)
         for _ in 0..<sub { w.put(1,1); w.put(1,1) }
         if sub > 0 { for _ in sub..<8 { w.put(reserved,2) } }
@@ -42,6 +42,113 @@ struct CompanionOriginalSPSCheckTests {
         var d = Data(repeating: 0, count: 23); d[0]=1; d[21]=UInt8(width-1); d[22]=1
         d.append(contentsOf: [0xa1,UInt8(units.count >> 8),UInt8(units.count & 255)])
         for n in units { d.append(contentsOf: [UInt8(n.count >> 8),UInt8(n.count & 255)]);d.append(n) };return d
+    }
+    private func escaped(_ payload: Data, type: UInt8) -> Data {
+        var result=Data([type<<1,1]),zeros=0
+        for b in payload {if zeros == 2 && b<=3{result.append(3);zeros=0};result.append(b);zeros=b == 0 ? zeros+1:0};return result
+    }
+    private func vps(id: Int = 0, layers: Int = 0, sub: Int = 0, base: Int = 3, reserved: Int = 65535) -> Data {
+        var w=Writer();w.put(id,4);w.put(base,2);w.put(layers,6);w.put(sub,3);w.put(1,1);w.put(reserved,16)
+        return escaped(w.bytes(),type:32)
+    }
+    private func pps(id: Int = 0, sps: Int = 0, dependent: Int = 0, output: Int = 0, extra: Int = 0) -> Data {
+        var w=Writer();w.ue(id);w.ue(sps);w.put(dependent,1);w.put(output,1);w.put(extra,3)
+        return escaped(w.bytes(),type:34)
+    }
+    private func referenceConfiguration(_ entries: [(UInt8,Bool,[Data])], width: Int = 4) -> Data {
+        var d=Data(repeating:0,count:23);d[0]=1;d[21]=UInt8(width-1);d[22]=UInt8(entries.count)
+        for (type,complete,units) in entries {
+            d.append(contentsOf:[type | (complete ? 128:0),UInt8(units.count>>8),UInt8(units.count&255)])
+            for n in units{d.append(contentsOf:[UInt8(n.count>>8),UInt8(n.count&255)]);d.append(n)}
+        };return d
+    }
+    private func references(_ v: Data? = nil, _ s: Data? = nil, _ p: Data? = nil, complete: Bool = true) -> Data {
+        referenceConfiguration([(32,complete,[v ?? vps()]),(33,complete,[s ?? nal()]),(34,complete,[p ?? pps()])])
+    }
+    @Test func configurationReferencePrefixesKeepRawCompletenessAndOpaqueSuffixSeparate() throws {
+        for width in 1...4 {for complete in [false,true] {
+            let cfg=referenceConfiguration([(32,complete,[vps(id:15,sub:6)]),(33,complete,[nal(sub:6,id:15,vpsID:15)]),(34,complete,[pps(id:63,sps:15,dependent:1,output:1,extra:7)])],width:width)
+            let r=try SPS.readConfigurationReferences(cfg)
+            #expect(r.vpsID == 15 && r.vpsMaxSubLayersMinus1 == 6 && r.geometry.spsID == 15 && r.ppsID == 63 && r.ppsSPSID == 15)
+            #expect(r.dependentSliceSegmentsEnabled && r.outputFlagPresent && r.extraSliceHeaderBits == 7)
+            #expect(r.vpsArrayComplete == complete && r.spsArrayComplete == complete && r.ppsArrayComplete == complete)
+            #expect(r.configurationReferencePrefixesAgree && !r.completeParameterSetConformanceVerified && !r.activePictureParameterSetSelectionVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+        }}
+        // Arbitrary unparsed PPS/VPS suffix can pass only this prefix finding.
+        let r=try SPS.readConfigurationReferences(references(vps()+Data([255]),nil,pps()+Data([255])))
+        #expect(!r.completeParameterSetConformanceVerified && !r.geometry.completeSPSConformanceVerified)
+    }
+    @Test func configurationMissingAmbiguousMismatchedUnsupportedReferencesRefuse() throws {
+        let v=vps(),s=nal(),p=pps()
+        let cases=[configuration([s]),referenceConfiguration([(32,true,[v]),(33,true,[s])]),
+            referenceConfiguration([(32,true,[v,v]),(33,true,[s]),(34,true,[p])]),
+            referenceConfiguration([(32,true,[v]),(33,true,[s]),(34,true,[p,p])]),
+            referenceConfiguration([(32,true,[v]),(33,true,[s]),(34,true,[p]),(34,false,[])]),
+            references(vps(id:1)),references(nil,nil,pps(sps:1)),references(vps(layers:1)),references(vps(base:2)),references(vps(sub:7)),references(vps(reserved:0)),
+            references(nil,nil,pps(id:64)),references(nil,nil,pps(id:65535)),references(nil,nil,pps(sps:16)),
+            references(Data([0x40,1])),references(nil,nil,Data([0x44,1])),references(v+Data([0,0,3,4])),references(nil,nil,p+Data([0,0,1]))]
+        for cfg in cases {#expect(throws:(any Error).self){try SPS.readConfigurationReferences(cfg)}}
+        var reserved=references();reserved[23] |= 64
+        var layer=p;layer[1]=9
+        var temporal=v;temporal[1]=2
+        for cfg in [reserved,references(nil,nil,layer),references(temporal)] {#expect(throws:(any Error).self){try SPS.readConfigurationReferences(cfg)}}
+        for n in 2..<6{#expect(throws:(any Error).self){try SPS.readConfigurationReferences(references(Data(v.prefix(n))))}}
+        #expect(try SPS.readConfiguration(configuration([s])).codedWidth == 176) // Old SPS-only API unchanged.
+        #expect(throws:CancellationError.self){try SPS.readConfigurationReferences(references(),checkpoint:{throw CancellationError()})}
+    }
+    @Test func sourceReferencePrefixesBindFreshTrackAndPreserveNarrowInBandAdmission() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-parameter-prefix-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);defer{print("GENERATED_PARAMETER_PREFIX_REVIEW "+root.path)}
+        for kind in [UInt8(0),32,33,34] {
+            let bytes=source(references(),inBand:kind == 0 ? nil:kind),input=root.appendingPathComponent(String(kind)+".mkv"),folder=root.appendingPathComponent("spool"+String(kind))
+            try bytes.write(to:input);try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+            let t=try CompanionOriginalTrackCheck.readSource(view(bytes)),r=try SPS.readSourceReferences(view(bytes),track:t)
+            #expect(r.geometry.configurationSHA256 == t.configurationSHA256)
+            if kind == 0 {
+                let bound=try await CompanionDiskCheck.spoolOriginalSourceParameterReferences(source:input,in:folder)
+                #expect(bound.originalParameterReferencePrefixesBoundToSource && bound.selectedPacketParameterSetNALsAbsent && !bound.activePictureParameterSetSelectionVerified && !bound.independentSourceFrameAssociationVerified && !bound.completeParameterSetConformanceVerified)
+            }else{await #expect(throws:(any Error).self){try await CompanionDiskCheck.spoolOriginalSourceParameterReferences(source:input,in:folder)}}
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+        let original=source(references()),old=try CompanionOriginalTrackCheck.readSource(view(original)),changed=source(references(nil,nil,pps(id:1)))
+        #expect(throws:(any Error).self){try SPS.readSourceReferences(view(changed),track:old)}
+        let fresh=try CompanionOriginalTrackCheck.readSource(view(changed)),r=try SPS.readSourceReferences(view(changed),track:fresh)
+        #expect(r.ppsID == 1 && !r.activePictureParameterSetSelectionVerified)
+    }
+    @Test func actualGeneratedSourceParameterReferencesCountsCancellationAndFinalIdentity() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-parameter-native-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);defer{print("GENERATED_PARAMETER_NATIVE_REVIEW "+root.path)}
+        _ = try await RustFixtureBuild.generate(.reference,at:root,copiesIn:root)
+        func folder(_ name:String) throws -> URL {let u=root.appendingPathComponent(name);try FileManager.default.createDirectory(at:u,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);return u}
+        for name in ["single","group","wide-vint","conformance","whole-gop"] {
+            let input=root.appendingPathComponent(name+".mkv"),bytes=try Data(contentsOf:input),stage=try folder("spool-"+name)
+            let r=try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{_ in Issue.record("Parameter reference source-only path launched decoder")})){
+                try await CompanionDiskCheck.spoolOriginalSourceParameterReferences(source:input,in:stage)
+            }
+            #expect(r.references.ppsID == 0 && r.references.ppsSPSID == 0 && r.references.vpsID == 0 && r.references.geometry.spsID == 0)
+            #expect(r.source.packets.packets == (name == "whole-gop" ? 24:4) && r.source.packets.records == r.source.packets.packets)
+            #expect(r.references.geometry.codedWidth == (name == "conformance" ? 176:160) && !r.activePictureParameterSetSelectionVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+        let input=root.appendingPathComponent("single.mkv"),bytes=try Data(contentsOf:input)
+        for kind in ["cap","read-cancel","late-cancel","extra","source-substitute"] {
+            let stage=try folder(kind),gate=DolbySampleProcessTests.Gate(),cancel=kind.hasSuffix("cancel")
+            let task=Task{defer{gate.signal.finish()};return try await CompanionDiskCheck.$testBoundary.withValue(.init(beforeFinal:{if kind == "late-cancel"{gate.hold()};if kind == "extra"{do{try Data([1]).write(to:stage.appendingPathComponent("extra"))}catch{Issue.record("Generated parameter final injection failed")}};if kind == "source-substitute"{do{try FileManager.default.moveItem(at:input,to:input.appendingPathExtension("original"));try bytes.write(to:input)}catch{Issue.record("Generated parameter source substitution failed")}}},originalTrackRead:{_,_ in if kind == "read-cancel"{gate.hold()}})){
+                try await CompanionDiskCheck.spoolOriginalSourceParameterReferences(source:input,in:stage,limits:.init(records:kind == "cap" ? 1:2_000_000))
+            }}
+            if cancel{for await _ in gate.stream{break};task.cancel();gate.release.signal()}
+            do{_ = try await task.value;Issue.record("Parameter source refusal admitted")}catch is CancellationError{#expect(cancel)}catch{#expect(!cancel)}
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+    }
+    @Test func sourceReferencePrefixActualEightPageSQLiteFullPreservesSource() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-parameter-full-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);defer{print("GENERATED_PARAMETER_FULL_REVIEW "+root.path)}
+        let input=root.appendingPathComponent("source.mkv"),stage=root.appendingPathComponent("spool"),bytes=source(references(),repeats:2000)
+        try bytes.write(to:input);try FileManager.default.createDirectory(at:stage,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+        await #expect(throws:(any Error).self){try await CompanionDiskCheck.spoolOriginalSourceParameterReferences(source:input,in:stage,limits:.init(pages:8))}
+        let size=(try FileManager.default.attributesOfItem(atPath:stage.appendingPathComponent(DolbyAssociationSpool.name).path)[.size] as? NSNumber)?.intValue
+        #expect(size == 8*4096);#expect(try Data(contentsOf:input) == bytes)
     }
     @Test func finitePrefixGeometryChromaUnitsAndOpaqueSublayerRegions() throws {
         for sub in 0...6 {

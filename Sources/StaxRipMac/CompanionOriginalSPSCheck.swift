@@ -19,10 +19,31 @@ enum CompanionOriginalSPSCheck {
         let independentSampleValuesVerified = false
         let editedPictureSemanticsVerified = false
     }
+    /// Configuration prefix relationships only, not active picture selection.
+    struct ParameterReferences: Sendable, Equatable {
+        let geometry: GeometryPrefix
+        let vpsNALSHA256, ppsNALSHA256: String
+        let vpsID, vpsMaxSubLayersMinus1, ppsID, ppsSPSID: Int
+        let dependentSliceSegmentsEnabled, outputFlagPresent: Bool
+        let extraSliceHeaderBits: Int
+        let vpsArrayComplete, spsArrayComplete, ppsArrayComplete: Bool
+        let configurationReferencePrefixesAgree = true
+        let completeParameterSetConformanceVerified = false
+        let activePictureParameterSetSelectionVerified = false
+        let independentSourceROIProvenanceVerified = false
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+    }
     private static func refused() -> NativeExportError {
         .invalid("Original configuration SPS geometry prefix refused. Active picture geometry is not established.")
     }
     static func readSource(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt) throws -> GeometryPrefix {
+        try readConfiguration(sourceConfiguration(view, track: track), checkpoint: view.checkpoint)
+    }
+    static func readSourceReferences(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt) throws -> ParameterReferences {
+        try readConfigurationReferences(sourceConfiguration(view, track: track), checkpoint: view.checkpoint)
+    }
+    private static func sourceConfiguration(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt) throws -> Data {
         let actual = try Track.readSource(view)
         guard actual.trackNumber == track.trackNumber,
               actual.originalPayloadOffset == track.originalPayloadOffset,
@@ -42,31 +63,66 @@ enum CompanionOriginalSPSCheck {
         }
         guard let configuration, configuration.count == actual.configurationBytes,
               DolbyInspection.hex(SHA256.hash(data: configuration)) == actual.configurationSHA256 else { throw refused() }
-        return try readConfiguration(configuration, checkpoint: view.checkpoint)
+        return configuration
     }
-    /// Finite base-layer 10-bit 4:2:0 prefix subset. Exactly one SPS occurrence,
-    /// including duplicate byte-identical occurrences; never choose the first.
-    static func readConfiguration(_ data: Data, checkpoint: () throws -> Void = {}) throws -> GeometryPrefix {
+    private struct ArrayEntry {
+        let type: UInt8, complete: Bool, reserved: Bool, units: [Data]
+    }
+    private static func arrays(_ data: Data, checkpoint: () throws -> Void) throws -> [ArrayEntry] {
         guard data.count <= 1 << 20 else { throw refused() }
         _ = try Track.configuration(data, checkpoint: checkpoint)
-        var cursor = 23, sps: Data?
+        var cursor = 23, entries: [ArrayEntry] = []
         for _ in 0..<Int(data[22]) {
             try checkpoint()
-            let type = data[cursor] & 63, count = Int(data[cursor+1]) << 8 | Int(data[cursor+2])
-            cursor += 3
+            let header = data[cursor], count = Int(data[cursor+1]) << 8 | Int(data[cursor+2])
+            cursor += 3; var units: [Data] = []
             for _ in 0..<count {
                 try checkpoint()
                 let length = Int(data[cursor]) << 8 | Int(data[cursor+1]); cursor += 2
-                if type == 33 {
-                    guard sps == nil else { throw refused() }
-                    sps = data.subdata(in: cursor..<(cursor+length))
-                }
-                cursor += length
+                units.append(data.subdata(in: cursor..<(cursor+length))); cursor += length
             }
+            entries.append(.init(type: header & 63, complete: header & 128 != 0, reserved: header & 64 != 0, units: units))
         }
-        guard let nal = sps, nal.count > 2, nal[0] == 0x42, nal[1] == 1,
-              nal.last != 0 else { throw refused() }
-        var rbsp = Data(), zeros = 0, i = 2
+        return entries
+    }
+    /// Existing SPS-only subset keeps its admission; reference checking is explicit.
+    static func readConfiguration(_ data: Data, checkpoint: () throws -> Void = {}) throws -> GeometryPrefix {
+        let units = try arrays(data, checkpoint: checkpoint).filter { $0.type == 33 }.flatMap(\.units)
+        guard units.count == 1, let nal = units.first else { throw refused() }
+        return try geometry(data, nal: nal, checkpoint: checkpoint)
+    }
+    /// One base-layer VPS/SPS/PPS occurrence and matching reference prefixes only.
+    /// Array-completeness bits are recorded, never update or activation authority.
+    static func readConfigurationReferences(_ data: Data, checkpoint: () throws -> Void = {}) throws -> ParameterReferences {
+        let entries = try arrays(data, checkpoint: checkpoint)
+        func one(_ type: UInt8) throws -> ArrayEntry {
+            let matches = entries.filter { $0.type == type }
+            guard matches.count == 1, let entry = matches.first, !entry.reserved, entry.units.count == 1 else { throw refused() }
+            return entry
+        }
+        let vps = try one(32), sps = try one(33), pps = try one(34)
+        let geom = try geometry(data, nal: sps.units[0], checkpoint: checkpoint)
+        var v = Bits(data: try rbsp(vps.units[0], type: 32, checkpoint: checkpoint))
+        let vpsID = try v.read(4), internalBase = try v.read(1), availableBase = try v.read(1), layers = try v.read(6)
+        let sub = try v.read(3), nesting = try v.read(1)
+        guard internalBase == 1, availableBase == 1, layers == 0, sub <= 6,
+              sub > 0 || nesting == 1, try v.read(16) == 65535,
+              v.position < v.data.count*8, geom.vpsID == vpsID else { throw refused() }
+        var p = Bits(data: try rbsp(pps.units[0], type: 34, checkpoint: checkpoint))
+        let ppsID = try p.ue(maximum: 63), spsID = try p.ue(maximum: 15)
+        let dependent = try p.read(1), output = try p.read(1), extra = try p.read(3)
+        guard p.position < p.data.count*8, spsID == geom.spsID else { throw refused() }
+        try checkpoint()
+        return .init(geometry: geom, vpsNALSHA256: DolbyInspection.hex(SHA256.hash(data: vps.units[0])),
+            ppsNALSHA256: DolbyInspection.hex(SHA256.hash(data: pps.units[0])), vpsID: vpsID,
+            vpsMaxSubLayersMinus1: sub, ppsID: ppsID, ppsSPSID: spsID,
+            dependentSliceSegmentsEnabled: dependent == 1, outputFlagPresent: output == 1,
+            extraSliceHeaderBits: extra, vpsArrayComplete: vps.complete,
+            spsArrayComplete: sps.complete, ppsArrayComplete: pps.complete)
+    }
+    private static func rbsp(_ nal: Data, type: UInt8, checkpoint: () throws -> Void) throws -> Data {
+        guard nal.count > 2, nal[0] == type << 1, nal[1] == 1, nal.last != 0 else { throw refused() }
+        var result = Data(), zeros = 0, i = 2
         while i < nal.count {
             try checkpoint()
             let b = nal[i]
@@ -77,8 +133,12 @@ enum CompanionOriginalSPSCheck {
                     zeros = 0; i += 1; continue
                 }
             }
-            rbsp.append(b); zeros = b == 0 ? zeros+1 : 0; i += 1
+            result.append(b); zeros = b == 0 ? zeros+1 : 0; i += 1
         }
+        return result
+    }
+    private static func geometry(_ data: Data, nal: Data, checkpoint: () throws -> Void) throws -> GeometryPrefix {
+        let rbsp = try rbsp(nal, type: 33, checkpoint: checkpoint)
         var bits = Bits(data: rbsp)
         let vps = try bits.read(4), sub = try bits.read(3), nesting = try bits.read(1)
         guard sub <= 6, sub > 0 || nesting == 1 else { throw refused() }

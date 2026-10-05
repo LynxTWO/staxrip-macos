@@ -157,6 +157,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-148 | 2026-10-05 | Joint source Video and fixed-decoder crop readback | Confirmed | |
 | D-149 | 2026-10-05 | Joint original Video/crop access ownership | Confirmed | |
 | D-150 | 2026-10-05 | Original configuration SPS geometry prefix binding | Confirmed | |
+| D-151 | 2026-10-05 | Source configuration parameter reference prefixes | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4512,3 +4513,39 @@ Final focused33tests3suites14.207s and ordinary589reported tests/105suites213.41
 writer/decoder/sample/crop absent. Eight-file privacy zero/positive sentinel, protected
 owner metadata/journal/captured artifacts unchanged, planning empty. Generated review roots
 retained privately; other finite ownership/retirement/recovery/distribution gates stay open.
+
+
+## D-151: Bind configuration VPS/SPS/PPS reference prefixes without picture activation
+
+Status: Confirmed
+
+Distinct unused source-only entry reuses D150 selected source/configuration/SPS/escape/bit
+capabilities on the existing pinned synchronous source/open SQLite worker. Exactly one
+base-layer VPS/SPS/PPS array and occurrence, finite prefix fields and matching reference IDs
+precede full source packet/RPU/table/final qualified settlement. Raw completeness flags are
+not update/activation authority. Full parameter-set suffix/PTL, slice/SEI activation and
+source picture use remain unverified. No decoder, second worker, protocol/default packaging,
+app action, generic wrapper/closed-store adoption or recovery authority. Existing SPS-only
+and lower source/frame/sample/crop API subsets remain unchanged.
+
+See SOURCE-PARAMETER-REFERENCE-PREFIX-EVIDENCE.md for primary syntax/mapping references,
+generated bounded vectors/real HEVC configurations, in-band/missing/duplicate/ambiguous/
+stale-source/storage/cancel/substitution refusal and retained evidence. Static closure
+remains94 sources; execution is prior companion pipeline. Source/frame/ROI/value/rendered/
+edited, complete parameter-set and other ownership/distribution gates remain open. VCL PPS
+reference and first/dependent slice readback must precede any joint geometry/origin upgrade;
+matching prefix IDs alone never imply active picture selection. Full exact rational picture
+coverage and qualified final settlement remain mandatory for a later joint finding.
+
+
+Qualified38tests3suites14.590s/final ordinary594reported tests105suites211.401s PASSED38
+unchanged explicit opt-in skips/no emitted warnings. Explicit production21.30s/current
+strict app/read-only helper signatures/minima14.0/11.0 pass, development writer/decoder/
+sample/crop absent. Six-file privacy zero/positive sentinel, protected owner metadata/
+journal/captured artifacts unchanged, planning empty. No new compiler/test failure,
+C/runtime copy/sanitizer/pixel oracle/APFS/DeveloperID/owner body/full-source/UI execution.
+PR125 hosted589tests605.233s8issues retained/updated without retry: two unchanged120s bounds,
+two absent-positive-child assertions, missing generated pipe-holder marker, Fresh-analysis
+8.160468vs5 and two EOF expectations. Individual causes unestablished; local passes do not
+resolve hosted failures. Other parameter interpretation/activation/origin/ownership/
+retirement/recovery/distribution and rendered/edited gates remain separate and open.

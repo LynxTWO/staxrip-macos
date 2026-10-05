@@ -2334,3 +2334,14 @@ SOURCE-SPS-GEOMETRY-PREFIX-EVIDENCE.md. Existing narrower APIs remain unchanged;
 source-generated conformance prefix is read independently of decoder declarations. Active
 VPS/PPS/slice selection and full joint coverage still precede coordinate-origin policy;
 explicit access/retention and other retirement/recovery/distribution gates remain open.
+
+
+### D151 source configuration parameter reference prefixes
+
+Unused source-only worker reuses D150 source/config/SPS binding and reads exactly one finite
+VPS/PPS prefix with matching IDs. Raw completeness/dependent flags are facts, not activation,
+full parameter-set validation or source picture use. Full source/table/final checked
+settlement precedes result; no decoder or controller is added. See D-151 and
+SOURCE-PARAMETER-REFERENCE-PREFIX-EVIDENCE.md. VCL/first-dependent slice and complete parameter
+interpretation/joint picture coverage remain prerequisites before coordinate-origin policy.
+Source/frame/ROI/value/rendered/edited and other finite ownership/distribution gates stay open.

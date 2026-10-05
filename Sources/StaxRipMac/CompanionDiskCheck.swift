@@ -27,6 +27,14 @@ enum CompanionDiskCheck {
         let directory: Directory
         var errorDescription: String? { "Companion directory enumeration ownership is uncertain. Retain needed source and stage access for review." }
     }
+    struct DirectoryAdmissionFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: any Error
+        /// Nil means an earlier shared ownership marker prevented a close attempt.
+        let closeStatus, closeErrno: Int32?
+        let reportedAfterActualClose: Bool
+        let directory: Directory
+        var errorDescription: String? { "Companion directory admission ownership is uncertain. Retain needed source and stage access for review." }
+    }
     struct Boundary: Sendable {
         var progress: @Sendable (String, Int64) -> Void = { _, _ in }
         var beforeFinal: @Sendable () -> Void = {}
@@ -35,6 +43,9 @@ enum CompanionDiskCheck {
         var fileOpened: @Sendable (String?) throws -> Void = { _ in }
         var admissionClosed: @Sendable (String?, Int32, Int32) -> Void = { _, _, _ in }
         var refuseAdmissionClose: @Sendable (String?) -> Bool = { _ in false }
+        var directoryAdmissionOpened: @Sendable (Directory) throws -> Void = { _ in }
+        var directoryAdmissionClosed: @Sendable (Int32, Int32) -> Void = { _, _ in }
+        var refuseDirectoryAdmissionClose: @Sendable () -> Bool = { false }
         var enumerationOpened: @Sendable (EnumerationPass, EnumerationRole) throws -> Void = { _, _ in }
         var allowEnumerationStream: @Sendable (EnumerationPass) -> Bool = { _ in true }
         var enumerationClosed: @Sendable (EnumerationPass, EnumerationRole, Int32, Int32) -> Void = { _, _, _, _ in }
@@ -529,7 +540,7 @@ enum CompanionDiskCheck {
     private static func check(source url: URL, stage urlStage: URL, input: Input,
                               originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool, metadataTool: CompanionMetadataProcess.Tool?, metadataBoundary: CompanionMetadataProcess.Boundary, cancelled: Cancellation, boundary: Boundary) throws -> Receipt {
         try cancelled.check()
-        let source = try File(url: url, maximum: 1 << 40, boundary: boundary, checkpoint: cancelled.check), directory = try Directory(urlStage)
+        let source = try File(url: url, maximum: 1 << 40, boundary: boundary, checkpoint: cancelled.check), directory = try Directory.admit(urlStage, boundary: boundary, checkpoint: cancelled.check)
         let limits = input.retention.limits, expected = Set(limits.keys), provided = input.provided
         guard try directory.names(pass: .initial, cancelled: cancelled, boundary: boundary) == expected else { throw failure() }
         if let c = provided {
@@ -748,24 +759,58 @@ enum CompanionDiskCheck {
     // SAME worker-confined directory; retained by existing outer Access on
     // enumeration uncertainty. Original descriptor retirement is separate.
     final class Directory: @unchecked Sendable {
-        fileprivate let url: URL, fd: Int32, initial: stat
+        fileprivate let url: URL
+        fileprivate private(set) var fd: Int32
+        fileprivate private(set) var initial = stat()
         private var enumerationFD: Int32 = -1
         private var enumerationStream: UnsafeMutablePointer<DIR>?
         #if DEBUG
         var enumerationConsumedForTesting: Bool { enumerationFD < 0 && enumerationStream == nil }
         var descriptorForTesting: Int32 { fd }
+        var selectedURLForTesting: URL { url }
         #endif
         var id: Transaction.FileID { .init(initial) }
-        init(_ url: URL) throws {
+        // The SAME concrete owner receives the positive descriptor before any
+        // admission guard/callback/cancellation. Full verifier retirement is separate.
+        private init(_ url: URL, descriptor: Int32) { self.url = url; fd = descriptor }
+        static func admit(_ url: URL, boundary: Boundary, checkpoint: () throws -> Void) throws -> Directory {
             guard url.isFileURL, !url.path.utf8.contains(0) else { throw failure() }
             let descriptor = Darwin.open(url.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
             guard descriptor >= 0 else { throw failure() }
-            var info = stat(), path = stat()
-            guard fstat(descriptor, &info) == 0, lstat(url.path, &path) == 0, info.st_uid == geteuid(),
-                  info.st_mode & 0o7777 == 0o700, same(info, path) else { Darwin.close(descriptor); throw failure() }
-            self.url = url; fd = descriptor; initial = info
+            let directory = Directory(url, descriptor: descriptor)
+            do {
+                #if DEBUG
+                try boundary.directoryAdmissionOpened(directory)
+                #endif
+                try checkpoint()
+                var info = stat(), path = stat()
+                guard fstat(directory.fd, &info) == 0, lstat(url.path, &path) == 0, info.st_uid == geteuid(),
+                      info.st_mode & 0o7777 == 0o700, same(info, path) else { throw failure() }
+                directory.initial = info
+                try checkpoint(); return directory
+            } catch {
+                // An exception is not settlement authority for an earlier shared
+                // owner. Preserve the SAME concrete Directory without a new attempt.
+                if error is any CompanionUnsettledOwnership {
+                    throw DirectoryAdmissionFailure(operationError: error, closeStatus: nil, closeErrno: nil,
+                        reportedAfterActualClose: false, directory: directory)
+                }
+                let number = directory.fd; directory.fd = -1
+                let status = Darwin.close(number), code: Int32 = status == 0 ? 0 : errno
+                #if DEBUG
+                boundary.directoryAdmissionClosed(status, code)
+                let reported = status == 0 && boundary.refuseDirectoryAdmissionClose()
+                #else
+                let reported = false
+                #endif
+                if status != 0 || reported {
+                    throw DirectoryAdmissionFailure(operationError: error, closeStatus: status, closeErrno: code,
+                        reportedAfterActualClose: reported, directory: directory)
+                }
+                throw error
+            }
         }
-        deinit { Darwin.close(fd) }
+        deinit { if fd >= 0 { Darwin.close(fd) } } // Admitted terminal/fallback remains unqualified.
         func check() throws {
             var info = stat(), path = stat()
             guard fstat(fd, &info) == 0, lstat(url.path, &path) == 0, same(initial, info), same(initial, path) else { throw failure() }

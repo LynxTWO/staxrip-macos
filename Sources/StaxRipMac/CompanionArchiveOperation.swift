@@ -577,14 +577,12 @@ enum CompanionArchiveOperation {
         else if let e = error as? OriginalCompanionTransaction.CleanupFailure { access.stage = e.retainedStage }
         // The registry stores concrete access, not the returned error. Retain
         // the SAME verifier directory independently of error/Task lifetime.
-        let enumeration: CompanionDiskCheck.EnumerationCloseFailure?
-        if let e = error as? CompanionDiskCheck.EnumerationCloseFailure { enumeration = e }
-        else if let e = error as? OriginalCompanionTransaction.UnsettledPhaseFailure {
-            enumeration = e.operationError as? CompanionDiskCheck.EnumerationCloseFailure
-        } else if let e = error as? OriginalCompanionTransaction.SourceSettlementFailure {
-            enumeration = e.operationError as? CompanionDiskCheck.EnumerationCloseFailure
-        } else { enumeration = nil }
-        access.enumerationDirectory = enumeration?.directory
+        let verifierError: any Error
+        if let e = error as? OriginalCompanionTransaction.UnsettledPhaseFailure { verifierError = e.operationError }
+        else if let e = error as? OriginalCompanionTransaction.SourceSettlementFailure { verifierError = e.operationError }
+        else { verifierError = error }
+        if let e = verifierError as? CompanionDiskCheck.EnumerationCloseFailure { access.enumerationDirectory = e.directory }
+        else if let e = verifierError as? CompanionDiskCheck.DirectoryAdmissionFailure { access.enumerationDirectory = e.directory }
         // Expiry ends only temporary energy. Dropped errors do not release access
         // or authorize cleanup, adoption, publication or a successful review.
         DispatchQueue.main.asyncAfter(deadline: .now() + environment.retainedActivitySeconds) {

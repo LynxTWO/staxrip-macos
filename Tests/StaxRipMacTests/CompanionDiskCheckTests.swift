@@ -345,4 +345,33 @@ struct CompanionDiskCheckTests {
         }
     }
 
+    private final class DirectoryAdmissionCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var statuses: [Int32] = []
+        func add(_ status: Int32, _ code: Int32) { lock.withLock { #expect(status == 0 && code == 0); statuses.append(status) } }
+        func expect(_ count: Int) { lock.withLock { #expect(statuses.count == count) } }
+    }
+    @Test func positiveDirectoryAdmissionRollbackChecksActualGuardCallbackAndSubstitutionRefusals() throws {
+        for point in ["mode", "callback", "substitution", "missing", "symlink", "file"] {
+            let root=FileManager.default.temporaryDirectory.appendingPathComponent("generated-directory-admission-"+UUID().uuidString)
+            try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+            let selected=root.appendingPathComponent("selected"), moved=root.appendingPathComponent("original-selected")
+            try FileManager.default.createDirectory(at:selected,withIntermediateDirectories:false,attributes:[.posixPermissions:point == "mode" ? 0o755 : 0o700])
+            var target=selected
+            if point == "missing" { target=root.appendingPathComponent("missing") }
+            if point == "symlink" { target=root.appendingPathComponent("link"); try FileManager.default.createSymbolicLink(at:target,withDestinationURL:selected) }
+            if point == "file" { target=root.appendingPathComponent("file"); try Data([1]).write(to:target) }
+            let closes=DirectoryAdmissionCloses()
+            do {
+                _=try CompanionDiskCheck.Directory.admit(target,boundary:.init(directoryAdmissionOpened:{ directory in
+                    var info=stat(); let status=fstat(directory.descriptorForTesting,&info); #expect(status == 0)
+                    if point == "callback" { throw NativeExportError.invalid("Generated directory admission refusal") }
+                    if point == "substitution" { try FileManager.default.moveItem(at:selected,to:moved); try FileManager.default.createDirectory(at:selected,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]) }
+                },directoryAdmissionClosed:{ closes.add($0,$1) }),checkpoint:{})
+                Issue.record("Refused directory admission returned")
+            } catch { if error is any CompanionUnsettledOwnership { print("GENERATED_UNEXPECTED_DIRECTORY_ADMISSION " + root.path); throw error }; #expect(error is NativeExportError) }
+            closes.expect(["missing","symlink","file"].contains(point) ? 0 : 1)
+            try FileManager.default.removeItem(at:root)
+        }
+    }
+
 }

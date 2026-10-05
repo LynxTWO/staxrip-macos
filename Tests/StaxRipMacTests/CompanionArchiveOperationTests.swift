@@ -3536,4 +3536,102 @@ struct CompanionArchiveOperationTests {
         }
     }
 
+    private final class AdmissionDirectoryClose: @unchecked Sendable {
+        private let lock=NSLock(); private var count=0
+        func add(_ status:Int32,_ code:Int32) { lock.withLock { #expect(status == 0 && code == 0); count += 1 } }
+        func expect(_ expected:Int) { lock.withLock { #expect(count == expected) } }
+    }
+    @Test func directoryAdmissionReportsRetainSamePartialOwnerAndSourcePriorityBothModes() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly,.entireContainer] {
+            let ordinary=try await fixture(), normal=Ledger()
+            _=try await Operation.$testEnvironment.withValue(environment(normal,fakeScopes:true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned:{ normal.pinned($0) },archiveClosed:{ normal.closed($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched:{ normal.launch($0) },settled:{ normal.join($0) })) {
+                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched:{ normal.launch($0) },settled:{ normal.join($0) })) {
+                            try await CompanionDiskCheck.$testBoundary.withValue(.init(directoryAdmissionOpened:{ _ in normal.expectActive(scoped:true) },directoryAdmissionClosed:{ _,_ in Issue.record("Ordinary admission rolled back") })) { try await execute(ordinary,mode:mode) }
+                        }
+                    }
+                }
+            }
+            normal.expectJoined(count:2); normal.expectClosed(); normal.expectEnded(scoped:true); ordinary.cleanup()
+            for point in ["guard","callback","source-priority","substitution"] {
+                let f=try await fixture(), ledger=Ledger(), closes=AdmissionDirectoryClose(), witness=WeakDiskEnumerationOwner(), original=try Data(contentsOf:f.source)
+                defer { print("GENERATED_DIRECTORY_ADMISSION_REVIEW " + f.root.path) }
+                var task:Task<ResultSetStaging.Published,Error>?=Task {
+                    try await Operation.$testEnvironment.withValue(environment(ledger,fakeScopes:true)) {
+                        try await Operation.$testBoundary.withValue(.init(pinned:{ ledger.pinned($0) },archiveClosed:{ _ in Issue.record("Uncertain admission released access") })) {
+                            try await CompanionWriterProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                                try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched:{ _ in Issue.record("Refused admission launched verifier") })) {
+                                    try await CompanionDiskCheck.$testBoundary.withValue(.init(directoryAdmissionOpened:{ directory in
+                                        ledger.expectActive(scoped:true)
+                                        if point == "callback" { throw NativeExportError.invalid("Generated directory admission refusal") }
+                                        if point == "substitution" { try FileManager.default.moveItem(at:directory.selectedURLForTesting,to:f.root.appendingPathComponent("retained-original-directory")); try FileManager.default.createDirectory(at:directory.selectedURLForTesting,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]) }
+                                        else { try FileManager.default.setAttributes([.posixPermissions:0o755],ofItemAtPath:directory.selectedURLForTesting.path) }
+                                    },directoryAdmissionClosed:{ closes.add($0,$1) },refuseDirectoryAdmissionClose:{ true })) {
+                                        try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(refuseClose:{ point == "source-priority" })) { try await execute(f,mode:mode) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                var id:UUID?
+                do { _=try await task!.value; Issue.record("Uncertain directory admission published") }
+                catch let e as Operation.ReviewFailure {
+                    id=e.reviewID; #expect(e.published == nil && e.removed == nil)
+                    let cause:any Error
+                    if point == "source-priority" { cause=(try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure)).operationError }
+                    else { cause=(try #require(e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)).operationError }
+                    let fault=try #require(cause as? CompanionDiskCheck.DirectoryAdmissionFailure)
+                    #expect(fault.closeStatus == 0 && fault.closeErrno == 0 && fault.reportedAfterActualClose && fault.operationError is NativeExportError)
+                    #expect(fault.directory.descriptorForTesting == -1 && fault.directory.enumerationConsumedForTesting)
+                    witness.directory=fault.directory; witness.stage=Operation.retainedStageForTesting(e.reviewID)
+                }
+                task=nil; let review=try #require(id); closes.expect(1); ledger.expectJoined(count:1)
+                #expect(witness.directory != nil && witness.directory === Operation.retainedEnumerationDirectoryForTesting(review) && witness.stage != nil); ledger.expectRetained()
+                await #expect(throws:NativeExportError.self) { try await execute(f,mode:mode) }
+                try await Task.sleep(for:.milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); #expect(witness.directory != nil && witness.stage != nil)
+                #expect(try Data(contentsOf:f.source) == original && !FileManager.default.fileExists(atPath:f.root.appendingPathComponent("published").path))
+                // Test namespace isolation keeps SAME Access/stage/grants/partial
+                // Directory and files. It is not recovery or cleanup authority.
+                Operation.isolateGeneratedEnumerationReviewForTesting(review); ledger.expectRetained(); #expect(witness.directory != nil && witness.stage != nil)
+            }
+        }
+    }
+    @Test func actualDirectoryAdmissionCancellationChecksRollbackBeforeReleaseOrRetention() async throws {
+        for reported in [false,true] {
+            let f=try await fixture(), ledger=Ledger(), closes=AdmissionDirectoryClose(), gate=Gate(), witness=WeakDiskEnumerationOwner(), original=try Data(contentsOf:f.source)
+            var task:Task<ResultSetStaging.Published,Error>?=Task {
+                defer { gate.signal.finish() }
+                return try await Operation.$testEnvironment.withValue(environment(ledger,fakeScopes:true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned:{ ledger.pinned($0) },archiveClosed:{ count in if reported { Issue.record("Uncertain cancelled directory released access") }; closes.expect(1); ledger.closed(count) })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched:{ _ in Issue.record("Cancelled admission launched verifier") })) {
+                                try await CompanionDiskCheck.$testBoundary.withValue(.init(directoryAdmissionOpened:{ _ in gate.hold() },directoryAdmissionClosed:{ closes.add($0,$1) },refuseDirectoryAdmissionClose:{ reported })) { try await execute(f) }
+                            }
+                        }
+                    }
+                }
+            }
+            for await _ in gate.entered { break }; ledger.expectActive(scoped:true); #expect(ownAssertion(try assertions()))
+            task!.cancel(); gate.release.signal(); var id:UUID?
+            do { _=try await task!.value; Issue.record("Cancelled directory admission published") }
+            catch let e as Operation.ReviewFailure {
+                #expect(reported && e.published == nil && e.removed == nil); id=e.reviewID
+                let phase=try #require(e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)
+                let fault=try #require(phase.operationError as? CompanionDiskCheck.DirectoryAdmissionFailure)
+                #expect(fault.operationError is CancellationError && fault.closeStatus == 0 && fault.closeErrno == 0 && fault.reportedAfterActualClose)
+                #expect(fault.directory.descriptorForTesting == -1); witness.directory=fault.directory; witness.stage=Operation.retainedStageForTesting(e.reviewID)
+            } catch { if error is any CompanionUnsettledOwnership { print("GENERATED_UNEXPECTED_DIRECTORY_CANCEL_REVIEW " + f.root.path); throw error }; #expect(!reported && error is CancellationError) }
+            task=nil; closes.expect(1); ledger.expectJoined(count:1); #expect(try Data(contentsOf:f.source) == original && !FileManager.default.fileExists(atPath:f.root.appendingPathComponent("published").path))
+            if reported {
+                let review=try #require(id); ledger.expectRetained(); #expect(witness.directory === Operation.retainedEnumerationDirectoryForTesting(review) && witness.stage != nil)
+                await #expect(throws:NativeExportError.self) { try await execute(f) }
+                try await Task.sleep(for:.milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); #expect(witness.directory != nil && witness.stage != nil)
+                Operation.isolateGeneratedEnumerationReviewForTesting(review); ledger.expectRetained(); #expect(witness.directory != nil && witness.stage != nil)
+                print("GENERATED_CANCELLED_DIRECTORY_ADMISSION_REVIEW " + f.root.path)
+            } else { ledger.expectClosed(); ledger.expectEnded(scoped:true); #expect(!ownAssertion(try assertions())); f.cleanup() }
+        }
+    }
+
 }

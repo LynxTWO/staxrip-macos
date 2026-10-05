@@ -10,7 +10,24 @@ struct ToolResult: Sendable {
 
 // Owns one process. Pipes are drained concurrently and retained output is bounded.
 final class ToolRunner: @unchecked Sendable {
+    // Opt-in for callers that preserve concrete resources on settlement refusal.
+    private let checkedReaders: Bool
+    init(checkedReaders: Bool = false) { self.checkedReaders = checkedReaders }
+    struct ReaderCloseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let owner: ToolRunner
+        let roles: [String]
+        let closeErrors: [String: Error]
+        let processStatus: Int32
+        let cause: Error?
+        var consumerCause: Error? = nil
+        var errorDescription: String? { "Tool reader settlement is uncertain. The operation's resources must be retained." }
+    }
+    private var retainedPipes: [Pipe] = []
+    private var retainedSelf: ToolRunner?
     #if DEBUG
+    @TaskLocal static var readerCloseReport: (@Sendable (String, Bool) -> Bool)?
+    var ownedLivePID: Int32? { lock.withLock { process.flatMap { $0.isRunning ? $0.processIdentifier : nil } } }
+    var retainsUncertainty: Bool { lock.withLock { retainedSelf != nil && retainedPipes.count == 2 } }
     @TaskLocal static var observeBoundary: (@Sendable (String) -> Void)?
     #endif
     // Control never waits for a child or a pipe callback. Its own queue keeps
@@ -43,6 +60,7 @@ final class ToolRunner: @unchecked Sendable {
     func runWithStreams(executable: URL, arguments: [String], stdoutLimit: Int = 4 * 1024 * 1024, onErrorOutput: (@Sendable (Data) -> Void)? = nil, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
         #if DEBUG
         let observe = Self.observeBoundary
+        let closeReport = Self.readerCloseReport
         observe?("body entered")
         #endif
         try Task.checkCancellation()
@@ -72,12 +90,13 @@ final class ToolRunner: @unchecked Sendable {
                     } catch { continuation.resume(throwing: error); return }
                     lock.lock()
                     if cancelled { lock.unlock(); continuation.resume(throwing: CancellationError()); return }
-                    guard process == nil else {
+                    guard process == nil, retainedSelf == nil else {
                         lock.unlock()
                         continuation.resume(throwing: NativeExportError.invalid("This tool runner already owns an active process.")); return
                     }
                     let group = DispatchGroup()
-                    // Completion joins process exit and both fully drained, closed readers.
+                    // Completion joins process exit and both reader cancel handlers.
+                    // Checked close refusals are delivered only after this join.
                     // No shared worker waits for a child or another dispatch block.
                     for _ in 0..<3 { group.enter() }
                     task.terminationHandler = { _ in group.leave() }
@@ -91,7 +110,8 @@ final class ToolRunner: @unchecked Sendable {
                     let stdout = BoundedBytes(limit: max(0, min(stdoutLimit, 4 * 1024 * 1024)))
                     let stderr = BoundedBytes(limit: 64 * 1024)
                     let readFailure = ToolReadFailure()
-                    for (handle, buffer, callback) in [(output.fileHandleForReading, stdout, onOutput), (errors.fileHandleForReading, stderr, onErrorOutput)] {
+                    let closeFailure = ToolReaderCloseFailures()
+                    for (role, handle, buffer, callback) in [("stdout", output.fileHandleForReading, stdout, onOutput), ("stderr", errors.fileHandleForReading, stderr, onErrorOutput)] {
                         let queue = DispatchQueue(label: "StaxRip.tool-pipe", qos: .userInitiated)
                         let source = DispatchSource.makeReadSource(fileDescriptor: handle.fileDescriptor, queue: queue)
                         source.setEventHandler { [self] in
@@ -111,7 +131,13 @@ final class ToolRunner: @unchecked Sendable {
                             }
                         }
                         source.setCancelHandler {
-                            try? handle.close()
+                            // One Foundation close call; never retry after a refusal.
+                            var closed = false
+                            do { try handle.close(); closed = true }
+                            catch { if self.checkedReaders { closeFailure.record(role, error: error) } }
+                            #if DEBUG
+                            if self.checkedReaders, closeReport?(role, closed) == true { closeFailure.record(role) }
+                            #endif
                             source.setEventHandler(handler: nil)
                             source.setCancelHandler(handler: nil)
                             group.leave()
@@ -121,13 +147,31 @@ final class ToolRunner: @unchecked Sendable {
                     group.notify(queue: controlQueue) { [self] in
                         task.terminationHandler = nil
                         lock.lock(); process = nil; let wasCancelled = cancelled; lock.unlock()
-                        if let error = readFailure.error { continuation.resume(throwing: error); return }
-                        if wasCancelled { continuation.resume(throwing: CancellationError()); return }
+                        let bodyError: Error? = readFailure.error ?? (wasCancelled ? CancellationError() : nil)
+                        let refused = closeFailure.roles
+                        if !refused.isEmpty {
+                            // Keep these same concrete pipes and runner after error/Task drop.
+                            // No release interface: uncertainty is not cleanup authority.
+                            lock.withLock { retainedPipes = [output, errors]; retainedSelf = self }
+                            continuation.resume(throwing: ReaderCloseFailure(owner: self, roles: refused, closeErrors: closeFailure.errors, processStatus: task.terminationStatus, cause: bodyError)); return
+                        }
+                        if let bodyError { continuation.resume(throwing: bodyError); return }
                         continuation.resume(returning: ToolResult(status: task.terminationStatus, stdout: stdout.data, stderr: stderr.data, truncated: stdout.truncated))
                     }
                 }
             }
         } onCancel: { self.cancel() }
+    }
+}
+
+private final class ToolReaderCloseFailures: @unchecked Sendable {
+    private let lock = NSLock()
+    private var failed = Set<String>()
+    private var actual: [String: Error] = [:]
+    var roles: [String] { lock.withLock { failed.sorted() } }
+    var errors: [String: Error] { lock.withLock { actual } }
+    func record(_ role: String, error: Error? = nil) {
+        lock.withLock { _ = failed.insert(role); if let error { actual[role] = error } }
     }
 }
 
@@ -236,8 +280,8 @@ struct MediaProbe: Decodable, Sendable {
     var seconds: Double { Double(format?.duration ?? "") ?? 0 }
     var video: Stream? { streams.first { $0.codec_type == "video" && $0.disposition?["attached_pic"] != 1 } }
 
-    static func read(_ source: URL, tools: FFmpegTools) async throws -> MediaProbe {
-        let result = try await ToolRunner().run(executable: tools.ffprobe, arguments: ["-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-show_chapters", "-show_data_hash", "sha256", "-of", "json", source.path])
+    static func read(_ source: URL, tools: FFmpegTools, checkedReaders: Bool = false) async throws -> MediaProbe {
+        let result = try await ToolRunner(checkedReaders: checkedReaders).run(executable: tools.ffprobe, arguments: ["-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-show_chapters", "-show_data_hash", "sha256", "-of", "json", source.path])
         guard result.status == 0, !result.truncated else {
             throw NativeExportError.invalid("Media inspection failed. " + String(decoding: result.stderr, as: UTF8.self))
         }

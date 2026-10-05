@@ -155,14 +155,17 @@ struct FreshAnalysis: Sendable {
 }
 
 enum MeasuredAnalysis {
+    #if DEBUG
+    @TaskLocal static var consumedPCM: (@Sendable (ToolRunner) -> Void)?
+    #endif
     static func run(source: URL, track: Int, regions: [SpeechRegion], tools: FFmpegTools, declaredLayout: String? = nil,
                     progress: @escaping @Sendable (Double) -> Void) async throws -> AnalysisReport {
         try await fresh(source: source, track: track, regions: regions, tools: tools, declaredLayout: declaredLayout, progress: progress).report
     }
     static func fresh(source: URL, track: Int, regions: [SpeechRegion], tools: FFmpegTools, declaredLayout: String? = nil,
-                      progress: @escaping @Sendable (Double) -> Void) async throws -> FreshAnalysis {
+                      checkedReaders: Bool = false, progress: @escaping @Sendable (Double) -> Void) async throws -> FreshAnalysis {
         let before = try await SourceFingerprint.read(source)
-        let probe = try await MediaProbe.read(source, tools: tools)
+        let probe = try await MediaProbe.read(source, tools: tools, checkedReaders: checkedReaders)
         guard let stream = probe.streams.first(where: { $0.index == track && $0.codec_type == "audio" }),
               let rate = Int(stream.sample_rate ?? ""), let count = stream.channels else {
             throw NativeExportError.invalid("Audio stream format is unavailable.")
@@ -184,11 +187,14 @@ enum MeasuredAnalysis {
             }
             end = region.endFrame
         }
-        let version = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-version"])
+        let version = try await ToolRunner(checkedReaders: checkedReaders).run(executable: tools.ffmpeg, arguments: ["-version"])
         guard version.status == 0 else { throw NativeExportError.invalid("Cannot identify the audio decoder.") }
         let decoder = String(decoding: version.stdout, as: UTF8.self).split(separator: "\n").first.map(String.init) ?? "FFmpeg unknown"
+        #if DEBUG
+        let consumed = Self.consumedPCM
+        #endif
         let consumer = try PCMAnalysisConsumer(rate: rate, channels: count, regions: regions)
-        let runner = ToolRunner()
+        let runner = ToolRunner(checkedReaders: checkedReaders)
         let result: ToolResult
         do {
             result = try await runner.run(executable: tools.ffmpeg, arguments: ["-nostdin", "-v", "error", "-xerror", "-protocol_whitelist", "file,pipe", "-i", source.path,
@@ -196,6 +202,9 @@ enum MeasuredAnalysis {
                 guard consumer.failure == nil else { return }
                 do {
                     try consumer.consume(data)
+                    #if DEBUG
+                    if consumer.frames > 0 { consumed?(runner) }
+                    #endif
                     let now = ProcessInfo.processInfo.systemUptime
                     if consumer.frames-consumer.lastProgressFrame >= Int64(rate), now-consumer.lastProgressTime >= 0.25 {
                         consumer.lastProgressTime = now
@@ -205,6 +214,11 @@ enum MeasuredAnalysis {
                 } catch { consumer.failure = error; runner.cancel() }
             })
         } catch {
+            if var unsettled = error as? ToolRunner.ReaderCloseFailure {
+                unsettled.consumerCause = consumer.failure
+                throw unsettled
+            }
+            if error is CompanionUnsettledOwnership { throw error }
             if let failure = consumer.failure { throw failure }
             throw error
         }

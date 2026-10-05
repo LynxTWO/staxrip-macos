@@ -27,6 +27,13 @@ enum CompanionDiskCheck {
         let directory: Directory
         var errorDescription: String? { "Companion directory enumeration ownership is uncertain. Retain needed source and stage access for review." }
     }
+    struct DirectoryTerminalFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: (any Error)?
+        let closeStatus, closeErrno: Int32
+        let reportedAfterActualClose: Bool
+        let directory: Directory
+        var errorDescription: String? { "Companion verified directory ownership is uncertain. Retain needed source and stage access for review." }
+    }
     struct DirectoryAdmissionFailure: CompanionUnsettledOwnership, LocalizedError {
         let operationError: any Error
         /// Nil means an earlier shared ownership marker prevented a close attempt.
@@ -45,6 +52,9 @@ enum CompanionDiskCheck {
         var refuseAdmissionClose: @Sendable (String?) -> Bool = { _ in false }
         var directoryAdmissionOpened: @Sendable (Directory) throws -> Void = { _ in }
         var directoryAdmissionClosed: @Sendable (Int32, Int32) -> Void = { _, _ in }
+        var beforeDirectoryTerminal: @Sendable (Directory) -> Void = { _ in }
+        var directoryTerminalClosed: @Sendable (Int32, Int32) -> Void = { _, _ in }
+        var refuseDirectoryTerminalClose: @Sendable () -> Bool = { false }
         var refuseDirectoryAdmissionClose: @Sendable () -> Bool = { false }
         var enumerationOpened: @Sendable (EnumerationPass, EnumerationRole) throws -> Void = { _, _ in }
         var allowEnumerationStream: @Sendable (EnumerationPass) -> Bool = { _ in true }
@@ -656,6 +666,9 @@ enum CompanionDiskCheck {
         guard try directory.names(pass: .final, cancelled: cancelled, boundary: boundary) == expected else { throw failure() }
         for (name, file) in opened { try cancelled.check(); try file.check(name: name, directory: directory.fd) }
         try cancelled.check()
+        // Only the complete original-metadata success path reaches this transition.
+        // Earlier body/shared/helper/enumeration failures never authorize retirement.
+        if metadata != nil { try directory.retireVerified(boundary: boundary, checkpoint: cancelled.check) }
         return .init(contents: contents, fullContainerMatchesOriginalBytes: contents.retention == .entireContainer, originalTrack: track, originalPackets: packets, originalIndex: index, originalAudit: audit, originalMetadata: metadata)
     }
     private static func same(_ a: stat, _ b: stat) -> Bool {
@@ -810,7 +823,29 @@ enum CompanionDiskCheck {
                 throw error
             }
         }
-        deinit { if fd >= 0 { Darwin.close(fd) } } // Admitted terminal/fallback remains unqualified.
+        deinit { if fd >= 0 { Darwin.close(fd) } } // Other terminal/fallback paths remain unqualified.
+        /// Called only after successful metadata helper return and every final body check.
+        /// A late cancellation still waits for this independently eligible retirement.
+        fileprivate func retireVerified(boundary: Boundary, checkpoint: () throws -> Void) throws {
+            #if DEBUG
+            boundary.beforeDirectoryTerminal(self)
+            #endif
+            let outcome = Result<Void, Error> { try checkpoint() }
+            let number = fd; fd = -1 // Consume before sole actual close, including refusal.
+            let status = Darwin.close(number), code: Int32 = status == 0 ? 0 : errno
+            #if DEBUG
+            boundary.directoryTerminalClosed(status, code)
+            let reported = status == 0 && boundary.refuseDirectoryTerminalClose()
+            #else
+            let reported = false
+            #endif
+            if status != 0 || reported {
+                let original: Error? = { if case .failure(let error) = outcome { return error }; return nil }()
+                throw DirectoryTerminalFailure(operationError: original, closeStatus: status, closeErrno: code,
+                    reportedAfterActualClose: reported, directory: self)
+            }
+            try outcome.get()
+        }
         func check() throws {
             var info = stat(), path = stat()
             guard fstat(fd, &info) == 0, lstat(url.path, &path) == 0, same(initial, info), same(initial, path) else { throw failure() }

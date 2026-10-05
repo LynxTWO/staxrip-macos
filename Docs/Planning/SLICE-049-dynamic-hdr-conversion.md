@@ -2021,3 +2021,48 @@ PR107 automatic500tests941.797s90issues retained/PR updated without rerun;39exis
 31existing120s/6existing180s bounds plus14other. Source-frame/sample-source agreement
 remains fixed-decoder dependent, independent values/all edited/release flags false.
 See NATIVE-SAMPLE-ACCESS-EVIDENCE.md. No app action or whole-program completion.
+
+
+## D-134: Checked preservation and candidate outer close settlement
+Status: Confirmed
+Date:2026-10-05, owner standing autonomous generated non-audio delegation,R059.
+
+Replace legacy unchecked outer Access.finish in execute/reviewCandidate with actual
+checked closes before grant/activity release. Reuse concrete pins/consume-before-close/
+no-retry and existing review registry; no generic receipts or cleanup authority. Shared
+phase/cleanup/identity uncertainty retains access. Post-commit outer refusal carries
+actual returned Published directory/bytes/member count in typed review, never discards
+that directory or announces no publication. Late cancellation without ownership error
+still returns actual commit success. No persisted recovery/import/provenance claim.
+
+Acceptance: actual generated writer/full native original semantic validator/exclusive
+publication both modes and candidate review, actual normal outer closes; controlled
+reported refusal after actual close (not spontaneous OS fault), ordinary semantic
+refusal/active/late cancel/post-commit retention/drop/expiry/exclusions/prior bytes.
+Focused/ordinary/explicit production/privacy/planning checks; hosted outcomes without
+rerun. No owner body/film/queue/listening/UI/default packaging/signing/merge/release.
+This unit qualifies outer access pins only; inspected D105/D099 internal transaction/
+staging descriptor deinit close outcomes remain separately unqualified.
+
+
+D134 acceptance: focus32reported tests/1suite10.844s passes without warnings.
+Actual both-mode normal outer closes/reverse release, candidate semantic mismatch
+and four committed/late-cancel cases qualify actual source/prior/published preservation.
+Eleven helper direct joins inside three new operations' tests; controlled reported
+outer close uncertainty retains access and actual Published state after dropped
+error/energy expiry/exclusions. Candidate/source bytes unchanged; uncertain committed/
+candidate generated roots retained. Reported refusal is not spontaneous OS close
+fault, fake scopes not actual sandbox grants. Ordinary510reported tests/100suites
+211.477s passes33explicit skips/no warnings, access25.722s/static prior companion
+31.806s. Production/signature/privacy/protection/planning receipts follow independently.
+D134 does not qualify inspected D105 source/D099 parent-stage internal deinit close
+outcomes; those remain the next concrete ownership prerequisite. All original semantic/
+sample/rendered/edit/recovery/release gates and default packaging remain unchanged.
+
+
+D134 final production/current strict ad-hoc app/read-only helper signatures pass,
+minima14.0/11.0 with writer/decoder/sample absent. Five-file privacy zero matches/
+positive sentinel, owner metadata/current journal/original sample-prefix-frozen-runtime
+unchanged and planning findings empty. PR108 automatic remains in progress at this
+inspection; no rerun or outcome inferred. Previous failures remain retained, causes
+unknown. No whole-program completion or distribution claim.

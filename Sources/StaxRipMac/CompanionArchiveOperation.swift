@@ -9,7 +9,12 @@ enum CompanionArchiveOperation {
         let operationError: Error
         let reviewID: UUID
         let intendedStage: URL
-        var errorDescription: String? { "Companion access is retained for ownership review. No cleanup is authorized." }
+        /// Actual returned exclusive commit, not a persisted recovery receipt.
+        let published: ResultSetStaging.Published?
+        var errorDescription: String? {
+            published == nil ? "Companion access is retained for ownership review. No cleanup is authorized."
+                : "Companion result was published; access is retained for ownership review. No cleanup is authorized."
+        }
     }
     struct Environment {
         var access: (URL) throws -> (() -> Void)? = { url in
@@ -29,6 +34,8 @@ enum CompanionArchiveOperation {
         // Report uncertainty only after both actual outer closes succeed.
         var refuseAssociationClose: @Sendable () -> Bool = { false }
         var acquisitionClosed: @Sendable (Int) -> Void = { _ in }
+        var archiveClosed: @Sendable (Int) -> Void = { _ in }
+        var refuseArchiveClose: @Sendable () -> Bool = { false }
     }
     @TaskLocal static var testBoundary = Boundary()
     static func retainedForTesting(_ id: UUID) -> Bool { retained[id] != nil }
@@ -59,6 +66,7 @@ enum CompanionArchiveOperation {
         #if DEBUG
         boundary.pinned(pins.descriptors)
         #endif
+        var published: ResultSetStaging.Published?
         do {
             let result = try await OriginalCompanionTransaction.execute(source: source, in: parent,
                 destinationName: destinationName, retention: retention, produce: { stage in
@@ -78,9 +86,23 @@ enum CompanionArchiveOperation {
                         sourceIdentityChecked: true, decodedFrameAssociation: metadata.decodedFrameAssociation,
                         immutableSnapshot: metadata.immutableSnapshot, stableImporter: metadata.stableImporter)
                 })
-            // Cancellation after an exclusive commit still reports actual success.
-            access.finish(); return result
+            published = result
+            try pins.check()
+            // Cancellation after commit is still success unless ownership refuses.
+            let closed = try access.finishChecked(archive: true)
+            #if DEBUG
+            boundary.archiveClosed(closed)
+            #else
+            _ = closed
+            #endif
+            return result
         } catch {
+            if let published {
+                // Transaction already returned its exclusive commit. Never discard
+                // or classify this as an unpublished pre-commit failure.
+                throw retain(access, error: error, locator: published.directory,
+                             environment: environment, published: published)
+            }
             let stage: URL?
             if let e = error as? OriginalCompanionTransaction.UnsettledPhaseFailure { stage = e.intendedStage }
             else if let e = error as? OriginalCompanionTransaction.CleanupFailure { stage = e.intendedStage }
@@ -88,7 +110,20 @@ enum CompanionArchiveOperation {
             if let stage {
                 throw retain(access, error: error, locator: stage, environment: environment)
             }
-            access.finish(); throw error
+            if error is any CompanionUnsettledOwnership {
+                throw retain(access, error: error, locator: parent, environment: environment)
+            }
+            do { try pins.check() }
+            catch { throw retain(access, error: error, locator: parent, environment: environment) }
+            do {
+                let closed = try access.finishChecked(archive: true)
+                #if DEBUG
+                boundary.archiveClosed(closed)
+                #else
+                _ = closed
+                #endif
+            } catch { throw retain(access, error: error, locator: parent, environment: environment) }
+            throw error
         }
     }
     /// Source-dependent read-only examination. Candidate permission does not grant
@@ -119,7 +154,12 @@ enum CompanionArchiveOperation {
             #endif
             let result = try await CompanionDiskCheck.reviewOriginalCandidate(source: source, candidate: candidate, retention: retention, tool: reader)
             try pins.check()
-            access.finish()
+            let closed = try access.finishChecked(archive: true)
+            #if DEBUG
+            boundary.archiveClosed(closed)
+            #else
+            _ = closed
+            #endif
             return result
         } catch {
             // Native worker/process refusal returns only after settlement, except
@@ -130,7 +170,14 @@ enum CompanionArchiveOperation {
             }
             do { try pins.check() }
             catch { throw retain(access, error: error, locator: candidate, environment: environment) }
-            access.finish()
+            do {
+                let closed = try access.finishChecked(archive: true)
+                #if DEBUG
+                boundary.archiveClosed(closed)
+                #else
+                _ = closed
+                #endif
+            } catch { throw retain(access, error: error, locator: candidate, environment: environment) }
             throw error
         }
     }
@@ -288,14 +335,15 @@ enum CompanionArchiveOperation {
         }
         return access
     }
-    private static func retain(_ access: Access, error: Error, locator: URL, environment: Environment) -> ReviewFailure {
+    private static func retain(_ access: Access, error: Error, locator: URL, environment: Environment,
+                               published: ResultSetStaging.Published? = nil) -> ReviewFailure {
         let id = UUID(); retained[id] = access
         // Expiry ends only temporary energy. Dropped errors do not release access
         // or authorize cleanup, adoption, publication or a successful review.
         DispatchQueue.main.asyncAfter(deadline: .now() + environment.retainedActivitySeconds) {
             retained[id]?.endActivity()
         }
-        return ReviewFailure(operationError: error, reviewID: id, intendedStage: locator)
+        return ReviewFailure(operationError: error, reviewID: id, intendedStage: locator, published: published)
     }
     private nonisolated static func refused() -> NativeExportError { .invalid("Native companion access refused. No result was published.") }
 
@@ -316,10 +364,12 @@ enum CompanionArchiveOperation {
             for end in ends.reversed() { end() }; ends.removeAll()
             endActivity()
         }
-        @MainActor func finishChecked() throws -> Int {
+        @MainActor func finishChecked(archive: Bool = false) throws -> Int {
             let closed = try pins.closeChecked()
             #if DEBUG
-            if closed > 0 && CompanionArchiveOperation.testBoundary.refuseAssociationClose() { throw Pins.CloseFailure() }
+            let reported = archive ? CompanionArchiveOperation.testBoundary.refuseArchiveClose
+                : CompanionArchiveOperation.testBoundary.refuseAssociationClose
+            if closed > 0 && reported() { throw Pins.CloseFailure() }
             #endif
             for end in ends.reversed() { end() }; ends.removeAll()
             endActivity()

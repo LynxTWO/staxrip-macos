@@ -2355,3 +2355,12 @@ TemporalId0 admission and streamed original signed packet/RPU counts remain sepa
 full slice conformance, active decoding and coordinate origins. See D-152 and
 SOURCE-VCL-PPS-PREFIX-EVIDENCE.md. No decoder/controller/action/default packaging is added;
 source-frame/ROI/value/rendered/edited flags remain false and explicit caller access required.
+
+
+### D153 joint source parameter/VCL and fixed-decoder crop readback
+
+The unused joint entry combines D152 fresh original configuration/first-slice references and
+D148 Video readback with actual D144 fixed crop coverage on the same source/open-store worker.
+Source SPS and fixed decoder geometry comparisons remain separate from active picture
+selection and container/user origin. See D-153 and SOURCE-PARAMETER-CROP-EVIDENCE.md. New
+concrete source/spool access integration remains separate; ROI/value/rendered/edited false.

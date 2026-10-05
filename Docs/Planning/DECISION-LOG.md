@@ -145,6 +145,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-136 | 2026-10-05 | Shared concrete development fixture build ownership | Confirmed | |
 | D-137 | 2026-10-05 | Checked staging transient closes and actual commit review | Confirmed | |
 | D-138 | 2026-10-05 | Checked staging creation rollback and observed directory state | Confirmed | |
+| D-139 | 2026-10-05 | Checked published staging parent and directory pins | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3965,3 +3966,41 @@ preparation passed, preview skipped. Full failed log retained/PR112 updated with
 retry. Individual timing/phase/prelaunch causes remain unestablished; no historical
 observer/assertion/deadline/global scheduling change or all-starvation/no-logic-defect
 claim. Source/journal/runtime/privacy/planning checks are recorded separately.
+
+
+## D-139: Checked published staging parent and directory pins
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+Select actual committed ordinary publication pin settlement before discard/removal
+and uncertain pre-commit lifecycles. Existing stage fields consume/check both roles
+once after verification/transient settlement. No retry or descriptor-number absence
+proof. Actual Published propagates through D105/D134 on terminal refusal; stronger
+source error remains. Never discard/reset available/report unpublished after commit.
+Late cancellation success requires qualified settlement. Consumed fields prevent
+fallback retry; other fallback paths are explicitly not qualified. No generic owner/
+receipt/Python bridge/new worker/schema/UI/default packaging/release/recovery API.
+
+Three opaque/two actual native tests cover normal/individual/two reported refusals,
+consumed owner state, collision retry, explicit transient uncertainty exclusion,
+both-mode actual full semantics/publication/late cancellation, source priority and
+retained access/drop/expiry/exclusions. Fourteen new helper direct joins; controlled
+reports after actual close are not OS faults, fake scopes not sandbox rights. Initial
+new Boolean throwing test macro error retained/corrected; no assertion/deadline/skip/
+global scheduling/historical observer change. See PUBLISHED-STAGING-PIN-EVIDENCE.md.
+Actual removed and remaining unsettled/deinit pin lifecycle plus other resource/
+rendered/edited/distribution/import gates stay separate. PR113 full failed log retained
+without retry; individual residual causes unestablished.
+
+
+Final consumed-state focus79tests/3suites14.081s passed/no warnings. Subsequent DEBUG
+state guard avoids reading owner fields during publishing; exact final ordinary
+536reported tests/101suites209.830s passed33unchanged explicit opt-in skips/no warnings.
+Static93-source host compiles changed code and executes prior companion preservation/
+review, not decoder/sample loading. Existing cancellation/collision/source semantics
+remain strict. Separate sample/sanitizer/APFS/signing/owner-source qualifications reused.
+No new product file or UI walkthrough; actual removed and unsettled fallback paths
+remain explicitly unqualified.
+
+Explicit production build20.36s/current strict ad-hoc app/read-only helper signatures
+passed without warnings, minima14.0/11.0; writer/decoder/sample absent.

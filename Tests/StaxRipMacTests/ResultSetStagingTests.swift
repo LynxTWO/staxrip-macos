@@ -434,4 +434,61 @@ struct ResultSetStagingTests {
         }
     }
 
+    @Test func publishedPinsCloseOnceBeforeReturnAndNeverRetryOnDroppedStage() async throws {
+        for refusal in ["none", "directory", "parent", "both"] {
+            let root = try folder(), closes = Closes()
+            defer { if refusal == "none" { try? FileManager.default.removeItem(at: root) } else { print("GENERATED_PUBLISHED_PIN_REVIEW " + root.path) } }
+            try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { role in
+                (role == .publishedDirectory && ["directory", "both"].contains(refusal)) || (role == .publishedParent && ["parent", "both"].contains(refusal))
+            })) {
+                var stage: ResultSetStaging? = try ResultSetStaging.create(in: root)
+                let active = try #require(stage), members = try fixture(active)
+                let actual: ResultSetStaging.Published
+                do { actual = try await active.publish(as: "result", members: members); #expect(refusal == "none") }
+                catch let e as ResultSetStaging.SettlementFailure {
+                    #expect(refusal != "none" && e.operationError == nil)
+                    #expect(e.closeFailures.count == (refusal == "both" ? 2 : 1))
+                    #expect(e.closeFailures.allSatisfy { $0.reportedAfterActualClose })
+                    actual = try #require(e.published); #expect(e.intendedStage == actual.directory)
+                }
+                #expect(active.publishedPinsConsumedForTesting)
+                #expect(closes.count(.publishedDirectory) == 1 && closes.count(.publishedParent) == 1)
+                #expect(actual.verifiedBytes == members.reduce(0) { $0 + $1.byteCount } && actual.memberCount == 3)
+                #expect(throws: (any Error).self) { try active.discard() }
+                await #expect(throws: (any Error).self) { try await active.publish(as: "second", members: members) }
+                for member in members { #expect(try Data(contentsOf: actual.directory.appendingPathComponent(member.name)).count == Int(member.byteCount)) }
+                stage = nil
+            }
+            // The stage's last strong reference ended; callbacks cannot recur in deinit.
+            #expect(closes.count(.publishedDirectory) == 1 && closes.count(.publishedParent) == 1)
+        }
+    }
+    @Test func retryablePrecommitRefusalKeepsPinsUntilRealPublication() async throws {
+        let root = try folder(), closes = Closes(); defer { try? FileManager.default.removeItem(at: root) }
+        try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) })) {
+            let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+            let occupied = root.appendingPathComponent("occupied"); try Data([42]).write(to: occupied)
+            await #expect(throws: NativeExportError.self) { try await stage.publish(as: "occupied", members: members) }
+            #expect(!stage.publishedPinsConsumedForTesting)
+            #expect(closes.count(.publishedDirectory) == 0 && closes.count(.publishedParent) == 0)
+            let actual = try await stage.publish(as: "result", members: members)
+            #expect(stage.publishedPinsConsumedForTesting)
+            #expect(closes.count(.publishedDirectory) == 1 && closes.count(.publishedParent) == 1)
+            let prior = try Data(contentsOf: occupied)
+            #expect(actual.memberCount == 3 && prior == Data([42]))
+        }
+    }
+    @Test func transientUncertaintyDoesNotQualifyOrConsumeTerminalPinRoles() async throws {
+        let root = try folder(), closes = Closes(); defer { print("GENERATED_TRANSIENT_PIN_REVIEW " + root.path) }
+        try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { $0 == .member("manifest.json") })) {
+            let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+            do { _ = try await stage.publish(as: "result", members: members); Issue.record("Transient refusal returned success") }
+            catch let e as ResultSetStaging.SettlementFailure { #expect(e.published != nil && e.closeFailures.count == 1) }
+            #expect(!stage.publishedPinsConsumedForTesting)
+            #expect(closes.count(.publishedDirectory) == 0 && closes.count(.publishedParent) == 0)
+        }
+        // Unchecked fallback is not terminal settlement evidence or review release authority.
+        #expect(closes.count(.publishedDirectory) == 0 && closes.count(.publishedParent) == 0)
+    }
+
 }

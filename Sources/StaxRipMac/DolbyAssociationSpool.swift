@@ -9,6 +9,30 @@ final class DolbyAssociationSpool {
     typealias RPU = CompanionOriginalPacketCheck.RPU
     enum Failure: Error { case refused, storageFull }
     struct OwnershipFailure: CompanionUnsettledOwnership {}
+    enum AdmissionRole: String, Sendable { case file, folder }
+    enum AdmissionStep: Sendable { case folderOpened, folderObserved, concretePath, beforeCreate, fileOpened, fileObserved }
+    struct AdmissionBoundary: Sendable {
+        var step: @Sendable (AdmissionStep) throws -> Void = { _ in }
+        var closed: @Sendable (AdmissionRole, Int32, Int32) -> Void = { _, _, _ in }
+        var refuseClose: @Sendable (AdmissionRole) -> Bool = { _ in false }
+    }
+    #if DEBUG
+    @TaskLocal static var testAdmissionBoundary = AdmissionBoundary()
+    #endif
+    struct AdmissionCloseFailure {
+        let role: AdmissionRole
+        let status, code: Int32
+        let reportedAfterActualClose: Bool
+    }
+    /// Attempt facts only, never current path identity or cleanup authority.
+    struct AdmissionFailure: CompanionUnsettledOwnership {
+        let operationError: Error
+        let directory: URL
+        let createdMember: Bool
+        let observedFolderID, observedFileID: OriginalCompanionTransaction.FileID?
+        let closeFailures: [AdmissionCloseFailure]
+        var member: URL? { createdMember ? directory.appendingPathComponent(DolbyAssociationSpool.name) : nil }
+    }
     struct Counts: Equatable { let packets: Int64, rpus: Int64 }
     struct Limits: Sendable {
         var pages = 131_072 // 512 MiB at the required 4096-byte page size.
@@ -37,36 +61,88 @@ final class DolbyAssociationSpool {
     /// Every return closes SQLite and owned pins. Close uncertainty is retained.
     static func withSpool<T>(in directory: URL, sourceBytes: Int64, limits: Limits = .init(),
                              checkpoint: @escaping () throws -> Void = {},
+                             admissionBoundary: AdmissionBoundary? = nil,
                              body: (DolbyAssociationSpool) throws -> T) throws -> T {
-        let spool = try DolbyAssociationSpool(directory, sourceBytes: sourceBytes, limits: limits, checkpoint: checkpoint)
+        #if DEBUG
+        let boundary = admissionBoundary ?? testAdmissionBoundary
+        #else
+        let boundary = AdmissionBoundary()
+        #endif
+        let spool = try DolbyAssociationSpool(directory, sourceBytes: sourceBytes, limits: limits, checkpoint: checkpoint, boundary: boundary)
         let result = Result { let value = try body(spool); try spool.operation(false) {}; return value }
         try spool.close()
         return try result.get()
     }
-    private init(_ directory: URL, sourceBytes: Int64, limits: Limits, checkpoint: @escaping () throws -> Void) throws {
+    private init(_ directory: URL, sourceBytes: Int64, limits: Limits, checkpoint: @escaping () throws -> Void, boundary: AdmissionBoundary) throws {
         try checkpoint()
         guard directory.isFileURL, (1...(1 << 40)).contains(sourceBytes),
               (8...131_072).contains(limits.pages), (1...2_000_000).contains(limits.records) else { throw Failure.refused }
-        let folder = open(directory.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        guard folder >= 0 else { throw Failure.refused }
-        var fs = stat()
-        guard fstat(folder, &fs) == 0, fs.st_uid == geteuid(), fs.st_mode & 0o7777 == 0o700 else {
-            Darwin.close(folder); throw Failure.refused
-        }
-        // SQLite NOFOLLOW refuses symlinked ancestors such as macOS /var.
-        // F_GETPATH comes from the already owned directory descriptor; retain
-        // both the caller path and this concrete path through final checks.
-        var path = [CChar](repeating:0,count:Int(MAXPATHLEN))
-        guard fcntl(folder,F_GETPATH,&path) == 0 else { Darwin.close(folder); throw Failure.refused }
-        let concreteFolder = String(cString:path)
+        // Local concrete admission ownership starts at each positive open,
+        // before any guard can refuse. Transfer only after every admission check.
+        var folder: Int32 = -1, fd: Int32 = -1
+        var fs = stat(), statFile = stat(), concreteFolder = ""
+        var created = false
+        var observedFolder, observedFile: OriginalCompanionTransaction.FileID?
         do {
+            folder = open(directory.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+            guard folder >= 0 else { throw Failure.refused }
+            #if DEBUG
+            try boundary.step(.folderOpened)
+            #endif
+            try checkpoint()
+            let folderStatus = fstat(folder, &fs)
+            if folderStatus == 0 { observedFolder = .init(fs) }
+            guard folderStatus == 0, fs.st_uid == geteuid(), fs.st_mode & 0o7777 == 0o700 else { throw Failure.refused }
+            #if DEBUG
+            try boundary.step(.folderObserved)
+            #endif
+            // Descriptor-derived concrete path; both caller/concrete identities
+            // remain required by the admitted object's later observations.
+            var path = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+            guard fcntl(folder, F_GETPATH, &path) == 0 else { throw Failure.refused }
+            concreteFolder = String(cString: path)
+            #if DEBUG
+            try boundary.step(.concretePath)
+            #endif
             guard try FileManager.default.contentsOfDirectory(atPath: directory.path).isEmpty else { throw Failure.refused }
-        } catch { Darwin.close(folder); throw error }
-        let fd = openat(folder, Self.name, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
-        guard fd >= 0 else { Darwin.close(folder); throw Failure.refused }
-        var statFile = stat()
-        guard fstat(fd, &statFile) == 0, statFile.st_nlink == 1, statFile.st_mode & 0o7777 == 0o600 else {
-            Darwin.close(fd); Darwin.close(folder); throw Failure.refused
+            #if DEBUG
+            try boundary.step(.beforeCreate)
+            #endif
+            fd = openat(folder, Self.name, O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
+            guard fd >= 0 else { throw Failure.refused }
+            created = true
+            #if DEBUG
+            try boundary.step(.fileOpened)
+            #endif
+            try checkpoint()
+            let fileStatus = fstat(fd, &statFile)
+            if fileStatus == 0 { observedFile = .init(statFile) }
+            guard fileStatus == 0, statFile.st_nlink == 1, statFile.st_mode & 0o7777 == 0o600 else { throw Failure.refused }
+            #if DEBUG
+            try boundary.step(.fileObserved)
+            #endif
+        } catch {
+            let original = error
+            var failures: [AdmissionCloseFailure] = []
+            // Both actual roles are attempted even if the first is uncertain.
+            for role in [AdmissionRole.file, .folder] {
+                let number = role == .file ? fd : folder
+                if role == .file { fd = -1 } else { folder = -1 }
+                guard number >= 0 else { continue }
+                let status = Darwin.close(number), code: Int32 = status == 0 ? 0 : errno
+                #if DEBUG
+                boundary.closed(role, status, code)
+                let reported = status == 0 && boundary.refuseClose(role)
+                #else
+                let reported = false
+                #endif
+                if status != 0 || reported { failures.append(.init(role: role, status: status, code: code, reportedAfterActualClose: reported)) }
+            }
+            if !failures.isEmpty {
+                throw AdmissionFailure(operationError: original, directory: directory,
+                    createdMember: created, observedFolderID: observedFolder, observedFileID: observedFile, closeFailures: failures)
+            }
+            throw original
         }
         self.directory = directory; folderFD = folder; fileFD = fd; folderID = fs; fileID = statFile
         canonicalFolder = concreteFolder

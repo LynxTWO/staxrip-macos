@@ -22,6 +22,9 @@ enum CompanionDiskCheck {
         var beforeFinal: @Sendable () -> Void = {}
         var originalTrackRead: @Sendable (Int64, Int) -> Void = { _, _ in }
         var originalComponentRead: @Sendable (String, Int64, Int) -> Void = { _, _, _ in }
+        var fileOpened: @Sendable (String?) throws -> Void = { _ in }
+        var admissionClosed: @Sendable (String?, Int32, Int32) -> Void = { _, _, _ in }
+        var refuseAdmissionClose: @Sendable (String?) -> Bool = { _ in false }
     }
     #if DEBUG
     @TaskLocal static var testBoundary = Boundary()
@@ -143,7 +146,14 @@ enum CompanionDiskCheck {
         guard let decoder = result.1 else { throw failure() }
         return .init(source: result.0, decoder: decoder)
     }
-    struct SourceOwnershipFailure: CompanionUnsettledOwnership {}
+    struct SourceOwnershipFailure: CompanionUnsettledOwnership { var operationError: Error? = nil }
+    /// Finite file admission rollback only; later component/deinit closes remain separate.
+    struct FileAdmissionFailure: CompanionUnsettledOwnership {
+        let operationError: Error
+        let component: String?
+        let closeStatus, closeErrno: Int32
+        let reportedAfterActualClose: Bool
+    }
     /// Source-only observations into an exclusive disposable database. Caller
     /// owns the empty private folder/access and retains it on uncertain close.
     /// Neither companion equality nor decoder association follows from this pass.
@@ -158,16 +168,18 @@ enum CompanionDiskCheck {
         #if DEBUG
         let boundary = testBoundary
         let decoderBoundary = DolbyDecoderProcess.testBoundary
+        let spoolBoundary = DolbyAssociationSpool.testAdmissionBoundary
         #else
         let boundary = Boundary()
         let decoderBoundary = DolbyDecoderProcess.Boundary()
+        let spoolBoundary = DolbyAssociationSpool.AdmissionBoundary()
         #endif
         let result: (SourceSpoolReceipt,DolbyDecoderStream.Receipt?) = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue(label: "StaxRip.original-source-spool", qos: .userInitiated).async {
                     continuation.resume(with: Result {
                         try cancelled.check()
-                        let file = try File(url: source, maximum: 1 << 40)
+                        let file = try File(url: source, maximum: 1 << 40, boundary: boundary, checkpoint: cancelled.check)
                         let outcome = Result {
                             let hash = try file.hash(cancelled: cancelled, original: nil) { boundary.progress("source", $0) }
                             try file.check(source)
@@ -179,7 +191,7 @@ enum CompanionDiskCheck {
                                 return try file.read(offset: offset, count: count, cancelled: cancelled)
                             }, component: { _ in throw failure() }, checkpoint: cancelled.check)
                             let receipt = try DolbyAssociationSpool.withSpool(in: directory, sourceBytes: file.bytes,
-                                                                            limits: limits, checkpoint: cancelled.check) { spool in
+                                                                            limits: limits, checkpoint: cancelled.check, admissionBoundary: spoolBoundary) { spool in
                                 let track = try CompanionOriginalTrackCheck.readSource(view)
                                 var timing: (UInt64, Bool)?
                                 let packets = try CompanionOriginalPacketCheck.readSource(view, track: track, begin: { scale, unknown in
@@ -226,7 +238,9 @@ enum CompanionDiskCheck {
                         }
                         // An uncertain actual close supersedes success or ordinary
                         // refusal. The caller must retain its owned folder/access.
-                        try file.closeChecked()
+                        let original: Error?
+                        if case .failure(let error) = outcome { original = error } else { original = nil }
+                        try file.closeChecked(operationError: original)
                         return try outcome.get()
                     })
                 }
@@ -280,7 +294,7 @@ enum CompanionDiskCheck {
     private static func check(source url: URL, stage urlStage: URL, input: Input,
                               originalTrack: Bool, originalPackets: Bool, originalIndex: Bool, originalAudit: Bool, metadataTool: CompanionMetadataProcess.Tool?, metadataBoundary: CompanionMetadataProcess.Boundary, cancelled: Cancellation, boundary: Boundary) throws -> Receipt {
         try cancelled.check()
-        let source = try File(url: url, maximum: 1 << 40), directory = try Directory(urlStage)
+        let source = try File(url: url, maximum: 1 << 40, boundary: boundary, checkpoint: cancelled.check), directory = try Directory(urlStage)
         let limits = input.retention.limits, expected = Set(limits.keys), provided = input.provided
         guard try directory.names() == expected else { throw failure() }
         if let c = provided {
@@ -300,7 +314,7 @@ enum CompanionDiskCheck {
         for name in expected.sorted() {
             try cancelled.check()
             guard let maximum = limits[name] else { throw failure() }
-            let file = try File(name: name, directory: directory.fd, maximum: maximum)
+            let file = try File(name: name, directory: directory.fd, maximum: maximum, boundary: boundary, checkpoint: cancelled.check)
             opened[name] = file
             if let c = provided {
                 guard let member = c.members.first(where: { $0.name == name }), (1...maximum).contains(member.byteCount),
@@ -409,34 +423,62 @@ enum CompanionDiskCheck {
         private var closed = false
         var id: Transaction.FileID { .init(initial) }
         var bytes: Int64 { initial.st_size }
-        init(url: URL, maximum: Int64) throws {
+        init(url: URL, maximum: Int64, boundary: Boundary = .init(), checkpoint: () throws -> Void = {}) throws {
             guard url.isFileURL, !url.path.utf8.contains(0) else { throw failure() }
-            let descriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
+            var descriptor = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
             guard descriptor >= 0 else { throw failure() }
             var info = stat(), path = stat()
-            guard fstat(descriptor, &info) == 0, lstat(url.path, &path) == 0,
-                  info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG), (1...maximum).contains(info.st_size), same(info, path) else {
-                Darwin.close(descriptor); throw failure()
+            do {
+                #if DEBUG
+                try boundary.fileOpened(nil)
+                #endif
+                try checkpoint()
+                guard fstat(descriptor, &info) == 0, lstat(url.path, &path) == 0,
+                      info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG), (1...maximum).contains(info.st_size), same(info, path) else { throw failure() }
+            } catch {
+                try Self.rollback(&descriptor, component: nil, cause: error, boundary: boundary)
+                throw error
             }
             fd = descriptor; initial = info
         }
-        init(name: String, directory: Int32, maximum: Int64) throws {
+        init(name: String, directory: Int32, maximum: Int64, boundary: Boundary = .init(), checkpoint: () throws -> Void = {}) throws {
             // Name comes only from the fixed exact membership/receipt schema above.
-            let descriptor = openat(directory, name, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
+            var descriptor = openat(directory, name, O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK)
             guard descriptor >= 0 else { throw failure() }
             var info = stat(), path = stat()
-            guard fstat(descriptor, &info) == 0, fstatat(directory, name, &path, AT_SYMLINK_NOFOLLOW) == 0,
-                  info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG), info.st_uid == geteuid(),
-                  info.st_mode & 0o7777 == 0o600, info.st_nlink == 1, (1...maximum).contains(info.st_size), same(info, path) else {
-                Darwin.close(descriptor); throw failure()
+            do {
+                #if DEBUG
+                try boundary.fileOpened(name)
+                #endif
+                try checkpoint()
+                guard fstat(descriptor, &info) == 0, fstatat(directory, name, &path, AT_SYMLINK_NOFOLLOW) == 0,
+                      info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG), info.st_uid == geteuid(),
+                      info.st_mode & 0o7777 == 0o600, info.st_nlink == 1, (1...maximum).contains(info.st_size), same(info, path) else { throw failure() }
+            } catch {
+                try Self.rollback(&descriptor, component: name, cause: error, boundary: boundary)
+                throw error
             }
             fd = descriptor; initial = info
+        }
+        private static func rollback(_ descriptor: inout Int32, component: String?, cause: Error, boundary: Boundary) throws {
+            let number = descriptor; descriptor = -1 // Consume before close; never retry.
+            let status = Darwin.close(number), code: Int32 = status == 0 ? 0 : errno
+            #if DEBUG
+            boundary.admissionClosed(component, status, code)
+            let reported = status == 0 && boundary.refuseAdmissionClose(component)
+            #else
+            let reported = false
+            #endif
+            if status != 0 || reported {
+                throw FileAdmissionFailure(operationError: cause, component: component,
+                    closeStatus: status, closeErrno: code, reportedAfterActualClose: reported)
+            }
         }
         deinit { if !closed { Darwin.close(fd) } }
-        func closeChecked() throws {
-            guard !closed else { throw SourceOwnershipFailure() }
+        func closeChecked(operationError: Error? = nil) throws {
+            guard !closed else { throw SourceOwnershipFailure(operationError: operationError) }
             closed = true // Never retry a possibly reused descriptor after close failure.
-            guard Darwin.close(fd) == 0 else { throw SourceOwnershipFailure() }
+            guard Darwin.close(fd) == 0 else { throw SourceOwnershipFailure(operationError: operationError) }
         }
         func check(_ url: URL) throws {
             var info = stat(), path = stat()

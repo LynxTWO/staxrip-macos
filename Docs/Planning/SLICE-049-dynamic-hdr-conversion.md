@@ -2208,3 +2208,15 @@ No automatic close/removal/recovery release follows retention. See D-141 and
 RETAINED-STAGE-OWNER-EVIDENCE.md. Retirement/fallback closes and direct caller drop
 without a concrete controller remain unqualified; other resource/rendered/edited gates
 stay open. No new owner/worker/schema/action/default packaging/release capability.
+
+
+### D142 explicit decoded crop sample prerequisite
+
+Separate generated DEVELOPMENT C measurement now resolves coded or codec-visible even-phase
+rectangles against actual progressive10-bit420 plane storage. Raw-row shared-FFmpeg oracle,
+sanitizer bounds and owned live cancel/deadline/substitution pass. No container/user origin,
+native profile/access/source-ROI binding or independent values/rendered/edited proof follows.
+See D-142 and DECODED-CROP-SAMPLE-EVIDENCE.md. Existing product/protocols/original runtime
+objects unchanged. Next assess distinct fixed crop role/profile on the existing synchronous
+owner with bounded typed admission; shape is not provenance. D141 retained pin retirement/
+standalone drop and other resource/recovery/distribution gates remain separately open.

@@ -41,6 +41,12 @@ struct QueueView: View {
                     .disabled(model.jobs.isEmpty || model.filePanelActive || fileAccess.reviewing)
             }
             Text(batch.toolDescription).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary).lineLimit(2)
+            #if DEBUG
+            if batch.isolatedDemoJournal {
+                Label("Isolated demonstration queue · separate recovery journal", systemImage: "testtube.2")
+                    .font(.caption).accessibilityIdentifier("isolated-demo-journal")
+            }
+            #endif
             if batch.running {
                 Label(ExportActivity.explanation, systemImage: "moon.zzz")
                     .font(.caption).foregroundStyle(.secondary).accessibilityElement(children: .combine)

@@ -13,6 +13,79 @@ struct RecoveryTests {
         QueueJob(id: UUID(), source: folder.appendingPathComponent("source.mkv").path, isDemo: false, destination: folder.appendingPathComponent(name + ".mkv").path, configuration: EncodeConfiguration(), created: Date())
     }
 
+    @Test func demonstrationJournalSelectionRefusesAdoptionAndAliases() throws {
+        let parent = try directory().resolvingSymlinksInPath()
+        defer { try? FileManager.default.removeItem(at: parent) }
+        let root = parent.appendingPathComponent("staxrip-demo-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        let journal = root.appendingPathComponent("demo-batch.json")
+        #expect(BatchJournal.demoSelection(root: nil) == .notRequested)
+        for invalid in ["", "relative", parent.path, root.path + "/missing", root.path + "\n"] {
+            #expect(BatchJournal.demoSelection(root: invalid) == .refused)
+        }
+        #expect(BatchJournal.demoSelection(root: root.path) == .isolated(journal))
+        let alias = parent.appendingPathComponent("staxrip-demo-" + UUID().uuidString)
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: root)
+        #expect(BatchJournal.demoSelection(root: alias.path) == .refused)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: root.path)
+        #expect(BatchJournal.demoSelection(root: root.path) == .refused)
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: root.path)
+        let sentinel = Data("existing generated recovery must be retained".utf8)
+        try sentinel.write(to: journal, options: .withoutOverwriting)
+        #expect(BatchJournal.demoSelection(root: root.path) == .refused)
+        #expect(try Data(contentsOf: journal) == sentinel)
+        try FileManager.default.removeItem(at: journal)
+        try sentinel.write(to: journal.appendingPathExtension("lock"), options: .withoutOverwriting)
+        #expect(BatchJournal.demoSelection(root: root.path) == .refused)
+        #expect(try Data(contentsOf: journal.appendingPathExtension("lock")) == sentinel)
+    }
+
+    @Test func refusedDemonstrationCannotStartOrCheckpoint() throws {
+        let root = try directory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let journal = root.appendingPathComponent("untouched.json")
+        let controller = BatchController(journalURL: journal)
+        controller.configureDemoJournal(refused: true)
+        controller.tools = FFmpegTools(ffmpeg: URL(fileURLWithPath: "/usr/bin/false"), ffprobe: URL(fileURLWithPath: "/usr/bin/false"))
+        controller.start([job(in: root)])
+        #expect(!controller.running)
+        #expect(controller.statuses.isEmpty)
+        #expect(controller.recovery == nil)
+        #expect(controller.recoveryError?.contains("Queue execution is disabled") == true)
+        #expect(!FileManager.default.fileExists(atPath: journal.path))
+        #expect(!FileManager.default.fileExists(atPath: journal.appendingPathExtension("lock").path))
+        #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+    }
+
+    @Test func validDemonstrationCheckpointsOnlyItsGeneratedJournal() async throws {
+        let parent = try directory().resolvingSymlinksInPath()
+        var settled = false
+        defer { if settled { try? FileManager.default.removeItem(at: parent) } }
+        let root = parent.appendingPathComponent("staxrip-demo-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        guard case .isolated(let journal) = BatchJournal.demoSelection(root: root.path) else {
+            Issue.record("Fresh generated journal selection refused"); return
+        }
+        let controller = BatchController(journalURL: journal)
+        controller.configureDemoJournal(refused: false)
+        controller.tools = FFmpegTools(ffmpeg: URL(fileURLWithPath: "/usr/bin/false"), ffprobe: URL(fileURLWithPath: "/usr/bin/false"))
+        let item = QueueJob(id: UUID(), source: root.appendingPathComponent("source.mkv").path,
+                            isDemo: true, destination: root.appendingPathComponent("result.mkv").path,
+                            configuration: EncodeConfiguration(), created: Date(timeIntervalSince1970: 0))
+        controller.start([item])
+        let deadline = Date().addingTimeInterval(5)
+        while controller.running && Date() < deadline { try await Task.sleep(for: .milliseconds(10)) }
+        try #require(!controller.running)
+        settled = true
+        #expect(controller.isolatedDemoJournal)
+        #expect(controller.statuses[item.id]?.phase == "Failed")
+        let saved = try BatchJournal.read(from: journal)
+        #expect(saved.jobs == [item])
+        #expect(saved.statuses[item.id]?.phase == "Failed")
+        #expect(!FileManager.default.fileExists(atPath: item.destination))
+        #expect(Set(try FileManager.default.contentsOfDirectory(atPath: root.path)) == ["demo-batch.json", "demo-batch.json.lock"])
+    }
+
     @Test func interruptedJobsRestoreWithoutStartingOrRemovingFiles() throws {
         let dir = try directory(); defer { try? FileManager.default.removeItem(at: dir) }
         let first = job(in: dir), second = job(in: dir, name: "second")

@@ -13,6 +13,37 @@ struct BatchJournal: Codable {
             .appendingPathComponent("StaxRipMac", isDirectory: true).appendingPathComponent("last-batch.json")
     }
 
+    #if DEBUG
+    enum DemoSelection: Equatable {
+        case notRequested
+        case isolated(URL)
+        case refused
+    }
+
+    // The integration owner creates this empty, private directory before launch.
+    // A requested demo never falls back to the normal recovery journal.
+    static func demoSelection(root: String?) -> DemoSelection {
+        guard let root else { return .notRequested }
+        guard root.hasPrefix("/"), !root.unicodeScalars.contains(where: { $0.value < 32 }),
+              !root.contains("\0") else { return .refused }
+        let url = URL(fileURLWithPath: root, isDirectory: true).standardizedFileURL
+        let prefix = "staxrip-demo-"
+        guard url.lastPathComponent.hasPrefix(prefix),
+              UUID(uuidString: String(url.lastPathComponent.dropFirst(prefix.count))) != nil,
+              url.resolvingSymlinksInPath().path == url.path else { return .refused }
+        var info = stat()
+        guard lstat(url.path, &info) == 0, info.st_mode & S_IFMT == S_IFDIR,
+              info.st_uid == geteuid(), info.st_mode & 0o777 == 0o700 else { return .refused }
+        let journal = url.appendingPathComponent("demo-batch.json")
+        // First-launch only: an existing file, link or lease must not be adopted.
+        for candidate in [journal, journal.appendingPathExtension("lock")] {
+            var existing = stat()
+            guard lstat(candidate.path, &existing) != 0, errno == ENOENT else { return .refused }
+        }
+        return .isolated(journal)
+    }
+    #endif
+
     func validated() throws -> Self {
         guard (1...9).contains(version) else { throw SessionError.invalid("Unsupported batch recovery version.") }
         guard version >= 9 || jobs.allSatisfy({ $0.configuration.hevcBufferLimits == nil }) else {

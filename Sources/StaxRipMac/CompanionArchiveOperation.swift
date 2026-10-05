@@ -97,6 +97,12 @@ enum CompanionArchiveOperation {
             #endif
             return result
         } catch {
+            if let inner = error as? OriginalCompanionTransaction.SourceSettlementFailure {
+                // An inner source close may refuse after the exclusive commit,
+                // before the transaction can return its actual Published value.
+                throw retain(access, error: inner, locator: inner.intendedStage,
+                             environment: environment, published: inner.published)
+            }
             if let published {
                 // Transaction already returned its exclusive commit. Never discard
                 // or classify this as an unpublished pre-commit failure.

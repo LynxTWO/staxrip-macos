@@ -253,6 +253,88 @@ struct OriginalCompanionTransactionTests {
         #expect(result.memberCount == 6 && FileManager.default.fileExists(atPath: result.directory.path))
     }
 
+    @Test(arguments: ["unsafe", "create", "writer", "verifier", "ownership"])
+    func internalSourceCloseChecksRollbackAndRefusalWithoutRetry(path: String) async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let src = try source(root), box = Box(), closes = Box()
+        if path == "unsafe" { try Data().write(to: src) }
+        let original = try Data(contentsOf: src)
+        let parent = path == "create" ? root.appendingPathComponent("missing-parent") : root
+        do {
+            _ = try await Transaction.$sourceBoundary.withValue(.init(closed: { closes.called(); #expect($0 == 1) }, refuseClose: { true })) {
+                try await Transaction.execute(source: src, in: parent, destinationName: "result", retention: .metadataOnly,
+                    produce: { directory in
+                        box.set(directory)
+                        let c = try synthetic(src, directory, .metadataOnly)
+                        if path == "writer" { throw NativeExportError.invalid("Generated settled refusal") }
+                        if path == "ownership" { throw CompanionWriterProcess.OwnershipFailure() }
+                        return c
+                    }, verify: { _, _ in throw NativeExportError.invalid("Generated settled verifier refusal") })
+            }
+            Issue.record("Reported internal source close uncertainty returned ordinary result")
+        } catch let e as Transaction.SourceSettlementFailure {
+            #expect(e.published == nil)
+            #expect((e.closeError as? Transaction.SourceCloseFailure)?.reportedAfterActualClose == true)
+            if path == "ownership" { #expect(e.operationError is CompanionWriterProcess.OwnershipFailure) }
+            if let stage = box.value {
+                #expect(e.intendedStage == stage)
+                #expect(FileManager.default.fileExists(atPath: stage.appendingPathComponent("manifest.json").path))
+            } else { #expect(e.intendedStage == parent) }
+        } catch let e as Transaction.SourceCloseFailure {
+            #expect(path == "unsafe" && e.reportedAfterActualClose)
+        }
+        #expect(closes.count == 1)
+        #expect(try Data(contentsOf: src) == original)
+        #expect(!FileManager.default.fileExists(atPath: root.appendingPathComponent("result").path))
+        // Known controlled report after real close; this test owns settled opaque
+        // phases/root. No spontaneous OS fault or production cleanup claim.
+    }
+
+    @Test(arguments: ["unsafe", "create", "writer", "verifier"])
+    func ordinaryInternalSourceRollbackClosesBeforeOwnedCleanup(path: String) async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let src = try source(root), closes = Box()
+        if path == "unsafe" { try Data().write(to: src) }
+        let parent = path == "create" ? root.appendingPathComponent("missing-parent") : root
+        do {
+            _ = try await Transaction.$sourceBoundary.withValue(.init(closed: { closes.called(); #expect($0 == 1) })) {
+                try await Transaction.execute(source: src, in: parent, destinationName: "result", retention: .metadataOnly,
+                    produce: { directory in
+                        let c = try synthetic(src, directory, .metadataOnly)
+                        if path == "writer" { throw NativeExportError.invalid("Generated settled refusal") }
+                        return c
+                    }, verify: { _, _ in throw NativeExportError.invalid("Generated settled verifier refusal") })
+            }
+            Issue.record("Generated refusal returned success")
+        } catch {
+            #expect(!(error is any CompanionUnsettledOwnership))
+        }
+        #expect(closes.count == 1)
+        #expect(try remains(root) == [src.lastPathComponent])
+    }
+
+    @Test func cancelledSettledPhaseInternalCloseRefusalRetainsStage() async throws {
+        let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
+        let src = try source(root), box = Box(), closes = Box(), gate = Gate()
+        let task = Task {
+            try await Transaction.$sourceBoundary.withValue(.init(closed: { _ in closes.called() }, refuseClose: { true })) {
+                try await Transaction.execute(source: src, in: root, destinationName: "result", retention: .metadataOnly,
+                    produce: { directory in
+                        box.set(directory); let c = try synthetic(src, directory, .metadataOnly)
+                        await gate.pause(); return c
+                    }, verify: { _, c in verified(c) })
+            }
+        }
+        for await _ in gate.entered { break }
+        task.cancel(); gate.release()
+        do { _ = try await task.value; Issue.record("Cancelled close uncertainty succeeded") }
+        catch let e as Transaction.SourceSettlementFailure {
+            #expect(e.operationError is CancellationError && e.published == nil && e.intendedStage == box.value)
+            #expect(FileManager.default.fileExists(atPath: e.intendedStage.appendingPathComponent("manifest.json").path))
+        }
+        #expect(closes.count == 1)
+    }
+
     private struct Wire: Decodable {
         struct Member: Decodable { let name: String; let bytes: Int64; let sha256: String }
         let retention: String
@@ -310,10 +392,10 @@ struct OriginalCompanionTransactionTests {
             let result = try await Transaction.execute(source: src, in: root, destinationName: "result-" + name,
                 retention: mode, produce: { try await phase("produce", $0).contents() }, verify: { directory, _ in
                     let r = try await phase("verify", directory)
-                    return .init(contents: try r.contents(), originalComponentsMatchSource: try #require(r.original_components_match_source),
-                                 sourceIdentityChecked: try #require(r.source_identity_checked_at_boundaries),
+                    return .init(contents: try r.contents(), originalComponentsMatchSource: try #require(r.original_components_match_source as Bool?),
+                                 sourceIdentityChecked: try #require(r.source_identity_checked_at_boundaries as Bool?),
                                  decodedFrameAssociation: try #require(r.decoded_frame_association),
-                                 immutableSnapshot: try #require(r.immutable_snapshot), stableImporter: try #require(r.stable_importer))
+                                 immutableSnapshot: try #require(r.immutable_snapshot as Bool?), stableImporter: try #require(r.stable_importer as Bool?))
                 })
             #expect(result.memberCount == (mode == .metadataOnly ? 6 : 7))
             #expect(try Data(contentsOf: src) == original)

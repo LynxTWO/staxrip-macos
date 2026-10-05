@@ -1239,6 +1239,73 @@ struct CompanionArchiveOperationTests {
           }
         }
     }
+    @Test func exclusiveCommitInternalSourceCloseRetainsActualPublishedState() async throws {
+        final class Report: @unchecked Sendable {
+            private let lock = NSLock(); private var count = 0, closes = 0
+            func refuse() -> Bool { lock.withLock { count += 1 }; return true }
+            var value: Int { lock.withLock { count } }
+            func closed() { lock.withLock { closes += 1 } }
+            var closeCount: Int { lock.withLock { closes } }
+        }
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+          for refuse in [false, true] {
+            let f = try await fixture(); var keep = true
+            defer { if keep { print("GENERATED_INTERNAL_SOURCE_COMMITTED_REVIEW " + f.root.path) } else { f.cleanup() } }
+            let ledger = Ledger(), gate = Gate(), report = Report(), original = try Data(contentsOf: f.source)
+            let prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8); try priorBytes.write(to: prior)
+            let task = Task {
+                defer { gate.signal.finish() }
+                return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) }, refuseArchiveClose: { false })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                                try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(closed: { #expect($0 == 1); report.closed() }, refuseClose: { refuse ? report.refuse() : false })) {
+                                    try await ResultSetStaging.$testBoundary.withValue(.init(afterCommit: { gate.hold() })) { try await execute(f, mode: mode) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            for await _ in gate.entered { break }
+            ledger.expectJoined(count: 2); ledger.expectActive(scoped: true)
+            let directory = f.root.appendingPathComponent("published"), before = try snapshot(directory)
+            task.cancel(); gate.release.signal()
+            if refuse {
+                var reviewID: UUID?
+                do { _ = try await task.value; Issue.record("Committed close refusal returned ordinary success") }
+                catch let e as Operation.ReviewFailure {
+                    reviewID = e.reviewID
+                    let actual = try #require(e.published)
+                    #expect(actual.directory == directory && actual.memberCount == mode.limits.count && actual.verifiedBytes > 0)
+                    let inner = try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure)
+                    #expect(inner.published?.directory == directory)
+                    #expect((inner.closeError as? OriginalCompanionTransaction.SourceCloseFailure)?.reportedAfterActualClose == true)
+                    #expect(e.intendedStage == directory)
+                    #expect(e.errorDescription?.contains("was published") == true)
+                }
+                let id = try #require(reviewID); ledger.expectRetainedGrants(); #expect(report.value == 1)
+                await #expect(throws: NativeExportError.self) { try await execute(f) }
+                await #expect(throws: NativeExportError.self) { try await review(f) }
+                await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
+                await #expect(throws: NativeExportError.self) { try await associateSamples(f, tool: try sampleAccessTool(in: f.root)) }
+                try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetainedGrants(); #expect(Operation.retainedForTesting(id))
+                let later = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
+                try #require(later >= 0); defer { #expect(Darwin.close(later) == 0) }
+                Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+                var info = stat(); #expect(fstat(later, &info) == 0 && report.value == 1)
+            } else {
+                let actual = try await task.value
+                #expect(actual.directory == directory && actual.memberCount == mode.limits.count)
+                ledger.expectEnded(scoped: true); ledger.expectClosed(); keep = false
+            }
+            ledger.expectJoined(count: 2); #expect(report.closeCount == 1)
+            #expect(try snapshot(directory) == before && Data(contentsOf: f.source) == original && Data(contentsOf: prior) == priorBytes)
+            #expect(Set(try FileManager.default.contentsOfDirectory(atPath: directory.path)) == Set(mode.limits.keys))
+            if mode == .entireContainer { #expect(try Data(contentsOf: directory.appendingPathComponent("original-container.mkv")) == original) }
+          }
+        }
+    }
     @Test func candidateSuccessfulFullReviewReportedCloseRetainsWithoutMutatingCandidate() async throws {
         for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
             let f = try await candidate(mode); defer { print("GENERATED_CANDIDATE_CLOSE_REVIEW " + f.root.path) }
@@ -1257,6 +1324,38 @@ struct CompanionArchiveOperationTests {
             Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
             #expect(try snapshot(f.stage) == before && Data(contentsOf: f.source) == original)
         }
+    }
+
+    @Test func actualJoinedWriterRefusalInternalSourceCloseRetainsOwnedStageAndGrants() async throws {
+        let f = try await fixture(); defer { print("GENERATED_INTERNAL_SOURCE_STAGE_REVIEW " + f.root.path) }
+        let ledger = Ledger(), original = try Data(contentsOf: f.source), priorBytes = Data("Generated prior".utf8)
+        let prior = f.root.appendingPathComponent("prior-output"); try priorBytes.write(to: prior)
+        var reviewID: UUID?, stage: URL?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(phase: { phase in
+                    if phase == "verifier" { throw NativeExportError.invalid("Generated settled verifier admission refusal") }
+                }, pinned: { ledger.pinned($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                        try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(closed: { #expect($0 == 1) }, refuseClose: { true })) { try await execute(f) }
+                    }
+                }
+            }
+            Issue.record("Internal source close uncertainty returned ordinary refusal")
+        } catch let e as Operation.ReviewFailure {
+            reviewID = e.reviewID; stage = e.intendedStage
+            let inner = try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure)
+            #expect(e.published == nil && inner.published == nil && inner.operationError is NativeExportError)
+            #expect((inner.closeError as? OriginalCompanionTransaction.SourceCloseFailure)?.reportedAfterActualClose == true)
+        }
+        let id = try #require(reviewID), directory = try #require(stage), before = try snapshot(directory)
+        ledger.expectJoined(count: 1); ledger.expectRetained()
+        #expect(before["manifest.json"] != nil && !FileManager.default.fileExists(atPath: f.root.appendingPathComponent("published").path))
+        await #expect(throws: NativeExportError.self) { try await execute(f) }
+        await #expect(throws: NativeExportError.self) { try await review(f) }
+        try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained()
+        Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+        #expect(try snapshot(directory) == before && Data(contentsOf: f.source) == original && Data(contentsOf: prior) == priorBytes)
     }
 
 }

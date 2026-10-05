@@ -2262,3 +2262,19 @@ acquisition is not denial; fake scopes not actual sandbox rights. Source ROI/ind
 values/rendered/edited/color/EL/resize remain false. Early source/spool constructor rollback
 close results remain unqualified and are the next concrete finite resource prerequisite;
 no broader resource/action/default packaging/release/import readiness claim.
+
+
+### D146 finite source/spool admission settlement
+
+Existing source URL/component file and early spool folder/file admission now check actual
+rollback closes once after consuming numbers; both spool roles attempted despite first
+uncertainty. Typed shared refusal retains actual creation/observed identity attempt facts and
+original cause through concrete outer Access after error drop/energy expiry. No cleanup/
+adoption/action/default packaging/recovery authority. New early failures launch no decoder;
+actual task cancellation/normal closes/reported-after-real-close faults/exclusions qualify
+these finite paths. See D-146 and SOURCE-SPOOL-ADMISSION-CLOSE-EVIDENCE.md. Other admitted
+component/directory/deinit and retired stage lifecycles remain separately unqualified.
+Source ROI/independent values/rendered/edited flags remain false. Next independently bound
+selected-source Video/crop/display declaration prerequisite must reuse D112 declarations,
+check primary Matroska semantics and D098 origins before container/user ROI proof; current
+fixed decoder/caller agreement alone supplies none of those origins.

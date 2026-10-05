@@ -364,4 +364,82 @@ struct DolbyAssociationSpoolTests {
         }
     }
 
+    private enum AdmissionRefusal: Error { case generated }
+    private final class AdmissionCloses: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [Spool.AdmissionRole] = []
+        func add(_ role: Spool.AdmissionRole, _ status: Int32, _ code: Int32) {
+            lock.withLock { #expect(status == 0 && code == 0); values.append(role) }
+        }
+        func expect(_ roles: [Spool.AdmissionRole]) { lock.withLock { #expect(values == roles) } }
+    }
+    @Test func finiteAdmissionRollbackChecksAllActualOpenedRoles() throws {
+        for step in [Spool.AdmissionStep.folderOpened, .folderObserved, .concretePath, .beforeCreate, .fileOpened, .fileObserved] {
+            let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
+            let closes = AdmissionCloses()
+            #expect(throws: AdmissionRefusal.self) {
+                try Spool.withSpool(in: root, sourceBytes: 100, admissionBoundary: .init(step: { if $0 == step { throw AdmissionRefusal.generated } }, closed: { closes.add($0,$1,$2) })) { _ in Issue.record("Refused admission reached body") }
+            }
+            let created = step == .fileOpened || step == .fileObserved
+            closes.expect(created ? [.file,.folder] : [.folder])
+            let names = try FileManager.default.contentsOfDirectory(atPath: root.path)
+            #expect(names == (created ? [Spool.name] : []))
+            if created { #expect(try Data(contentsOf: root.appendingPathComponent(Spool.name)).isEmpty) }
+        }
+    }
+    @Test func admissionCloseUncertaintyPreservesAttemptFactsCauseBothRolesAndNoRetry() throws {
+        for step in [Spool.AdmissionStep.concretePath, .fileOpened, .fileObserved] {
+            for refusal in ["file", "folder", "both"] where step != .concretePath || refusal == "folder" {
+                let root = try directory(), closes = AdmissionCloses()
+                do {
+                    try Spool.withSpool(in: root, sourceBytes: 100, admissionBoundary: .init(step: { if $0 == step { throw AdmissionRefusal.generated } }, closed: { closes.add($0,$1,$2) }, refuseClose: { refusal == "both" || $0.rawValue == refusal })) { _ in Issue.record("Uncertain admission reached body") }
+                    Issue.record("Reported close refusal returned ordinary result")
+                } catch let error as Spool.AdmissionFailure {
+                    let created = step != .concretePath
+                    #expect(error.operationError is AdmissionRefusal && error.createdMember == created)
+                    #expect(error.directory == root && error.observedFolderID != nil)
+                    #expect((error.member != nil) == created && (error.observedFileID != nil) == (step == .fileObserved))
+                    #expect(error.closeFailures.count == (refusal == "both" ? 2 : 1))
+                    #expect(error.closeFailures.allSatisfy { $0.status == 0 && $0.code == 0 && $0.reportedAfterActualClose })
+                }
+                closes.expect(step == .concretePath ? [.folder] : [.file,.folder])
+                // A fresh descriptor remains valid after the thrown owner is gone;
+                // no absence check on consumed numbers and no close retry.
+                let later = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
+                try #require(later >= 0); var info = stat(); #expect(fstat(later,&info) == 0); #expect(Darwin.close(later) == 0)
+                let names = try FileManager.default.contentsOfDirectory(atPath: root.path)
+                #expect(names == (step == .concretePath ? [] : [Spool.name]))
+                print("GENERATED_RETAINED_SPOOL_ADMISSION \(root.path)")
+            }
+        }
+    }
+    @Test func actualUnsafeExclusiveACLAndNamespaceAdmissionRefusalsCheckRollback() async throws {
+        for variant in ["missing", "mode", "membership", "exclusive", "acl", "file-mode", "substitution"] {
+            let root = try directory(), closes = AdmissionCloses(), moved = root.appendingPathExtension("retained")
+            defer { try? FileManager.default.removeItem(at: root); try? FileManager.default.removeItem(at: moved) }
+            if variant == "missing" { try FileManager.default.removeItem(at: root) }
+            if variant == "mode" { #expect(chmod(root.path,0o755) == 0) }
+            let sentinel = root.appendingPathComponent(Spool.name)
+            if variant == "acl" {
+                let r = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/chmod"), arguments: ["+a", "everyone deny add_file", root.path])
+                #expect(r.status == 0)
+            }
+            #expect(throws: (any Error).self) {
+                try Spool.withSpool(in: root, sourceBytes: 100, admissionBoundary: .init(step: { step in
+                    if variant == "membership" && step == .concretePath { try Data("prior".utf8).write(to: sentinel) }
+                    if variant == "exclusive" && step == .beforeCreate { try Data("prior".utf8).write(to: sentinel) }
+                    if variant == "file-mode" && step == .fileOpened { #expect(chmod(sentinel.path,0o644) == 0) }
+                    if variant == "substitution" && step == .concretePath {
+                        try FileManager.default.moveItem(at: root, to: moved)
+                        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions:0o700])
+                        try Data("prior".utf8).write(to: sentinel)
+                    }
+                }, closed: { closes.add($0,$1,$2) })) { _ in Issue.record("Unsafe admission reached body") }
+            }
+            closes.expect(variant == "missing" ? [] : variant == "file-mode" ? [.file,.folder] : [.folder])
+            if ["membership", "exclusive", "substitution"].contains(variant) { #expect(try Data(contentsOf: sentinel) == Data("prior".utf8)) }
+            if variant == "acl" { _ = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/chmod"), arguments: ["-N",root.path]) }
+        }
+    }
+
 }

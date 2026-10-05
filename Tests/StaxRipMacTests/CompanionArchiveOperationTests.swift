@@ -2214,4 +2214,85 @@ struct CompanionArchiveOperationTests {
         #expect(try Data(contentsOf: f.source) == original && !FileManager.default.fileExists(atPath: missing.path))
     }
 
+    private final class ConstructorCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var roles: [String] = []
+        func add(_ role: String, _ status: Int32, _ code: Int32) { lock.withLock { #expect(status == 0 && code == 0); roles.append(role) } }
+        func expect(_ expected: [String]) { lock.withLock { #expect(roles == expected) } }
+    }
+    @Test func reportedInternalAdmissionCloseRetainsCropGrantsFactsAfterDropAndExpiry() async throws {
+        for variant in ["source", "folder", "file", "both"] {
+            let f = try await fixture(), ledger = Ledger(), closes = ConstructorCloses(), tool = try cropAccessTool(in: f.root)
+            let original = try Data(contentsOf: f.source); var reviewID: UUID?
+            do {
+                _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { _ in Issue.record("Uncertain admission released outer access") })) {
+                        try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Refused constructor launched decoder") })) {
+                            try await CompanionDiskCheck.$testBoundary.withValue(.init(fileOpened: { _ in if variant == "source" { throw NativeExportError.invalid("Generated source admission refusal") } }, admissionClosed: { _, status, code in closes.add("source",status,code) }, refuseAdmissionClose: { _ in variant == "source" })) {
+                                try await DolbyAssociationSpool.$testAdmissionBoundary.withValue(.init(step: { step in
+                                    if variant == "folder" && step == .folderObserved || ["file","both"].contains(variant) && step == .fileObserved { throw CancellationError() }
+                                }, closed: { closes.add($0.rawValue,$1,$2) }, refuseClose: { variant == "folder" || variant == "both" || variant == "file" && $0 == .file })) { try await associateCrops(f, tool: tool) }
+                            }
+                        }
+                    }
+                }
+                Issue.record("Reported internal close returned ordinary result")
+            } catch let error as Operation.ReviewFailure {
+                reviewID = error.reviewID; #expect(error.intendedStage == f.stage)
+                if variant == "source" {
+                    let inner = try #require(error.operationError as? CompanionDiskCheck.FileAdmissionFailure)
+                    #expect(inner.operationError is NativeExportError && inner.reportedAfterActualClose)
+                } else {
+                    let inner = try #require(error.operationError as? DolbyAssociationSpool.AdmissionFailure)
+                    #expect(inner.operationError is CancellationError && inner.createdMember == (variant != "folder"))
+                    #expect(inner.observedFolderID != nil && (inner.observedFileID != nil) == (variant != "folder"))
+                    #expect(inner.closeFailures.count == (variant == "both" ? 2 : 1) && inner.closeFailures.allSatisfy { $0.reportedAfterActualClose })
+                }
+            }
+            let id = try #require(reviewID)
+            closes.expect(variant == "source" ? ["source"] : variant == "folder" ? ["folder"] : ["file","folder"])
+            ledger.expectRetained(); ledger.expectActive(scoped: true); ledger.expectJoined(count: 0)
+            await #expect(throws: NativeExportError.self) { try await execute(f) }
+            await #expect(throws: NativeExportError.self) { try await review(f) }
+            await #expect(throws: NativeExportError.self) { try await associateCrops(f, tool: tool) }
+            await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
+            await #expect(throws: NativeExportError.self) { try await associateSamples(f, tool: try sampleAccessTool(in: f.root)) }
+            try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained()
+            let currentSource = try Data(contentsOf: f.source)
+            #expect(Operation.retainedForTesting(id) && currentSource == original)
+            let names = try FileManager.default.contentsOfDirectory(atPath: f.stage.path)
+            #expect(names == (["file","both"].contains(variant) ? [DolbyAssociationSpool.name] : []))
+            let later = Darwin.open("/dev/null",O_RDONLY | O_CLOEXEC); try #require(later >= 0)
+            Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+            var info = stat(); #expect(fstat(later,&info) == 0 && Darwin.close(later) == 0)
+            print("GENERATED_RETAINED_CROP_CONSTRUCTOR \(f.root.path)")
+        }
+    }
+    @Test func actualTaskCancellationDuringConstructorChecksRollbackBeforeReverseRelease() async throws {
+        for phase in ["source", "folder", "file"] {
+            let f = try await fixture(); defer { f.cleanup() }
+            let ledger = Ledger(), closes = ConstructorCloses(), gate = Gate(), tool = try cropAccessTool(in: f.root)
+            let task = Task {
+                defer { gate.signal.finish() }
+                return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                        try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Cancelled admission launched decoder") })) {
+                            try await CompanionDiskCheck.$testBoundary.withValue(.init(fileOpened: { _ in if phase == "source" { gate.holdFirst() } }, admissionClosed: { _,status,code in closes.add("source",status,code) })) {
+                                try await DolbyAssociationSpool.$testAdmissionBoundary.withValue(.init(step: { step in
+                                    if phase == "folder" && step == .folderOpened || phase == "file" && step == .fileOpened { gate.holdFirst() }
+                                }, closed: { closes.add($0.rawValue,$1,$2) })) { try await associateCrops(f, tool: tool) }
+                            }
+                        }
+                    }
+                }
+            }
+            for await _ in gate.entered { break }; ledger.expectActive(scoped: true)
+            task.cancel(); gate.release.signal()
+            await #expect(throws: CancellationError.self) { try await task.value }
+            closes.expect(phase == "source" ? ["source"] : phase == "folder" ? ["folder"] : ["file","folder"])
+            ledger.expectEnded(scoped: true); ledger.expectClosed(); ledger.expectJoined(count: 0)
+            let names = try FileManager.default.contentsOfDirectory(atPath: f.stage.path)
+            #expect(names == (phase == "file" ? [DolbyAssociationSpool.name] : []))
+        }
+    }
+
 }

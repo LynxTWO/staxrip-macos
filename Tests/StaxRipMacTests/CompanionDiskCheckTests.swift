@@ -210,4 +210,59 @@ struct CompanionDiskCheckTests {
         // Worker has returned, all its descriptor owners have unwound; checker does not remove caller files.
         #expect(try FileManager.default.contentsOfDirectory(atPath: f.stage.path).count == c.members.count)
     }
+    private final class AdmissionCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var values: [String?] = []
+        func add(_ component: String?, _ status: Int32, _ code: Int32) { lock.withLock { #expect(status == 0 && code == 0); values.append(component) } }
+        func expect(_ expected: [String?]) { lock.withLock { #expect(values == expected) } }
+    }
+    @Test func sourceURLAdmissionRollbackChecksRealCloseAndPropagatesCause() async throws {
+        for variant in ["empty", "directory", "missing", "alias", "cancel", "reported", "substitution"] {
+            let f = try await Self.fixture(), closes = AdmissionCloses()
+            let input = f.root.appendingPathComponent("admission-source"), moved = f.root.appendingPathComponent("original-admission-source")
+            if variant == "directory" { try FileManager.default.createDirectory(at: input, withIntermediateDirectories: false) }
+            else if variant == "alias" { try FileManager.default.createSymbolicLink(at: input, withDestinationURL: f.source) }
+            else if variant != "missing" { try (variant == "substitution" ? Data("prior".utf8) : Data()).write(to: input) }
+            let boundary = CompanionDiskCheck.Boundary(fileOpened: { _ in
+                if variant == "cancel" { throw CancellationError() }
+                if variant == "substitution" { try FileManager.default.moveItem(at: input, to: moved); try Data("prior".utf8).write(to: input) }
+            }, admissionClosed: { closes.add($0,$1,$2) }, refuseAdmissionClose: { _ in variant == "reported" })
+            do {
+                _ = try await CompanionDiskCheck.$testBoundary.withValue(boundary) { try await CompanionDiskCheck.spoolOriginalSource(source: input, in: f.stage) }
+                Issue.record("Invalid source admission returned receipt")
+            } catch let error as CompanionDiskCheck.FileAdmissionFailure {
+                #expect(variant == "reported" && error.operationError is NativeExportError && error.component == nil)
+                #expect(error.closeStatus == 0 && error.closeErrno == 0 && error.reportedAfterActualClose)
+            } catch is CancellationError { #expect(variant == "cancel") }
+            catch { #expect(variant != "reported" && variant != "cancel") }
+            closes.expect(["missing","alias"].contains(variant) ? [] : [nil])
+            let names = try FileManager.default.contentsOfDirectory(atPath: f.stage.path); #expect(names.isEmpty)
+            if variant == "substitution" {
+                let selectedBytes = try Data(contentsOf: input), originalBytes = try Data(contentsOf: moved)
+                #expect(selectedBytes == Data("prior".utf8) && originalBytes == Data("prior".utf8))
+            }
+            if variant == "reported" { print("GENERATED_RETAINED_SOURCE_ADMISSION \(f.root.path)") }
+            else { f.cleanup() }
+        }
+    }
+    @Test func retainedComponentAdmissionRollbackIsCheckedWithoutClaimingLaterCloses() async throws {
+        for reported in [false,true] {
+            let (f,c) = try await staged()
+            let selected = try #require(c.members.map(\.name).sorted().first), url = f.stage.appendingPathComponent(selected)
+            let original = try Data(contentsOf: url), closes = AdmissionCloses()
+            do {
+                _ = try await CompanionDiskCheck.$testBoundary.withValue(.init(fileOpened: { component in
+                    if component == selected { #expect(chmod(url.path,0o644) == 0) }
+                }, admissionClosed: { closes.add($0,$1,$2) }, refuseAdmissionClose: { _ in reported })) {
+                    try await CompanionDiskCheck.verify(source: f.source, stage: f.stage, contents: c)
+                }
+                Issue.record("Unsafe component admission returned receipt")
+            } catch let error as CompanionDiskCheck.FileAdmissionFailure {
+                #expect(reported && error.component == selected && error.operationError is NativeExportError && error.reportedAfterActualClose)
+            } catch { #expect(!reported) }
+            closes.expect([selected]); #expect(try Data(contentsOf: url) == original)
+            if reported { print("GENERATED_RETAINED_COMPONENT_ADMISSION \(f.root.path)") }
+            else { f.cleanup() }
+        }
+    }
+
 }

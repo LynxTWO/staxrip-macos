@@ -152,6 +152,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-143 | 2026-10-05 | Native development crop role and admission | Confirmed | |
 | D-144 | 2026-10-05 | Native original-source and caller crop association | Confirmed | |
 | D-145 | 2026-10-05 | Concrete crop source/spool access ownership | Confirmed | |
+| D-146 | 2026-10-05 | Checked finite source/spool admission rollback closes | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4268,3 +4269,63 @@ planning findings empty. Awake assertion renewed only after exact owned command/
 inspection, old PID22021 stopped/absence observed; new bounded PID47458 expires09:37:21UTC.
 No owner full-source/body/new sample/sanitizer/APFS/signing/UI qualification. Constructor
 rollback, retirement/other resources/recovery/rendered/edited/distribution remain open.
+
+## D-146: Check finite source and spool admission rollback closes
+
+Status: Confirmed
+
+The unused source/spool worker and retained-component file admission discarded actual
+close results before ownership transfer. D145 outer pins and D132 helper settlement did
+not qualify these roles. Existing concrete admission now owns each positive open before
+any guard/checkpoint can refuse, consumes before one actual close, checks status and never
+retries. Spool rollback attempts file and folder despite first uncertainty. A typed shared
+marker preserves the admission cause, created/not-created member attempt and observed
+folder/file identities. These are attempt facts, not current namespace/immutable provenance
+or cleanup/adoption authority. No file is removed; no worker, generic lease/receipt wrapper,
+Python runtime bridge, protocol/schema/action/default packaging/release capability added.
+
+The existing source worker explicitly passes admission test boundaries and cancellation.
+After-open checkpoints qualify external task cancellation rollback. Needed outer source/
+spool grants/pins remain held on typed uncertainty after error drop/exclusion/energy expiry.
+An enclosing checked source-close refusal retains its original operation error. Failed OS
+close is not release proof; negative consumed numbers do not authorize retry. Existing
+normal SQLite/source/helper settlement and source/caller proof remain strict. Other admitted
+component/directory/deinit, retired stage and writer/metadata/disk close roles remain separate;
+this finite constructor correction is not whole-resource readiness or production recovery.
+
+Initial unchanged spool coverage17tests2suites0.060s, new admission29tests2suites3.703s and
+composed82tests3suites20.425s pass/no warnings. Compatible composed82tests23.491s includes
+unchanged captured D143 runtime12 accepted both-space/thread/conformance/reorder crop
+trials/19 actual decoder joins, live current-PID idle-sleep activity and ordinary live/late
+cancellation/final substitution. New early refusals launch no decoder. Seven new tests
+cover normal finite rollback, both-role after-real-close reports, source/component unsafe
+admission, missing/no-follow/exclusive/ACL/path mutation, actual task cancellation at three
+admission points, preserved attempt/cause and dropped-review/expiry/conflicts. No spontaneous
+OS close/fdopendir/F_GETPATH fault or actual sandbox grant/revocation claim. Controlled
+concrete-path step refusal follows actual successful F_GETPATH. Generated uncertain roots
+retained privately; DEBUG registry isolation is not production recovery/cleanup authority.
+Source ROI provenance/independent values/rendered/edited/EL/resize/luminance stay false.
+
+PR120 automatic37279179123 failed559tests540.839s35issues: zero60s/21unchanged120s/seven180s
+bounds plus four metadata positive-child assertions, missing generated pipe-holder marker
+and two mastering phase EOF expectations. Full log retained/PR120 updated without retry.
+Individual causes remain unestablished; D136 supported duplicated cold compilation correction
+is not attribution of all remaining failures or proof of no logic defects. No assertion/
+deadline/skip/global scheduling/concurrency/historical observer change. Full ordinary/build/
+protection outcomes follow; static93-source host executes prior companion pipeline, not crops.
+
+
+Final product-code ordinary566reported tests/104suites212.779s PASSED36 unchanged explicit
+opt-in skips/no warnings. The sole later change strengthens one new generated source
+substitution case to preserve identical bytes on both paths, isolating identity refusal;
+final focused1test0.253s passes/no warnings, product code unchanged. No ordinary retry.
+Explicit production20.82s/current strict ad-hoc app/read-only helper signatures/
+minima14.0/11.0 pass; writer/decoder/sample/crop absent. Static93-source prior companion
+host compiles these sources and executes preservation/review, not crop loading. No new
+C/sanitizer/oracle/APFS/signing/owner full-source/body qualification. Eight-file privacy
+zero/positive sentinel, owner source metadata/current journal/original D142/sample-prefix-
+frozen-D130/D143 runtime unchanged; planning finding for new wording corrected and retained.
+Remaining admitted component/directory/deinit/retired-stage/helper resource roles and source
+ROI/value/rendered/edited/recovery/distribution gates remain open. Next bounded independent
+source declaration prerequisite must reuse existing D112 source Video parser and check
+primary Matroska geometry semantics before any container/user ROI provenance claim.

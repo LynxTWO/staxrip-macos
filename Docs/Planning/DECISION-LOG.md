@@ -160,6 +160,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-151 | 2026-10-05 | Source configuration parameter reference prefixes | Confirmed | |
 | D-152 | 2026-10-05 | Original first-slice VCL PPS prefix binding | Confirmed | |
 | D-153 | 2026-10-05 | Joint source parameter/VCL and fixed-decoder crop readback | Confirmed | |
+| D-154 | 2026-10-05 | Concrete joint parameter/crop access ownership | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4636,3 +4637,39 @@ passes do not resolve hosted failures. No historical observer/CI margin/assertio
 skip/global suite-job scheduling/concurrency workaround. Explicit new access controller,
 full parameter/slice/active selection/origin/value/rendered/edited and other finite resource/
 retirement/recovery/distribution gates remain separate and open.
+
+
+## D-154: Hold concrete source/spool access through joint parameter/crop settlement
+
+Status: Confirmed
+
+Unused CompanionArchiveOperation.associateOriginalParameterCrops directly awaits the same
+D153 source/open SQLite worker under existing explicit source/spool scope attempts, no-follow
+pins and idle-sleep activity. Full original configuration/VCL/Video/packet-RPU-clock/one-picture
+coverage, final source-tool-library-spool observations/qualified normal closes/owned worker-
+child-group-pipes settlement/final selected identities and both outer checked closes precede
+reverse ordinary release. Shared process/close/substitution uncertainty retains the same
+Access/grants/pins/files after dropped errors/exclusions; activity expiry is not settlement,
+release or cleanup. No inferred parent grant or false Foundation acquisition as denial.
+
+See NATIVE-PARAMETER-CROP-ACCESS-EVIDENCE.md for seven new tests, real generated native trials,
+POSIX/ACL and OS idle-sleep observations, controlled after-real-close reports versus OS faults,
+fake scopes versus sandbox grants and finite coverage limits. Raw Video/SPS/decoder/caller
+facts stay separate; full conformance/active selection/ROI/value/rendered/edited flags false.
+No new owner/worker/generic wrapper/protocol/action/UI/default packaging/release/recovery
+or automatic folder cleanup authority. Other resource/deinit/retirement gates remain open.
+
+Default67tests22.557s/private actual1test3.763s pass, twelve accepted trials/nineteen direct
+joins. Ordinary608tests105suites212.264s FAILED one existing metadata pipe-holder assertion;
+full log retained without retry/cause/harmlessness claim. Forty explicit skips/no warnings.
+Access35.386s/source prefix13.420s/static33.028s pass. Production21.91s/current strict ad-hoc
+app/read-only helper signatures/minima14.0/11.0 pass; writer/decoder/sample/crop absent. Exact
+static94-source host runs prior preservation/review only. Five-file privacy zero/positive
+sentinel, protected owner metadata/journal/captured artifacts unchanged/planning empty.
+
+Parent PR128 failed601tests529.006s34issues retained/updated without retry:21 unchanged120s/
+seven180s plus four decoder-surrogate absent-positive-child/two EOF assertions. Individual
+causes unestablished; no assertion/deadline/skip/global scheduling workaround. Next read-only
+selection is finite original SPS coding-tree-block/grid prefix, requiring primary verification
+before implementation; not non-first slice, full SPS or active origin proof. All remaining
+parameter/activation/origin/value/rendered/edited/resource/recovery/distribution gates stay open.

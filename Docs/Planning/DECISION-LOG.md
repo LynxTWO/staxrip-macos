@@ -156,6 +156,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-147 | 2026-10-05 | Selected original Video declaration binding | Confirmed | |
 | D-148 | 2026-10-05 | Joint source Video and fixed-decoder crop readback | Confirmed | |
 | D-149 | 2026-10-05 | Joint original Video/crop access ownership | Confirmed | |
+| D-150 | 2026-10-05 | Original configuration SPS geometry prefix binding | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4479,3 +4480,35 @@ recovery/sandbox/distribution and source ROI/value/rendered/edited gates remain 
 Next finite independent original SPS syntax/parameter-set selection readback must be qualified
 before source-to-codec/container/user origin policy; matching rasters and proposals are not
 that proof. No whole-program completion or all-useful-work blockage claim.
+
+
+## D-150: Bind a finite original SPS geometry prefix to selected source configuration
+
+Status: Confirmed
+
+New unused source-only entry reuses the pinned synchronous source/open SQLite worker and
+fresh selected Track/configuration binding. Exactly one SPS occurrence is required; bounded
+base-layer 10-bit420 prefix, strict emulation-prevention removal and window arithmetic are
+explicit. PTL constraints/SPS suffix remain opaque; missing/multiple/ambiguous configuration
+or selected packet VPS/SPS/PPS refuses this new path only. No active picture SPS, complete
+SPS conformance, source-to-codec origin, progressive/color/SAR or edited admission follows.
+Original source/packet/escaped-RPU reconstruction, source-table counts/final observations/
+qualified normal closes/awaited worker precede result. No decoder, second worker, closed-store
+adoption, generic wrapper, protocol/action/default packaging or recovery authority.
+
+See SOURCE-SPS-GEOMETRY-PREFIX-EVIDENCE.md for primary H.265 references, generated prefix and
+actual HEVC fixtures, seven forged Track facts, storage/cancellation/final substitution
+refusals and retained initial fixture permission failure. Deliberately expand static host
+exact source closure from93 to94; execution remains prior companion preservation/review.
+PR124 full hosted failure retained and updated without retry or residual cause attribution.
+Existing bounds/assertions/skips/concurrency unchanged. Complete SPS/active VPS-PPS-slice
+selection and joint picture coverage remain prerequisites before origin policy; source ROI/
+value/rendered/edited, finite resource retirement/recovery/distribution gates stay open.
+
+
+Final focused33tests3suites14.207s and ordinary589reported tests/105suites213.417s pass;
+38 unchanged explicit opt-in skips/no emitted warnings in final runs. Explicit production
+21.61s/current strict app/read-only helper signatures/minima14.0/11.0 pass, development
+writer/decoder/sample/crop absent. Eight-file privacy zero/positive sentinel, protected
+owner metadata/journal/captured artifacts unchanged, planning empty. Generated review roots
+retained privately; other finite ownership/retirement/recovery/distribution gates stay open.

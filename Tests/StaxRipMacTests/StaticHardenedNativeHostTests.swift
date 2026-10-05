@@ -117,7 +117,7 @@ struct StaticHardenedNativeHostTests {
         try FileManager.default.removeItem(at: bundle.main)
         let sources = try FileManager.default.contentsOfDirectory(at: Self.repo.appendingPathComponent("Sources/StaxRipMac"), includingPropertiesForKeys: nil).filter { $0.pathExtension == "swift" && $0.lastPathComponent != "StaxRipMacApp.swift" }.sorted { $0.path < $1.path }
         // D125 adds the concrete native SQLite storage file to the prior 92-source closure.
-        try #require(sources.count == 93)
+        try #require(sources.count == 94)
         try #require(Set(sources.map(\.lastPathComponent)).isSuperset(of: ["DolbyDecoderProcess.swift", "DolbyDecoderStream.swift", "DolbyAssociationSpool.swift"]))
         let entry = Self.repo.appendingPathComponent("scripts/fixtures/static-native-companion-host.swift")
         let fingerprints = try sources.map { try Self.hash($0) }, entryHash = try Self.hash(entry)

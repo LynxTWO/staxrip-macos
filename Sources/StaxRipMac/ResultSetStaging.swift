@@ -15,7 +15,7 @@ final class ResultSetStaging: @unchecked Sendable {
         let verifiedBytes: Int64
         let memberCount: Int
     }
-    enum CloseRole: Sendable, Hashable { case member(String), directoryStream, enumerationDescriptor }
+    enum CloseRole: Sendable, Hashable { case member(String), directoryStream, enumerationDescriptor, creationParent, creationDirectory }
     struct CloseFailure: Error, Sendable {
         let role: CloseRole
         let systemError: Int32
@@ -29,6 +29,20 @@ final class ResultSetStaging: @unchecked Sendable {
         var errorDescription: String? {
             published == nil ? "Result-set verification close is unsettled; its stage needs review."
                 : "Result set was published; verification close needs ownership review."
+        }
+    }
+    /// Creation facts are observed in this attempt, not adoption or cleanup authority.
+    struct CreationSettlementFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: Error
+        let closeFailures: [CloseFailure]
+        let parent: URL
+        let attemptedStage: URL
+        let directoryCreated: Bool
+        let identityEstablished: Bool
+        var reviewLocator: URL { directoryCreated ? attemptedStage : parent }
+        var errorDescription: String? {
+            directoryCreated ? "Stage creation failed after directory creation; ownership needs review."
+                : "Stage was not created; parent descriptor close needs ownership review."
         }
     }
     private enum State { case available, publishing, published, discarded, review }
@@ -51,11 +65,13 @@ final class ResultSetStaging: @unchecked Sendable {
         // A controlled report follows actual successful close, never an OS fault claim.
         var refuseClose: @Sendable (CloseRole) -> Bool = { _ in false }
         var refuseStreamAdmission: @Sendable () -> Bool = { false }
+        var creation: @Sendable (String, URL) throws -> Void = { _, _ in }
+        var creationOpened: @Sendable (CloseRole) -> Void = { _ in }
     }
     @TaskLocal static var testBoundary = TestBoundary()
     #endif
 
-    /// Observes only this concrete verifier's transient descriptor/stream roles.
+    /// Observes finite verifier and creation-rollback roles; terminal stage pins are separate.
     private struct CloseObservation: Sendable {
         #if DEBUG
         private let boundary = ResultSetStaging.testBoundary
@@ -105,22 +121,68 @@ final class ResultSetStaging: @unchecked Sendable {
 
     static func create(in parent: URL) throws -> ResultSetStaging {
         guard parent.isFileURL, !parent.path.utf8.contains(0) else { throw failure("Invalid parent directory.") }
-        let p = Darwin.open(parent.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        guard p >= 0 else { throw failure("Cannot open destination parent (system error \(errno)).") }
         let name = ".staxrip-result-" + UUID().uuidString
-        guard mkdirat(p, name, 0o700) == 0 else {
-            let code = errno; Darwin.close(p)
-            throw failure("Cannot create owned stage (system error \(code)).")
+        let attempted = parent.appendingPathComponent(name)
+        let closing = CloseObservation()
+        var p: Int32 = -1, d: Int32 = -1
+        var created = false, established = false
+        #if DEBUG
+        let boundary = testBoundary
+        #endif
+        do {
+            p = Darwin.open(parent.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+            guard p >= 0 else { throw failure("Cannot open destination parent (system error \(errno)).") }
+            #if DEBUG
+            boundary.creationOpened(.creationParent)
+            try boundary.creation("parent-opened", attempted)
+            #endif
+            var originalParent = stat()
+            guard fstat(p, &originalParent) == 0 else { throw failure("Cannot inspect destination parent.") }
+            guard mkdirat(p, name, 0o700) == 0 else {
+                throw failure("Cannot create owned stage (system error \(errno)).")
+            }
+            created = true
+            #if DEBUG
+            try boundary.creation("directory-created", attempted)
+            #endif
+            d = openat(p, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+            guard d >= 0 else { throw failure("Created stage cannot be opened; its directory may remain.") }
+            #if DEBUG
+            boundary.creationOpened(.creationDirectory)
+            try boundary.creation("directory-opened", attempted)
+            #endif
+            var value = stat(), path = stat(), currentParent = stat()
+            guard fstat(d, &value) == 0, value.st_uid == geteuid(), value.st_mode & 0o7777 == 0o700,
+                  fstatat(p, name, &path, AT_SYMLINK_NOFOLLOW) == 0, sameObject(value, path),
+                  lstat(parent.path, &currentParent) == 0, sameObject(originalParent, currentParent) else {
+                throw failure("Created stage identity could not be established; no removal is authorized.")
+            }
+            established = true
+            #if DEBUG
+            try boundary.creation("before-transfer", attempted)
+            #endif
+            guard fstat(d, &path) == 0, sameObject(value, path),
+                  fstatat(p, name, &path, AT_SYMLINK_NOFOLLOW) == 0, sameObject(value, path),
+                  lstat(parent.path, &currentParent) == 0, sameObject(originalParent, currentParent) else {
+                established = false
+                throw failure("Created stage or parent changed before ownership transfer.")
+            }
+            let stage = ResultSetStaging(parent: parent, parentFD: p, directoryFD: d, name: name, identity: value)
+            p = -1; d = -1 // Successful transfer; creation rollback never closes the stage's pins.
+            return stage
+        } catch {
+            let operation = error
+            var failures: [CloseFailure] = []
+            if let close = closing.descriptor(&d, role: .creationDirectory) { failures.append(close) }
+            if let close = closing.descriptor(&p, role: .creationParent) { failures.append(close) }
+            // No removal during creation rollback. A created directory remains a review
+            // locator even when actual closes succeeded; unsafe identity is never adopted.
+            if created || !failures.isEmpty {
+                throw CreationSettlementFailure(operationError: operation, closeFailures: failures,
+                    parent: parent, attemptedStage: attempted, directoryCreated: created, identityEstablished: established)
+            }
+            throw operation
         }
-        let d = openat(p, name, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        var value = stat()
-        guard d >= 0, fstat(d, &value) == 0, value.st_uid == geteuid(), value.st_mode & 0o777 == 0o700 else {
-            if d >= 0 { Darwin.close(d) }
-            // Never remove a directory whose identity we did not establish.
-            Darwin.close(p)
-            throw failure("Owned stage could not be established; its temporary directory may remain.")
-        }
-        return ResultSetStaging(parent: parent, parentFD: p, directoryFD: d, name: name, identity: value)
     }
 
     private init(parent: URL, parentFD: Int32, directoryFD: Int32, name: String, identity: stat) {

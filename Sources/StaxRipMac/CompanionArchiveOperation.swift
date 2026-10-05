@@ -103,6 +103,9 @@ enum CompanionArchiveOperation {
                 throw retain(access, error: inner, locator: inner.intendedStage,
                              environment: environment, published: inner.published)
             }
+            if let inner = error as? OriginalCompanionTransaction.CreationSettlementFailure {
+                throw retain(access, error: inner, locator: inner.intendedStage, environment: environment)
+            }
             if let inner = error as? OriginalCompanionTransaction.StagingSettlementFailure {
                 throw retain(access, error: inner, locator: inner.intendedStage,
                              environment: environment, published: inner.published)

@@ -144,6 +144,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-135 | 2026-10-05 | Checked internal transaction source close | Confirmed | |
 | D-136 | 2026-10-05 | Shared concrete development fixture build ownership | Confirmed | |
 | D-137 | 2026-10-05 | Checked staging transient closes and actual commit review | Confirmed | |
+| D-138 | 2026-10-05 | Checked staging creation rollback and observed directory state | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3922,3 +3923,45 @@ decoder/sample absent. Static93-source host ordinary execution compiles changed 
 and runs its prior native companion pipeline, not decoder/sample loading. No new
 product file or UI/controller/session action; no UI walkthrough claimed. Separate
 C sample/sanitizer/APFS/frozen/owner-source receipts reused, not new executions.
+
+
+## D-138: Checked staging creation rollback and observed directory state
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+Select finite creation rollback before changing long-lived parent/stage terminal
+ownership. Opened numbers are owned before admission, consumed before actual
+close/check once with no retry, and both rollback roles settle before throwing.
+Concrete created/not-created and observed identity facts survive D105/D134 source
+priority and retained access. Created-but-untransferred directories require review
+without automatic deletion/adoption, even when closes succeed. Final namespace
+substitution refuses transfer; successful transfer does not qualify terminal pins.
+Controlled after-real-close reports are not spontaneous OS faults; provider scope
+balancing is not sandbox rights. Activity expiry is not access/cleanup authority.
+
+Corrected composed74tests/3suites12.141s passed, including actual native both-mode
+writer/full semantic verifier/publication and four new helper direct joins. Creation
+refusal/cancel cases occur before helpers launch. POSIX write denial, role counts,
+identity substitution, combined source refusal/drop/expiry/exclusions are qualified
+in STAGING-CREATION-CLOSE-EVIDENCE.md. Initial new test compiler/macro errors retained
+and corrected without historical observer/assertion/deadline/global concurrency
+changes. No new product source/worker/schema/UI/action/default packaging/release/
+recovery API or edited/sample proof. Remaining terminal committed/removed state
+and other helper/disk resource roles remain separate prerequisites.
+
+
+Final ordinary531reported tests/101suites209.269s passed with33unchanged explicit
+opt-in skips/no emitted warnings. Explicit production build20.23s and current strict
+ad-hoc app/read-only helper signatures passed, minima14.0/11.0; writer/decoder/sample
+absent. Static93-source host compiles changed creation code and runs prior companion
+preservation/review, not decoder/sample loading. No new product file or UI walkthrough.
+Separate sample/sanitizer/APFS/signing/owner full-source qualifications reused.
+
+PR112 automatic37259659010 failed525tests510.732s13issues: two120s/four180s declared
+bounds and seven other assertions (three metadata/one sample absent-positive-child,
+Fresh-analysis cancellation6.049671vs5 and two mastering phase EOF expectations).
+Staging20.764s/access233.463s/shared-fixture59.890s/static228.852s passed; exact fixture
+preparation passed, preview skipped. Full failed log retained/PR112 updated without
+retry. Individual timing/phase/prelaunch causes remain unestablished; no historical
+observer/assertion/deadline/global scheduling change or all-starvation/no-logic-defect
+claim. Source/journal/runtime/privacy/planning checks are recorded separately.

@@ -2164,3 +2164,14 @@ STAGING-TRANSIENT-CLOSE-EVIDENCE.md for actual checks. Long-lived parent/stage c
 deinit/terminal pin closes and other helper resource roles remain next, with all
 rendered/edited/distribution/import gates unchanged. PR111 automatic residual failures
 remain retained, without deadline/assertion/global scheduling workarounds.
+
+
+### D138 finite staging creation rollback
+
+Creation now checks actual rollback closes once, preserves original refusal and
+observed directory-created/identity facts, and retains needed access on uncertainty
+or a created-but-untransferred stage. No automatic removal/adoption or inferred
+publication follows failure. Successful transfer remains separate from unqualified
+long-lived terminal pin closes. See D-138 and STAGING-CREATION-CLOSE-EVIDENCE.md.
+Committed/actually removed terminal state, other helper resource roles and rendered/
+edited/distribution/recovery/import gates remain open.

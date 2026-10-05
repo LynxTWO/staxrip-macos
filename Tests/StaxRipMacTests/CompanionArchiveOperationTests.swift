@@ -1487,4 +1487,78 @@ struct CompanionArchiveOperationTests {
         #expect(after == before && sourceAfter == original && priorAfter == priorBytes)
         Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
     }
+    @Test func actualNativeCreationTransfersPinsWithoutRollbackAcrossBothModes() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+            let f = try await fixture(), ledger = Ledger(), opened = StageCloses(), closed = StageCloses()
+            defer { f.cleanup() }
+            let original = try Data(contentsOf: f.source), prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8)
+            try priorBytes.write(to: prior)
+            let result = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closed.add($0) }, creation: { _, _ in ledger.expectActive(scoped: true) }, creationOpened: { opened.add($0) })) { try await execute(f, mode: mode) }
+                        }
+                    }
+                }
+            }
+            ledger.expectJoined(count: 2); ledger.expectEnded(scoped: true); ledger.expectClosed()
+            #expect(opened.count(.creationParent) == 1 && opened.count(.creationDirectory) == 1)
+            #expect(closed.count(.creationParent) == 0 && closed.count(.creationDirectory) == 0)
+            let membership = try FileManager.default.contentsOfDirectory(atPath: result.directory.path)
+            #expect(result.memberCount == mode.limits.count && Set(membership) == Set(mode.limits.keys))
+            let sourceAfter = try Data(contentsOf: f.source), priorAfter = try Data(contentsOf: prior)
+            #expect(sourceAfter == original && priorAfter == priorBytes)
+        }
+    }
+    @Test func creationRollbackReviewRetainsActualStageStateAccessAndStrongerSourceCause() async throws {
+        for caseName in ["parent", "created", "combined"] {
+            let f = try await fixture(), ledger = Ledger(), closes = StageCloses()
+            defer { print("GENERATED_NATIVE_CREATION_REVIEW " + f.root.path) }
+            let original = try Data(contentsOf: f.source), prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8)
+            try priorBytes.write(to: prior)
+            var reviewID: UUID?, locator: URL?
+            let operation = Task {
+                try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) })) {
+                        try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(closed: { #expect($0 == 1) }, refuseClose: { caseName == "combined" })) {
+                            try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.add($0) }, refuseClose: { $0 == .creationParent || $0 == .creationDirectory }, creation: { point, _ in
+                                if point == (caseName == "parent" ? "parent-opened" : "before-transfer") {
+                                    withUnsafeCurrentTask { $0?.cancel() }; try Task.checkCancellation()
+                                }
+                            })) { try await execute(f) }
+                        }
+                    }
+                }
+            }
+            do { _ = try await operation.value; Issue.record("Creation rollback returned ordinary result") }
+            catch let e as Operation.ReviewFailure {
+                reviewID = e.reviewID; locator = e.intendedStage
+                let creation: ResultSetStaging.CreationSettlementFailure
+                if caseName == "combined" {
+                    let source = try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure)
+                    creation = try #require(source.operationError as? ResultSetStaging.CreationSettlementFailure)
+                    #expect(source.closeError is OriginalCompanionTransaction.SourceCloseFailure && source.published == nil)
+                } else { creation = try #require(e.operationError as? OriginalCompanionTransaction.CreationSettlementFailure).operationError }
+                #expect(creation.directoryCreated == (caseName != "parent") && creation.identityEstablished == (caseName != "parent"))
+                #expect(creation.operationError is CancellationError && creation.closeFailures.count == (caseName == "parent" ? 1 : 2))
+                #expect(creation.closeFailures.allSatisfy { $0.reportedAfterActualClose })
+                #expect(e.intendedStage == creation.reviewLocator && e.published == nil)
+            }
+            let id = try #require(reviewID), directory = try #require(locator)
+            ledger.expectJoined(count: 0); ledger.expectRetained()
+            #expect(closes.count(.creationParent) == 1 && closes.count(.creationDirectory) == (caseName == "parent" ? 0 : 1))
+            if caseName == "parent" { #expect(directory == f.root) }
+            else { let names = try FileManager.default.contentsOfDirectory(atPath: directory.path); #expect(directory.lastPathComponent.hasPrefix(".staxrip-result-") && names.isEmpty) }
+            await #expect(throws: NativeExportError.self) { try await execute(f) }
+            await #expect(throws: NativeExportError.self) { try await review(f) }
+            try await Task.sleep(for: .milliseconds(100))
+            ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id))
+            let sourceAfter = try Data(contentsOf: f.source), priorAfter = try Data(contentsOf: prior)
+            #expect(sourceAfter == original && priorAfter == priorBytes)
+            Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+            #expect(closes.count(.creationParent) == 1)
+        }
+    }
+
 }

@@ -76,6 +76,11 @@ enum OriginalCompanionTransaction {
         let published: ResultSetStaging.Published?
         var errorDescription: String? { operationError.errorDescription }
     }
+    struct CreationSettlementFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: ResultSetStaging.CreationSettlementFailure
+        var intendedStage: URL { operationError.reviewLocator }
+        var errorDescription: String? { operationError.errorDescription }
+    }
     struct SourceCloseFailure: CompanionUnsettledOwnership {
         let systemError: Int32
         let reportedAfterActualClose: Bool
@@ -163,7 +168,8 @@ enum OriginalCompanionTransaction {
             if let staging = operation as? ResultSetStaging.SettlementFailure { published = staging.published }
             var closeError: Error?
             do { try source.closeChecked() } catch { closeError = error }
-            let directory = published?.directory ?? ownedStage?.originalDirectoryURL ?? parent
+            let directory = published?.directory ?? ownedStage?.originalDirectoryURL ??
+                (operation as? ResultSetStaging.CreationSettlementFailure)?.reviewLocator ?? parent
             if let close = closeError ?? (operation as? SourceCloseFailure) {
                 // Never discard after source close uncertainty, including before
                 // commit. Keep a stronger phase failure as the operation cause.
@@ -173,6 +179,9 @@ enum OriginalCompanionTransaction {
             if let staging = operation as? ResultSetStaging.SettlementFailure {
                 throw StagingSettlementFailure(operationError: staging, intendedStage: staging.intendedStage,
                                                published: staging.published)
+            }
+            if let creation = operation as? ResultSetStaging.CreationSettlementFailure {
+                throw CreationSettlementFailure(operationError: creation)
             }
             if operation is CompanionUnsettledOwnership {
                 // Do not delete files while an owned writer may still be active.

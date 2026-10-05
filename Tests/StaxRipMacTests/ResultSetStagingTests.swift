@@ -362,4 +362,76 @@ struct ResultSetStagingTests {
             #expect(closes.count(.member("media.bin")) == 1)
         }
     }
+    @Test func creationParentRollbackChecksRealCloseAndPreservesNoDirectoryState() throws {
+        for reported in [false, true] {
+            let root = try folder(), closes = Closes()
+            defer { if reported { print("GENERATED_CREATION_PARENT_REVIEW " + root.path) } else { try? FileManager.default.removeItem(at: root) } }
+            try ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { reported && $0 == .creationParent }, creation: { point, _ in
+                if point == "parent-opened" { throw CancellationError() }
+            })) { () throws -> Void in
+                do { _ = try ResultSetStaging.create(in: root); Issue.record("Creation rollback returned stage") }
+                catch let e as ResultSetStaging.CreationSettlementFailure {
+                    #expect(reported && !e.directoryCreated && !e.identityEstablished && e.reviewLocator == root)
+                    #expect(e.operationError is CancellationError && e.closeFailures.count == 1 && e.closeFailures[0].reportedAfterActualClose)
+                    #expect(e.errorDescription?.contains("not created") == true)
+                } catch { #expect(!reported && error is CancellationError) }
+                #expect(closes.count(.creationParent) == 1 && closes.count(.creationDirectory) == 0)
+                #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+            }
+        }
+    }
+    @Test func actualCreationWriteDenialClosesParentWithoutInventingStage() throws {
+        let root = try folder(), closes = Closes()
+        defer { _ = chmod(root.path, 0o700); try? FileManager.default.removeItem(at: root) }
+        try ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, creation: { point, _ in
+            if point == "parent-opened" { try #require(chmod(root.path, 0o500) == 0) }
+        })) { () throws -> Void in
+            do { _ = try ResultSetStaging.create(in: root); Issue.record("POSIX creation denial returned stage") }
+            catch { #expect(error is NativeExportError && !(error is any CompanionUnsettledOwnership)); #expect(error.localizedDescription.contains("system error 13")) }
+            #expect(closes.count(.creationParent) == 1 && closes.count(.creationDirectory) == 0)
+            #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).isEmpty)
+        }
+    }
+    @Test func createdDirectoryRollbackClosesEveryOwnedRoleAndRetainsObservedFacts() throws {
+        for point in ["directory-created", "directory-opened", "before-transfer"] {
+          for reported in [false, true] {
+            let root = try folder(), closes = Closes(); defer { print("GENERATED_CREATED_DIRECTORY_REVIEW " + root.path) }
+            try ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { reported && ($0 == .creationParent || $0 == .creationDirectory) }, creation: { step, _ in
+                if step == point { throw CancellationError() }
+            })) { () throws -> Void in
+                do { _ = try ResultSetStaging.create(in: root); Issue.record("Created rollback returned ordinary stage") }
+                catch let e as ResultSetStaging.CreationSettlementFailure {
+                    #expect(e.directoryCreated && e.identityEstablished == (point == "before-transfer") && e.reviewLocator == e.attemptedStage)
+                    #expect(e.operationError is CancellationError)
+                    let owned = point == "directory-created" ? 1 : 2
+                    #expect(e.closeFailures.count == (reported ? owned : 0))
+                    #expect(e.closeFailures.allSatisfy { $0.reportedAfterActualClose })
+                    #expect(try FileManager.default.contentsOfDirectory(atPath: e.attemptedStage.path).isEmpty)
+                }
+                #expect(closes.count(.creationParent) == 1 && closes.count(.creationDirectory) == (point == "directory-created" ? 0 : 1))
+                #expect(try FileManager.default.contentsOfDirectory(atPath: root.path).count == 1)
+            }
+          }
+        }
+    }
+    @Test func creationFinalSubstitutionRefusesWithoutRemovingEitherDirectory() throws {
+        let root = try folder(), closes = Closes(), moved = root.appendingPathComponent("moved-created-stage")
+        defer { print("GENERATED_CREATION_SUBSTITUTION_REVIEW " + root.path) }
+        try ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, creation: { point, attempted in
+            if point == "before-transfer" {
+                try FileManager.default.moveItem(at: attempted, to: moved)
+                try FileManager.default.createDirectory(at: attempted, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+                try Data([42]).write(to: attempted.appendingPathComponent("sentinel"))
+            }
+        })) { () throws -> Void in
+            do { _ = try ResultSetStaging.create(in: root); Issue.record("Substituted creation returned stage") }
+            catch let e as ResultSetStaging.CreationSettlementFailure {
+                #expect(e.directoryCreated && !e.identityEstablished && e.closeFailures.isEmpty && e.operationError is NativeExportError)
+                let sentinel = try Data(contentsOf: e.attemptedStage.appendingPathComponent("sentinel"))
+                #expect(exists(moved) && sentinel == Data([42]))
+            }
+            #expect(closes.count(.creationParent) == 1 && closes.count(.creationDirectory) == 1)
+        }
+    }
+
 }

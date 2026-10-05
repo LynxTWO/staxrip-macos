@@ -100,6 +100,7 @@ struct DolbySampleProcessTests {
         private var initial:DolbyDecoderStream.BaseSampleFrame?
         func launch(_ p:pid_t){lock.withLock{child=p}};func settle(_ p:pid_t){lock.withLock{joined=p}}
         func sample(_ f:DolbyDecoderStream.BaseSampleFrame){lock.withLock{frames += 1;if initial == nil{initial=f}}}
+        var observations:(pid_t,pid_t){lock.withLock{(child,joined)}}
         var pid:pid_t{lock.withLock{child}};var count:Int{lock.withLock{frames}}
         var first:DolbyDecoderStream.BaseSampleFrame?{lock.withLock{initial}}
         func assertJoined(){let p=lock.withLock{(child,joined)};#expect(p.0 > 0 && p.0 == p.1);guard p.0 > 0 && p.0 == p.1 else{return};var s:Int32=0;#expect(waitpid(p.0,&s,WNOHANG) == -1 && errno == ECHILD)}
@@ -130,16 +131,21 @@ struct DolbySampleProcessTests {
         return .init(root:root,source:source,executable:exe)
     }
     @Test func actualNativeProfileRoleSurrogatesJoinAndRefuseIncompleteOutput() async throws {
+        let labels = ["valid","silence","EOF-live-child","complete-nonzero","malformed","complete-live-child"]
         for (i,body) in ["EMIT","sleep(60);","close(1);close(2);sleep(60);","EMIT return 7;","puts(\"{}\");fflush(stdout);sleep(60);","EMIT sleep(60);"].enumerated() {
             let f=try await fixture(body),tool=try f.tool,state=State();var cleanup=true
             defer{if cleanup{try? FileManager.default.removeItem(at:f.root)}}
+            let diagnosis = DolbyDecoderTests.Diagnosis(); var outcome = "success"
             do {
-                let r=try await Owner.$testBoundary.withValue(.init(launched:{state.launch($0)},settled:{state.settle($0)})){
+                let r=try await Owner.$testBoundary.withValue(.init(launched:{state.launch($0)},settled:{state.settle($0)},
+                    admission:{diagnosis.enter($0,$1)},checkRefused:{diagnosis.check($0,$1,$2)},
+                    spawnStatus:{diagnosis.spawned($0)},closed:{diagnosis.closed($0,$1,$2)})){
                     try await Owner.runSamples(tool:tool,source:f.source,timeout:i == 0 ? 10:0.5,observeSamples:{state.sample($0)})
                 }
                 #expect(i == 0 && r.sampleFrameSummaryCount == 2 && state.count == 2 && !r.independentSampleSourceAssociationVerified)
-            } catch let e as Owner.OwnershipFailure {cleanup=false;#expect(i != 0 && e.reason == "group-1-joined-true")}
-            catch{#expect(i != 0)}
+            } catch let e as Owner.OwnershipFailure {outcome=DolbyDecoderTests.Diagnosis.category(e);cleanup=false;#expect(i != 0 && e.reason == "group-1-joined-true")}
+            catch{outcome=DolbyDecoderTests.Diagnosis.category(error);#expect(i != 0)}
+            diagnosis.report("sample-"+String(i)+"-"+labels[i],outcome:outcome,observations:state.observations)
             state.assertJoined();#expect(try Data(contentsOf:f.source) == Data(repeating:0x5a,count:100000))
         }
     }

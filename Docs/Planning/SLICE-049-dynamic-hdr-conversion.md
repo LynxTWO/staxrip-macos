@@ -2460,3 +2460,35 @@ execution/full exit proof. Product/build97 tracked files unchanged; D15822.29s p
 build reused, CURRENT strict ad-hoc app/helper14.0/11.0 still pass, other helpers absent.
 Static94-source prior preservation/review only. Four-file privacy/protected evidence and
 planning pass; no new compiler/test failure/ordinary retry/owner body/runtime/UI admission.
+
+### D160 bounded sample/crop invocation discriminator
+
+Approved for build by: owner standing autonomous delegation and explicit 2026-10-05
+heartbeat instruction for minimal sample/crop case/admission capture. Consumer: M5 exact
+remaining launch-role refusal diagnosis. PR133 sample/crop shared assertions hide which
+six-body/five-body/eleven-role invocation failed and what happened before launch. Reuse
+D158 categorical collector and existing DEBUG boundary, with fixed labels before unchanged
+historical assertions. Product/build remains identical; no new observer/clock/poll/wait/
+worker/protocol. Preserve all bodies/order/0.5s-10s limits/callbacks/assertions/close injection/
+cleanup/skips/scheduling. Added diagnostic work does not prove timing equivalence.
+Use existing five D158 qualification and actual sample/crop generated cases as meaningful
+checks, no new mirrored test. Ordered focus/ordinary/current signature/protection/planning/
+exact draft-head-retained CI/handoff. All M1-M5 open; no source-frame/value/origin/rendered/
+edited/group/release upgrade. PR134 actual Fresh/Rendering EOF has matched=true/ready/
+candidateReturned without received notification; record this observed distinction, but do
+not alter the existing timer/observer or infer exact queue scheduling from it.
+
+D160 acceptance: all22 new invocation labels captured; focus25tests6suites5.087s pass,
+no added test/helper trial. Original boundaries/assertions preserved by independent
+read-only review; no execution/full milestone exit by reviewer.
+
+Final ordinary625reported tests/105suites215.827s PASSED40 unchanged explicit opt-in skips/no
+warnings. Access38.538s/source-prefix20.936s/static34.235s/Recovery48.311s pass.
+Product/build97 tracked files byte-identical to D159/D158; actual D15822.29s build reused,
+no new production compilation. Current strict ad-hoc app/read-only helper signatures and
+minima14.0/11.0 pass; writer/decoder/sample/crop absent. Exact static94-source host runs prior
+preservation/review, not decoder/sample/crop/SPS/VCL loading. Six-file privacy zero/positive
+sentinel/protected owner metadata-journal-original-frozen-D130/D142/D143 unchanged; planning
+audit empty. No new compile/test failure or ordinary retry/owner body/runtime rebuild/UI.
+Private bounds-regex/cwd/repo lookup mistakes corrected before execution rerun or remote
+mutation; actual retained logs parsed without changing tests. Source-only review, no full exit.

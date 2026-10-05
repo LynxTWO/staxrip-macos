@@ -92,24 +92,29 @@ struct DolbyCropProcessTests {
     }
     @Test func actualNativeCropRoleClosePriorityEOFDeadlineAndPrelaunchRefusal() async throws {
         let request=try Self.request()
+        let labels = ["valid","silence","complete-nonzero","malformed","complete-live-child"]
         for (i,body) in ["EMIT","sleep(60);","EMIT return 7;","puts(\"{}\");fflush(stdout);","EMIT sleep(60);"].enumerated() {
             let f=try await fixture(body),tool=try f.tool,ledger=DecoderCloseObservations();var retained=false
             defer{if !retained{try? FileManager.default.removeItem(at:f.root)}}
-            do{let r=try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0)},settled:{ledger.settle($0)},closed:{ledger.close($0,$1,$2)})){
+            let diagnosis = DolbyDecoderTests.Diagnosis(); var outcome = "success"
+            do{let r=try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0)},settled:{ledger.settle($0)},admission:{diagnosis.enter($0,$1)},checkRefused:{diagnosis.check($0,$1,$2)},spawnStatus:{diagnosis.spawned($0)},closed:{ledger.close($0,$1,$2);diagnosis.closed($0,$1,$2)})){
                 try await Owner.runCrops(tool:tool,source:f.source,request:request,timeout:i == 0 ? 10:0.5)
             };#expect(i == 0 && r.cropFrameSummaryCount == 2)}
-            catch let e as Owner.OwnershipFailure{retained=true;#expect(i != 0);print("GENERATED_CROP_RETAINED reason=\(e.reason) root=\(f.root.path)")}
-            catch{#expect(i != 0)}
+            catch let e as Owner.OwnershipFailure{outcome=DolbyDecoderTests.Diagnosis.category(e);retained=true;#expect(i != 0);print("GENERATED_CROP_RETAINED reason=\(e.reason) root=\(f.root.path)")}
+            catch{outcome=DolbyDecoderTests.Diagnosis.category(error);#expect(i != 0)}
+            diagnosis.report("crop-"+String(i)+"-"+labels[i],outcome:outcome,observations:ledger.observations)
             ledger.expect(Set(Owner.DescriptorRole.allCases),launched:true)
         }
         let f=try await fixture("EMIT"),tool=try f.tool,state=Support.State();var retained=false
         defer{if !retained{try? FileManager.default.removeItem(at:f.root)}}
         for role in [Owner.DescriptorRole?](arrayLiteral:nil)+Owner.DescriptorRole.allCases.map(Optional.some) {
             let ledger=DecoderCloseObservations(refused:role)
-            do{let r=try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0)},settled:{ledger.settle($0)},closed:{ledger.close($0,$1,$2)},refuseClose:{r,_,_ in ledger.inject(r)})){
+            let diagnosis = DolbyDecoderTests.Diagnosis(); var outcome = "success"
+            do{let r=try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0)},settled:{ledger.settle($0)},admission:{diagnosis.enter($0,$1)},checkRefused:{diagnosis.check($0,$1,$2)},spawnStatus:{diagnosis.spawned($0)},closed:{ledger.close($0,$1,$2);diagnosis.closed($0,$1,$2)},refuseClose:{r,_,_ in ledger.inject(r)})){
                 try await Owner.runCrops(tool:tool,source:f.source,request:request)
             };#expect(role == nil && r.cropFrameSummaryCount == 2)}
-            catch let e as Owner.OwnershipFailure{retained=true;#expect(role != nil && e.reason == "descriptor-close")}
+            catch let e as Owner.OwnershipFailure{outcome=DolbyDecoderTests.Diagnosis.category(e);retained=true;#expect(role != nil && e.reason == "descriptor-close")}
+            diagnosis.report("crop-close-"+(role?.rawValue ?? "normal"),outcome:outcome,observations:ledger.observations)
             ledger.expect(Set(Owner.DescriptorRole.allCases),launched:true)
         }
         let bad=try Owner.Tool.developmentCrops(f.exe,expectedSHA256:String(repeating:"b",count:64),libraries:Dictionary(uniqueKeysWithValues:Support.names.map{($0,Support.hash)}),versions:[1,1,1])

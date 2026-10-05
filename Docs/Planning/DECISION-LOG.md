@@ -155,6 +155,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-146 | 2026-10-05 | Checked finite source/spool admission rollback closes | Confirmed | |
 | D-147 | 2026-10-05 | Selected original Video declaration binding | Confirmed | |
 | D-148 | 2026-10-05 | Joint source Video and fixed-decoder crop readback | Confirmed | |
+| D-149 | 2026-10-05 | Joint original Video/crop access ownership | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4424,3 +4425,57 @@ source/spool grants/pins, checked outer release and existing retained registry. 
 coded/visible comparisons remain facts with ROI/value/rendered/edited false; no container/user
 origin mapping or default SAR. Other finite resource/deinit/retirement/recovery/distribution
 gates remain open; no whole-program completion.
+
+
+## D-149: Hold explicit source/spool access through joint Video/crop settlement
+
+Status: Confirmed
+
+Distinct unused concrete operation invokes D148 directly under existing Access/Pins/activity/
+retained registry. Explicit original-source/spool scope attempts and actual no-follow pins
+precede activity. Final qualified source/table/decoder/crop observations/closes/owned joins,
+selected identities and checked outer closes precede ordinary reverse release. Shared
+ownership/close/identity uncertainty retains concrete grants/pins/files after error drop and
+excludes all operation kinds. Energy expiry ends activity only. No inferred parent permission,
+false ordinary Foundation acquisition as denial, descriptor retry, new worker/generic wrapper,
+closed database adoption, protocol/action/UI/default packaging or recovery-release authority.
+Raw Video/decoder/caller facts and comparisons remain distinct; ROI/value/rendered/edited
+flags false, SAR absent. See JOINT-VIDEO-CROP-ACCESS-EVIDENCE.md.
+
+Initial default7tests0.724s and compatible67tests4suites26.441s pass/no warnings. New actual
+joint access2.767s/twelve accepted generated source-space-thread/conformance/reorder trials,
+nineteen direct decoder joins. Live current-PID assertion/non-zombie reader/ordinary cancel
+and absence, real POSIX/ACL denial, rollback/pre/source-pass/late cancel, final substitutions,
+controlled after-real-close helper/outer/partial refusals/drop/expiry/exclusions pass. Fake
+scopes are not sandbox rights; reported faults not spontaneous OS close refusal. Retained
+actual generated root gives no cleanup/adoption/group/production recovery authority.
+
+PR123 automatic37289528071 failed575tests627.165s35issues: 28 unchanged120/180s bounds plus
+seven metadata/sample child and mastering EOF assertions. Full log retained/PR updated
+without retry or individual cause attribution; no historical observer/assertion/deadline/
+skip/global scheduling changes. First ordinary582tests211.971s failed eight assertions from
+accidentally doubled test calls in two older crop tests. Removed accidental new calls while
+preserving historical assertions and intentional retained-conflict checks; product unchanged,
+log retained. Corrected checks follow. Independent
+source SPS/active parameter-set geometry and exact container/user origin policy remain
+prerequisites; existing hvcC framing validation is not those facts. Other resource/retirement/
+recovery/distribution and rendered/edited gates remain open.
+
+
+Final corrected ordinary582reported tests/104suites213.401s PASSED38 explicit opt-in skips
+(37 unchanged plus the new private joint access case), no emitted warnings. Access33.066s/
+static prior companion32.035s passed. Static93-source hardened host compiles changed code but
+executes prior companion preservation/review, not joint Video/crop/sample/decoder loading.
+The corrected ordinary includes the final test-only retained cross-operation exclusions;
+no historical assertions, bounds, suite scheduling or skip workarounds changed.
+
+Explicit production21.26s/current strict ad-hoc app/read-only helper signatures/minima14.0/
+11.0 pass; writer/decoder/sample/crop absent. Five-file privacy zero/positive sentinel,
+owner source metadata/current journal/original D142/sample-prefix-frozen-D130/D143 runtime
+unchanged; final planning findings empty. No new runtime rebuild/copy/C/sanitizer/pixel oracle/
+APFS/DeveloperID signing/owner media body/full-source/UI qualification. New actual uncertain
+root retained privately. Other component/directory/deinit/retired-stage/helper resource,
+recovery/sandbox/distribution and source ROI/value/rendered/edited gates remain open.
+Next finite independent original SPS syntax/parameter-set selection readback must be qualified
+before source-to-codec/container/user origin policy; matching rasters and proposals are not
+that proof. No whole-program completion or all-useful-work blockage claim.

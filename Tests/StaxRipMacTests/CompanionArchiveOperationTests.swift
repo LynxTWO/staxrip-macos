@@ -1918,6 +1918,7 @@ struct CompanionArchiveOperationTests {
         await #expect(throws: NativeExportError.self) { try await execute(f) }
         await #expect(throws: NativeExportError.self) { try await review(f) }
         await #expect(throws: NativeExportError.self) { try await associateCrops(f, tool: tool) }
+        await #expect(throws: NativeExportError.self) { try await associateVideoCrops(f, tool: tool) }
         await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
         await #expect(throws: NativeExportError.self) { try await associateSamples(f, tool: try sampleAccessTool(in: f.root)) }
         try await Task.sleep(for: .milliseconds(100))
@@ -2202,6 +2203,394 @@ struct CompanionArchiveOperationTests {
         #expect(requested == [f.source, missing] && stopped.isEmpty && activities == 0 && reports.value == 1)
         #expect(Operation.retainedForTesting(id))
         await #expect(throws: NativeExportError.self) { try await associateCrops(f, tool: tool) }
+        await #expect(throws: NativeExportError.self) { try await associateVideoCrops(f, tool: tool) }
+        await #expect(throws: NativeExportError.self) { try await execute(f) }
+        await #expect(throws: NativeExportError.self) { try await review(f) }
+        await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
+        await #expect(throws: NativeExportError.self) { try await associateSamples(f, tool: try sampleAccessTool(in: f.root)) }
+        let later = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
+        try #require(later >= 0); defer { #expect(Darwin.close(later) == 0) }
+        try await Task.sleep(for: .milliseconds(100)); #expect(stopped.isEmpty && activities == 0)
+        Operation.releaseGeneratedReviewForTesting(id)
+        var info = stat(); #expect(fstat(later, &info) == 0 && stopped == [missing, f.source] && reports.value == 1)
+        #expect(try Data(contentsOf: f.source) == original && !FileManager.default.fileExists(atPath: missing.path))
+    }
+
+    private func associateVideoCrops(_ f: Fixture, tool: DolbyDecoderProcess.Tool) async throws -> CompanionDiskCheck.SourceVideoCropReceipt {
+        try await Operation.associateOriginalVideoCrops(source: f.source, spoolDirectory: f.stage, tool: tool, request: DolbyCropProcessTests.request())
+    }
+    @Test func videoCropAssociationAcquisitionRollbackPrecancelAndActualReadWriteDenials() async throws {
+        let f = try await fixture(); defer { f.cleanup() }
+        let tool = try cropAccessTool(in: f.root), original = try Data(contentsOf: f.source)
+        var requested: [URL] = [], stopped: [URL] = [], starts = 0, ends = 0
+        let failed = Operation.Environment(access: { url in
+            requested.append(url)
+            if url == f.stage { throw NativeExportError.invalid("Generated spool grant refusal") }
+            return { stopped.append(url) }
+        }, activity: { _ in starts += 1; return { ends += 1 } })
+        await Operation.$testEnvironment.withValue(failed) {
+            await #expect(throws: NativeExportError.self) { try await associateVideoCrops(f, tool: tool) }
+        }
+        #expect(requested == [f.source, f.stage] && stopped == [f.source] && starts == 0)
+        let task = Task { withUnsafeCurrentTask { $0?.cancel() }; return try await Operation.$testEnvironment.withValue(failed) { try await associateVideoCrops(f, tool: tool) } }
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(requested == [f.source, f.stage])
+        let env = Operation.Environment(activity: { _ in starts += 1; return { ends += 1 } })
+        if geteuid() != 0 {
+            var info = stat(); try #require(lstat(f.source.path, &info) == 0)
+            let mode = info.st_mode & 0o7777
+            defer { _ = chmod(f.source.path, mode); _ = chmod(f.stage.path, 0o700) }
+            for (url, deniedMode) in [(f.source, mode_t(0)), (f.stage, mode_t(0))] {
+                try #require(chmod(url.path, deniedMode) == 0)
+                await Operation.$testEnvironment.withValue(env) {
+                    await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Denied source/spool launched decoder") })) {
+                        await #expect(throws: NativeExportError.self) { try await associateVideoCrops(f, tool: tool) }
+                    }
+                }
+                try #require(chmod(url.path, url == f.source ? mode : 0o700) == 0)
+            }
+            #expect(starts == 0 && ends == 0)
+            // Keep strict private POSIX mode while actual generated ACL denies
+            // creation of the fixed member. Remove only this fixture's new ACL.
+            let acl = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/chmod"), arguments: ["+a", "everyone deny add_file", f.stage.path])
+            try #require(acl.status == 0)
+            defer { let result = chmod(f.stage.path, 0o700); #expect(result == 0) }
+            await Operation.$testEnvironment.withValue(env) {
+                await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Denied spool write launched decoder") })) {
+                    await #expect(throws: DolbyAssociationSpool.Failure.self) { try await associateVideoCrops(f, tool: tool) }
+                }
+            }
+            let removed = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/chmod"), arguments: ["-N", f.stage.path])
+            try #require(removed.status == 0)
+            #expect(starts == 1 && ends == 1)
+        }
+        #expect(try Data(contentsOf: f.source) == original && FileManager.default.contentsOfDirectory(atPath: f.stage.path).isEmpty)
+    }
+    @Test func videoCropAssociationSourceRefusalClosesPinsAndBalancesOnlyExplicitGrants() async throws {
+        let f = try await fixture(); defer { f.cleanup() }; let ledger = Ledger()
+        let tool = try cropAccessTool(in: f.root), invalid = Data("Generated invalid source".utf8)
+        try invalid.write(to: f.source)
+        var requested: [URL] = [], stopped: [URL] = []
+        var env = environment(ledger, fakeScopes: true)
+        env.access = { url in requested.append(url); ledger.beginScope(); return { stopped.append(url); ledger.endScope() } }
+        await Operation.$testEnvironment.withValue(env) {
+            await Operation.$testBoundary.withValue(.init(phase: { phase in #expect(phase == "video-crop-association"); ledger.expectActive(scoped: true) }, pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Invalid source launched decoder") })) {
+                    await #expect(throws: NativeExportError.self) { try await associateVideoCrops(f, tool: tool) }
+                }
+            }
+        }
+        #expect(requested == [f.source, f.stage] && stopped == [f.stage, f.source])
+        ledger.expectEnded(scoped: true); ledger.expectClosed()
+        #expect(!ownAssertion(try assertions(), reason: "StaxRip original source Video/crop association"))
+        #expect(try Data(contentsOf: f.source) == invalid)
+        // A partial disposable SQLite file is still owned by this explicit caller.
+        #expect(FileManager.default.fileExists(atPath: f.stage.path))
+    }
+    @Test func videoCropControlledUnsettledAssociationRetainsAccessAndExcludesAllOperationKindsAfterExpiry() async throws {
+        struct ControlledUnsettled: CompanionUnsettledOwnership {}
+        let f = try await fixture(); defer { f.cleanup() }; let ledger = Ledger(), tool = try cropAccessTool(in: f.root)
+        let original = try Data(contentsOf: f.source); var reviewID: UUID?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(phase: { _ in throw ControlledUnsettled() }, pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) { try await associateVideoCrops(f, tool: tool) }
+            }
+            Issue.record("Controlled uncertain association returned success")
+        } catch let e as Operation.ReviewFailure { reviewID = e.reviewID; #expect(e.intendedStage == f.stage) }
+        let id = try #require(reviewID); ledger.expectRetained(); ledger.expectActive(scoped: true)
+        await #expect(throws: NativeExportError.self) { try await execute(f) }
+        await #expect(throws: NativeExportError.self) { try await review(f) }
+        await #expect(throws: NativeExportError.self) { try await associateVideoCrops(f, tool: tool) }
+        await #expect(throws: NativeExportError.self) { try await associateCrops(f, tool: tool) }
+        await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
+        await #expect(throws: NativeExportError.self) { try await associateSamples(f, tool: try sampleAccessTool(in: f.root)) }
+        try await Task.sleep(for: .milliseconds(100))
+        ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id))
+        Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+        #expect(try Data(contentsOf: f.source) == original && FileManager.default.contentsOfDirectory(atPath: f.stage.path).isEmpty)
+    }
+
+    @Test func videoCropActiveSourcePassCancellationSettlesBeforeGrantAndPinRelease() async throws {
+        let f = try await fixture(); defer { f.cleanup() }; let ledger = Ledger(), gate = Gate(), tool = try cropAccessTool(in: f.root)
+        let original = try Data(contentsOf: f.source)
+        let task = Task {
+            defer { gate.signal.finish() }
+            return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Cancelled source pass launched decoder") })) {
+                        try await CompanionDiskCheck.$testBoundary.withValue(.init(progress: { phase, _ in if phase == "source" { gate.holdFirst() } })) { try await associateVideoCrops(f, tool: tool) }
+                    }
+                }
+            }
+        }
+        for await _ in gate.entered { break }; ledger.expectActive(scoped: true)
+        task.cancel(); gate.release.signal()
+        await #expect(throws: CancellationError.self) { try await task.value }
+        ledger.expectEnded(scoped: true); ledger.expectClosed()
+        #expect(try Data(contentsOf: f.source) == original && FileManager.default.contentsOfDirectory(atPath: f.stage.path).isEmpty)
+    }
+    @Test func videoCropReportedOuterCloseRefusalRetainsGrantsAfterActualCloses() async throws {
+        let f = try await fixture(); defer { f.cleanup() }; let tool = try cropAccessTool(in: f.root)
+        try Data("Generated invalid source".utf8).write(to: f.source)
+        final class Reports: @unchecked Sendable {
+            private let lock = NSLock(); private var count = 0
+            func report() -> Bool { lock.withLock { count += 1 }; return true }
+            var value: Int { lock.withLock { count } }
+        }
+        let reports = Reports()
+        var scopes = 0, stops = 0, energy = 0, reviewID: UUID?
+        let env = Operation.Environment(access: { _ in scopes += 1; return { stops += 1 } }, activity: { _ in energy += 1; return { energy -= 1 } }, retainedActivitySeconds: 0.05)
+        do {
+            _ = try await Operation.$testEnvironment.withValue(env) {
+                try await Operation.$testBoundary.withValue(.init(associationClosed: { _ in Issue.record("Reported close refusal released access") }, refuseAssociationClose: { reports.report() })) {
+                    try await associateVideoCrops(f, tool: tool)
+                }
+            }
+            Issue.record("Reported outer close uncertainty returned success")
+        } catch let e as Operation.ReviewFailure { reviewID = e.reviewID; #expect(e.operationError is any CompanionUnsettledOwnership) }
+        let id = try #require(reviewID)
+        #expect(scopes == 2 && stops == 0 && energy == 1 && reports.value == 1 && Operation.retainedForTesting(id))
+        // Actual closes have consumed numbers; no FD-number absence probe. A
+        // subsequent independent FD must not be closed by controlled isolation.
+        let later = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
+        try #require(later >= 0); defer { #expect(Darwin.close(later) == 0) }
+        try await Task.sleep(for: .milliseconds(100)); #expect(energy == 0 && stops == 0)
+        Operation.releaseGeneratedReviewForTesting(id)
+        var info = stat(); #expect(fstat(later, &info) == 0 && stops == 2 && reports.value == 1)
+        #expect(FileManager.default.fileExists(atPath: f.stage.path))
+    }
+    @Test(.enabled(if: cropDecoderDirectory != nil), .timeLimit(.minutes(2)))
+    func actualVideoCropAssociationOwnsActivityClosesBothThreadsCancellationAndFinalSelection() async throws {
+        let runtime = URL(fileURLWithPath: try #require(Self.cropDecoderDirectory), isDirectory: true)
+        func digest(_ url: URL) throws -> String { DolbyInspection.hex(SHA256.hash(data: try Data(contentsOf: url))) }
+        let exe = runtime.appendingPathComponent("Helpers/crop-probe"), originalExe = try digest(exe)
+        var hashes: [String: String] = [:]
+        for name in ["libavcodec.63.dylib", "libavformat.63.dylib", "libavutil.61.dylib"] { hashes[name] = try digest(runtime.appendingPathComponent("Frameworks/" + name)) }
+        let tool = try DolbyDecoderProcess.Tool.developmentCrops(exe, expectedSHA256: originalExe, libraries: hashes, versions: [4129126,4129126,3998054])
+        let request = try DolbyCropProcessTests.request(.coded)
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("native-video-crop-access-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        var keep = true
+        defer { if keep { print("GENERATED_VIDEO_CROP_ACCESS_REVIEW " + root.path) } else { try? FileManager.default.removeItem(at: root) } }
+        _ = try await RustFixtureBuild.generate(.reference, at: root, copiesIn: root)
+        let original = root.appendingPathComponent("single.mkv"), originalBytes = try Data(contentsOf: original)
+        let prior = root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8); try priorBytes.write(to: prior)
+        func folder() throws -> URL {
+            let url = root.appendingPathComponent("spool-" + UUID().uuidString)
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]); return url
+        }
+        for name in ["single", "conformance", "whole-gop"] {
+          let selected = root.appendingPathComponent(name + ".mkv"), selectedBytes = try Data(contentsOf: selected)
+          for space in [DolbyDecoderStream.CropRequest.Space.coded, .codecVisible] {
+          let request = try DolbyCropProcessTests.request(space)
+          for threads in [1, 4] {
+            let spool = try folder(), ledger = Ledger(), closes = DecoderCloseObservations(); var requested: [URL] = [], stopped: [URL] = []
+            var env = environment(ledger, fakeScopes: threads == 1)
+            if threads == 1 { env.access = { url in requested.append(url); ledger.beginScope(); return { stopped.append(url); ledger.endScope() } } }
+            let result = try await Operation.$testEnvironment.withValue(env) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0); closes.launch($0) }, settled: { ledger.join($0); closes.settle($0) }, closed: { closes.close($0,$1,$2) })) {
+                        try await Operation.associateOriginalVideoCrops(source: selected, spoolDirectory: spool, tool: tool, request: request, threads: threads)
+                    }
+                }
+            }
+            #expect(result.originalVideoDeclarationsBoundToSource && result.independentSourceFrameAssociationVerified && result.originalSourceAndCallerCropAgreementVerified && !result.independentSourceROIProvenanceVerified && !result.independentSampleValuesVerified && !result.editedPictureSemanticsVerified && result.decoder.frames == (name == "whole-gop" ? 24 : 4))
+            if threads == 1 { #expect(requested == [selected, spool] && stopped == [spool, selected]) }
+            closes.expect(Set(DolbyDecoderProcess.DescriptorRole.allCases), launched: true)
+            ledger.expectJoined(count: 1); ledger.expectEnded(scoped: threads == 1); ledger.expectClosed()
+            #expect(Set(try FileManager.default.contentsOfDirectory(atPath: spool.path)) == ["association.sqlite"])
+            #expect(result.decoder.cropFrameSummaryCount == result.decoder.frames)
+            #expect(try Data(contentsOf: selected) == selectedBytes)
+            #expect(result.declarations.crop[2] == 1 && result.declarations.unit == 3 && result.declarations.display == [16,9])
+            #expect(result.decoder.geometry.sampleAspectRatio == nil)
+            if name == "conformance" {
+                #expect(result.decoder.geometry.crop == [0,14,0,14] && result.declaredPixelsEqualDecoderCodecVisiblePixels && !result.declaredPixelsEqualDecoderCodedPixels)
+            }
+          }
+        }
+        }
+        for role in [DolbyDecoderProcess.DescriptorRole.stdoutWrite, .nullInput] {
+            let spool = try folder(), ledger = Ledger(), closes = DecoderCloseObservations(refused: role)
+            var reviewID: UUID?
+            do {
+                _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { _ in Issue.record("Uncertain helper released access") })) {
+                        try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0); closes.launch($0) }, settled: { ledger.join($0); closes.settle($0) }, closed: { closes.close($0,$1,$2) }, refuseClose: { r,_,_ in closes.inject(r) })) {
+                            try await Operation.associateOriginalVideoCrops(source: original, spoolDirectory: spool, tool: tool, request: request)
+                        }
+                    }
+                }
+                Issue.record("Reported helper close uncertainty released crop access")
+            } catch let e as Operation.ReviewFailure {
+                reviewID = e.reviewID
+                #expect((e.operationError as? DolbyDecoderProcess.OwnershipFailure)?.reason == "descriptor-close")
+            }
+            let id = try #require(reviewID)
+            closes.expect(Set(DolbyDecoderProcess.DescriptorRole.allCases), launched: true)
+            ledger.expectJoined(count: 1); ledger.expectRetained(); ledger.expectActive(scoped: true)
+            await #expect(throws: NativeExportError.self) { try await Operation.associateOriginalVideoCrops(source: original, spoolDirectory: spool, tool: tool, request: request) }
+            try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained()
+            // Controlled reported refusal after real closes and fixed-child join;
+            // test registry isolation is not production recovery/cleanup authority.
+            Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+        }
+        // Actual source/crop success must still refuse ordinary return when
+        // the reported outer close follows both successful real close calls.
+        final class OuterReport: @unchecked Sendable {
+            private let lock = NSLock(); private var count = 0
+            func report() -> Bool { lock.withLock { count += 1 }; return true }
+            var value: Int { lock.withLock { count } }
+        }
+        let outerSpool = try folder(), outerLedger = Ledger(), outerReport = OuterReport()
+        var outerReview: UUID?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(environment(outerLedger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { outerLedger.pinned($0) }, associationClosed: { _ in Issue.record("Reported outer close released successful crop access") }, refuseAssociationClose: { outerReport.report() })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { outerLedger.launch($0) }, settled: { outerLedger.join($0) })) {
+                        try await Operation.associateOriginalVideoCrops(source: original, spoolDirectory: outerSpool, tool: tool, request: request)
+                    }
+                }
+            }
+            Issue.record("Reported outer close admitted a complete-looking crop receipt")
+        } catch let e as Operation.ReviewFailure { outerReview = e.reviewID; #expect(e.operationError is any CompanionUnsettledOwnership) }
+        let outerID = try #require(outerReview)
+        outerLedger.expectJoined(count: 1); outerLedger.expectRetainedGrants(); #expect(outerReport.value == 1)
+        #expect(Operation.retainedForTesting(outerID))
+        try await Task.sleep(for: .milliseconds(100)); outerLedger.expectEnded(); outerLedger.expectRetainedGrants()
+        await #expect(throws: NativeExportError.self) { try await Operation.associateOriginalVideoCrops(source: original, spoolDirectory: outerSpool, tool: tool, request: request) }
+        Operation.releaseGeneratedReviewForTesting(outerID); outerLedger.expectEnded(scoped: true)
+        let outerMembers = Set(try FileManager.default.contentsOfDirectory(atPath: outerSpool.path))
+        #expect(outerReport.value == 1 && outerMembers == ["association.sqlite"])
+        // All these final selected-path refusals occur after the real decoder join.
+        for changeSource in [false, true] {
+            let source = root.appendingPathComponent("final-source-" + UUID().uuidString); try originalBytes.write(to: source)
+            let spool = try folder(), ledger = Ledger(), moved = root.appendingPathComponent("retained-selection-" + UUID().uuidString)
+            do {
+                _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                        try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await CompanionDiskCheck.$testBoundary.withValue(.init(beforeFinal: {
+                                do {
+                                    let selected = changeSource ? source : spool
+                                    try FileManager.default.moveItem(at: selected, to: moved)
+                                    if changeSource { try originalBytes.write(to: selected) }
+                                    else { try FileManager.default.createDirectory(at: selected, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700]) }
+                                } catch { Issue.record("Generated association selection substitution failed") }
+                            })) { try await Operation.associateOriginalVideoCrops(source: source, spoolDirectory: spool, tool: tool, request: request) }
+                        }
+                    }
+                }
+                Issue.record("Changed outer association selection returned success")
+            } catch let e as Operation.ReviewFailure {
+                #expect(e.intendedStage == spool); ledger.expectJoined(count: 1); ledger.expectRetained()
+                #expect(Operation.retainedForTesting(e.reviewID))
+                Operation.releaseGeneratedReviewForTesting(e.reviewID); ledger.expectEnded(scoped: true)
+            }
+            #expect(try Data(contentsOf: source) == originalBytes)
+            if changeSource { #expect(try Data(contentsOf: moved) == originalBytes) }
+            else { #expect(Set(try FileManager.default.contentsOfDirectory(atPath: moved.path)) == ["association.sqlite"]) }
+        }
+        // Cancellation after direct-child join is a refusal with balanced release.
+        let lateSpool = try folder(), lateLedger = Ledger(), lateGate = Gate()
+        let late = Task {
+            defer { lateGate.signal.finish() }
+            return try await Operation.$testEnvironment.withValue(environment(lateLedger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { lateLedger.pinned($0) }, associationClosed: { lateLedger.closed($0) })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { lateLedger.launch($0) }, settled: { lateLedger.join($0) }, beforeReceipt: { lateGate.hold() })) {
+                        try await Operation.associateOriginalVideoCrops(source: original, spoolDirectory: lateSpool, tool: tool, request: request)
+                    }
+                }
+            }
+        }
+        for await _ in lateGate.entered { break }; lateLedger.expectJoined(count: 1); lateLedger.expectActive(scoped: true)
+        late.cancel(); lateGate.release.signal()
+        await #expect(throws: CancellationError.self) { try await late.value }
+        lateLedger.expectEnded(scoped: true); lateLedger.expectClosed()
+        // A long generated source keeps the actual decoder live at a frame gate.
+        let view = CompanionDiskCheck.ReadView(sourceBytes: Int64(originalBytes.count), source: { o, n in originalBytes.subdata(in: Int(o)..<(Int(o) + n)) }, component: { _ in throw NativeExportError.invalid("Generated source-only fixture") }, checkpoint: {})
+        let walker = CompanionOriginalTrackCheck.Walker(view), header = try walker.element(0, end: view.sourceBytes)
+        let segment = try walker.element(header.end, end: view.sourceBytes)
+        var prefix = Data(), clusters = Data(), offset = segment.payload
+        while offset < segment.end {
+            let element = try walker.element(offset, end: segment.end)
+            let bytes = originalBytes.subdata(in: Int(offset)..<Int(element.end))
+            if element.id == 0x1f43b675 { clusters.append(bytes) } else { prefix.append(bytes) }
+            offset = element.end
+        }
+        var longBytes = originalBytes.prefix(Int(header.end)) + Data([0x18,0x53,0x80,0x67,0xff]) + prefix
+        for _ in 0..<2000 { longBytes.append(clusters) }
+        let source = root.appendingPathComponent("live-source.mkv"); try longBytes.write(to: source)
+        let spool = try folder(), ledger = Ledger(), gate = Gate()
+        let task = Task {
+            defer { gate.signal.finish() }
+            return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, associationClosed: { ledger.closed($0) })) {
+                    try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, row: { d in if String(decoding: d, as: UTF8.self).contains("\"kind\":\"crop-frame\"") { gate.holdFirst() } }, settled: { ledger.join($0) })) {
+                        try await Operation.associateOriginalVideoCrops(source: source, spoolDirectory: spool, tool: tool, request: request)
+                    }
+                }
+            }
+        }
+        for await _ in gate.entered { break }
+        ledger.expectActive(scoped: true)
+        #expect(ownAssertion(try assertions(), reason: "StaxRip original source Video/crop association"))
+        let pid = try #require(ledger.latestPID)
+        let state = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/ps"), arguments: ["-p", String(pid), "-o", "stat="])
+        #expect(state.status == 0 && !String(decoding: state.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("Z"))
+        await #expect(throws: NativeExportError.self) { try await Operation.associateOriginalVideoCrops(source: original, spoolDirectory: spool, tool: tool, request: request) }
+        task.cancel(); ledger.expectActive(scoped: true); gate.release.signal()
+        var uncertain = false
+        do { _ = try await task.value; Issue.record("Cancelled live association returned success") }
+        catch is CancellationError { ledger.expectEnded(scoped: true); ledger.expectClosed() }
+        catch let e as Operation.ReviewFailure {
+            uncertain = true
+            #expect((e.operationError as? DolbyDecoderProcess.OwnershipFailure)?.reason == "group-1-joined-true")
+            ledger.expectJoined(count: 1); ledger.expectRetained(); #expect(Operation.retainedForTesting(e.reviewID))
+            // Controlled registry isolation after fixed-child join; retain files.
+            // This is not process-group settlement or production cleanup authority.
+            Operation.releaseGeneratedReviewForTesting(e.reviewID); ledger.expectEnded(scoped: true)
+        }
+        ledger.expectJoined(count: 1)
+        #expect(!ownAssertion(try assertions(), reason: "StaxRip original source Video/crop association"))
+        #expect(try Data(contentsOf: original) == originalBytes && Data(contentsOf: source) == longBytes && Data(contentsOf: prior) == priorBytes)
+        #expect(try digest(exe) == originalExe)
+        for (name, hash) in hashes { #expect(try digest(runtime.appendingPathComponent("Frameworks/" + name)) == hash) }
+        keep = true
+        print("Generated concrete joint Video/crop access: twelve accepted trials/both spaces-threads, nineteen joined decoders, final/late/live refusal; uncertain group=\(uncertain)")
+    }
+
+    @Test func videoCropPartialAcquisitionCheckedRollbackRetainsGrantsOnReportedUncertainty() async throws {
+        final class Reports: @unchecked Sendable {
+            private let lock = NSLock(); private var count = 0
+            func report() -> Bool { lock.withLock { count += 1 }; return true }
+            var value: Int { lock.withLock { count } }
+        }
+        let f = try await fixture(); defer { f.cleanup() }; let tool = try cropAccessTool(in: f.root)
+        let request = try DolbyCropProcessTests.request()
+        let missing = f.root.appendingPathComponent("missing-spool"), original = try Data(contentsOf: f.source)
+        var requested: [URL] = [], stopped: [URL] = [], activities = 0
+        let env = Operation.Environment(access: { url in requested.append(url); return { stopped.append(url) } }, activity: { _ in activities += 1; return {} }, retainedActivitySeconds: 0.05)
+        await Operation.$testEnvironment.withValue(env) {
+            await Operation.$testBoundary.withValue(.init(acquisitionClosed: { #expect($0 == 1) })) {
+                await #expect(throws: NativeExportError.self) { try await Operation.associateOriginalVideoCrops(source: f.source, spoolDirectory: missing, tool: tool, request: request) }
+            }
+        }
+        #expect(requested == [f.source, missing] && stopped == [missing, f.source] && activities == 0)
+        requested.removeAll(); stopped.removeAll()
+        let reports = Reports(); var reviewID: UUID?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(env) {
+                try await Operation.$testBoundary.withValue(.init(refuseAssociationClose: { reports.report() }, acquisitionClosed: { _ in Issue.record("Uncertain rollback released grants") })) {
+                    try await Operation.associateOriginalVideoCrops(source: f.source, spoolDirectory: missing, tool: tool, request: request)
+                }
+            }
+            Issue.record("Partial acquisition uncertainty returned ordinary refusal/success")
+        } catch let e as Operation.ReviewFailure { reviewID = e.reviewID; #expect(e.operationError is any CompanionUnsettledOwnership) }
+        let id = try #require(reviewID)
+        #expect(requested == [f.source, missing] && stopped.isEmpty && activities == 0 && reports.value == 1)
+        #expect(Operation.retainedForTesting(id))
+        await #expect(throws: NativeExportError.self) { try await associateVideoCrops(f, tool: tool) }
+        await #expect(throws: NativeExportError.self) { try await associateCrops(f, tool: tool) }
         await #expect(throws: NativeExportError.self) { try await execute(f) }
         await #expect(throws: NativeExportError.self) { try await review(f) }
         await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
@@ -2254,6 +2643,7 @@ struct CompanionArchiveOperationTests {
             await #expect(throws: NativeExportError.self) { try await execute(f) }
             await #expect(throws: NativeExportError.self) { try await review(f) }
             await #expect(throws: NativeExportError.self) { try await associateCrops(f, tool: tool) }
+        await #expect(throws: NativeExportError.self) { try await associateVideoCrops(f, tool: tool) }
             await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
             await #expect(throws: NativeExportError.self) { try await associateSamples(f, tool: try sampleAccessTool(in: f.root)) }
             try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained()

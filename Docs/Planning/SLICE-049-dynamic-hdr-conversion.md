@@ -2306,3 +2306,18 @@ trials/26direct decoder joins include retained controlled close refusal; no clea
 Existing narrower APIs/access contracts remain unchanged. Concrete joint access integration
 and independently established container/user origin policy remain later prerequisites;
 resource retirement/recovery/distribution and all edit/rendered gates remain open.
+
+
+### D149 joint original Video/crop access
+
+Distinct unused concrete access operation invokes D148 on the same source/open-spool worker
+under existing explicit grants/no-follow pins/activity. Final qualified observations/closes/
+owned joins/selected identities/checked outer closes precede reverse release; shared
+uncertainty retains needed access/files after drop/exclusion/energy expiry. See D-149 and
+JOINT-VIDEO-CROP-ACCESS-EVIDENCE.md. Actual twelve generated accepted trials/nineteen decoder
+joins qualify both spaces/threads/conformance/reorder, live OS assertion, ordinary active/
+late cancel, denials/rollback and controlled retained refusals. No container/user origin
+provenance, independent values, rendering/edit admission, default SAR, app action/packaging
+or cleanup/recovery authority follows. Source SPS/active parameter-set geometry still needs
+independent syntax/selection qualification before origin policy; other finite resource/
+retirement/recovery/distribution and rendered/edited gates remain open.

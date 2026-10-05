@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import CryptoKit
 
 struct VideoCopyContract: Sendable {
     static let maximumSeconds = 172_800.0
@@ -307,5 +308,119 @@ struct VideoCopyManifest: Sendable {
             try? await Self.fileWork { try reader.close() }
             throw error
         }
+    }
+}
+
+// Dedicated exact-copy timing evidence. This is not SDR VideoCopy admission and
+// does not authorize Dolby conversion, picture equality or publication.
+enum DolbyCopyTiming {
+    struct Packet: Sendable {
+        let pts, dts, duration, bytes: Int64
+        let hash: Data
+        init(_ line: Data) throws {
+            guard let text = String(data: line, encoding: .utf8) else { throw failure() }
+            var fields: [String: String] = [:]
+            for field in text.split(separator: "|", omittingEmptySubsequences: false) {
+                let pair = field.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+                guard pair.count == 2, fields.updateValue(String(pair[1]), forKey: String(pair[0])) == nil else { throw failure() }
+            }
+            guard Set(fields.keys) == Set(["pts", "dts", "duration", "size", "data_hash"]),
+                  let pts = Int64(fields["pts"]!), let dts = Int64(fields["dts"]!),
+                  let duration = Int64(fields["duration"]!), duration > 0,
+                  let bytes = Int64(fields["size"]!), (1...DolbyInspection.maximumPacketBytes).contains(bytes) else { throw failure() }
+            self.pts = pts; self.dts = dts; self.duration = duration; self.bytes = bytes
+            hash = try VideoCopyPacket.hash(fields["data_hash"]!)
+        }
+    }
+    struct Receipt: Sendable, Equatable {
+        let packets: Int
+        let timeBase: HDRFraction
+        let packetSequence: Data
+        let timingSequence: Data
+        func requireSameTiming(as other: Self) throws {
+            guard packets == other.packets, timeBase == other.timeBase, timingSequence == other.timingSequence else { throw failure() }
+        }
+    }
+    static func failure() -> NativeExportError { .invalid("Dolby HDR10 copy: complete exact packet timing could not be verified. Nothing published.") }
+    // Fixed-width signed values preserve duplicates and nonmonotonic encoded
+    // order. Domain prefixes distinguish packet binding from timing equality.
+    static func integers(_ values: [Int64]) -> Data {
+        var result = Data()
+        for value in values {
+            var little = value.littleEndian
+            withUnsafeBytes(of: &little) { result.append(contentsOf: $0) }
+        }
+        return result
+    }
+    final class Stream: @unchecked Sendable {
+        private let timeBase: HDRFraction
+        private let limit: Int
+        private var line = Data(), count = 0
+        private var packets = SHA256(), timing = SHA256()
+        private(set) var error: Error?
+        private(set) var peakLineBytes = 0
+        init(timeBase: HDRFraction, limit: Int = DolbyInspection.maximumPackets) throws {
+            guard timeBase.numerator > 0, timeBase.value <= 0.001, (1...DolbyInspection.maximumPackets).contains(limit) else { throw failure() }
+            self.timeBase = timeBase; self.limit = limit
+            packets.update(data: Data("DOLBY-COPY-PACKETS-1\0".utf8))
+            timing.update(data: Data("DOLBY-COPY-TIMING-1\0".utf8))
+        }
+        func accept(_ chunk: Data) {
+            guard error == nil else { return }
+            do {
+                for byte in chunk {
+                    if byte == 10 {
+                        guard !line.isEmpty, count < limit else { throw failure() }
+                        let p = try Packet(line)
+                        // Native binding must supply the same declared time base
+                        // and ordered packet records; no DTS is inferred from PTS.
+                        packets.update(data: integers([Int64(count), p.pts, p.bytes]))
+                        packets.update(data: p.hash)
+                        timing.update(data: integers([Int64(count), p.pts, p.dts, p.duration]))
+                        count += 1; line.removeAll(keepingCapacity: true)
+                    } else {
+                        guard line.count < 512 else { throw failure() }
+                        line.append(byte); peakLineBytes = max(peakLineBytes, line.count)
+                    }
+                }
+            } catch { self.error = error }
+        }
+        func finish() throws -> Receipt {
+            if let error { throw error }
+            guard line.isEmpty, count > 0 else { throw failure() }
+            return .init(packets: count, timeBase: timeBase,
+                         packetSequence: Data(packets.finalize()), timingSequence: Data(timing.finalize()))
+        }
+    }
+    // The caller still owns source/candidate access and staging, and must retain
+    // them on CompanionUnsettledOwnership. A timing receipt alone is insufficient.
+    static func read(_ source: URL, stream: Int, timeBase: HDRFraction, tools: FFmpegTools) async throws -> Receipt {
+        guard source.isFileURL, stream >= 0 else { throw failure() }
+        let parser = try Stream(timeBase: timeBase)
+        let runner = ToolRunner(checkedReaders: true)
+        let result: ToolResult
+        do {
+            result = try await runner.run(executable: tools.ffprobe, arguments: [
+                "-v", "error", "-protocol_whitelist", "file,pipe", "-select_streams", String(stream),
+                "-show_packets", "-show_data_hash", "sha256", "-show_entries",
+                "packet=pts,dts,duration,size,data_hash", "-of", "compact=p=0:nk=0", source.path
+            ], stdoutLimit: 0) { chunk in
+                guard parser.error == nil else { return }
+                parser.accept(chunk)
+                if parser.error != nil { runner.cancel() }
+            }
+        } catch var error as ToolRunner.ReaderCloseFailure {
+            error.consumerCause = parser.error
+            throw error
+        } catch {
+            if error is any CompanionUnsettledOwnership { throw error }
+            if let parse = parser.error { throw parse }
+            throw error
+        }
+        try Task.checkCancellation()
+        guard result.status == 0, result.stderr.isEmpty else { throw failure() }
+        // stdoutLimit=0 intentionally keeps no transcript; complete lines/count
+        // plus the joined successful helper are independent requirements.
+        return try parser.finish()
     }
 }

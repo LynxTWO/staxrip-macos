@@ -241,8 +241,74 @@ private final class MasterCancellation: @unchecked Sendable {
     }
 }
 
+// Test-only categorical diagnosis. Never retain raw status, errors, candidates or clocks.
+private final class MasterPhaseDiagnosis: @unchecked Sendable {
+    enum Phase: String { case none, freshAnalysis, measuringSource, decoding, rendering, measuringCandidate, rejected, ready, other }
+    enum Event: String { case phaseNext, finished }
+    enum Terminal: String { case pending, candidateReturned, cancelled, plannerReference, plannerGain, plannerTimeline, incompletePCM, nativeInvalid, decoding, posix, cocoa, other }
+    private let lock = NSLock()
+    private var phase = Phase.none, terminal = Terminal.pending
+    private var matched = false, code: Int?
+    func status(_ text: String, matched: Bool) {
+        let category: Phase
+        if text.hasPrefix("Fresh analysis") { category = .freshAnalysis }
+        else if text.hasPrefix("Measuring source") { category = .measuringSource }
+        else if text.hasPrefix("Decoding selected track") { category = .decoding }
+        else if text.hasPrefix("Rendering candidate") { category = .rendering }
+        else if text.hasPrefix("Measuring encoded candidate") { category = .measuringCandidate }
+        else if text.hasPrefix("Candidate ") { category = .rejected }
+        else if text.hasPrefix("Verified candidate ready") { category = .ready }
+        else { category = .other }
+        lock.withLock { phase = category; self.matched = self.matched || matched }
+    }
+    func returned() { lock.withLock { terminal = .candidateReturned } }
+    func failed(_ error: any Error) {
+        let category: Terminal, number: Int?
+        if error is CancellationError { category = .cancelled; number = nil }
+        else if case NativeExportError.invalid(let text) = error {
+            switch text {
+            case "The selected reference or programme range is unmeasurable. Choose a longer measurable track or correct the speech intervals.": category = .plannerReference
+            case "The target requires gain outside -36 to +12 dB. Change the target or source; no candidate was published.": category = .plannerGain
+            case "No timeline is available for gain planning.": category = .plannerTimeline
+            case "Audio decoding failed or returned incomplete PCM. No report was saved.": category = .incompletePCM
+            default: category = .nativeInvalid
+            }
+            number = nil
+        } else if error is DecodingError { category = .decoding; number = nil }
+        else {
+            let value = error as NSError
+            if value.domain == NSPOSIXErrorDomain { category = .posix; number = value.code }
+            else if value.domain == NSCocoaErrorDomain { category = .cocoa; number = value.code }
+            else { category = .other; number = nil }
+        }
+        lock.withLock { terminal = category; code = number }
+    }
+    func record(target: Phase, event: Event, received: Bool?) -> String {
+        lock.withLock { "MASTERING_CASE target=\(target.rawValue) event=\(event.rawValue) received=\(received.map(String.init) ?? "none") phase=\(phase.rawValue) matched=\(matched) terminal=\(terminal.rawValue) code=\(code.map(String.init) ?? "none")" }
+    }
+}
+
 @Suite(.serialized)
 struct MasteringRecoveryTests {
+    @Test func terminalDiagnosticsKeepOnlyFiniteCategoriesAndNumericCodes() {
+        let privateText = "Generated private path/payload sentinel"
+        let d = MasterPhaseDiagnosis()
+        d.status("Candidate 1 rejected: " + privateText, matched: true)
+        d.failed(NativeExportError.invalid(privateText))
+        let opaque = d.record(target: .rendering,event: .phaseNext,received: false)
+        #expect(opaque.contains("phase=rejected matched=true terminal=nativeInvalid code=none"))
+        #expect(!opaque.contains(privateText))
+        d.failed(NativeExportError.invalid("The selected reference or programme range is unmeasurable. Choose a longer measurable track or correct the speech intervals."))
+        #expect(d.record(target: .rendering,event: .finished,received: nil).contains("terminal=plannerReference"))
+        d.failed(POSIXError(.EACCES))
+        #expect(d.record(target: .rendering,event: .finished,received: nil).contains("terminal=posix code=13"))
+        d.failed(NSError(domain: privateText,code: 99,userInfo: [NSLocalizedDescriptionKey:privateText]))
+        #expect(d.record(target: .rendering,event: .finished,received: nil).contains("terminal=other code=none"))
+        d.failed(CancellationError())
+        #expect(d.record(target: .rendering,event: .finished,received: nil).contains("terminal=cancelled"))
+        d.returned()
+        #expect(d.record(target: .rendering,event: .finished,received: nil).contains("terminal=candidateReturned"))
+    }
     @Test(.enabled(if: FFmpegTools.discover() != nil), arguments: ["Fresh analysis", "Rendering candidate", "Measuring encoded candidate"])
     func cancelsOwnedWorkWithoutPublishing(phase: String) async throws {
         let tools = try #require(FFmpegTools.discover())
@@ -254,19 +320,31 @@ struct MasteringRecoveryTests {
         let fingerprint = try await SourceFingerprint.read(source)
         let cancellation = MasterCancellation()
         let notified = AsyncStream<Date>.makeStream()
+        let diagnosis = MasterPhaseDiagnosis()
+        let target: MasterPhaseDiagnosis.Phase = phase == "Fresh analysis" ? .freshAnalysis : phase == "Rendering candidate" ? .rendering : .measuringCandidate
+        defer { print(diagnosis.record(target: target,event: .finished,received: nil)) }
         let task = Task {
             defer { notified.continuation.finish() }
-            return try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { status,_ in
-                if status.hasPrefix(phase) {
-                    DispatchQueue.global().asyncAfter(deadline: .now()+0.02) {
-                        notified.continuation.yield(Date()); notified.continuation.finish(); cancellation.cancel()
+            do {
+                let candidate = try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { status,_ in
+                    let matched = status.hasPrefix(phase)
+                    diagnosis.status(status,matched: matched)
+                    if matched {
+                        DispatchQueue.global().asyncAfter(deadline: .now()+0.02) {
+                            notified.continuation.yield(Date()); notified.continuation.finish(); cancellation.cancel()
+                        }
                     }
                 }
+                diagnosis.returned(); return candidate
+            } catch {
+                diagnosis.failed(error); throw error
             }
         }
         cancellation.install(task)
         var iterator = notified.stream.makeAsyncIterator()
-        let start = try #require(await iterator.next())
+        let next = await iterator.next()
+        print(diagnosis.record(target: target,event: .phaseNext,received: next != nil))
+        let start = try #require(next)
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(Date().timeIntervalSince(start) < 5)
         #expect(try await SourceFingerprint.read(source) == fingerprint)

@@ -2434,3 +2434,29 @@ D158 final: ordinary624/105suites219.705s passes40 unchanged skips/no warnings;
 label-only test correction separately passes11/2suites5.319s. Optimized22.29s/current
 strict ad-hoc app/helper14.0/11.0; five-file protection/privacy and planning pass.
 Hosted per-case cause capture remains the next acceptance artifact, not a local-pass exit.
+
+### D159 bounded missing-phase terminal diagnostic
+
+Approved for build by: owner standing autonomous delegation and explicit 2026-10-05
+heartbeat authorizing an independent minimal missing mastering-phase task/error discriminator
+while decoder CI is incomplete. Consumer: M5 explained hosted phase EOF before repair.
+Existing generated recovery task always finishes its stream but a nil next prevents awaiting
+its terminal error. Add test-only fixed last-status/target-match/terminal category records
+before the unchanged task defer finishes and before the unchanged nil assertion.
+Preserve all product bytes, historical callback/timer/Date reads/cancel/yield/finish order,
+task waits/assertions/deadlines/skips/scheduling. No audio listening or new audio feature.
+No private status/error descriptions, paths, body or commands; only allowlisted enum/code
+facts. A small synthetic classifier/state test proves omission/category reporting, not
+historical engine refusal or performance. Run existing generated recovery cases under
+changed diagnostics, ordered ordinary checks, protection/planning and exact draft/head/CI
+handoff. Product build can be reused only with identical product/build source identity.
+No relaxed failure check, global concurrency/cache/serialization workaround, Claude
+metadata pipe-holder duplication or whole milestone/source/group/release claim.
+
+Final focus2reported tests/1suite25.763s and ordinary625/105suites218.065s pass40 unchanged
+explicit skips/no warnings. The three historical parameter cases report requested status
+and cancellation, not newly induced EOF. Independent source review finite approval, no
+execution/full exit proof. Product/build97 tracked files unchanged; D15822.29s production
+build reused, CURRENT strict ad-hoc app/helper14.0/11.0 still pass, other helpers absent.
+Static94-source prior preservation/review only. Four-file privacy/protected evidence and
+planning pass; no new compiler/test failure/ordinary retry/owner body/runtime/UI admission.

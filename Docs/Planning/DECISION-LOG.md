@@ -165,6 +165,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-156 | 2026-10-05 | Original source VCL segment prefix/reference/address binding | Confirmed | |
 | D-157 | 2026-10-05 | Checked native writer post-spawn pipe closes | Confirmed | |
 | D-158 | 2026-10-05 | Expose decoder CI case and admission refusal | Confirmed | |
+| D-159 | 2026-10-05 | Explain missing mastering phase terminal outcomes | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4897,3 +4898,40 @@ runs prior preservation/review only. Five-file privacy zero/positive sentinel/pr
 owner metadata-journal-original-frozen-D130/D142/D143 unchanged; planning empty.
 Initial private build receipt regex assumed s; actual log says sec. Corrected read-only
 receipt parsing without build rerun or product mutation. No new compile/test failure.
+
+
+## D-159: Explain missing phase terminal outcomes before repair
+Status: Confirmed
+Date: 2026-10-05.
+
+M5 consumes a test-only categorical task result. The existing generated recovery task
+finishes its phase stream on exit, so nil next refuses before task.value exposes its error.
+Record only fixed last public-status/target-match/terminal categories and numeric Cocoa or
+POSIX code before that same defer finishes. Evaluate next once, print its categorical
+snapshot, then retain the same nil requirement. Product files, cancellation timer/Date
+reads/yield/finish/task await/assertions/deadlines/skips/scheduling remain unchanged.
+No error/status description, path, body or command appears in new records. Unknown native
+messages map to nativeInvalid; unknown domains/codes map to other/no code. A synthetic
+classifier/privacy test is separate from the three existing generated cancellation cases.
+It does not reproduce historical EOF or explain cancellation duration. No new audio feature
+or listening. See MASTERING-PHASE-CI-DIAGNOSTIC-EVIDENCE.md and Slice049 D159 acceptance.
+
+Parent PR133 exact b2fe745e48c2390ccc7b0b7c939f46948e67ee6c run37327344142/attempt1/
+job111821332161 FAILED624tests483.546s32issues:21unchanged120s/six180s bounds,
+one sample child-zero/two crop role-child assertions and Fresh-analysis/Rendering phase
+EOF. All15 categorical decoder records appeared; all ten historical loop cases launched
+and emitted callbacks, with assertions passing in this run. Those observations do not
+identify earlier failed iterations, resolve remaining failures or prove universal group
+settlement. Full log/summary retained/parent updated without rerun/cause attribution.
+Source76.975s/writer68.163s/access251.426s/static234.978s/fixture34s passed, preview skipped.
+Next hosted phase terminal records must precede repair. All M1-M5 remain open; no weakened
+assertion/deadline/skip/global scheduling/cache/serialization workaround, product admission,
+UI/release/recovery or full syntax/activation/origin/value/rendered-edited upgrade.
+
+Final focus2reported tests/1suite25.763s and ordinary625/105suites218.065s pass40 unchanged
+explicit skips/no warnings. The three historical parameter cases report requested status
+and cancellation, not newly induced EOF. Independent source review finite approval, no
+execution/full exit proof. Product/build97 tracked files unchanged; D15822.29s production
+build reused, CURRENT strict ad-hoc app/helper14.0/11.0 still pass, other helpers absent.
+Static94-source prior preservation/review only. Four-file privacy/protected evidence and
+planning pass; no new compiler/test failure/ordinary retry/owner body/runtime/UI admission.

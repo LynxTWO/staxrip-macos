@@ -3196,6 +3196,15 @@ struct CompanionArchiveOperationTests {
         }
     }
 
+    // Both fields remain weak: this test witness cannot keep either retained
+    // concrete owner alive when the independent registries release their references.
+    private final class WeakArchiveWriterOwners {
+        weak var pins: CompanionWriterProcess.AdmittedPins?
+        weak var stage: ResultSetStaging?
+        init(pins: CompanionWriterProcess.AdmittedPins?, stage: ResultSetStaging?) {
+            self.pins = pins; self.stage = stage
+        }
+    }
     @Test func writerPinRefusalsRetainSameOwnerStageAndAccessAfterDropExpiryAndSourcePriority() async throws {
         for mode in [OriginalCompanionTransaction.Retention.metadataOnly,.entireContainer] {
             for fault in ["one", "all", "source-priority", "opened", "cancel"] {
@@ -3240,22 +3249,22 @@ struct CompanionArchiveOperationTests {
                 }
                 task = nil
                 let review = try #require(id)
-                weak let owner = Operation.retainedWriterPinsForTesting(review)
-                weak let stage = Operation.retainedStageForTesting(review)
-                #expect(owner != nil && owner === CompanionWriterProcess.retainedPins(source: f.source) && stage != nil)
+                let witness = WeakArchiveWriterOwners(pins: Operation.retainedWriterPinsForTesting(review),
+                                                     stage: Operation.retainedStageForTesting(review))
+                #expect(witness.pins != nil && witness.pins === CompanionWriterProcess.retainedPins(source: f.source) && witness.stage != nil)
                 ledger.expectJoined(count: 1); ledger.expectRetained()
                 if fault == "opened" {
-                    for fd in try #require(owner?.descriptorsForTesting) { var info = stat(); #expect(fd >= 0 && fstat(fd,&info) == 0) }
-                } else { pinCloses.expectOnce(); #expect(owner?.descriptorsForTesting == [-1,-1,-1]) }
+                    for fd in try #require(witness.pins?.descriptorsForTesting) { var info = stat(); #expect(fd >= 0 && fstat(fd,&info) == 0) }
+                } else { pinCloses.expectOnce(); #expect(witness.pins?.descriptorsForTesting == [-1,-1,-1]) }
                 await #expect(throws: NativeExportError.self) { try await execute(f, mode: mode) }
                 try await Task.sleep(for: .milliseconds(100))
-                ledger.expectEnded(); ledger.expectRetained(); #expect(owner != nil && stage != nil && Operation.retainedForTesting(review))
+                ledger.expectEnded(); ledger.expectRetained(); #expect(witness.pins != nil && witness.stage != nil && Operation.retainedForTesting(review))
                 #expect(try Data(contentsOf: f.source) == original)
                 #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("published").path))
-                CompanionWriterProcess.isolateGeneratedPinsForTesting(try #require(owner))
-                #expect(owner != nil) // Existing Access still owns the SAME concrete pins.
+                CompanionWriterProcess.isolateGeneratedPinsForTesting(try #require(witness.pins))
+                #expect(witness.pins != nil) // Existing Access still owns the SAME concrete pins.
                 Operation.releaseGeneratedReviewForTesting(review)
-                ledger.expectEnded(scoped: true); #expect(owner == nil && stage == nil)
+                ledger.expectEnded(scoped: true); #expect(witness.pins == nil && witness.stage == nil)
             }
         }
     }

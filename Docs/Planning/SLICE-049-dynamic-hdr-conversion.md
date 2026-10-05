@@ -2551,3 +2551,24 @@ signatures/minima14.0/11.0 pass; writer/decoder/sample/crop absent. Compilation/
 checks are not DeveloperID/hardened loading/clean-machine/native UI qualification. Seven-file
 privacy zero/positive sentinel/protected owner metadata-journal-original-frozen-D130/D142/
 D143 unchanged/planning empty. No runtime artifact rebuilt/copied or owner media body read.
+
+
+### D163 bounded hosted weak-witness compatibility repair
+Status: Approved for build by standing authorized actual-cause non-audio CI repair.
+M5 consumer: compile existing M1 D162 retained-pin tests on hosted compiler. Actual
+PR137 headb58551e/run37343500814 failed at THREE new weak-let declarations before tests;
+local Swift6.4 admitted them. Replace only those with explicit weak-var test witness
+properties, preserving every assertion/error-Task drop/expiry/isolation/case. No clearing
+to manufacture owner disappearance. No product, fixture, observer, timer, deadline, skip
+or scheduling change; no extra helper trials/new tests. Update SAME draft PR137, preserve
+failed head/run and earlier failures, no manual rerun. Full program/M1-M5 still open.
+
+
+Actual local focus5tests/2suites3.163s PASSED/no warnings. Existing
+five cases/34writer direct joins; no new tests/helper trials. Ordinary631tests/105suites
+220.498s PASSED with0issues/40UNCHANGED explicit opt-in skips/0emitted warnings,
+full log retained/no retry. Actual D162optimized22.47s reused/all98product-build files byte-identical;
+CURRENT strict ad-hoc app/read-only helper/minima14.0/11.0 pass, writer/decoder/sample/crop
+absent. Five-file privacy zero/positive sentinel/protected owner metadata-journal-original-
+frozen-D130/D142/D143 unchanged/planning empty. Source-only finite review/no independent
+execution/full milestone exit. Hosted compilation outcome remains a separate actual gate.

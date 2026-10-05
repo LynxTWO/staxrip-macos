@@ -371,6 +371,12 @@ struct CompanionWriterProcessTests {
             Writer.isolateGeneratedPinsForTesting(try #require(Writer.retainedPins(source: f.source)))
         }
     }
+    // Hosted Swift6.1.2 rejects weak let locals; keep witness storage mutable.
+    // Compatibility awaits changed-head CI. ARC alone changes the weak value.
+    private final class WeakWriterPins {
+        weak var value: Writer.AdmittedPins?
+        init(_ value: Writer.AdmittedPins?) { self.value = value }
+    }
     @Test func reportedSettlementKeepsSameOpenedPinsAfterTaskErrorDropAndExcludesDirectConflict() async throws {
         let f = try await Self.fixture(), state = State(), pins = PinEvents(), tool = try f.tool
         defer { print("GENERATED_WRITER_OPEN_PIN_REVIEW " + f.root.path) }
@@ -383,12 +389,12 @@ struct CompanionWriterProcessTests {
         do { _ = try await task!.value; Issue.record("Reported settlement returned receipt") }
         catch let e as Writer.OwnershipFailure { #expect(e.operationError == nil) }
         task = nil; state.assertJoined(); #expect(pins.count == 0)
-        weak let owner = Writer.retainedPins(source: f.source)
-        let numbers = try #require(owner?.descriptorsForTesting)
+        let witness = WeakWriterPins(Writer.retainedPins(source: f.source))
+        let numbers = try #require(witness.value?.descriptorsForTesting)
         for fd in numbers { var info = stat(); #expect(fd >= 0 && fstat(fd,&info) == 0) }
         await #expect(throws: NativeExportError.self) { try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: .metadataOnly) }
-        #expect(owner != nil && owner?.descriptorsForTesting == numbers)
-        Writer.isolateGeneratedPinsForTesting(try #require(owner)); #expect(owner == nil)
+        #expect(witness.value != nil && witness.value?.descriptorsForTesting == numbers)
+        Writer.isolateGeneratedPinsForTesting(try #require(witness.value)); #expect(witness.value == nil)
     }
 
 }

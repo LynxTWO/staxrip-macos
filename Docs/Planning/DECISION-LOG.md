@@ -169,6 +169,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-160 | 2026-10-05 | Identify sample/crop CI invocation and admission category | Confirmed | |
 | D-161 | 2026-10-05 | Locate video-copy timeout and awaited chapter-write stages | Confirmed | |
 | D-162 | 2026-10-05 | Settle writer terminal pins before preservation verification | Confirmed | |
+| D-163 | 2026-10-05 | Preserve weak retention witnesses across compiler versions | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -5078,3 +5079,40 @@ signatures/minima14.0/11.0 pass; writer/decoder/sample/crop absent. Compilation/
 checks are not DeveloperID/hardened loading/clean-machine/native UI qualification. Seven-file
 privacy zero/positive sentinel/protected owner metadata-journal-original-frozen-D130/D142/
 D143 unchanged/planning empty. No runtime artifact rebuilt/copied or owner media body read.
+
+
+## D-163: Preserve weak retention witnesses across compiler versions
+Status: Confirmed
+Date: 2026-10-05.
+
+Actual PR137 run37343500814/attempt1/job111876189068/exactb58551e670b646c6b1f83524f6bb26ee8873b3bf
+fails before Swift tests: THREE NEW weak-let locals rejected by hostedSwift6.1.2. Local
+Swift6.4 accepts, so D162 local syntax qualification did not cover hosted compiler. Full
+failed-step/job logs retained/no rerun; native fixture preparation passes. No test counts
+or older failure resolution inferred. Repeated diagnostics not additional sites.
+
+M5/M1 consumer: existing retained writer pins/stage lifetime tests now use two explicit
+private test witness classes with three mutable weak properties. No strong owner/error/
+Task fields or reset assignments. Every assertion/identity load/error-Task drop/expiry/
+registry-Access isolation sequence remains; no new tests/helper trials/product/callback/
+clock/timer/deadline/case/skip/fixture/worker/scheduling change. Source review finite/no
+execution/full exit; corrected premature compatibility comment. Hosted compatibility
+awaits actual corrected-head compilation, not local pass. Existing PR137 updated without
+new stacked PR/manual rerun. See WRITER-WEAK-WITNESS-COMPATIBILITY-EVIDENCE.md.
+
+All98selected product/build files identical to D162; actual22.47s build reused, no new
+production build. Older hosted failures independently retained and not resolved by this
+compile-only cause. Live-work and queue-policy proposals still pending actual human answer.
+All M1-M5 OPEN; original preservation constructors/pre-spawn/fallback/deinit/metadata-disk/
+retired stage/trusted helper/native workflow/recovery/distribution gates remain separate.
+No owner media body/runtime/C/sanitizer/oracle/APFS/DeveloperID/UI/release/cleanup admission.
+
+
+Actual local focus5tests/2suites3.163s PASSED/no warnings. Existing
+five cases/34writer direct joins; no new tests/helper trials. Ordinary631tests/105suites
+220.498s PASSED with0issues/40UNCHANGED explicit opt-in skips/0emitted warnings,
+full log retained/no retry. Actual D162optimized22.47s reused/all98product-build files byte-identical;
+CURRENT strict ad-hoc app/read-only helper/minima14.0/11.0 pass, writer/decoder/sample/crop
+absent. Five-file privacy zero/positive sentinel/protected owner metadata-journal-original-
+frozen-D130/D142/D143 unchanged/planning empty. Source-only finite review/no independent
+execution/full milestone exit. Hosted compilation outcome remains a separate actual gate.

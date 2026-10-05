@@ -2220,3 +2220,14 @@ See D-142 and DECODED-CROP-SAMPLE-EVIDENCE.md. Existing product/protocols/origin
 objects unchanged. Next assess distinct fixed crop role/profile on the existing synchronous
 owner with bounded typed admission; shape is not provenance. D141 retained pin retirement/
 standalone drop and other resource/recovery/distribution gates remain separately open.
+
+
+### D143 native crop admission
+
+Distinct fixed development crop role/request and typed28-field rows now reuse the sole
+native process owner with bounded geometry/statistics and checked actual closes. Missing
+SAR/timestamp facts stay absent; existing metadata/sample/source-spool paths stay narrower.
+Actual generated compatible22-trial/29-direct-join evidence includes retained consumer
+ownership uncertainty. See D-143 and NATIVE-CROP-PROCESS-EVIDENCE.md. Next source/open-spool
+crop binding and concrete access remain separate; row shape is not pixel/provenance proof.
+Container/user origin/rendered/color/EL/resize/edited/distribution/recovery gates stay open.

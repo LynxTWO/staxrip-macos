@@ -149,6 +149,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-140 | 2026-10-05 | Checked removed staging terminal pins and actual removal propagation | Confirmed | |
 | D-141 | 2026-10-05 | Concrete stage owner retained through uncertain transaction/access review | Confirmed | |
 | D-142 | 2026-10-05 | Explicit decoded crop sample prerequisite | Confirmed | |
+| D-143 | 2026-10-05 | Native development crop role and admission | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4139,3 +4140,42 @@ two sample absent-positive-child assertions and two mastering phase EOF expectat
 Full log retained/PR116 updated without retry, residual causes unestablished. Next concrete
 native crop admission/source-resource integration remains distinct; D141 pin retirement/
 standalone drop and other resource/recovery/distribution/rendered/edited gates stay open.
+
+## D-143: Admit explicit crop rows on the existing native development owner
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+Distinct fixed DEBUG crop tool/request/profile uses the existing sole POSIX owner and
+checked role closes. Typed28-field crop frames bind finite caller geometry to exact
+producer request/absolute codec coordinates, three plane shapes/hash/moment bounds and
+constant color declarations. Crop SAR absence is nil; missing best-effort timestamp is
+not synthesized. Metadata/sample schemas remain strict; source/open spool explicitly
+refuses crop. Row shape/counts or plausible changed values do not upgrade source/ROI/
+independent pixel/rendered/edited flags. See NATIVE-CROP-PROCESS-EVIDENCE.md.
+
+Corrected24tests6suites4.683s and final33tests8suites14.028s passed/no warnings. Actual
+new copied/relocated compatible artifact executes22 accepted both-space/thread/conformance/
+reorder cases plus faults,29 direct helper joins. Live cancellation ordinarily settles;
+short consumer refusal propagates actual group-1-joined-true uncertainty/root retention.
+Controlled reports follow real closes, not OS faults. No new C/sanitizer/oracle execution
+or artifact overwrite; original D142/D129/prefix/frozen/D130 unchanged. Initial incorrect
+edit cwd and throwing Boolean macro retained/corrected. No global check workaround.
+
+PR117 reader passed; Swift37269870678 failed543tests616.790s12issues: two120s/three180s
+bounds plus three metadata absent-positive-child assertions, HDR10/Fresh cancellation
+7.398261/5.463937vs5 and two mastering EOF expectations. Full log retained/PR117 updated
+without retry; residual causes unestablished. Full ordinary/build/protection outcomes
+follow. Static93-source host runs prior companion pipeline, not crop loading. Source/
+ROI binding/access and container/user origin, independent values/rendered/EL/resize/edits,
+retained pin retirement/recovery/distribution and other resource gates remain open.
+
+
+Final ordinary548reported tests/103suites213.300s FAILED one EXISTING metadata-surrogate
+pipe-holder settlement assertion CompanionMetadataProcessTests.swift268. Full log retained
+without retry/cause/harmlessness claim;34 explicit opt-in skips (33 unchanged plus new private
+crop runtime), no emitted warnings. New default crop suite passes; actual compatible focus
+was explicitly opted in. Explicit production build/current strict ad-hoc app/read-only helper
+signatures pass, minima14.0/11.0; writer/decoder/sample/crop absent. Copied DEVELOPMENT crop
+signature/minimum14.0 checked separately, not hardened/DeveloperID trust. Seven-file privacy
+zero/positive sentinel, owner metadata/current journal/original D142/sample-prefix-frozen-
+D130/new runtime unchanged, planning empty. No UI/owner media/full-source/APFS/signing retry.

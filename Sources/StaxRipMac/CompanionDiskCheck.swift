@@ -179,6 +179,7 @@ enum CompanionDiskCheck {
                                             threads:decoder.threads,observeSamples:{ try spool.acceptSampleObservation($0) },
                                             observe:{ try spool.acceptDecoderRow($0,track:track) },
                                             timeout:decoder.timeout,checkCancellation:cancelled.check,boundary:decoderBoundary)
+                                    case .cropSamples: throw Self.failure()
                                     }
                                     guard actual.source == SourceFingerprint(sha256:hash,byteCount:file.bytes),
                                           actual.configurationSHA256 == track.configurationSHA256,

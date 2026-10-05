@@ -21,8 +21,11 @@ enum DolbyDecoderProcess {
         static func developmentSamples(_ url: URL, expectedSHA256: String, libraries: [String:String], versions: [UInt64]) throws -> Self {
             try captured(url,expectedSHA256:expectedSHA256,libraries:libraries,versions:versions,profile:.baseSamples)
         }
+        static func developmentCrops(_ url: URL, expectedSHA256: String, libraries: [String:String], versions: [UInt64]) throws -> Self {
+            try captured(url,expectedSHA256:expectedSHA256,libraries:libraries,versions:versions,profile:.cropSamples)
+        }
         private static func captured(_ url: URL, expectedSHA256: String, libraries: [String:String], versions: [UInt64], profile: DolbyDecoderStream.Profile) throws -> Self {
-            guard url.isFileURL, url.lastPathComponent == (profile == .metadata ? "reference":"sample-probe"), url.deletingLastPathComponent().lastPathComponent == "Helpers",
+            guard url.isFileURL, url.lastPathComponent == (profile == .metadata ? "reference" : profile == .baseSamples ? "sample-probe" : "crop-probe"), url.deletingLastPathComponent().lastPathComponent == "Helpers",
                   !url.path.utf8.contains(0), Set(libraries.keys) == ["libavcodec.63.dylib","libavformat.63.dylib","libavutil.61.dylib"],
                   versions.count == 3, versions.allSatisfy({ (1...UInt64(UInt32.max)).contains($0) }) else { throw failure() }
             for digest in [expectedSHA256] + Array(libraries.values) { _ = try DolbyInspection.hash(digest) }
@@ -68,11 +71,21 @@ enum DolbyDecoderProcess {
         try await runProfile(tool:tool,source:source,threads:threads,timeout:timeout,profile:.baseSamples,
                              observeSamples:observeSamples,observe:observe)
     }
+    /// Explicit crop rows remain shape/measurement claims without source/ROI binding.
+    static func runCrops(tool: Tool, source: URL, request: DolbyDecoderStream.CropRequest,
+                         threads: Int = 4, timeout: Double = 120,
+                         observeCrops: @escaping @Sendable (DolbyDecoderStream.CropFrame) throws -> Void = { _ in },
+                         observe: @escaping @Sendable (Data) throws -> Void = { _ in }) async throws -> DolbyDecoderStream.Receipt {
+        try await runProfile(tool:tool,source:source,threads:threads,timeout:timeout,profile:.cropSamples,
+            cropRequest:request,observeCrops:observeCrops,observe:observe)
+    }
     private static func runProfile(tool: Tool, source: URL, threads: Int, timeout: Double,
                                    profile: DolbyDecoderStream.Profile,
+                                   cropRequest: DolbyDecoderStream.CropRequest? = nil,
+                                   observeCrops: @escaping @Sendable (DolbyDecoderStream.CropFrame) throws -> Void = { _ in },
                                    observeSamples: @escaping @Sendable (DolbyDecoderStream.BaseSampleFrame) throws -> Void = { _ in },
                                    observe: @escaping @Sendable (Data) throws -> Void) async throws -> DolbyDecoderStream.Receipt {
-        guard tool.profile == profile, [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        guard tool.profile == profile, (profile == .cropSamples) == (cropRequest != nil), [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         try Task.checkCancellation()
         let cancellation = Cancellation()
         #if DEBUG
@@ -84,10 +97,10 @@ enum DolbyDecoderProcess {
                 DispatchQueue(label: "StaxRip.development-decoder-owner", qos: .userInitiated).async {
                     let result = Result {
                         #if DEBUG
-                        return try runOwnedProfile(tool: tool, source: source, threads: threads, profile:profile,observeSamples:observeSamples,observe: observe,
+                        return try runOwnedProfile(tool: tool, source: source, threads: threads, profile:profile,cropRequest:cropRequest,observeCrops:observeCrops,observeSamples:observeSamples,observe: observe,
                                         timeout: timeout, checkCancellation: { try cancellation.check() }, boundary: boundary)
                         #else
-                        return try runOwnedProfile(tool: tool, source: source, threads: threads, profile:profile,observeSamples:observeSamples,observe: observe,
+                        return try runOwnedProfile(tool: tool, source: source, threads: threads, profile:profile,cropRequest:cropRequest,observeCrops:observeCrops,observeSamples:observeSamples,observe: observe,
                                         timeout: timeout, checkCancellation: { try cancellation.check() }, boundary: .init())
                         #endif
                     }
@@ -112,14 +125,24 @@ enum DolbyDecoderProcess {
         try runOwnedProfile(tool:tool,source:source,threads:threads,profile:.baseSamples,observeSamples:observeSamples,
                             observe:observe,timeout:timeout,checkCancellation:checkCancellation,boundary:boundary)
     }
+    static func runOwnedCrops(tool: Tool, source: URL, request: DolbyDecoderStream.CropRequest, threads: Int,
+                              observeCrops: @escaping (DolbyDecoderStream.CropFrame) throws -> Void,
+                              observe: @escaping (Data) throws -> Void = { _ in }, timeout: Double,
+                              checkCancellation: @escaping () throws -> Void, boundary: Boundary = .init()) throws -> DolbyDecoderStream.Receipt {
+        try runOwnedProfile(tool:tool,source:source,threads:threads,profile:.cropSamples,
+            cropRequest:request,observeCrops:observeCrops,observe:observe,timeout:timeout,
+            checkCancellation:checkCancellation,boundary:boundary)
+    }
     private static func runOwnedProfile(tool: Tool, source: URL, threads: Int, profile: DolbyDecoderStream.Profile,
+                                       cropRequest: DolbyDecoderStream.CropRequest? = nil,
+                                       observeCrops: @escaping (DolbyDecoderStream.CropFrame) throws -> Void = { _ in },
                                        observeSamples: @escaping (DolbyDecoderStream.BaseSampleFrame) throws -> Void = { _ in },
                                        observe: @escaping (Data) throws -> Void,
                                        timeout: Double, checkCancellation: @escaping () throws -> Void,
                                        boundary: Boundary) throws -> DolbyDecoderStream.Receipt {
         let descriptors = OwnedDescriptors(boundary: boundary)
         let result = Result {
-            try runOwnedBody(tool: tool, source: source, threads: threads, profile: profile,
+            try runOwnedBody(tool: tool, source: source, threads: threads, profile: profile, cropRequest:cropRequest,observeCrops:observeCrops,
                 observeSamples: observeSamples, observe: observe, timeout: timeout,
                 checkCancellation: checkCancellation, boundary: boundary, descriptors: descriptors)
         }
@@ -135,11 +158,13 @@ enum DolbyDecoderProcess {
         return try result.get()
     }
     private static func runOwnedBody(tool: Tool, source: URL, threads: Int, profile: DolbyDecoderStream.Profile,
+                                       cropRequest: DolbyDecoderStream.CropRequest? = nil,
+                                       observeCrops: @escaping (DolbyDecoderStream.CropFrame) throws -> Void = { _ in },
                                        observeSamples: @escaping (DolbyDecoderStream.BaseSampleFrame) throws -> Void = { _ in },
                                        observe: @escaping (Data) throws -> Void,
                                        timeout: Double, checkCancellation: @escaping () throws -> Void,
                                        boundary: Boundary, descriptors: OwnedDescriptors) throws -> DolbyDecoderStream.Receipt {
-        guard tool.profile == profile, [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        guard tool.profile == profile, (profile == .cropSamples) == (cropRequest != nil), [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)
         func check() throws { try checkCancellation(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
         try check()
@@ -164,7 +189,8 @@ enum DolbyDecoderProcess {
         }
         defer { withExtendedLifetime(libraries) {} }
         let fingerprint = SourceFingerprint(sha256: try input.digest(check: check), byteCount: input.bytes)
-        let parser = try DolbyDecoderStream(source: fingerprint, threads:threads, versions:tool.versions,profile:profile,
+        let parser = try DolbyDecoderStream(source: fingerprint, threads:threads, versions:tool.versions,profile:profile,cropRequest:cropRequest,
+            observeCrops:{ frame in try check();try observeCrops(frame);try check() },
             observeSamples:{ frame in try check();try observeSamples(frame);try check() }) { row in
             #if DEBUG
             boundary.row(row)
@@ -186,7 +212,7 @@ enum DolbyDecoderProcess {
               posix_spawn_file_actions_adddup2(&actions, stdout.write, STDOUT_FILENO) == 0,
               posix_spawn_file_actions_adddup2(&actions, stderr.write, STDERR_FILENO) == 0 else { throw failure() }
         for (pin,_) in libraries { try pin.check() }
-        let args = [tool.url.path, source.path, "--threads", String(threads)]
+        let args = [tool.url.path, source.path, "--threads", String(threads)] + (cropRequest?.arguments ?? [])
         var argv: [UnsafeMutablePointer<CChar>?] = args.map { $0.withCString { strdup($0) } } + [nil]
         let environment: [String] = ["PATH=/usr/bin:/bin", "LANG=C", "LC_ALL=C"]
         var env: [UnsafeMutablePointer<CChar>?] = environment.map { $0.withCString { strdup($0) } } + [nil]

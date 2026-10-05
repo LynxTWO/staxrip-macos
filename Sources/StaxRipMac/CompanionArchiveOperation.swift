@@ -11,9 +11,12 @@ enum CompanionArchiveOperation {
         let intendedStage: URL
         /// Actual returned exclusive commit, not a persisted recovery receipt.
         let published: ResultSetStaging.Published?
+        /// Actual owned stage removal in this attempt; no authority over a later path.
+        let removed: ResultSetStaging.Removed?
         var errorDescription: String? {
-            published == nil ? "Companion access is retained for ownership review. No cleanup is authorized."
-                : "Companion result was published; access is retained for ownership review. No cleanup is authorized."
+            if published != nil { return "Companion result was published; access is retained for ownership review. No cleanup is authorized." }
+            if removed != nil { return "Owned companion stage was removed; access is retained for close review. No cleanup is authorized." }
+            return "Companion access is retained for ownership review. No cleanup is authorized."
         }
     }
     struct Environment {
@@ -356,7 +359,8 @@ enum CompanionArchiveOperation {
         DispatchQueue.main.asyncAfter(deadline: .now() + environment.retainedActivitySeconds) {
             retained[id]?.endActivity()
         }
-        return ReviewFailure(operationError: error, reviewID: id, intendedStage: locator, published: published)
+        return ReviewFailure(operationError: error, reviewID: id, intendedStage: locator, published: published,
+            removed: (error as? OriginalCompanionTransaction.CleanupFailure)?.removed)
     }
     private nonisolated static func refused() -> NativeExportError { .invalid("Native companion access refused. No result was published.") }
 

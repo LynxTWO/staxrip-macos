@@ -15,7 +15,7 @@ final class ResultSetStaging: @unchecked Sendable {
         let verifiedBytes: Int64
         let memberCount: Int
     }
-    enum CloseRole: Sendable, Hashable { case member(String), directoryStream, enumerationDescriptor, creationParent, creationDirectory, publishedParent, publishedDirectory }
+    enum CloseRole: Sendable, Hashable { case member(String), directoryStream, enumerationDescriptor, creationParent, creationDirectory, publishedParent, publishedDirectory, removedParent, removedDirectory }
     struct CloseFailure: Error, Sendable {
         let role: CloseRole
         let systemError: Int32
@@ -30,6 +30,16 @@ final class ResultSetStaging: @unchecked Sendable {
             published == nil ? "Result-set verification close is unsettled; its stage needs review."
                 : "Result set was published; verification close needs ownership review."
         }
+    }
+    /// Actual unlink completion in this attempt; never authority over a later path.
+    struct Removed: Sendable {
+        let directory: URL
+        let entryCount: Int
+    }
+    struct RemovalSettlementFailure: CompanionUnsettledOwnership, LocalizedError {
+        let removed: Removed
+        let closeFailures: [CloseFailure]
+        var errorDescription: String? { "Owned stage was removed; descriptor close needs ownership review." }
     }
     /// Creation facts are observed in this attempt, not adoption or cleanup authority.
     struct CreationSettlementFailure: CompanionUnsettledOwnership, LocalizedError {
@@ -70,9 +80,10 @@ final class ResultSetStaging: @unchecked Sendable {
     }
     @TaskLocal static var testBoundary = TestBoundary()
     var publishedPinsConsumedForTesting: Bool { lock.withLock { state == .published && parentFD < 0 && directoryFD < 0 } }
+    var removedPinsConsumedForTesting: Bool { lock.withLock { state == .discarded && parentFD < 0 && directoryFD < 0 } }
     #endif
 
-    /// Observes finite verifier, creation rollback and settled-publication pin roles.
+    /// Observes finite verifier/creation and actual published/removed terminal pin roles.
     private struct CloseObservation: Sendable {
         #if DEBUG
         private let boundary = ResultSetStaging.testBoundary
@@ -198,7 +209,7 @@ final class ResultSetStaging: @unchecked Sendable {
     }
 
     // A review locator only, never authorization to delete an unverified path.
-    var originalDirectoryURL: URL { parent.appendingPathComponent(name) }
+    var originalDirectoryURL: URL { parent.appendingPathComponent(name, isDirectory: true) }
 
     func fileURL(_ filename: String) throws -> URL {
         try lock.withLock {
@@ -280,7 +291,12 @@ final class ResultSetStaging: @unchecked Sendable {
             guard unlinkat(parentFD, name, AT_REMOVEDIR) == 0 else {
                 throw Self.failure("Owned temporary directory cleanup failed (system error \(errno)).")
             }
-            state = .discarded
+            let actual = Removed(directory: originalDirectoryURL, entryCount: entries.count)
+            state = .discarded // Record actual removal before any terminal close refusal.
+            var failures: [CloseFailure] = []
+            if let close = closing.descriptor(&directoryFD, role: .removedDirectory) { failures.append(close) }
+            if let close = closing.descriptor(&parentFD, role: .removedParent) { failures.append(close) }
+            if !failures.isEmpty { throw RemovalSettlementFailure(removed: actual, closeFailures: failures) }
         }
     }
 

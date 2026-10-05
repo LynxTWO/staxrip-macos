@@ -491,4 +491,61 @@ struct ResultSetStagingTests {
         #expect(closes.count(.publishedDirectory) == 0 && closes.count(.publishedParent) == 0)
     }
 
+    @Test func actualRemovedPinClosesPreserveRemovedStateAndConsumeEachRole() throws {
+        for refusal in ["none", "directory", "parent", "both"] {
+          for empty in [false, true] {
+            let root = try folder(), closes = Closes()
+            defer { if refusal == "none" { try? FileManager.default.removeItem(at: root) } else { print("GENERATED_REMOVED_PIN_REVIEW " + root.path) } }
+            try ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { role in
+                (role == .removedDirectory && ["directory", "both"].contains(refusal)) || (role == .removedParent && ["parent", "both"].contains(refusal))
+            })) {
+                let stage = try ResultSetStaging.create(in: root), directory = stage.originalDirectoryURL
+                if !empty { _ = try fixture(stage) }
+                do { try stage.discard(); #expect(refusal == "none") }
+                catch let e as ResultSetStaging.RemovalSettlementFailure {
+                    #expect(refusal != "none" && e.removed.directory == directory && e.removed.entryCount == (empty ? 0 : 3))
+                    #expect(e.closeFailures.count == (refusal == "both" ? 2 : 1) && e.closeFailures.allSatisfy { $0.reportedAfterActualClose })
+                    #expect(e.errorDescription?.contains("was removed") == true)
+                }
+                #expect(stage.removedPinsConsumedForTesting && !exists(directory))
+                #expect(closes.count(.removedDirectory) == 1 && closes.count(.removedParent) == 1)
+                #expect(throws: NativeExportError.self) { try stage.discard() }
+                #expect(throws: NativeExportError.self) { try stage.fileURL("later") }
+                #expect(closes.count(.removedDirectory) == 1 && closes.count(.removedParent) == 1)
+            }
+            #expect(closes.count(.removedDirectory) == 1 && closes.count(.removedParent) == 1)
+          }
+        }
+    }
+    @Test func incompleteCleanupNeverReportsRemovedStateOrClosesItsTerminalPins() throws {
+        let root = try folder(), closes = Closes(); defer { try? FileManager.default.removeItem(at: root) }
+        try ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) })) {
+            let stage = try ResultSetStaging.create(in: root), blocker = try stage.fileURL("blocked-folder")
+            try FileManager.default.createDirectory(at: blocker, withIntermediateDirectories: false)
+            do { try stage.discard(); Issue.record("Nonrecursive cleanup removed a child directory") }
+            catch { #expect(error is NativeExportError && !(error is ResultSetStaging.RemovalSettlementFailure)) }
+            #expect(exists(stage.originalDirectoryURL) && exists(blocker) && !stage.removedPinsConsumedForTesting)
+            #expect(closes.count(.removedDirectory) == 0 && closes.count(.removedParent) == 0)
+            // Only this controlled owned blocker is manually settled for retry.
+            try FileManager.default.removeItem(at: blocker); try stage.discard()
+            #expect(stage.removedPinsConsumedForTesting && closes.count(.removedDirectory) == 1 && closes.count(.removedParent) == 1)
+        }
+    }
+    @Test func identitySubstitutionBeforeDiscardNeverReportsRemovalOrClosesTerminalPins() throws {
+        let root = try folder(), closes = Closes(), moved = root.appendingPathComponent("moved-stage")
+        defer { print("GENERATED_REMOVAL_SUBSTITUTION_REVIEW " + root.path) }
+        try ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) })) {
+            let stage = try ResultSetStaging.create(in: root); _ = try fixture(stage)
+            let original = stage.originalDirectoryURL
+            try FileManager.default.moveItem(at: original, to: moved)
+            try FileManager.default.createDirectory(at: original, withIntermediateDirectories: false)
+            let sentinel = original.appendingPathComponent("keep"); try Data([42]).write(to: sentinel)
+            do { try stage.discard(); Issue.record("Substitution returned removed success") }
+            catch { #expect(error is NativeExportError && !(error is ResultSetStaging.RemovalSettlementFailure)) }
+            let bytes = try Data(contentsOf: sentinel)
+            #expect(bytes == Data([42]) && exists(moved) && !stage.removedPinsConsumedForTesting)
+            #expect(closes.count(.removedDirectory) == 0 && closes.count(.removedParent) == 0)
+        }
+    }
+
 }

@@ -51,23 +51,38 @@ enum CompanionWriterProcess {
     // Concrete writer pins, retained independently of thrown errors or completed Tasks.
     // No production release/recovery interface exists.
     final class AdmittedPins: @unchecked Sendable {
-        fileprivate let source, stage, executable: Pin
+        fileprivate let sourceURL, stageURL, executableURL: URL
+        fileprivate var source, stage, executable: Pin?
         fileprivate var launched = false, terminalEligible = false
-        fileprivate init(source: Pin, stage: Pin, executable: Pin) {
-            self.source = source; self.stage = stage; self.executable = executable
+        fileprivate init(source: URL, stage: URL, executable: URL) {
+            sourceURL = source; stageURL = stage; executableURL = executable
+        }
+        fileprivate func open(_ role: PinRole, check: () throws -> Void, boundary: Boundary) throws -> Pin {
+            let url = role == .source ? sourceURL : role == .stage ? stageURL : executableURL
+            // Pin owns the positive open immediately; transfer to this SAME owner
+            // before any observed admission guard or cancellation can refuse.
+            let pin = try Pin(open: url, directory: role == .stage)
+            switch role { case .source: source = pin; case .stage: stage = pin; case .executable: executable = pin }
+            #if DEBUG
+            try boundary.pinOpened(role)
+            #endif
+            try check()
+            try pin.observe(executable: role == .executable)
+            try check()
+            return pin
         }
         fileprivate func closeChecked(_ boundary: Boundary) -> [PinRole] {
             var uncertain: [PinRole] = []
             for (role, pin) in [(PinRole.source, source), (.stage, stage), (.executable, executable)] {
-                if !pin.closeChecked(role, boundary: boundary) { uncertain.append(role) }
+                if let pin, !pin.closeChecked(role, boundary: boundary) { uncertain.append(role) }
             }
             return uncertain
         }
         fileprivate func conflicts(source: URL, stage: URL, executable: URL) -> Bool {
-            self.source.url == source || self.stage.url == stage || self.executable.url == executable
+            sourceURL == source || stageURL == stage || executableURL == executable
         }
         #if DEBUG
-        var descriptorsForTesting: [Int32] { [source.fd, stage.fd, executable.fd] }
+        var descriptorsForTesting: [Int32] { [source?.fd ?? -1, stage?.fd ?? -1, executable?.fd ?? -1] }
         #endif
     }
     private final class PinRetention: @unchecked Sendable {
@@ -76,7 +91,7 @@ enum CompanionWriterProcess {
             guard !lock.withLock({ values.contains { $0.conflicts(source: source, stage: stage, executable: executable) } }) else { throw failure() }
         }
         func retain(_ pins: AdmittedPins) { lock.withLock { values.append(pins) } }
-        func owner(source: URL) -> AdmittedPins? { lock.withLock { values.first { $0.source.url == source } } }
+        func owner(source: URL) -> AdmittedPins? { lock.withLock { values.first { $0.sourceURL == source } } }
         #if DEBUG
         // Generated isolation only after separately proving owned child settlement.
         // No production recovery, group proof or checked fallback-close claim follows.
@@ -98,6 +113,8 @@ enum CompanionWriterProcess {
         // DEBUG reports follow each actual close; refusal never masks OS failure.
         var closed: @Sendable (PipeRole, Int32, Int32) -> Void = { _,_,_ in }
         var refuseClose: @Sendable (PipeRole, Int32, Int32) -> Bool = { _,_,_ in false }
+        var pinOpened: @Sendable (PinRole) throws -> Void = { _ in }
+        var beforeSpawn: @Sendable () throws -> Void = {}
         var pinClosed: @Sendable (PinRole, Int32, Int32) -> Void = { _,_,_ in }
         var refusePinClose: @Sendable (PinRole, Int32, Int32) -> Bool = { _,_,_ in false }
         // Controlled report after actual eligible body settlement; not OS process denial.
@@ -143,11 +160,12 @@ enum CompanionWriterProcess {
     private static func work(tool: Tool, source: URL, stage: URL, retention: Transaction.Retention,
                              timeout: Double, cancellation: Cancellation, boundary: Boundary = .init()) throws -> CompanionWriterProtocol.Receipt {
         try pinRetention.check(source: source, stage: stage, executable: tool.url)
-        var uncertain: [PipeRole] = [], pins: AdmittedPins?
+        var uncertain: [PipeRole] = []
+        let pins = AdmittedPins(source: source, stage: stage, executable: tool.url)
         let result = Result {
             try workBody(tool: tool, source: source, stage: stage, retention: retention,
                 timeout: timeout, cancellation: cancellation, boundary: boundary,
-                recordClose: { uncertain.append($0) }, admitted: { pins = $0 })
+                recordClose: { uncertain.append($0) }, pins: pins)
         }
         let original: (any Error)?
         switch result { case .success: original = nil; case .failure(let error): original = error }
@@ -157,7 +175,7 @@ enum CompanionWriterProcess {
                 operationError = OwnershipFailure(operationError: original, pipeCloseRoles: uncertain)
             } else { operationError = PipeCloseFailure(operationError: original, roles: uncertain) }
         }
-        if let pins, pins.launched {
+        if pins.launched {
             #if DEBUG
             if pins.terminalEligible && boundary.reportPinSettlementUncertainty() {
                 pins.terminalEligible = false
@@ -170,28 +188,29 @@ enum CompanionWriterProcess {
                 pinRetention.retain(pins)
                 throw operationError ?? OwnershipFailure()
             }
-            let pinRoles = pins.closeChecked(boundary)
-            if !pinRoles.isEmpty {
+        }
+        // With no successful launch there is no child/body to settle. The same
+        // finite owner closes every opened partial/admitted pin before throw.
+        let pinRoles = pins.closeChecked(boundary)
+        if !pinRoles.isEmpty {
                 pinRetention.retain(pins)
                 if operationError is OwnershipFailure {
                     throw OwnershipFailure(operationError: operationError, pinCloseRoles: pinRoles)
                 }
                 throw PinCloseFailure(operationError: operationError, roles: pinRoles)
-            }
         }
-        // Partial admission/pre-spawn rollback remains a separate qualification.
         if let operationError { throw operationError }
         return try result.get()
     }
     private static func workBody(tool: Tool, source: URL, stage: URL, retention: Transaction.Retention,
         timeout: Double, cancellation: Cancellation, boundary: Boundary,
-        recordClose: (PipeRole) -> Void, admitted: (AdmittedPins) -> Void) throws -> CompanionWriterProtocol.Receipt {
+        recordClose: (PipeRole) -> Void, pins: AdmittedPins) throws -> CompanionWriterProtocol.Receipt {
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)
         func check() throws { try cancellation.check(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
         try check()
-        let input = try Pin(source), directory = try Pin(stage, directory: true), executable = try Pin(tool.url, executable: true)
-        let pins = AdmittedPins(source: input, stage: directory, executable: executable)
-        admitted(pins)
+        let input = try pins.open(.source, check: check, boundary: boundary)
+        let directory = try pins.open(.stage, check: check, boundary: boundary)
+        let executable = try pins.open(.executable, check: check, boundary: boundary)
         guard let names = try? FileManager.default.contentsOfDirectory(atPath: stage.path), names.isEmpty else { throw failure() }
         guard try executable.digest(check: check) == tool.sha256 else { throw failure() }
         try input.check(); try directory.check(); try executable.check(); try check()
@@ -218,6 +237,9 @@ enum CompanionWriterProcess {
         var env: [UnsafeMutablePointer<CChar>?] = environment.map { $0.withCString { strdup($0) } } + [nil]
         defer { for p in argv + env { free(p) } }
         guard argv.dropLast().allSatisfy({ $0 != nil }), env.dropLast().allSatisfy({ $0 != nil }) else { throw failure() }
+        #if DEBUG
+        try boundary.beforeSpawn()
+        #endif
         try check(); try executable.check()
         var pid: pid_t = 0
         let launched = argv.withUnsafeMutableBufferPointer { a in env.withUnsafeMutableBufferPointer { e in
@@ -361,22 +383,26 @@ enum CompanionWriterProcess {
         func nonblock(_ fd: Int32) throws { let flags = fcntl(fd, F_GETFL); guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else { throw failure() } }
     }
     fileprivate final class Pin {
-        let url: URL, initial: stat, isDirectory: Bool
+        let url: URL, isDirectory: Bool
+        private var initial = stat()
         private(set) var fd: Int32
         var id: Transaction.FileID { .init(initial) }
         var bytes: Int64 { initial.st_size }
-        init(_ url: URL, directory: Bool = false, executable: Bool = false) throws {
+        init(open url: URL, directory: Bool) throws {
             guard url.isFileURL, !url.path.utf8.contains(0) else { throw failure() }
             let opened = Darwin.open(url.path, O_RDONLY | O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW | (directory ? O_DIRECTORY : 0))
             guard opened >= 0 else { throw failure() }
+            self.url = url; fd = opened; isDirectory = directory
+        }
+        // Called only after the concrete owner has taken this positive open.
+        // Failed observation is not a current namespace identity receipt.
+        func observe(executable: Bool) throws {
             var info = stat(), path = stat()
-            guard fstat(opened, &info) == 0, lstat(url.path, &path) == 0,
-                  info.st_mode & mode_t(S_IFMT) == mode_t(directory ? S_IFDIR : S_IFREG),
-                  directory ? info.st_uid == geteuid() && info.st_mode & 0o7777 == 0o700 : (1...(executable ? Int64(32 << 20) : Int64(1 << 40))).contains(info.st_size),
-                  !executable || info.st_mode & 0o111 != 0, Self.same(info, path, directory: directory) else {
-                Darwin.close(opened); throw failure()
-            }
-            self.url = url; fd = opened; initial = info; isDirectory = directory
+            guard fstat(fd, &info) == 0, lstat(url.path, &path) == 0,
+                  info.st_mode & mode_t(S_IFMT) == mode_t(isDirectory ? S_IFDIR : S_IFREG),
+                  isDirectory ? info.st_uid == geteuid() && info.st_mode & 0o7777 == 0o700 : (1...(executable ? Int64(32 << 20) : Int64(1 << 40))).contains(info.st_size),
+                  !executable || info.st_mode & 0o111 != 0, Self.same(info, path, directory: isDirectory) else { throw failure() }
+            initial = info
         }
         deinit { if fd >= 0 { Darwin.close(fd) } }
         func closeChecked(_ role: PinRole, boundary: Boundary) -> Bool {

@@ -182,6 +182,23 @@ struct DolbySampleProcessTests {
         catch{#expect(!cancel && at != "consumer")}
         state.assertJoined()
     }
+    @Test func sampleActualCloseRolesAndControlledRefusalsUseSameSettledOwner() async throws {
+        let f=try await fixture("EMIT"),tool=try f.tool;var retained=false
+        defer{if !retained{try? FileManager.default.removeItem(at:f.root)}}
+        for role in [Owner.DescriptorRole?](arrayLiteral:nil)+Owner.DescriptorRole.allCases.map(Optional.some){
+            let ledger=DecoderCloseObservations(refused:role)
+            do{
+                let r=try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0)},settled:{ledger.settle($0)},closed:{ledger.close($0,$1,$2)},refuseClose:{r,_,_ in ledger.inject(r)})){
+                    try await Owner.runSamples(tool:tool,source:f.source)
+                }
+                #expect(role == nil && r.sampleFrameSummaryCount == 2)
+            }catch let e as Owner.OwnershipFailure{retained=true;#expect(role != nil && e.reason == "descriptor-close")}
+            ledger.expect(Set(Owner.DescriptorRole.allCases),launched:true)
+        }
+        #expect(try Data(contentsOf:f.source) == Data(repeating:0x5a,count:100000))
+        print("GENERATED_DECODER_CLOSE_SAMPLES normal=1 reported_refusals=10 actual_close_roles=10 no_retry=true retained=\(retained) root=\(f.root.path)")
+    }
+
 }
 
 @Suite(.serialized)
@@ -303,11 +320,11 @@ struct CompatibleNativeDolbySampleTests {
         for name in ["single","group","wide-vint","conformance","whole-gop"] {
             let source=root.appendingPathComponent(name+".mkv"),hash=try Support.digest(source)
             for threads in [1,4] {
-                let stage=try spool(name+String(threads)),state=Support.State()
-                let r=try await Owner.$testBoundary.withValue(.init(launched:{state.launch($0)},settled:{state.settle($0)})){
+                let stage=try spool(name+String(threads)),state=Support.State(),ledger=DecoderCloseObservations()
+                let r=try await Owner.$testBoundary.withValue(.init(launched:{state.launch($0);ledger.launch($0)},settled:{state.settle($0);ledger.settle($0)},closed:{ledger.close($0,$1,$2)})){
                     try await CompanionDiskCheck.associateOriginalSamples(source:source,in:stage,tool:tool,threads:threads)
                 }
-                state.assertJoined();joins += 1
+                state.assertJoined();ledger.expect(Set(Owner.DescriptorRole.allCases),launched:true);joins += 1
                 #expect(r.independentSourceFrameAssociationVerified && r.independentSampleSourceAssociationVerified)
                 #expect(!r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified && !r.decoder.independentSampleSourceAssociationVerified)
                 #expect(r.source.sourceSHA256 == hash && r.decoder.source.sha256 == hash && r.source.track.configurationSHA256 == r.decoder.configurationSHA256)
@@ -319,6 +336,17 @@ struct CompatibleNativeDolbySampleTests {
             }
         }
         let original=root.appendingPathComponent("single.mkv"),hash=try Support.digest(original)
+        // Actual fixed sample helper's reported-close uncertainty prevents the
+        // enclosing source/spool receipt even after complete source coverage.
+        for role in [Owner.DescriptorRole.stdoutWrite,.nullInput,.source] {
+            let ledger=DecoderCloseObservations(refused:role),stage=try spool("close-refusal-"+role.rawValue)
+            do{_ = try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0)},settled:{ledger.settle($0)},closed:{ledger.close($0,$1,$2)},refuseClose:{r,_,_ in ledger.inject(r)})){
+                try await CompanionDiskCheck.associateOriginalSamples(source:original,in:stage,tool:tool)
+            };Issue.record("Actual source/sample close refusal admitted")}
+            catch let e as Owner.OwnershipFailure{retained=true;#expect(e.reason == "descriptor-close");print("GENERATED_SOURCE_SAMPLE_CLOSE_RETAINED role=\(role.rawValue) root=\(root.path)")}
+            ledger.expect(Set(Owner.DescriptorRole.allCases),launched:true);joins += 1
+            #expect(try Support.digest(original) == hash)
+        }
         // Distinct metadata entry refuses sample role; no sample helper launch.
         let wrong=Support.State(),wrongStage=try spool("wrong-role")
         await Owner.$testBoundary.withValue(.init(launched:{wrong.launch($0)})){

@@ -4,6 +4,33 @@ import CryptoKit
 import Testing
 @testable import StaxRipMac
 
+/// Actual close callbacks, never post-return FD-number probes. One fixture operation
+/// owns each ledger; injected refusal follows real close and is not an OS fault claim.
+final class DecoderCloseObservations: @unchecked Sendable {
+    typealias Role = DolbyDecoderProcess.DescriptorRole
+    private let lock=NSLock()
+    private var counts:[Role:Int]=[:], child:pid_t=0, joined:pid_t=0
+    let refused:Role?
+    init(refused:Role?=nil){self.refused=refused}
+    func launch(_ pid:pid_t){lock.withLock{child=pid}}
+    func settle(_ pid:pid_t){lock.withLock{joined=pid}}
+    func close(_ role:Role,_ fd:Int32,_ status:Int32){lock.withLock{
+        #expect(fd >= 0 && status == 0)
+        counts[role,default:0] += 1;#expect(counts[role] == 1)
+        if child > 0 && [.source,.executable,.avcodec,.avformat,.avutil,.nullInput].contains(role){#expect(joined == child)}
+    }}
+    func inject(_ role:Role)->Bool{role == refused}
+    func expect(_ roles:Set<Role>,launched:Bool){let facts=lock.withLock{(counts,child,joined)}
+        #expect(Set(facts.0.keys) == roles && facts.0.values.allSatisfy{$0 == 1})
+        if launched {
+            #expect(facts.1 > 0 && facts.2 == facts.1)
+            guard facts.1 > 0 && facts.2 == facts.1 else{return}
+            var status:Int32=0;#expect(waitpid(facts.1,&status,WNOHANG) == -1 && errno == ECHILD)
+        }else{#expect(facts.1 == 0 && facts.2 == 0)}
+    }
+    var pid:pid_t{lock.withLock{child}}
+}
+
 @Suite(.serialized)
 struct DolbyDecoderTests {
     typealias Owner = DolbyDecoderProcess
@@ -153,6 +180,64 @@ struct DolbyDecoderTests {
             await #expect(throws:CancellationError.self) {try await t.value}
         };#expect(state.pid == 0)
     }
+    @Test func actualMetadataClosesEveryFixedRoleOnceAndInjectedRefusalCannotReturnReceipt() async throws {
+        let f=try await fixture(body:"EMIT"),tool=try f.tool
+        // Every injected report follows actual successful close; no simulated OS
+        // descriptor corruption or arbitrary FD/PID operation occurs.
+        var retained=false;defer{if !retained{try? FileManager.default.removeItem(at:f.root)}}
+        for role in [Owner.DescriptorRole?](arrayLiteral:nil)+Owner.DescriptorRole.allCases.map(Optional.some) {
+            let ledger=DecoderCloseObservations(refused:role)
+            do{
+                let r=try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0)},settled:{ledger.settle($0)},closed:{ledger.close($0,$1,$2)},refuseClose:{r,_,_ in ledger.inject(r)})){
+                    try await Owner.run(tool:tool,source:f.source)
+                }
+                #expect(role == nil && r.frames == 2)
+            }catch let e as Owner.OwnershipFailure{retained=true;#expect(role != nil && e.reason == "descriptor-close")}
+            ledger.expect(Set(Owner.DescriptorRole.allCases),launched:true)
+        }
+        #expect(try Data(contentsOf:f.source) == Data(repeating:0x5a,count:100000))
+        print("GENERATED_DECODER_CLOSE_METADATA normal=1 reported_refusals=10 actual_close_roles=10 no_retry=true retained=\(retained) root=\(f.root.path)")
+    }
+    @Test func actualConstructorAndPrelaunchClosesSupersedeOrdinaryRefusalWithoutLaunching() async throws {
+        for kind in ["empty-source","bad-executable","bad-library","missing-source"] {
+            let f=try await fixture(body:"EMIT"),tool=try f.tool;var retained=false
+            defer{if !retained{try? FileManager.default.removeItem(at:f.root)}}
+            switch kind {
+            case "empty-source":try Data().write(to:f.source)
+            case "bad-executable":try Data("invalid".utf8).write(to:f.executable)
+            case "bad-library":try Data("changed".utf8).write(to:f.framework.appendingPathComponent(Self.names[0]))
+            default:try FileManager.default.removeItem(at:f.source)
+            }
+            let ledger=DecoderCloseObservations(refused:.source)
+            do{_ = try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0)},settled:{ledger.settle($0)},closed:{ledger.close($0,$1,$2)},refuseClose:{r,_,_ in ledger.inject(r)})){
+                try await Owner.run(tool:tool,source:f.source)
+            };Issue.record("Prelaunch refusal returned receipt")}
+            catch let e as Owner.OwnershipFailure{retained=true;#expect(kind != "missing-source" && e.reason == "descriptor-close")}
+            catch is NativeExportError{#expect(kind == "missing-source")}
+            let expected:Set<Owner.DescriptorRole>
+            switch kind {case "empty-source":expected=[.source];case "bad-executable":expected=[.source,.executable];case "bad-library":expected=[.source,.executable,.avcodec];default:expected=[]}
+            ledger.expect(expected,launched:false)
+        }
+    }
+    @Test func abortClosesJoinBeforeReportedCloseFailureOverridesCancellationOrError() async throws {
+        for kind in ["deadline","nonzero","malformed","active","late"] {
+            let f=try await fixture(body:kind == "deadline" ? "sleep(60);":kind == "malformed" ? "puts(\"{}\");fflush(stdout);sleep(60);":kind == "nonzero" ? "EMIT return 7;":"EMIT"),tool=try f.tool
+            let ledger=DecoderCloseObservations(refused:.stdoutWrite),gate=Gate();var retained=false
+            defer{if !retained{try? FileManager.default.removeItem(at:f.root)}}
+            let task=Task {
+                defer{gate.signal.finish()}
+                return try await Owner.$testBoundary.withValue(.init(launched:{ledger.launch($0);if kind == "active"{gate.hold()}},settled:{ledger.settle($0)},beforeReceipt:{if kind == "late"{gate.hold()}},closed:{ledger.close($0,$1,$2)},refuseClose:{r,_,_ in ledger.inject(r)})){
+                    try await Owner.run(tool:tool,source:f.source,timeout:kind == "deadline" || kind == "malformed" ? 0.5:10)
+                }
+            }
+            if kind == "active" || kind == "late"{for await _ in gate.stream{break};task.cancel();gate.release.signal()}
+            do{_ = try await task.value;Issue.record("Reported abort close failure returned receipt")}
+            catch let e as Owner.OwnershipFailure{retained=true;#expect(e.reason == "descriptor-close" || e.reason == "group-1-joined-true")}
+            ledger.expect(Set(Owner.DescriptorRole.allCases),launched:true)
+            #expect(try Data(contentsOf:f.source) == Data(repeating:0x5a,count:100000))
+        }
+    }
+
 }
 
 @Suite(.serialized)

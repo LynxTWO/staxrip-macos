@@ -34,12 +34,19 @@ enum DolbyDecoderProcess {
         let reason: String
         var errorDescription: String? { "Development decoder process ownership could not be fully settled. Retain needed source and temporary access for review." }
     }
+    enum DescriptorRole: String, CaseIterable, Sendable {
+        case source, executable, avcodec, avformat, avutil
+        case stdoutRead, stdoutWrite, stderrRead, stderrWrite, nullInput
+    }
     struct Boundary: Sendable {
         var launched: @Sendable (pid_t) -> Void = { _ in }
         var row: @Sendable (Data) -> Void = { _ in }
         var poll: @Sendable () -> Void = {}
         var settled: @Sendable (pid_t) -> Void = { _ in }
         var beforeReceipt: @Sendable () -> Void = {}
+        // DEBUG reports real close outcomes; refusal injection never masks OS failure.
+        var closed: @Sendable (DescriptorRole, Int32, Int32) -> Void = { _,_,_ in }
+        var refuseClose: @Sendable (DescriptorRole, Int32, Int32) -> Bool = { _,_,_ in false }
     }
     #if DEBUG
     @TaskLocal static var testBoundary = Boundary()
@@ -110,18 +117,47 @@ enum DolbyDecoderProcess {
                                        observe: @escaping (Data) throws -> Void,
                                        timeout: Double, checkCancellation: @escaping () throws -> Void,
                                        boundary: Boundary) throws -> DolbyDecoderStream.Receipt {
+        let descriptors = OwnedDescriptors(boundary: boundary)
+        let result = Result {
+            try runOwnedBody(tool: tool, source: source, threads: threads, profile: profile,
+                observeSamples: observeSamples, observe: observe, timeout: timeout,
+                checkCancellation: checkCancellation, boundary: boundary, descriptors: descriptors)
+        }
+        // Body has already joined its child or returned typed process uncertainty.
+        // Close uncertainty cannot bypass required child/group settlement.
+        descriptors.closeRemaining()
+        if descriptors.uncertain {
+            if case .failure(let error) = result, error is any CompanionUnsettledOwnership {
+                throw error // Preserve the stronger existing process-ownership reason.
+            }
+            throw OwnershipFailure(reason: "descriptor-close")
+        }
+        return try result.get()
+    }
+    private static func runOwnedBody(tool: Tool, source: URL, threads: Int, profile: DolbyDecoderStream.Profile,
+                                       observeSamples: @escaping (DolbyDecoderStream.BaseSampleFrame) throws -> Void = { _ in },
+                                       observe: @escaping (Data) throws -> Void,
+                                       timeout: Double, checkCancellation: @escaping () throws -> Void,
+                                       boundary: Boundary, descriptors: OwnedDescriptors) throws -> DolbyDecoderStream.Receipt {
         guard tool.profile == profile, [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)
         func check() throws { try checkCancellation(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
         try check()
-        let input = try Pin(source), executable = try Pin(tool.url, executable: true)
+        let input = try Pin(source, descriptors: descriptors, role: .source), executable = try Pin(tool.url, executable: true, descriptors: descriptors, role: .executable)
         defer { withExtendedLifetime((input,executable)) {} }
         guard try executable.digest(check: check) == tool.sha256 else { throw failure() }
         try input.check(); try executable.check(); try check()
         let directory = tool.url.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Frameworks",isDirectory:true)
         var libraries = [(Pin,String)]()
         for name in tool.librarySHA256.keys.sorted() {
-            let pin = try Pin(directory.appendingPathComponent(name), library:true)
+            let role: DescriptorRole
+            switch name {
+            case "libavcodec.63.dylib": role = .avcodec
+            case "libavformat.63.dylib": role = .avformat
+            case "libavutil.61.dylib": role = .avutil
+            default: throw failure()
+            }
+            let pin = try Pin(directory.appendingPathComponent(name), library:true, descriptors: descriptors, role: role)
             let digest = tool.librarySHA256[name]!
             guard try pin.digest(check:check) == digest else { throw failure() }
             libraries.append((pin,digest))
@@ -135,9 +171,9 @@ enum DolbyDecoderProcess {
             #endif
             try check(); try observe(row); try check()
         }
-        let stdout = try PipeEnds(), stderr = try PipeEnds()
+        let stdout = try PipeEnds(descriptors: descriptors, output: true), stderr = try PipeEnds(descriptors: descriptors, output: false)
         let null = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
-        guard null >= 0 else { throw failure() }; defer { Darwin.close(null) }
+        guard null >= 0 else { throw failure() }; descriptors.own(null, as: .nullInput)
         try stdout.nonblock(stdout.read); try stderr.nonblock(stderr.read)
         var actions: posix_spawn_file_actions_t?, attributes: posix_spawnattr_t?
         guard posix_spawn_file_actions_init(&actions) == 0 else { throw failure() }
@@ -231,40 +267,65 @@ enum DolbyDecoderProcess {
         for (pin,digest) in libraries { guard try pin.digest(check:check) == digest else { throw failure() }; try pin.check() }
         try input.check(); try executable.check(); try check(); return result
     }
+    /// Concrete fixed decoder roles only, on the single owning worker. No public
+    /// lease/import/cleanup authority; numbers leave ownership before each close.
+    private final class OwnedDescriptors {
+        private var owned: [DescriptorRole: Int32] = [:]
+        private let boundary: Boundary
+        private(set) var uncertain = false
+        init(boundary: Boundary) { self.boundary = boundary }
+        func own(_ fd: Int32, as role: DescriptorRole) { owned[role] = fd }
+        func close(_ role: DescriptorRole) {
+            guard let fd = owned.removeValue(forKey: role) else { return }
+            let status = Darwin.close(fd)
+            if status != 0 { uncertain = true }
+            #if DEBUG
+            boundary.closed(role, fd, status)
+            if boundary.refuseClose(role, fd, status) { uncertain = true }
+            #endif
+        }
+        func closeRemaining() {
+            for role in DescriptorRole.allCases.reversed() { close(role) }
+        }
+    }
     private final class PipeEnds {
         var read: Int32, write: Int32
-        init() throws {
+        private let descriptors: OwnedDescriptors, readRole: DescriptorRole, writeRole: DescriptorRole
+        init(descriptors: OwnedDescriptors, output: Bool) throws {
             var fds: [Int32] = [-1, -1]
             guard Darwin.pipe(&fds) == 0 else { throw failure() }
+            self.descriptors = descriptors
+            readRole = output ? .stdoutRead : .stderrRead
+            writeRole = output ? .stdoutWrite : .stderrWrite
             read = fds[0]; write = fds[1]
+            descriptors.own(read, as: readRole); descriptors.own(write, as: writeRole)
             guard fcntl(read, F_SETFD, FD_CLOEXEC) == 0, fcntl(write, F_SETFD, FD_CLOEXEC) == 0,
                   fcntl(write, F_SETNOSIGPIPE, 1) == 0 else {
-                Darwin.close(read); Darwin.close(write); read = -1; write = -1; throw failure()
+                closeRead(); closeWrite(); throw failure()
             }
         }
-        deinit { closeRead(); closeWrite() }
-        func closeRead() { if read >= 0 { Darwin.close(read); read = -1 } }
-        func closeWrite() { if write >= 0 { Darwin.close(write); write = -1 } }
+        func closeRead() { if read >= 0 { read = -1; descriptors.close(readRole) } }
+        func closeWrite() { if write >= 0 { write = -1; descriptors.close(writeRole) } }
         func nonblock(_ fd: Int32) throws { let flags = fcntl(fd, F_GETFL); guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else { throw failure() } }
     }
     private final class Pin {
         let url: URL, fd: Int32, initial: stat
         var id: Transaction.FileID { .init(initial) }
         var bytes: Int64 { initial.st_size }
-        init(_ url: URL, executable: Bool = false, library: Bool = false) throws {
+        init(_ url: URL, executable: Bool = false, library: Bool = false, descriptors: OwnedDescriptors, role: DescriptorRole) throws {
             guard url.isFileURL, !url.path.utf8.contains(0) else { throw failure() }
             let opened = Darwin.open(url.path, O_RDONLY | O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW)
             guard opened >= 0 else { throw failure() }
+            descriptors.own(opened, as: role)
             var info = stat(), path = stat()
             guard fstat(opened, &info) == 0, lstat(url.path, &path) == 0,
                   info.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG),
                   (1...((executable || library) ? Int64(32 << 20) : Int64(1 << 40))).contains(info.st_size),
                   !executable || info.st_mode & 0o111 != 0, Self.same(info, path) else {
-                Darwin.close(opened); throw failure()
+                descriptors.close(role); throw failure()
             }
             self.url = url; fd = opened; initial = info
         }
-        deinit { Darwin.close(fd) }
         private static func same(_ a: stat, _ b: stat) -> Bool {
             Transaction.FileID(a) == Transaction.FileID(b) && a.st_mode == b.st_mode && a.st_uid == b.st_uid &&
                 (a.st_nlink == b.st_nlink && a.st_size == b.st_size &&

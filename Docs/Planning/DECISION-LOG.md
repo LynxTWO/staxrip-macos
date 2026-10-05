@@ -138,6 +138,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-129 | 2026-10-04 | Measure actual coded and codec-visible base samples | Confirmed | |
 | D-130 | 2026-10-04 | Own explicit development base-sample decoder profile | Confirmed | |
 | D-131 | 2026-10-04 | Bind native samples to original source | Confirmed | |
+| D-132 | 2026-10-05 | Check decoder descriptor close settlement | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3628,3 +3629,46 @@ retained/PR updated without retry or historical timing policy change. See
 NATIVE-SOURCE-SAMPLE-ASSOCIATION-EVIDENCE.md. Source agreement true only on the new
 complete composition; independent sample values/rendering/edited flags remain false.
 Resource/access/checked helper close and release qualification remain separate gates.
+
+
+## D-132: Check actual decoder descriptor close settlement
+Status: Confirmed
+Date:2026-10-05, owner standing autonomous generated non-audio delegation,R059.
+
+Inherited decoder pin/pipe/null closes discard status. Add concrete per-worker fixed
+role descriptor settlement to D124/D130, consuming each number before actual close,
+checking return and never retrying uncertain numbers. No generic lease/receipt layer,
+protocol relaxation or archive action. Track constructor/prelaunch rollback and normal/
+abort/final closes; keep all child/group joins before throwing a close uncertainty.
+Typed shared ownership must supersede ordinary cancellation/refusal/success while
+preserving existing stronger uncertain-process errors. Needed source/spool/access stay
+retained by current caller policy. Decoder/sample/source/edited semantics unchanged.
+
+Acceptance: generated metadata/sample roles actual closes and one-attempt accounting,
+controlled reported-refusal after actual close (not spontaneous OS fault), source/pin/
+pipe/null/prelaunch/active/late/error/cancel paths with actual owned child settlement,
+plus compatible sample association and prior static native pipeline as applicable.
+Focused/ordinary/explicit optimized/privacy/planning checks and automatic outcomes
+without rerun. No owner media body, movie/queue/listening, known crashing loader,
+signing retry, app action/default packaging/merge/release or cleanup authority for
+uncertain ownership. Resource/access sample integration follows this prerequisite.
+
+
+D132 acceptance: expanded focus19tests/4suites4.814s and compatible composed
+20tests/5suites13.724s pass without warnings. Both profiles check ten actual close
+roles once; constructor/prelaunch, active/late cancellation, deadline/malformed/nonzero
+and controlled reported refusal settle owned child before typed refusal. Actual ten
+compatible source/sample trials and eighteen helper direct joins pass; reported close
+refusal prevents enclosing complete-looking source/spool receipts. Controlled refusal
+is not a spontaneous OS fault. Prior93-source hardened native host compiles changed
+owner but runs companion preservation/review, not decoder/sample loading.
+Ordinary500reported tests/100suites209.796s FAILS one existing decoder-surrogate
+positive-child/join assertion,32unchanged opt-in skips/no new warnings. New close tests
+pass; failed full log retained without rerun or cause claim. Explicit production build/
+current strict ad-hoc app/read-only helper signatures/minima14.0/11.0 pass; writer/
+decoder/sample absent. Six-file privacy/owner metadata/current journal/original sample/
+prefix/frozen/runtime/planning checks pass. PR106 automatic125issues retained and PR
+updated without retry, historical observer/assertion/deadline/scheduling change. See
+NATIVE-DECODER-DESCRIPTOR-EVIDENCE.md. Needed access remains retained on typed
+uncertainty; sample source/spool access/activity integration and all edited/release
+gates remain open. No production or whole-program completion claim.

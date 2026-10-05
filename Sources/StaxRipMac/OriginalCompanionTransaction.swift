@@ -58,6 +58,30 @@ enum OriginalCompanionTransaction {
         let intendedStage: URL
         var errorDescription: String? { "Companion ownership is unsettled. Its temporary stage needs review." }
     }
+    /// Internal source close uncertainty after all trusted phases have returned.
+    /// A committed locator is actual in-memory publication, never cleanup authority.
+    struct SourceSettlementFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: Error
+        let closeError: Error
+        let intendedStage: URL
+        let published: ResultSetStaging.Published?
+        var errorDescription: String? {
+            published == nil ? "Companion source close is unsettled; its stage needs review."
+                : "Companion result was published; source close needs ownership review."
+        }
+    }
+    struct SourceCloseFailure: CompanionUnsettledOwnership {
+        let systemError: Int32
+        let reportedAfterActualClose: Bool
+    }
+    #if DEBUG
+    struct SourceBoundary: Sendable {
+        var closed: @Sendable (Int) -> Void = { _ in }
+        // A reported refusal follows a successful actual close; no OS fault claim.
+        var refuseClose: @Sendable () -> Bool = { false }
+    }
+    @TaskLocal static var sourceBoundary = SourceBoundary()
+    #endif
     typealias Producer = @Sendable (URL) async throws -> Contents
     typealias Verifier = @Sendable (URL, Contents) async throws -> Verification
 
@@ -98,9 +122,12 @@ enum OriginalCompanionTransaction {
         let destination = parent.appendingPathComponent(destinationName)
         guard lstat(destination.path, &existing) != 0, errno == ENOENT else { throw failure("Destination exists or cannot be inspected.") }
         let source = try Source(url)
-        let stage = try ResultSetStaging.create(in: parent)
-        let directory = stage.originalDirectoryURL
+        var ownedStage: ResultSetStaging?
+        var published: ResultSetStaging.Published?
         do {
+            let stage = try ResultSetStaging.create(in: parent)
+            ownedStage = stage
+            let directory = stage.originalDirectoryURL
             _ = try stage.fileURL("manifest.json")
             var info = stat()
             guard lstat(directory.path, &info) == 0, info.st_mode & 0o7777 == 0o700,
@@ -121,13 +148,26 @@ enum OriginalCompanionTransaction {
                   !verified.stableImporter, equal(produced, verified.contents) else {
                 throw failure("Independent semantic receipts do not agree.")
             }
-            return try await stage.publish(as: destinationName, members: produced.members, preCommit: { try source.check() })
+            let result = try await stage.publish(as: destinationName, members: produced.members, preCommit: { try source.check() })
+            published = result
+            try source.closeChecked()
+            return result
         } catch {
             let operation = error
+            var closeError: Error?
+            do { try source.closeChecked() } catch { closeError = error }
+            let directory = published?.directory ?? ownedStage?.originalDirectoryURL ?? parent
+            if let close = closeError ?? (operation as? SourceCloseFailure) {
+                // Never discard after source close uncertainty, including before
+                // commit. Keep a stronger phase failure as the operation cause.
+                throw SourceSettlementFailure(operationError: operation, closeError: close,
+                    intendedStage: directory, published: published)
+            }
             if operation is CompanionUnsettledOwnership {
                 // Do not delete files while an owned writer may still be active.
                 throw UnsettledPhaseFailure(operationError: operation, intendedStage: directory)
             }
+            guard let stage = ownedStage else { throw operation }
             do { try stage.discard() }
             catch {
                 // Return a reviewable ownership error; never follow a substituted stage.
@@ -139,7 +179,7 @@ enum OriginalCompanionTransaction {
 
     private final class Source: @unchecked Sendable {
         private let url: URL
-        private let fd: Int32
+        private var fd: Int32 = -1
         private let initial: stat
         var id: FileID { FileID(initial) }
         var bytes: Int64 { initial.st_size }
@@ -148,14 +188,31 @@ enum OriginalCompanionTransaction {
             let opened = Darwin.open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC | O_NOCTTY)
             guard opened >= 0 else { throw failure("Cannot open original source.") }
             var descriptor = stat(), path = stat()
-            guard fstat(opened, &descriptor) == 0, descriptor.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG),
-                  (1...Int64(1 << 40)).contains(descriptor.st_size), lstat(url.path, &path) == 0,
-                  Self.same(descriptor, path) else {
-                Darwin.close(opened); throw failure("Source is unsafe or changed.")
-            }
+            let safe = fstat(opened, &descriptor) == 0 && descriptor.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG) &&
+                (1...Int64(1 << 40)).contains(descriptor.st_size) && lstat(url.path, &path) == 0 &&
+                Self.same(descriptor, path)
             self.url = url; fd = opened; initial = descriptor
+            guard safe else {
+                try closeChecked()
+                throw failure("Source is unsafe or changed.")
+            }
         }
-        deinit { Darwin.close(fd) }
+        // Explicit transaction/initializer paths settle before return. This fallback
+        // consumes once; it is not checked-close evidence or recovery authority.
+        deinit { if fd >= 0 { let owned = fd; fd = -1; _ = Darwin.close(owned) } }
+        func closeChecked() throws {
+            guard fd >= 0 else { return }
+            let owned = fd; fd = -1
+            guard Darwin.close(owned) == 0 else {
+                throw SourceCloseFailure(systemError: errno, reportedAfterActualClose: false)
+            }
+            #if DEBUG
+            sourceBoundary.closed(1)
+            if sourceBoundary.refuseClose() {
+                throw SourceCloseFailure(systemError: 0, reportedAfterActualClose: true)
+            }
+            #endif
+        }
         private static func same(_ a: stat, _ b: stat) -> Bool {
             FileID(a) == FileID(b) && a.st_mode == b.st_mode && a.st_nlink == b.st_nlink &&
                 a.st_uid == b.st_uid && a.st_size == b.st_size &&
@@ -164,7 +221,7 @@ enum OriginalCompanionTransaction {
         }
         func check() throws {
             var descriptor = stat(), path = stat()
-            guard fstat(fd, &descriptor) == 0, lstat(url.path, &path) == 0,
+            guard fd >= 0, fstat(fd, &descriptor) == 0, lstat(url.path, &path) == 0,
                   Self.same(initial, descriptor), Self.same(initial, path) else { throw failure("Original source identity changed.") }
         }
     }

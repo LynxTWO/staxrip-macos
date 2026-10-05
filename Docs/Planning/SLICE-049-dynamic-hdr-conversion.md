@@ -2066,3 +2066,73 @@ positive sentinel, owner metadata/current journal/original sample-prefix-frozen-
 unchanged and planning findings empty. PR108 automatic remains in progress at this
 inspection; no rerun or outcome inferred. Previous failures remain retained, causes
 unknown. No whole-program completion or distribution claim.
+
+
+## D-135: Checked internal companion transaction source close
+Status: Confirmed
+Date:2026-10-05, owner standing autonomous generated non-audio delegation,R059.
+
+Select the finite internal D105 original-source descriptor as the next bounded
+prerequisite. D099 staging also owns parent/stage pins, component readers and directory
+streams; its explicit settlement/cleanup/commit changes remain a separate unit. This
+choice avoids treating a source-pin correction as qualification of every staging role.
+
+The concrete Source initializes ownership before unsafe-input rollback and explicitly
+consumes its descriptor before actual close, checks status and never retries. Stage
+creation failure, ordinary producer/verifier refusal and cancellation close the internal
+observation pin after phase return and before eligible stage discard. Shared phase
+uncertainty retains its original cause; internal source-close uncertainty prevents
+stage discard and retains needed outer access through the existing review registry.
+A close failure does not establish descriptor release. Deinit fallback is not checked
+settlement evidence. Trusted callbacks still must settle their own readers/processes.
+
+After exclusive publication, typed SourceSettlementFailure carries the actual Published
+state even though the transaction cannot return ordinary success. D134's concrete
+bridge retains that actual directory/bytes/member count and needed grants/activity;
+it never invokes pre-commit discard or reports no publication. Ordinary late cancellation
+still returns actual success when the source close settles. In-memory state is not a
+persisted recovery journal, producer provenance, import/adoption or cleanup authority.
+
+Acceptance: actual generated native writer/full original semantic verifier/exclusive
+publication both modes; actual successful one-attempt source closes and controlled
+reported uncertainty after real close. Generated constructor/create/phase rollback,
+cancellation, stronger phase marker, pre-commit stage retention, committed result
+retention/drop/energy expiry/exclusions and source/prior/published preservation.
+Fake grants are not sandbox rights; controlled reports are not spontaneous OS close
+faults. No reused-number absence probe, generic lease/receipt wrapper, new worker,
+Python runtime bridge, schema/action/default packaging/release/recovery-release.
+See COMPANION-TRANSACTION-SOURCE-CLOSE-EVIDENCE.md. Focus/ordinary/production/privacy/
+planning outcomes recorded separately; D090 timing/phase/prelaunch causes remain unknown.
+
+
+D135 acceptance: corrected composed focus47reported tests/2suites12.672s passes
+without warnings. Final ordinary515reported tests/100suites216.316s passes33unchanged
+explicit opt-in skips/no warnings, access30.344s/source transaction2.176s/static
+prior companion36.031s. Final ordinary covers the subsequent exact one-close counters
+and ordinary constructor/create/phase rollback assertions. Four actual native publication
+cases across both modes cancel only after acknowledged exclusive commit/two joined
+helpers. Two source-close successes return actual published success; two reported
+refusals retain actual Published state/grants/drop/expiry/exclusions and unchanged
+source/prior/published bytes. Actual joined-writer/verifier-admission refusal retains
+its complete owned stage on reported source-close uncertainty. Nine inside-operation
+helper direct joins across new actual tests; no Python runtime bridge. Reported
+uncertain generated roots remain retained privately. Synthetic settled phase tests
+cover unsafe constructor/create/ordinary error/cancel/combined ownership refusal and
+one actual close attempt. No spontaneous OS close or group-denial fault claimed.
+
+First new focused build failed a missing callback argument; failed log and derived
+warnings retained. Exact argument corrected. Existing ambiguous optional Boolean
+require sites now explicitly unwrap Bool? without changing phase flags. Production
+build/current strict ad-hoc app/read-only helper signatures pass without warnings,
+minima14.0/11.0; writer/decoder/sample absent. Static93-source host compiles changed
+code but executes prior companion preservation/review, not decoder/sample loading.
+C/sanitizer/APFS/frozen sample/owner full-source receipts reused, not new executions.
+
+PR109 automatic37250676493 failed510tests1072.270s151issues:59unchanged60s/61unchanged
+120s/7unchanged180s bounds plus24other assertions, including five metadata-decoder
+absent-positive-child assertions and generated phase/commit gates. Access793.838s/
+static785.624s passed; preview skipped. Full failed log retained/PR109 updated without
+retry; D090 timing/phase/prelaunch causes unknown. Current local pass does not resolve
+that failure. No historical observer/assertion/deadline/global scheduling/concurrency
+change or whole-program completion claim. Source/journal/runtime/privacy/planning
+receipts are separately recorded. D099 internal finite/transient closes remain next.

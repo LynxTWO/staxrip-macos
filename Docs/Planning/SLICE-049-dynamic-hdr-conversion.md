@@ -2246,3 +2246,19 @@ access/activity ownership is next; no app action/default packaging/release capab
 automatic spool cleanup. Stage retirement/other resources/recovery/import/distribution stay
 separate gates. Actual generated22 accepted cases/30direct joins include retained active
 group uncertainty; direct child join is not cleanup authority. No owner body/full-source run.
+
+
+### D145 concrete crop access owner
+
+Unused distinct caller-request crop operation now reuses explicit source/spool scope
+attempts/no-follow pins/activity, checked outer closes and retained review/exclusions.
+D144 source-dependent caller agreement remains unchanged; normal worker/database/helper
+settlement and final selected identities precede reverse release. Shared uncertainty
+retains needed access after error drop/energy expiry, no cleanup/recovery authority.
+See D-145 and NATIVE-CROP-ACCESS-EVIDENCE.md. Actual generated12 accepted both-space/thread
+trials/19 direct joins include live OS idle-sleep assertion/ordinary cancellation/absence,
+substitution and reported helper/outer/partial close priorities. False ordinary Foundation
+acquisition is not denial; fake scopes not actual sandbox rights. Source ROI/independent
+values/rendered/edited/color/EL/resize remain false. Early source/spool constructor rollback
+close results remain unqualified and are the next concrete finite resource prerequisite;
+no broader resource/action/default packaging/release/import readiness claim.

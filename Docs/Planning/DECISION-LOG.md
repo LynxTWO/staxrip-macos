@@ -151,6 +151,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-142 | 2026-10-05 | Explicit decoded crop sample prerequisite | Confirmed | |
 | D-143 | 2026-10-05 | Native development crop role and admission | Confirmed | |
 | D-144 | 2026-10-05 | Native original-source and caller crop association | Confirmed | |
+| D-145 | 2026-10-05 | Concrete crop source/spool access ownership | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4221,3 +4222,49 @@ empty. No UI walkthrough, owner body/full-source, new C/sanitizer/oracle/APFS or
 Retained stage retirement, standalone drop, other helper/disk resources, recovery/import/
 distribution/rendered/edited gates remain separately open. Concrete crop access/activity is
 next; complete source-dependent finding does not itself grant sandbox access or cleanup.
+
+
+## D-145: Own concrete crop source/spool access through normal settlement
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+Distinct typed crop operation reuses existing Access/Pins/acquisition/checked release/
+retained registry and D144 source worker/open SQLite/caller coverage. Explicit source/
+spool scope attempts and actual no-follow pins precede activity; false ordinary acquisition
+is not denial/no inferred parent access. Qualified normal source/database/helper/worker
+settlement/final selected identity/outer checked closes precede reverse release. Shared
+process/close/outer substitution uncertainty retains needed access after dropped error;
+energy expiry is not settlement/release/cleanup. See NATIVE-CROP-ACCESS-EVIDENCE.md.
+
+Default51tests20.370s/initial compatible51tests22.846s pass/no warnings. Actual captured
+unchanged crop runtime12 accepted trials/both spaces-threads/conformance/reorder,19 direct
+joins after additional complete-success outer refusal. Live current-PID OS idle-sleep
+assertion/non-zombie decoder/ordinary settled cancellation and absence, POSIX/ACL denial,
+rollback/pre/active/late cancellation/substitution/controlled helper-outer-partial close
+reports/drop/expiry/exclusions qualified. Reports follow actual closes, not OS faults;
+fake scopes not sandbox rights. New throwing Boolean macro compile failure retained/fixed.
+Final focus/full ordinary/build/protection outcomes follow. Independent ROI/value/rendered/
+edited flags false; no UI/default packaging/release/recovery/cleanup authority.
+
+PR119 automatic37274841307 failed552tests577.498s35issues:21unchanged120s/seven180s plus
+four metadata/one sample absent-positive-child and two mastering phase EOF assertions.
+Full log retained/PR119 updated without retry, individual causes unestablished. Read-only
+inspection found early File/source and spool constructor rollback close status still
+discarded; this unit does not qualify those roles. Next finite checked constructor
+rollback prerequisite before broader resource readiness, preserving actual created/not-
+created state and stronger ownership. Other resources/retired pins/recovery/import/
+distribution/rendered/edited gates remain open; no history/global check workaround.
+
+
+Final corrected51tests1suite23.303s passed/no warnings, actual crop2.910s/19direct helpers.
+Final ordinary559reported tests/104suites209.958s FAILED ONE EXISTING metadata-surrogate
+pipe-holder settlement assertion CompanionMetadataProcessTests.swift268. Full log retained
+without rerun/cause/harmlessness claim;36 explicit skips (35 unchanged plus new actual crop
+access case), no warnings. Access31.605s/static prior companion30.695s passed. Explicit
+production20.15s/current strict ad-hoc app/read-only helper signatures/minima14.0/11.0
+pass; writer/decoder/sample/crop absent. Five-file privacy zero/positive sentinel, owner
+metadata/current journal/original D142/sample-prefix-frozen-D130/D143 runtime unchanged,
+planning findings empty. Awake assertion renewed only after exact owned command/start
+inspection, old PID22021 stopped/absence observed; new bounded PID47458 expires09:37:21UTC.
+No owner full-source/body/new sample/sanitizer/APFS/signing/UI qualification. Constructor
+rollback, retirement/other resources/recovery/rendered/edited/distribution remain open.

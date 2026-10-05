@@ -55,6 +55,15 @@ enum CompanionArchiveOperation {
         retained.removeValue(forKey: id)
     }
 
+    private static var isolatedMetadataPipeReviews: [UUID: Access] = [:]
+    /// Generated postspawn pipe trials only: hold the SAME Access/stage/grants.
+    /// Caller separately proves all consumed roles and required owned joins.
+    static func isolateGeneratedMetadataPipeReviewForTesting(_ id: UUID) {
+        guard let access = retained[id] else { return }
+        isolatedMetadataPipeReviews[id] = access
+        retained.removeValue(forKey: id)
+    }
+
     /// Only controlled generated phases whose settlement was separately proved.
     /// This is deliberately absent from release code, not a recovery authority.
     static func releaseGeneratedReviewForTesting(_ id: UUID) { retained.removeValue(forKey: id)?.finish() }

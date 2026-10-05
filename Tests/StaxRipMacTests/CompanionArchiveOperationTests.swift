@@ -3634,4 +3634,104 @@ struct CompanionArchiveOperationTests {
         }
     }
 
+    private final class MetadataPipeCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var roles: [CompanionMetadataProcess.PipeRole] = []
+        func add(_ role: CompanionMetadataProcess.PipeRole, _ status: Int32, _ code: Int32) {
+            lock.withLock { #expect(status == 0 && code == 0 && !roles.contains(role)); roles.append(role) }
+        }
+        func expectAll() { lock.withLock { #expect(roles.count == 4 && Set(roles) == Set(CompanionMetadataProcess.PipeRole.allCases)) } }
+    }
+    @Test func metadataPipeSettlementPrecedesBothModeCommitAndUncertaintyRetainsAccess() async throws {
+        typealias Reader = CompanionMetadataProcess
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+          for point in ["normal"] + Reader.PipeRole.allCases.map({ $0.rawValue }) + ["all", "source-priority"] {
+            let f = try await fixture(), ledger = Ledger(), closes = MetadataPipeCloses(), witness = WeakDiskEnumerationOwner(), original = try Data(contentsOf:f.source)
+            let reported = point != "normal"
+            var task: Task<ResultSetStaging.Published, Error>? = Task {
+                try await Operation.$testEnvironment.withValue(environment(ledger,fakeScopes:true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned:{ ledger.pinned($0) },archiveClosed:{ count in
+                        if reported { Issue.record("Uncertain metadata pipe released access") }; closes.expectAll(); ledger.closed(count)
+                    })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                            try await Reader.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) },
+                                beforeReceipt:{ closes.expectAll(); ledger.expectJoined(count:2); ledger.expectActive(scoped:true) },
+                                closed:{ closes.add($0,$1,$2) },refuseClose:{ point == "all" || point == "source-priority" || point == $0.rawValue })) {
+                                try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(refuseClose:{ point == "source-priority" })) {
+                                    try await ResultSetStaging.$testBoundary.withValue(.init(beforeCommit:{
+                                        #expect(!reported); closes.expectAll(); ledger.expectJoined(count:2)
+                                    })) { try await execute(f,mode:mode) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            var id: UUID?
+            do { _ = try await task!.value; #expect(!reported) }
+            catch let e as Operation.ReviewFailure {
+                #expect(reported && e.published == nil && e.removed == nil); id=e.reviewID
+                let cause: any Error
+                if point == "source-priority" { cause=(try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure)).operationError }
+                else { cause=(try #require(e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)).operationError }
+                let fault = try #require(cause as? Reader.PipeCloseFailure)
+                #expect(fault.operationError == nil)
+                let expected = point == "all" || point == "source-priority" ? Set(Reader.PipeRole.allCases) : Set(Reader.PipeRole.allCases.filter({ $0.rawValue == point }))
+                #expect(Set(fault.roles) == expected); witness.stage=Operation.retainedStageForTesting(e.reviewID)
+            }
+            task=nil; closes.expectAll(); ledger.expectJoined(count:2); #expect(try Data(contentsOf:f.source) == original)
+            if reported {
+                let review=try #require(id); ledger.expectRetained(); #expect(witness.stage != nil)
+                #expect(!FileManager.default.fileExists(atPath:f.root.appendingPathComponent("published").path))
+                await #expect(throws:NativeExportError.self) { try await execute(f,mode:mode) }
+                try await Task.sleep(for:.milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); #expect(witness.stage != nil)
+                // Existing generated-review isolation retains access strongly; no release.
+                Operation.isolateGeneratedMetadataPipeReviewForTesting(review)
+                ledger.expectRetained(); #expect(witness.stage != nil)
+                print("GENERATED_OWNING_METADATA_PIPE_REVIEW " + f.root.path)
+            } else { ledger.expectClosed(); ledger.expectEnded(scoped:true); f.cleanup() }
+          }
+        }
+    }
+
+    @Test func actualLateMetadataCancellationChecksPipesBeforeReleaseOrRetainedAccess() async throws {
+        for reported in [false,true] {
+            let f=try await fixture(), ledger=Ledger(), closes=MetadataPipeCloses(), gate=Gate(), witness=WeakDiskEnumerationOwner(), original=try Data(contentsOf:f.source)
+            var task:Task<ResultSetStaging.Published,Error>?=Task {
+                defer { gate.signal.finish() }
+                return try await Operation.$testEnvironment.withValue(environment(ledger,fakeScopes:true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned:{ ledger.pinned($0) },archiveClosed:{ count in
+                        if reported { Issue.record("Uncertain cancelled metadata released access") }; closes.expectAll(); ledger.closed(count)
+                    })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) },
+                                beforeReceipt:{ closes.expectAll(); ledger.expectJoined(count:2); gate.hold() },
+                                closed:{ closes.add($0,$1,$2) },refuseClose:{ _ in reported })) { try await execute(f) }
+                        }
+                    }
+                }
+            }
+            for await _ in gate.entered { break }; ledger.expectActive(scoped:true); #expect(ownAssertion(try assertions()))
+            task!.cancel(); gate.release.signal(); var id:UUID?
+            do { _=try await task!.value; Issue.record("Late cancelled metadata published") }
+            catch let e as Operation.ReviewFailure {
+                #expect(reported && e.published == nil && e.removed == nil); id=e.reviewID
+                let phase=try #require(e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)
+                let fault=try #require(phase.operationError as? CompanionMetadataProcess.PipeCloseFailure)
+                #expect(fault.operationError is CancellationError && Set(fault.roles) == Set(CompanionMetadataProcess.PipeRole.allCases)); witness.stage=Operation.retainedStageForTesting(e.reviewID)
+            } catch {
+                if error is any CompanionUnsettledOwnership { print("GENERATED_UNEXPECTED_LATE_METADATA_REVIEW " + f.root.path); throw error }
+                #expect(!reported && error is CancellationError)
+            }
+            task=nil; closes.expectAll(); ledger.expectJoined(count:2)
+            #expect(try Data(contentsOf:f.source) == original && !FileManager.default.fileExists(atPath:f.root.appendingPathComponent("published").path))
+            if reported {
+                let review=try #require(id); ledger.expectRetained(); #expect(witness.stage != nil)
+                await #expect(throws:NativeExportError.self) { try await execute(f) }
+                try await Task.sleep(for:.milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); #expect(witness.stage != nil)
+                Operation.isolateGeneratedMetadataPipeReviewForTesting(review); ledger.expectRetained(); #expect(witness.stage != nil)
+                print("GENERATED_CANCELLED_OWNING_METADATA_PIPE_REVIEW " + f.root.path)
+            } else { ledger.expectClosed(); ledger.expectEnded(scoped:true); #expect(!ownAssertion(try assertions())); f.cleanup() }
+        }
+    }
+
 }

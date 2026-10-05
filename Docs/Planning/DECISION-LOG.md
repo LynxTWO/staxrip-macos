@@ -139,6 +139,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-130 | 2026-10-04 | Own explicit development base-sample decoder profile | Confirmed | |
 | D-131 | 2026-10-04 | Bind native samples to original source | Confirmed | |
 | D-132 | 2026-10-05 | Check decoder descriptor close settlement | Confirmed | |
+| D-133 | 2026-10-05 | Native sample source/spool access ownership | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3672,3 +3673,57 @@ updated without retry, historical observer/assertion/deadline/scheduling change.
 NATIVE-DECODER-DESCRIPTOR-EVIDENCE.md. Needed access remains retained on typed
 uncertainty; sample source/spool access/activity integration and all edited/release
 gates remain open. No production or whole-program completion claim.
+
+
+## D-133: Native sample source/spool access ownership
+Status: Confirmed
+Date:2026-10-05, owner standing autonomous generated non-audio delegation,R059.
+
+Extend the existing concrete D128 operation with an explicit typed original-sample
+entry using D131 and checked D132 helper settlement. Reuse fixed source/spool scope
+attempts, actual no-follow descriptor pins, activity and exclusion/retained-review
+policy. No inferred parent grant, generic receipt/profile normalization, new worker,
+closed spool adoption, file creation/removal authority or app-facing action. Ordinary
+return follows all worker/database/source/helper/pipe/outer closes and final selected
+identities; shared uncertainty retains needed access after dropped errors. Energy
+expiry is not ownership settlement or access release. All sample-value/edit/release
+qualification limits stay unchanged.
+
+Acceptance: generated actual captured D130 sample runtime both threads/source variants,
+real OS live idle-sleep activity and ordinary absence after settlement, explicit grant
+rollback/pre-cancel/POSIX denial, source-pass/active/late cancellation, final selection
+substitution, reported helper/outer close uncertainty and controlled retained-review
+exclusion/expiry. Fake scope providers are not sandbox grants/revocation; controlled
+reported failure after actual close is not spontaneous OS fault. No owner media body,
+known crashing module, signing retry/movie/listening/UI/default packaging/merge/release.
+Focused/ordinary/explicit production/privacy/planning checks; retain any current local
+or hosted failure without blind retry, assertion/deadline or scheduling changes.
+
+
+D133 inspected prerequisite extension: the shared access constructor used unchecked
+partial-pin rollback. Move acquisition into its concrete owned Access/Pins lifecycle
+so actual rollback closes are checked before reversing grants. Retain grants and
+block conflicting operations if rollback close is uncertain, even before activity
+starts. Qualification distinguishes controlled reported uncertainty after actual
+partial close from spontaneous OS failure; zero-owned-descriptor refusal is ordinary.
+No expanded permission or cleanup authority follows.
+
+
+D133 acceptance: corrected default28tests/1suite7.593s and compatible28tests/
+1suite15.452s pass; final acquisition-corrected compatible29tests/1suite10.558s
+passes without warnings. Six actual generated sample trials/both1/four threads,
+codec crop and24-picture B-frame source; twelve helper direct joins. Live current-PID
+idle-sleep activity and non-zombie decoder observed; ordinary cancellation balances
+release/absence, no new group-denial fault. Real POSIX/ACL denials, rollback/pre/active/
+late cancel, final source/folder substitution and controlled reported helper/outer/
+partial-acquisition close retention pass. Fake scopes/reported refusals are not actual
+sandbox grants/revocation or spontaneous OS faults. First compile actor-isolation
+failure retained/corrected. Initial ordinary506tests213.944s passes before acquisition
+extension; final507reported tests/100suites216.019s passes33opt-in skips/no warnings,
+access24.462s/static prior companion pipeline35.017s. Explicit production/current
+strict signatures/minima14.0/11.0 pass; writer/decoder/sample absent. Five-file privacy/
+owner metadata/current journal/original sample-prefix-frozen-runtime/planning pass.
+PR107 automatic500tests941.797s90issues retained/PR updated without rerun;39existing60s/
+31existing120s/6existing180s bounds plus14other. Source-frame/sample-source agreement
+remains fixed-decoder dependent, independent values/all edited/release flags false.
+See NATIVE-SAMPLE-ACCESS-EVIDENCE.md. No app action or whole-program completion.

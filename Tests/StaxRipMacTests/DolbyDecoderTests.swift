@@ -90,6 +90,7 @@ struct DolbyDecoderTests {
         let lock=NSLock();private var child:pid_t=0,joined:pid_t=0
         func launch(_ p:pid_t) { lock.withLock { child=p } };func settle(_ p:pid_t) { lock.withLock { joined=p } }
         var pid:pid_t { lock.withLock { child } }
+        var observations:(pid_t,pid_t) { lock.withLock { (child,joined) } }
         func assertJoined() {
             let pair=lock.withLock { (child,joined) }
             #expect(pair.0 > 0 && pair.0 == pair.1)
@@ -126,16 +127,77 @@ struct DolbyDecoderTests {
         let r=try await ToolRunner().run(executable:URL(fileURLWithPath:"/usr/bin/xcrun"),arguments:["clang",c.path,"-o",exe.path]);try #require(r.status == 0)
         return .init(root:root,source:source,executable:exe)
     }
+    private final class Diagnosis: @unchecked Sendable {
+        private let lock = NSLock()
+        private var stage = Owner.DiagnosticStage.notEntered, role: Owner.DescriptorRole?
+        private var refusal: Owner.CheckRefusal?, spawn: Int32?
+        private var closes: [(Owner.DescriptorRole, Int32)] = []
+        func enter(_ stage: Owner.DiagnosticStage, _ role: Owner.DescriptorRole?) { lock.withLock { self.stage = stage; self.role = role } }
+        func check(_ stage: Owner.DiagnosticStage, _ role: Owner.DescriptorRole?, _ refusal: Owner.CheckRefusal) { lock.withLock { self.stage = stage; self.role = role; self.refusal = refusal } }
+        func spawned(_ status: Int32) { lock.withLock { spawn = status } }
+        func closed(_ role: Owner.DescriptorRole, _ fd: Int32, _ status: Int32) { lock.withLock { #expect(fd >= 0); closes.append((role,status)) } }
+        var snapshot:(stage:Owner.DiagnosticStage, role:Owner.DescriptorRole?, refusal:Owner.CheckRefusal?, spawn:Int32?, closes:[(Owner.DescriptorRole,Int32)]) { lock.withLock { (stage,role,refusal,spawn,closes) } }
+        func report(_ id: String, outcome: String, state: State) {
+            let s = snapshot, pair = state.observations
+            let closeText = s.closes.map { $0.0.rawValue + ":" + String($0.1) }.joined(separator: ",")
+            print("DECODER_CASE id=\(id) outcome=\(outcome) stage=\(s.stage.rawValue) role=\(s.role?.rawValue ?? "none") check=\(s.refusal?.rawValue ?? "none") spawn=\(s.spawn.map(String.init) ?? "none") launched=\(pair.0 > 0) settledEvent=\(pair.0 > 0 && pair.0 == pair.1) closes=\(closeText)")
+        }
+    }
+    private func diagnosedBoundary(_ diagnosis: Diagnosis, _ state: State) -> Owner.Boundary {
+        .init(launched: { state.launch($0) }, settled: { state.settle($0) },
+              admission: { diagnosis.enter($0,$1) }, checkRefused: { diagnosis.check($0,$1,$2) },
+              spawnStatus: { diagnosis.spawned($0) }, closed: { diagnosis.closed($0,$1,$2) })
+    }
+    private func caughtCategory(_ error: any Error) -> String {
+        if error is CancellationError { return "cancelled" }
+        if let error = error as? Owner.OwnershipFailure { return "ownership:" + error.reason }
+        if error is NativeExportError { return "native-invalid" }
+        return "other" // Never log arbitrary error descriptions, paths or payloads.
+    }
+    @Test func categoricalDiagnosticsDistinguishPrelaunchHashPinSpawnAndDeadlineRefusals() async throws {
+        for fault in ["executable-hash", "library-hash", "library-missing", "spawn", "deadline"] {
+            let f = try await fixture(body: "EMIT"), state = State(), diagnosis = Diagnosis()
+            defer { try? FileManager.default.removeItem(at: f.root) }
+            let sourceBefore = try Data(contentsOf: f.source)
+            if fault == "spawn" { try Data(repeating: 0,count:128).write(to: f.executable); try FileManager.default.setAttributes([.posixPermissions:0o755],ofItemAtPath:f.executable.path) }
+            var hashes = [String:String]()
+            for name in Self.names { hashes[name] = try Self.digest(f.framework.appendingPathComponent(name)) }
+            if fault == "library-hash" { hashes[Self.names[1]] = String(repeating:"0",count:64) }
+            let executableHash = fault == "executable-hash" ? String(repeating:"0",count:64) : try Self.digest(f.executable)
+            let tool = try Owner.Tool.development(f.executable,expectedSHA256:executableHash,libraries:hashes,versions:[1,1,1])
+            if fault == "library-missing" { try FileManager.default.removeItem(at:f.framework.appendingPathComponent(Self.names[2])) }
+            var outcome = "success"
+            do { _ = try await Owner.$testBoundary.withValue(diagnosedBoundary(diagnosis,state)) { try await Owner.run(tool:tool,source:f.source,timeout:fault == "deadline" ? Double.leastNonzeroMagnitude : 10) }; Issue.record("Generated diagnostic refusal returned success") }
+            catch { outcome = caughtCategory(error); #expect(error is NativeExportError) }
+            diagnosis.report("qualification-" + fault,outcome:outcome,state:state)
+            let observed = diagnosis.snapshot
+            #expect(state.observations.0 == 0 && state.observations.1 == 0)
+            #expect(observed.closes.allSatisfy { $0.1 == 0 })
+            #expect(Set(observed.closes.map { $0.0 }).count == observed.closes.count)
+            switch fault {
+            case "executable-hash": #expect(observed.stage == .executableHash && observed.role == .executable && observed.closes.count == 2)
+            case "library-hash": #expect(observed.stage == .libraryHash && observed.role == .avformat && observed.closes.count == 4)
+            case "library-missing": #expect(observed.stage == .libraryPin && observed.role == .avutil && observed.closes.count == 4)
+            case "spawn": #expect(observed.stage == .spawn && observed.spawn != nil && observed.spawn != 0 && observed.closes.count == 10)
+            default: #expect(observed.stage == .options && observed.refusal == .deadline && observed.closes.isEmpty)
+            }
+            if fault != "deadline" { #expect(observed.refusal == nil) }
+            #expect(try Data(contentsOf:f.source) == sourceBefore)
+        }
+    }
     @Test func nativeSurrogatesJoinEOFDeadlineErrorsAndPipeHolder() async throws {
         let cases=["EMIT","sleep(60);","close(1);close(2);sleep(60);","return 7;","puts(\"{}\");fflush(stdout);sleep(60);","for(int i=0;i<70000;i++)fputc('x',stderr);fflush(stderr);sleep(60);","for(int i=0;i<65536;i++)fputc(' ',stdout);fflush(stdout);sleep(60);","EMIT sleep(60);","EMIT return 7;","pid_t p=fork();if(p==0){sleep(60);_exit(0);}char path[4096];snprintf(path,sizeof(path),\"%s-holder\",argv[1]);FILE*f=fopen(path,\"w\");fprintf(f,\"%d\",p);fclose(f);return 0;"]
+        let labels = ["valid","silence","EOF-live-child","nonzero","malformed","stderr-bound","stdout-line-bound","complete-live-child","complete-nonzero","pipe-holder"]
         for (i,body) in cases.enumerated() {
             let f=try await fixture(body:body),state=State(),tool=try f.tool;var cleanup=true
+            let diagnosis = Diagnosis(); var outcome = "success"
             defer { if cleanup { try? FileManager.default.removeItem(at:f.root) } }
             do {
-                let r=try await Owner.$testBoundary.withValue(.init(launched:{state.launch($0)},settled:{state.settle($0)})) { try await Owner.run(tool:tool,source:f.source,timeout: i == 0 ? 10:0.25) }
+                let r=try await Owner.$testBoundary.withValue(diagnosedBoundary(diagnosis,state)) { try await Owner.run(tool:tool,source:f.source,timeout: i == 0 ? 10:0.25) }
                 #expect(i == 0 && r.frames == 2 && !r.independentSourceFrameAssociationVerified)
-            } catch let e as Owner.OwnershipFailure { cleanup=false;#expect(i != 0 && e.reason == "group-1-joined-true") }
-            catch { #expect(i != 0) }
+            } catch let e as Owner.OwnershipFailure { outcome = caughtCategory(e); cleanup=false;#expect(i != 0 && e.reason == "group-1-joined-true") }
+            catch { outcome = caughtCategory(error); #expect(i != 0) }
+            diagnosis.report(String(i) + "-" + labels[i],outcome:outcome,state:state)
             state.assertJoined();#expect(try Data(contentsOf:f.source) == Data(repeating:0x5a,count:100000))
             if i == cases.count-1 {
                 let text=try String(contentsOf:URL(fileURLWithPath:f.source.path+"-holder"),encoding:.utf8),pid=try #require(Int32(text))

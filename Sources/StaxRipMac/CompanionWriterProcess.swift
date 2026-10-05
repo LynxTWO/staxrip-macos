@@ -26,7 +26,20 @@ enum CompanionWriterProcess {
         var errorDescription: String? { "Companion storage is full. Free destination space and retry. No result was published." }
     }
     struct OwnershipFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: (any Error)?
+        let pipeCloseRoles: [PipeRole]
+        init(operationError: (any Error)? = nil, pipeCloseRoles: [PipeRole] = []) {
+            self.operationError = operationError; self.pipeCloseRoles = pipeCloseRoles
+        }
         var errorDescription: String? { "Companion process ownership could not be fully settled. Retain the temporary stage for review." }
+    }
+    enum PipeRole: String, CaseIterable, Sendable {
+        case stdinRead, stdinWrite, stdoutRead, stdoutWrite, stderrRead, stderrWrite
+    }
+    struct PipeCloseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: (any Error)?
+        let roles: [PipeRole]
+        var errorDescription: String? { "Companion writer pipe ownership could not be fully settled. Retain needed source and stage access for review." }
     }
     struct Boundary: Sendable {
         var launched: @Sendable (pid_t) -> Void = { _ in }
@@ -35,6 +48,9 @@ enum CompanionWriterProcess {
         var poll: @Sendable () -> Void = {}
         var settled: @Sendable (pid_t) -> Void = { _ in }
         var beforeReceipt: @Sendable () -> Void = {}
+        // DEBUG reports follow each actual close; refusal never masks OS failure.
+        var closed: @Sendable (PipeRole, Int32, Int32) -> Void = { _,_,_ in }
+        var refuseClose: @Sendable (PipeRole, Int32, Int32) -> Bool = { _,_,_ in false }
     }
     #if DEBUG
     @TaskLocal static var testBoundary = Boundary()
@@ -75,6 +91,26 @@ enum CompanionWriterProcess {
     }
     private static func work(tool: Tool, source: URL, stage: URL, retention: Transaction.Retention,
                              timeout: Double, cancellation: Cancellation, boundary: Boundary = .init()) throws -> CompanionWriterProtocol.Receipt {
+        var uncertain: [PipeRole] = []
+        let result = Result {
+            try workBody(tool: tool, source: source, stage: stage, retention: retention,
+                timeout: timeout, cancellation: cancellation, boundary: boundary,
+                recordClose: { uncertain.append($0) })
+        }
+        if !uncertain.isEmpty {
+            let original: (any Error)?
+            switch result { case .success: original = nil; case .failure(let error): original = error }
+            // Process/group uncertainty remains the stronger outer refusal.
+            if let original = original as? OwnershipFailure {
+                throw OwnershipFailure(operationError: original, pipeCloseRoles: uncertain)
+            }
+            throw PipeCloseFailure(operationError: original, roles: uncertain)
+        }
+        return try result.get()
+    }
+    private static func workBody(tool: Tool, source: URL, stage: URL, retention: Transaction.Retention,
+        timeout: Double, cancellation: Cancellation, boundary: Boundary,
+        recordClose: (PipeRole) -> Void) throws -> CompanionWriterProtocol.Receipt {
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)
         func check() throws { try cancellation.check(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
         try check()
@@ -111,7 +147,12 @@ enum CompanionWriterProcess {
             posix_spawn(&pid, tool.url.path, &actions, &attributes, a.baseAddress!, e.baseAddress!)
         } }
         guard launched == 0, pid > 0 else { throw failure() }
-        stdin.closeRead(); stdout.closeWrite(); stderr.closeWrite()
+        func close(_ pipe: PipeEnds, read: Bool, role: PipeRole) {
+            if !pipe.closeChecked(read: read, role: role, boundary: boundary) { recordClose(role) }
+        }
+        close(stdin, read: true, role: .stdinRead)
+        close(stdout, read: false, role: .stdoutWrite)
+        close(stderr, read: false, role: .stderrWrite)
         #if DEBUG
         boundary.launched(pid)
         #endif
@@ -129,7 +170,7 @@ enum CompanionWriterProcess {
                     if count > 0 { sent += count }
                     else if count < 0 && errno != EAGAIN && errno != EINTR { throw failure() }
                     if sent == control.count {
-                        stdin.closeWrite()
+                        close(stdin, read: false, role: .stdinWrite)
                         #if DEBUG
                         boundary.started()
                         #endif
@@ -138,7 +179,7 @@ enum CompanionWriterProcess {
                 for (pipe, isOutput) in [(stdout, true), (stderr, false)] where pipe.read >= 0 {
                     var buffer = [UInt8](repeating: 0, count: 16_384)
                     let count = Darwin.read(pipe.read, &buffer, buffer.count)
-                    if count == 0 { pipe.closeRead() }
+                    if count == 0 { close(pipe, read: true, role: isOutput ? .stdoutRead : .stderrRead) }
                     else if count > 0 {
                         if isOutput {
                             for event in try parser.accept(Data(buffer.prefix(count))) {
@@ -174,10 +215,17 @@ enum CompanionWriterProcess {
         } catch {
             let original = error
             // An unexpected external reap removes PID ownership; never signal it.
-            guard !reaped else { throw OwnershipFailure() }
+            guard !reaped else {
+                close(stdin, read: false, role: .stdinWrite)
+                close(stdout, read: true, role: .stdoutRead)
+                close(stderr, read: true, role: .stderrRead)
+                throw OwnershipFailure(operationError: original)
+            }
             let groupStopped = Darwin.kill(-pid, SIGKILL) == 0 || errno == ESRCH
             if !groupStopped { _ = Darwin.kill(pid, SIGKILL) }
-            stdin.closeWrite(); stdout.closeRead(); stderr.closeRead()
+            close(stdin, read: false, role: .stdinWrite)
+            close(stdout, read: true, role: .stdoutRead)
+            close(stderr, read: true, role: .stderrRead)
             if !reaped {
                 var waited: pid_t
                 repeat { waited = waitpid(pid, &status, 0) } while waited < 0 && errno == EINTR
@@ -186,10 +234,12 @@ enum CompanionWriterProcess {
             #if DEBUG
             boundary.settled(pid)
             #endif
-            guard groupStopped, reaped else { throw OwnershipFailure() }
+            guard groupStopped, reaped else { throw OwnershipFailure(operationError: original) }
             throw original
         }
-        stdin.closeWrite(); stdout.closeRead(); stderr.closeRead()
+        close(stdin, read: false, role: .stdinWrite)
+        close(stdout, read: true, role: .stdoutRead)
+        close(stderr, read: true, role: .stderrRead)
         #if DEBUG
         boundary.settled(pid); boundary.beforeReceipt()
         #endif
@@ -214,6 +264,20 @@ enum CompanionWriterProcess {
         deinit { closeRead(); closeWrite() }
         func closeRead() { if read >= 0 { Darwin.close(read); read = -1 } }
         func closeWrite() { if write >= 0 { Darwin.close(write); write = -1 } }
+        /// Finite post-spawn role only. Consume before close, check once, never retry.
+        /// Admission rollback/deinit and Pin retirement remain separate qualifications.
+        func closeChecked(read reading: Bool, role: PipeRole, boundary: Boundary) -> Bool {
+            let fd = reading ? read : write
+            guard fd >= 0 else { return true }
+            if reading { read = -1 } else { write = -1 }
+            let status = Darwin.close(fd)
+            var settled = status == 0
+            #if DEBUG
+            boundary.closed(role, fd, status)
+            if boundary.refuseClose(role, fd, status) { settled = false }
+            #endif
+            return settled
+        }
         func nonblock(_ fd: Int32) throws { let flags = fcntl(fd, F_GETFL); guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else { throw failure() } }
     }
     private final class Pin {

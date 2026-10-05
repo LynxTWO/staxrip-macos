@@ -108,6 +108,115 @@ struct CompanionArchiveOperationTests {
             #expect(try Data(contentsOf: result.directory.appendingPathComponent("manifest.json")) == prior)
         }
     }
+    private final class WriterPipeCloses: @unchecked Sendable {
+        private let lock = NSLock()
+        private var values: [(CompanionWriterProcess.PipeRole, Int32, Int32)] = []
+        func add(_ role: CompanionWriterProcess.PipeRole, _ fd: Int32, _ status: Int32) {
+            lock.withLock { values.append((role, fd, status)) }
+        }
+        func expectOnce() {
+            lock.withLock {
+                #expect(values.count == 6 && values.allSatisfy { $0.1 >= 0 && $0.2 == 0 })
+                for role in CompanionWriterProcess.PipeRole.allCases { #expect(values.filter { $0.0 == role }.count == 1) }
+            }
+        }
+    }
+    @Test func checkedWriterPipesPrecedeBothModeSemanticVerificationAndExclusivePublication() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+            let f = try await fixture(); defer { f.cleanup() }
+            let ledger = Ledger(), closes = WriterPipeCloses(), original = try Data(contentsOf: f.source)
+            let result = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(phase: { _ in ledger.expectActive(scoped: true) }, pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) }, closed: { closes.add($0, $1, $2) })) {
+                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { closes.expectOnce(); ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await execute(f, mode: mode)
+                        }
+                    }
+                }
+            }
+            closes.expectOnce(); ledger.expectJoined(count: 2); ledger.expectEnded(scoped: true); ledger.expectClosed()
+            #expect(!ownAssertion(try assertions()))
+            #expect(try Data(contentsOf: f.source) == original)
+            let names = try FileManager.default.contentsOfDirectory(atPath: result.directory.path)
+            #expect(Set(names) == Set(mode.limits.keys))
+            if mode == .entireContainer { #expect(try Data(contentsOf: result.directory.appendingPathComponent("original-container.mkv")) == original) }
+            let published = try snapshot(result.directory)
+            await #expect(throws: (any Error).self) { try await execute(f, mode: mode) }
+            let after = try snapshot(result.directory); #expect(after == published)
+        }
+    }
+    @Test func checkedWriterPipeUncertaintyRetainsConcreteStageAccessAfterDropExpiryAndSourcePriority() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+          for fault in ["one", "all", "cancel", "source-priority"] {
+            let f = try await fixture(), ledger = Ledger(), closes = WriterPipeCloses(), gate = Gate()
+            defer { print("GENERATED_WRITER_PIPE_ACCESS_REVIEW " + f.root.path) }
+            let original = try Data(contentsOf: f.source), prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior output".utf8)
+            try priorBytes.write(to: prior)
+            var task: Task<ResultSetStaging.Published, any Error>? = Task {
+                defer { gate.signal.finish() }
+                return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { _ in Issue.record("Uncertain writer released outer pins") })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, ready: { if fault == "cancel" { gate.hold() } }, settled: { ledger.join($0) }, closed: { closes.add($0, $1, $2) }, refuseClose: { role,_,_ in fault == "all" || role == .stdinRead })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Uncertain writer launched verifier") })) {
+                                try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(refuseClose: { fault == "source-priority" })) { try await execute(f, mode: mode) }
+                            }
+                        }
+                    }
+                }
+            }
+            if fault == "cancel" {
+                for await _ in gate.entered { break }
+                ledger.expectActive(scoped: true)
+                #expect(ownAssertion(try assertions()))
+                let pid = try #require(ledger.latestPID)
+                let state = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/ps"), arguments: ["-p", String(pid), "-o", "stat="])
+                #expect(state.status == 0 && !String(decoding: state.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("Z"))
+                task?.cancel(); gate.release.signal()
+            }
+            var reviewID: UUID?
+            weak var retained: ResultSetStaging?
+            do { _ = try await task!.value; Issue.record("Writer pipe uncertainty returned publication") }
+            catch let e as Operation.ReviewFailure {
+                reviewID = e.reviewID; retained = Operation.retainedStageForTesting(e.reviewID)
+                #expect(e.published == nil && e.removed == nil)
+                var underlying: (any Error)?
+                if fault == "source-priority" {
+                    let source = try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure)
+                    underlying = source.operationError
+                } else {
+                    let phase = try #require(e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)
+                    underlying = phase.operationError
+                }
+                let pipe = try #require(underlying as? CompanionWriterProcess.PipeCloseFailure)
+                #expect(Set(pipe.roles) == Set(fault == "all" ? CompanionWriterProcess.PipeRole.allCases : [.stdinRead]))
+                if fault == "cancel" { #expect(pipe.operationError is CancellationError) }
+                else { #expect(pipe.operationError == nil) }
+            }
+            task = nil // Drop the completed Task's retained error as well.
+            // The returned error and worker locals are dropped. Existing registry owns
+            // the same concrete stage and access, not only a namespace locator.
+            let id = try #require(reviewID), stage = try #require(retained?.originalDirectoryURL)
+            ledger.expectJoined(count: 1); closes.expectOnce(); ledger.expectRetained()
+            let pins = try #require(retained?.retainedPinIdentitiesForTesting()), files = try snapshot(stage)
+            #expect(pins.count == 2 && retained != nil)
+            #expect(throws: NativeExportError.self) { try retained?.fileURL("manifest.json") }
+            #expect(throws: NativeExportError.self) { try retained?.discard() }
+            await #expect(throws: NativeExportError.self) { try await execute(f) }
+            await #expect(throws: NativeExportError.self) { try await review(f) }
+            try await Task.sleep(for: .milliseconds(100))
+            ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id) && retained != nil)
+            let laterPins = try #require(retained?.retainedPinIdentitiesForTesting()), laterFiles = try snapshot(stage)
+            #expect(zip(pins, laterPins).allSatisfy { $0.0.0 == $0.1.0 && $0.0.1 == $0.1.1 } && files == laterFiles)
+            #expect(try Data(contentsOf: f.source) == original && Data(contentsOf: prior) == priorBytes)
+            #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("published").path))
+            // Only controlled DEBUG isolation after all generated workers/children join;
+            // no production recovery/cleanup authority or stage fallback-close proof.
+            Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+            #expect(retained == nil)
+          }
+        }
+    }
+
     @Test func positiveInjectedScopesBalanceAndSecondAcquisitionFailureRollsBackWithoutActivity() async throws {
         let f = try await fixture(); defer { f.cleanup() }; let ledger = Ledger()
         _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {

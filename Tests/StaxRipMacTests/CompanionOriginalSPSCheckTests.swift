@@ -521,4 +521,124 @@ struct CompanionOriginalSPSCheckTests {
         }
     }
 
+    private func segment(type: UInt8 = 1, pps: Int = 0, first: Bool = true, prior: Bool = false,
+        dependent: Bool? = nil, address: Int = 0, addressBits: Int = 0) -> Data {
+        var w=Writer();w.put(first ? 1:0,1)
+        if (16...23).contains(type){w.put(prior ? 1:0,1)}
+        w.ue(pps)
+        if !first {if let dependent{w.put(dependent ? 1:0,1)};w.put(address,addressBits)}
+        w.put(0xaa,8) // Opaque suffix, not a complete slice.
+        return escaped(w.bytes(),type:type)
+    }
+    private func segmentGrid(ppsID: Int = 0, dependent: Bool = true, large: Bool = false) throws -> SPS.CodingTreePrefix {
+        try SPS.readConfigurationCodingTreePrefix(references(nil,
+            codingNAL(width:large ? 16384:176,height:large ? 16384:112,diff:large ? 1:3),
+            pps(id:ppsID,dependent:dependent ? 1:0)))
+    }
+    private func segmentPrefix(_ n:Data,_ grid:SPS.CodingTreePrefix,payloadBytes:Int64? = nil) throws -> SPS.SliceSegmentPrefix {
+        let payload=Data(n.dropFirst(2))
+        return try SPS.readSliceSegmentPrefix(header:Data(n.prefix(2)),payloadBytes:payloadBytes ?? Int64(payload.count),grid:grid,readByte:{offset in
+            #expect(offset<7 && offset<payload.count);return payload[offset]
+        })
+    }
+    @Test func segmentPrefixesReadRawPresenceTypesPPSIDsAndGridAddressBounds() throws {
+        let types:[UInt8]=[0,1,6,7,8,9,16,17,18,19,20,21]
+        for type in types {for id in 0...63 {for first in [false,true] {
+            let grid=try segmentGrid(ppsID:id)
+            let n=segment(type:type,pps:id,first:first,prior:true,dependent:first ? nil:true,address:5,addressBits:3)
+            let r=try segmentPrefix(n,grid)
+            #expect(r.ppsID == id && r.nalType == Int(type) && r.firstSliceSegmentInPicture == first)
+            #expect(r.address == (first ? nil:5) && r.dependentSliceSegment == (first ? nil:true))
+            #expect(r.noOutputOfPriorPics == ((16...21).contains(type) ? true:nil))
+            #expect(r.encodedPrefixBytes<=7 && r.prefixBits<=36 && !r.completeSliceConformanceVerified && !r.activePictureParameterSetSelectionVerified)
+        }}}
+        let disabled=try segmentGrid(dependent:false),r=try segmentPrefix(segment(first:false,address:0,addressBits:3),disabled)
+        #expect(r.address == 0 && r.dependentSliceSegment == nil)
+        // Zero is individual syntax range-valid; same-picture uniqueness is not inferred.
+        let one=try SPS.readConfigurationCodingTreePrefix(references(nil,codingNAL(width:16,height:16,cropped:false),nil))
+        let single=try segmentPrefix(segment(first:false),one);#expect(single.address == 0 && !single.firstSliceSegmentInPicture)
+    }
+    @Test func segmentIncrementalEscapeSevenByteBoundTruncationAndOpaqueSuffix() throws {
+        let grid=try segmentGrid(ppsID:63,large:true),n=segment(pps:63,first:false,dependent:false,address:0,addressBits:20)
+        #expect(n.range(of:Data([0,0,3,0])) != nil)
+        let r=try segmentPrefix(n,grid,payloadBytes:1<<30)
+        #expect(r.address == 0 && r.encodedPrefixBytes<=7 && r.prefixBits == 35)
+        for size in 0..<r.encodedPrefixBytes {
+            let truncated=Data(n.prefix(size+2));#expect(throws:(any Error).self){try segmentPrefix(truncated,grid)}
+        }
+        var bad=n;let at=try #require(bad.range(of:Data([0,0,3,0])));bad[at.lowerBound+3]=4
+        #expect(throws:(any Error).self){try segmentPrefix(bad,grid)}
+        var absent=n;absent.remove(at:at.lowerBound+2)
+        #expect(throws:(any Error).self){try segmentPrefix(absent,grid)}
+        let changed=n+Data([0,0,3,4]) // Unread suffix remains deliberately opaque.
+        let accepted=try segmentPrefix(changed,grid);#expect(!accepted.completeSliceConformanceVerified)
+        #expect(throws:CancellationError.self){try SPS.readSliceSegmentPrefix(header:Data(n.prefix(2)),payloadBytes:100,grid:grid,readByte:{_ in throw CancellationError()})}
+    }
+    @Test func segmentPrefixRefusesUnsupportedHeadersReferencesAndOutOfGridAddresses() throws {
+        let grid=try segmentGrid(),n=segment(first:false,dependent:false,address:6,addressBits:3)
+        #expect(throws:(any Error).self){try segmentPrefix(n,grid)}
+        for type in [UInt8(2),3,4,5,10,11,15,22,23,24,31] {#expect(throws:(any Error).self){try segmentPrefix(segment(type:type),grid)}}
+        for bad in [Data([0x82,1,255]),Data([2,9,255]),Data([2,2,255]),Data([2,0,255]),segment(pps:1),segment(pps:64),Data([2,1,0,0,0])] {
+            #expect(throws:(any Error).self){try segmentPrefix(bad,grid)}
+        }
+        let changed=SPS.CodingTreePrefix(parameters:grid.parameters,pocLSBBits:grid.pocLSBBits,prefixBitCount:grid.prefixBitCount,
+            orderingInfoPresentForAllSubLayers:grid.orderingInfoPresentForAllSubLayers,presentOrdering:grid.presentOrdering,
+            minCbLog2Size:grid.minCbLog2Size,ctbLog2Size:grid.ctbLog2Size,columns:grid.columns,rows:grid.rows,ctbs:6,addressBits:2)
+        #expect(throws:(any Error).self){try segmentPrefix(segment(),changed)}
+    }
+    @Test func sourceSegmentPrefixesStreamSignedDuplicateRawReferencesAndKeepFirstOnlyAPINarrow() throws {
+        let cfg=references(nil,codingNAL(),pps(dependent:1)),nonfirst=segment(first:false,dependent:true,address:5,addressBits:3)
+        let bytes=source(cfg,vcl:[nonfirst],times:[2,-1,2],rpuCopies:2),v=view(bytes),track=try CompanionOriginalTrackCheck.readSource(v)
+        var refs:[CompanionOriginalPacketCheck.SegmentReference]=[]
+        let r=try CompanionOriginalPacketCheck.readSourceSegmentPrefixes(v,track:track,observeSegment:{refs.append($0)})
+        #expect(r.packets.packets == 3 && r.packets.records == 6 && r.summary.prefixes == 3 && r.summary.firstPrefixes == 0 && r.summary.dependentPrefixes == 3)
+        #expect(refs.map(\.ptsNS) == [2,-1,2] && refs.map(\.packetIndex) == [0,1,2] && refs.allSatisfy{$0.prefix.address == 5})
+        #expect(!r.summary.pictureGroupingVerified && !r.summary.completeSliceConformanceVerified && !r.summary.activePictureParameterSetSelectionVerified)
+        #expect(throws:(any Error).self){try CompanionOriginalPacketCheck.readSourceVCLReferences(v,track:track)}
+        for b in [source(cfg),source(cfg,vcl:[nonfirst,nonfirst]),source(cfg,vcl:[nonfirst],invisible:true),source(cfg,inBand:33,vcl:[nonfirst]),source(cfg,vcl:[segment(pps:1)])] {
+            let actual=try CompanionOriginalTrackCheck.readSource(view(b))
+            #expect(throws:(any Error).self){try CompanionOriginalPacketCheck.readSourceSegmentPrefixes(view(b),track:actual)}
+        }
+        let changed=source(references(nil,codingNAL(diff:2),pps(dependent:1)),vcl:[segment(first:false,dependent:true,address:5,addressBits:5)])
+        #expect(throws:(any Error).self){try CompanionOriginalPacketCheck.readSourceSegmentPrefixes(view(changed),track:track)}
+        let actual=try CompanionOriginalTrackCheck.readSource(view(changed)),fresh=try CompanionOriginalPacketCheck.readSourceSegmentPrefixes(view(changed),track:actual)
+        #expect(fresh.codingTree.ctbs == 24 && fresh.summary.dependentPrefixes == 1 && !fresh.summary.activePictureParameterSetSelectionVerified)
+        // Large picture suffix is hashed in chunks; incremental prefix reads remain seven bytes.
+        let large=segment()+Data(repeating:255,count:2<<20),big=source(cfg,vcl:[large]);var requests:[(Int64,Int)]=[]
+        let bv=CompanionDiskCheck.ReadView(sourceBytes:Int64(big.count),source:{o,n in requests.append((o,n));return big.subdata(in:Int(o)..<Int(o)+n)},component:{_ in throw CancellationError()},checkpoint:{})
+        let bt=try CompanionOriginalTrackCheck.readSource(bv);var seen:CompanionOriginalPacketCheck.SegmentReference?
+        _ = try CompanionOriginalPacketCheck.readSourceSegmentPrefixes(bv,track:bt,observeSegment:{seen=$0})
+        let ref=try #require(seen),prefixReads=requests.filter{$0.1 == 1 && $0.0>=ref.nalOffset+2 && $0.0<ref.nalOffset+9}
+        #expect(prefixReads.count == ref.prefix.encodedPrefixBytes && prefixReads.count<=7 && requests.allSatisfy{$0.1<=1<<20})
+    }
+    @Test func sourceSegmentWorkerGeneratedConfigurationsStorageCancellationAndFinalRefusals() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-segment-native-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);defer{print("GENERATED_SEGMENT_NATIVE_REVIEW "+root.path)}
+        _ = try await RustFixtureBuild.generate(.reference,at:root,copiesIn:root)
+        func folder(_ name:String)throws->URL{let f=root.appendingPathComponent(name);try FileManager.default.createDirectory(at:f,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);return f}
+        for name in ["single","group","wide-vint","conformance","whole-gop"] {
+            let input=root.appendingPathComponent(name+".mkv"),bytes=try Data(contentsOf:input)
+            let r=try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{_ in Issue.record("Segment source-only path launched decoder")})){
+                try await CompanionDiskCheck.spoolOriginalSourceSegmentPrefixes(source:input,in:folder("spool-"+name))
+            }
+            let count:Int64=name == "whole-gop" ? 24:4
+            #expect(r.source.packets.packets == count && r.segments.summary.prefixes == count && r.segments.summary.firstPrefixes == count && r.segments.summary.dependentPrefixes == 0)
+            #expect(r.segments.summary.peakPrefixBytes<=7 && r.segments.codingTree.ctbs == (name == "conformance" ? 24:15))
+            #expect(r.originalVCLSegmentPrefixesBoundToSource && r.selectedPacketParameterSetNALsAbsent && !r.pictureGroupingVerified && !r.completeSliceAndParameterConformanceVerified && !r.activePictureParameterSetSelectionVerified && !r.independentSourceFrameAssociationVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+        let input=root.appendingPathComponent("fault-source.mkv"),bytes=source(references(nil,codingNAL(),pps(dependent:1)),repeats:2000,vcl:[segment(first:false,dependent:true,address:5,addressBits:3)]);try bytes.write(to:input)
+        for kind in ["records","pages","read-cancel","final-cancel","extra","source-substitute"] {
+            let stage=try folder(kind),gate=DolbySampleProcessTests.Gate(),cancel=kind.hasSuffix("cancel")
+            let limits=DolbyAssociationSpool.Limits(pages:kind == "pages" ? 8:131072,records:kind == "records" ? 1:2_000_000)
+            let task=Task{defer{gate.signal.finish()};return try await CompanionDiskCheck.$testBoundary.withValue(.init(beforeFinal:{if kind == "final-cancel"{gate.hold()};do{if kind == "extra"{try Data([1]).write(to:stage.appendingPathComponent("extra"))};if kind == "source-substitute"{try FileManager.default.moveItem(at:input,to:input.appendingPathExtension("original"));try bytes.write(to:input)}}catch{Issue.record("Segment final substitution failed")}},originalTrackRead:{_,_ in if kind == "read-cancel"{gate.hold()}})){
+                try await CompanionDiskCheck.spoolOriginalSourceSegmentPrefixes(source:input,in:stage,limits:limits)
+            }}
+            if cancel{for await _ in gate.stream{break};task.cancel();gate.release.signal()}
+            do{_ = try await task.value;Issue.record("Segment source refusal admitted")}catch is CancellationError{#expect(cancel)}catch{#expect(!cancel)}
+            if kind == "pages"{let size=(try FileManager.default.attributesOfItem(atPath:stage.appendingPathComponent(DolbyAssociationSpool.name).path)[.size] as? NSNumber)?.intValue;#expect(size == 8*4096)}
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+    }
+
 }

@@ -58,6 +58,39 @@ enum CompanionOriginalPacketCheck {
                 peakPrefixBytes: scan.prefixPeak,
                 sequenceSHA256: DolbyInspection.hex(scan.vclSequence.finalize())))
     }
+    struct SegmentReference: Sendable, Equatable {
+        let packetIndex, nalIndex, ptsNS, nalOffset, nalBytes: Int64
+        let prefix: CompanionOriginalSPSCheck.SliceSegmentPrefix
+    }
+    struct SegmentSummary: Sendable, Equatable {
+        let prefixes, firstPrefixes, dependentPrefixes: Int64
+        let peakPrefixBytes: Int
+        let sequenceSHA256: String
+        let sourcePPSAndGridAddressPrefixesAgree = true
+        let completeSliceConformanceVerified = false
+        let pictureGroupingVerified = false
+        let activePictureParameterSetSelectionVerified = false
+    }
+    struct SegmentReadback: Sendable {
+        let packets: Receipt
+        let codingTree: CompanionOriginalSPSCheck.CodingTreePrefix
+        let summary: SegmentSummary
+    }
+    /// One prefix per original packet is a finite syntax subset, not picture coverage.
+    static func readSourceSegmentPrefixes(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt,
+        begin: @escaping (UInt64, Bool) throws -> Void = { _, _ in },
+        observe: @escaping (Observation) throws -> Void = { _ in },
+        observeSegment: @escaping (SegmentReference) throws -> Void = { _ in }) throws -> SegmentReadback {
+        let grid = try CompanionOriginalSPSCheck.readSourceCodingTreePrefix(view, track: track)
+        let scan = Scanner(view, track, observe, begin, compareRetained: false,
+            refuseInBandParameterSets: true, segmentGrid: grid, observeSegment: observeSegment)
+        let packets = try scan.read()
+        guard scan.segments == packets.packets else { throw refused() }
+        return .init(packets: packets, codingTree: grid,
+            summary: .init(prefixes: scan.segments, firstPrefixes: scan.firstSegments,
+                dependentPrefixes: scan.dependentSegments, peakPrefixBytes: scan.prefixPeak,
+                sequenceSHA256: DolbyInspection.hex(scan.segmentSequence.finalize())))
+    }
     private struct Block {
         let payload: Int64, end: Int64, blockOffset: Int64, pts: Int64
         let invisible: Bool, keyframe: Bool?, discardable: Bool?
@@ -105,12 +138,16 @@ enum CompanionOriginalPacketCheck {
         var packets: Int64 = 0, records: Int64 = 0, enhancement: Int64 = 0, archive: Int64 = 0
         let references: CompanionOriginalSPSCheck.ParameterReferences?
         let observeVCL: (VCLReference) throws -> Void
+        let segmentGrid: CompanionOriginalSPSCheck.CodingTreePrefix?
+        let observeSegment: (SegmentReference) throws -> Void
+        var segments: Int64 = 0, firstSegments: Int64 = 0, dependentSegments: Int64 = 0, segmentSequence = SHA256()
         var vcls: Int64 = 0, iraps: Int64 = 0, prefixPeak = 0, vclSequence = SHA256()
         var blocks = 0, peak = 0, sequence = SHA256()
-        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void, compareRetained: Bool, refuseInBandParameterSets: Bool = false, references: CompanionOriginalSPSCheck.ParameterReferences? = nil, observeVCL: @escaping (VCLReference) throws -> Void = { _ in }) {
+        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void, compareRetained: Bool, refuseInBandParameterSets: Bool = false, references: CompanionOriginalSPSCheck.ParameterReferences? = nil, observeVCL: @escaping (VCLReference) throws -> Void = { _ in }, segmentGrid: CompanionOriginalSPSCheck.CodingTreePrefix? = nil, observeSegment: @escaping (SegmentReference) throws -> Void = { _ in }) {
             self.view = view; self.track = track; self.observe = observe; self.begin = begin
             self.compareRetained = compareRetained; self.refuseInBandParameterSets = refuseInBandParameterSets
             self.references = references; self.observeVCL = observeVCL
+            self.segmentGrid = segmentGrid; self.observeSegment = observeSegment
             walker = Track.Walker(view, elementLimit: 128_000_000)
         }
         func children(_ e: Element, _ body: (Element) throws -> Void) throws {
@@ -272,7 +309,7 @@ enum CompanionOriginalPacketCheck {
                          discardable: e.id == 0xa3 ? flags & 1 != 0 : nil)
         }
         func emit(_ b: Block, duration: UInt64?) throws {
-            guard packets < 2_000_000, references == nil || !b.invisible else { throw refused() }
+            guard packets < 2_000_000, (references == nil && segmentGrid == nil) || !b.invisible else { throw refused() }
             var hash = SHA256(), cursor = b.payload
             while cursor < b.end {
                 try view.checkpoint()
@@ -288,7 +325,7 @@ enum CompanionOriginalPacketCheck {
             try observe(.packet(.init(index: packets, inputOffset: b.payload, blockOffset: b.blockOffset, ptsNS: b.pts,
                                       durationNS: duration, invisible: b.invisible, keyframe: b.keyframe, discardable: b.discardable,
                                       encodedBytes: b.end - b.payload, sha256: DolbyInspection.hex(digest))))
-            cursor = b.payload; var ordinal: Int64 = 0, vcl: VCLReference?
+            cursor = b.payload; var ordinal: Int64 = 0, vcl: VCLReference?, segment: SegmentReference?
             while cursor < b.end {
                 try view.checkpoint()
                 guard Int64(track.nalLengthBytes) <= b.end - cursor else { throw refused() }
@@ -299,6 +336,17 @@ enum CompanionOriginalPacketCheck {
                 guard h[0] & 0x80 == 0, h[1] & 7 != 0 else { throw refused() }
                 let type = h[0] >> 1 & 0x3f
                 guard !refuseInBandParameterSets || ![32,33,34].contains(type) else { throw refused() }
+                if let grid = segmentGrid, type <= 31 {
+                    guard segment == nil, length > 2 else { throw refused() }
+                    let start = cursor + 2
+                    let prefix = try CompanionOriginalSPSCheck.readSliceSegmentPrefix(header: h,
+                        payloadBytes: Int64(length-2), grid: grid, readByte: { offset in
+                            try self.view.checkpoint()
+                            return try self.view.source(start + Int64(offset), 1)[0]
+                        })
+                    segment = .init(packetIndex: packets, nalIndex: ordinal, ptsNS: b.pts,
+                        nalOffset: cursor, nalBytes: Int64(length), prefix: prefix)
+                }
                 if let references, type <= 31 {
                     guard vcl == nil, length > 2 else { throw refused() }
                     let prefix = try CompanionOriginalSPSCheck.readFirstSlicePrefix(header: h,
@@ -338,6 +386,25 @@ enum CompanionOriginalPacketCheck {
                 try observeVCL(vcl); vcls += 1
                 if vcl.prefix.noOutputOfPriorPics != nil { iraps += 1 }
                 prefixPeak = max(prefixPeak, vcl.prefix.encodedPrefixBytes)
+            }
+            if segmentGrid != nil {
+                guard let segment else { throw refused() }
+                let p = segment.prefix
+                segmentSequence.update(data: Data(digest))
+                let first: Int64 = p.firstSliceSegmentInPicture ? 1 : 0
+                let prior: Int64 = p.noOutputOfPriorPics.map { $0 ? 1 : 0 } ?? -1
+                let dependent: Int64 = p.dependentSliceSegment.map { $0 ? 1 : 0 } ?? -1
+                let address: Int64 = p.address.map { Int64($0) } ?? -1
+                let facts: [Int64] = [segment.packetIndex,segment.nalIndex,segment.ptsNS,segment.nalOffset,segment.nalBytes,
+                    Int64(p.nalType),Int64(p.ppsID),Int64(p.prefixBits),Int64(p.encodedPrefixBytes),first,prior,dependent,address]
+                for value in facts {
+                    segmentSequence.update(data: little(value))
+                }
+                segmentSequence.update(data: Data(p.prefixSHA256.utf8))
+                try observeSegment(segment); segments += 1
+                if p.firstSliceSegmentInPicture { firstSegments += 1 }
+                if p.dependentSliceSegment == true { dependentSegments += 1 }
+                prefixPeak = max(prefixPeak, p.encodedPrefixBytes)
             }
             packets += 1
         }

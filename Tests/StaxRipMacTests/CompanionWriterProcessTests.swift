@@ -397,4 +397,108 @@ struct CompanionWriterProcessTests {
         Writer.isolateGeneratedPinsForTesting(try #require(witness.value)); #expect(witness.value == nil)
     }
 
+    private final class AdmissionCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var values: [(Writer.PinRole,Int32,Int32)] = []
+        func add(_ role: Writer.PinRole, _ fd: Int32, _ status: Int32) { lock.withLock { values.append((role,fd,status)) } }
+        func expect(_ roles: [Writer.PinRole]) {
+            lock.withLock {
+                #expect(values.map { $0.0 } == roles && values.allSatisfy { $0.1 >= 0 && $0.2 == 0 })
+                #expect(Set(values.map { $0.1 }).count == values.count)
+            }
+        }
+    }
+    @Test func actualWriterPinAdmissionRefusalsCloseEveryPositiveOpenBeforeReturn() async throws {
+        for variant in ["source-empty","source-directory","source-link","source-missing","source-denied","stage-mode","stage-missing","executable-mode","executable-empty","executable-missing","digest","spawn","stage-not-empty"] {
+            let f = try await Self.fixture(); defer { f.cleanup() }
+            let tool = try f.tool, state = State(), closes = AdmissionCloses()
+            switch variant {
+            case "source-empty": try Data().write(to: f.source)
+            case "source-directory": try FileManager.default.removeItem(at: f.source); try FileManager.default.createDirectory(at: f.source, withIntermediateDirectories: false)
+            case "source-link": let moved = f.root.appendingPathComponent("original"); try FileManager.default.moveItem(at: f.source, to: moved); try FileManager.default.createSymbolicLink(at: f.source, withDestinationURL: moved)
+            case "source-missing": try FileManager.default.removeItem(at: f.source)
+            case "source-denied": try #require(chmod(f.source.path,0) == 0)
+            case "stage-mode": try #require(chmod(f.stage.path,0o755) == 0)
+            case "stage-missing": try FileManager.default.removeItem(at: f.stage)
+            case "executable-mode": try #require(chmod(f.executable.path,0o600) == 0)
+            case "executable-empty": try Data().write(to: f.executable)
+            case "executable-missing": try FileManager.default.removeItem(at: f.executable)
+            case "stage-not-empty": try Data([1]).write(to: f.stage.appendingPathComponent("existing"))
+            default: break
+            }
+            let selectedTool: Writer.Tool
+            if variant == "digest" { selectedTool = try .development(f.executable, expectedSHA256: String(repeating:"0",count:64)) }
+            else if variant == "spawn" { try Data("Generated invalid executable".utf8).write(to:f.executable); selectedTool = try f.tool }
+            else { selectedTool = tool }
+            await #expect(throws: NativeExportError.self) {
+                try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) }, pinClosed: { closes.add($0,$1,$2) })) {
+                    try await Writer.run(tool:selectedTool,source:f.source,stage:f.stage,retention:.metadataOnly)
+                }
+            }
+            let roles: [Writer.PinRole]
+            if ["source-link","source-missing","source-denied"].contains(variant) { roles = [] }
+            else if ["source-empty","source-directory","stage-missing"].contains(variant) { roles = [.source] }
+            else if ["stage-mode","executable-missing"].contains(variant) { roles = [.source,.stage] }
+            else { roles = Writer.PinRole.allCases }
+            closes.expect(roles); #expect(state.pid == 0 && Writer.retainedPins(source:f.source) == nil)
+        }
+    }
+    @Test func writerPartialAdmissionReportsRetainSameOwnerAndOriginalCauseAfterDrop() async throws {
+        for phase in Writer.PinRole.allCases {
+            let f = try await Self.fixture(), closes = AdmissionCloses(), tool = try f.tool
+            defer { print("GENERATED_WRITER_PARTIAL_PIN_REVIEW " + f.root.path) }
+            let expected: [Writer.PinRole] = phase == .source ? [.source] : phase == .stage ? [.source,.stage] : Writer.PinRole.allCases
+            var task: Task<CompanionWriterProtocol.Receipt,Error>? = Task {
+                try await Writer.$testBoundary.withValue(.init(launched: { _ in Issue.record("Admission report launched writer") },
+                    pinOpened: { role in if role == phase { throw NativeExportError.invalid("Generated writer admission refusal") } },
+                    pinClosed: { closes.add($0,$1,$2) }, refusePinClose: { _,_,status in status == 0 })) {
+                    try await Writer.run(tool:tool,source:f.source,stage:f.stage,retention:.metadataOnly)
+                }
+            }
+            do { _ = try await task!.value; Issue.record("Partial pin report returned receipt") }
+            catch let e as Writer.PinCloseFailure { #expect(e.roles == expected && e.operationError is NativeExportError) }
+            task = nil; closes.expect(expected)
+            let witness = WeakWriterPins(Writer.retainedPins(source:f.source))
+            #expect(witness.value != nil && witness.value?.descriptorsForTesting == [-1,-1,-1])
+            await #expect(throws: NativeExportError.self) { try await Writer.run(tool:tool,source:f.source,stage:f.stage,retention:.metadataOnly) }
+            #expect(witness.value != nil)
+            Writer.isolateGeneratedPinsForTesting(try #require(witness.value)); #expect(witness.value == nil)
+        }
+    }
+    @Test func actualTaskCancellationDuringWriterPinAdmissionOrPrelaunchClosesBeforeThrow() async throws {
+        for phase in ["source","stage","executable","prelaunch"] {
+            let f = try await Self.fixture(); defer { f.cleanup() }
+            let tool = try f.tool, gate = Gate(), closes = AdmissionCloses(), state = State()
+            let task = Task {
+                try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) },
+                    pinOpened: { role in if role.rawValue == phase { gate.hold() } }, beforeSpawn: { if phase == "prelaunch" { gate.hold() } },
+                    pinClosed: { closes.add($0,$1,$2) })) {
+                    try await Writer.run(tool:tool,source:f.source,stage:f.stage,retention:.metadataOnly)
+                }
+            }
+            for await _ in gate.entered { break }; task.cancel(); gate.release.signal()
+            await #expect(throws: CancellationError.self) { try await task.value }
+            closes.expect(phase == "source" ? [.source] : phase == "stage" ? [.source,.stage] : Writer.PinRole.allCases)
+            #expect(state.pid == 0 && Writer.retainedPins(source:f.source) == nil)
+            #expect(try FileManager.default.contentsOfDirectory(atPath:f.stage.path).isEmpty)
+        }
+    }
+    @Test func writerObservedAdmissionSubstitutionRefusesAfterOwningActualOpenedRole() async throws {
+        for phase in Writer.PinRole.allCases {
+            let f = try await Self.fixture(); defer { f.cleanup() }
+            let closes = AdmissionCloses(), tool = try f.tool
+            let expected: [Writer.PinRole] = phase == .source ? [.source] : phase == .stage ? [.source,.stage] : Writer.PinRole.allCases
+            await #expect(throws: NativeExportError.self) {
+                try await Writer.$testBoundary.withValue(.init(launched: { _ in Issue.record("Substituted admission launched writer") }, pinOpened: { role in
+                    guard role == phase else { return }
+                    let target = role == .source ? f.source : role == .stage ? f.stage : f.executable
+                    let moved = f.root.appendingPathComponent("substituted-" + role.rawValue)
+                    try FileManager.default.moveItem(at:target,to:moved); try FileManager.default.copyItem(at:moved,to:target)
+                }, pinClosed: { closes.add($0,$1,$2) })) {
+                    try await Writer.run(tool:tool,source:f.source,stage:f.stage,retention:.metadataOnly)
+                }
+            }
+            closes.expect(expected); #expect(Writer.retainedPins(source:f.source) == nil)
+        }
+    }
+
 }

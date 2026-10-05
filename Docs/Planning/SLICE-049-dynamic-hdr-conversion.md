@@ -2572,3 +2572,32 @@ CURRENT strict ad-hoc app/read-only helper/minima14.0/11.0 pass, writer/decoder/
 absent. Five-file privacy zero/positive sentinel/protected owner metadata-journal-original-
 frozen-D130/D142/D143 unchanged/planning empty. Source-only finite review/no independent
 execution/full milestone exit. Hosted compilation outcome remains a separate actual gate.
+
+
+### D164 bounded writer positive-open pin admission settlement
+Status: Approved for build by standing owner non-audio M1 ownership correction, 2026-10-05.
+M1 consumer: existing original preservation writer, semantic verifier and exclusive publication.
+Own each actual positive source/stage/executable open before admission can refuse; same concrete
+writer pin object supports partial admission and checked prelaunch rollback. Consume/check each
+owned role once and attempt every role after uncertainty, preserving original cause and stronger
+process/source priority. Retain SAME partial owner via writer and existing outer Access/stage
+registries after error/Task drop and activity expiry. Launched eligibility remains unchanged.
+Generated real refusal/cancellation/after-real-close reports, no helper on refused admission,
+plus existing both-mode original verifier/publication checks. Pipe constructors/fcntl/spawn
+rollback/deinit and other resource roles remain separate; no whole-resource or milestone claim.
+No historical timer/deadline/assertion/skip/scheduling change, live-gate/queue authority,
+new owner-worker/generic lease/protocol/UI/default packaging/release/recovery/cleanup authority.
+
+
+Actual corrected focus90tests/2suites27.931s PASSED/no warnings. Final ordinary637reported
+tests/105suites217.981s PASSED40UNCHANGED explicit opt-in skips/no warnings/no ordinary retry.
+Six NEW tests add ZERO helper launches/trials; historical bodies/timers/deadlines/assertions/
+skips/scheduling byte-identical. Only concrete writer source changed among98product-build
+files; existing Archive Access and transaction source priority reused unchanged. Explicit
+optimized build23.01s compiler-reported/current strict ad-hoc app/read-only helper signatures/
+minima14.0/11.0 pass; writer/decoder/sample/crop absent. Exact static94source host runs PRIOR
+preservation/review, not new admission fault observers/SPS-VCL/crop/sample/decoder loading.
+Six-file privacy zero/positive sentinel/protected owner metadata-journal-original-frozen-
+D130/D142/D143 unchanged/planning empty. No new compiler/test failure in corrected checks;
+interrupted initial execution remains separately unqualified. Source-only independent
+review/no independent execution/full exit. All M1-M5 OPEN.

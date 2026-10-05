@@ -170,6 +170,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-161 | 2026-10-05 | Locate video-copy timeout and awaited chapter-write stages | Confirmed | |
 | D-162 | 2026-10-05 | Settle writer terminal pins before preservation verification | Confirmed | |
 | D-163 | 2026-10-05 | Preserve weak retention witnesses across compiler versions | Confirmed | |
+| D-164 | 2026-10-05 | Check writer pin admission and prelaunch rollback | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -5116,3 +5117,62 @@ CURRENT strict ad-hoc app/read-only helper/minima14.0/11.0 pass, writer/decoder/
 absent. Five-file privacy zero/positive sentinel/protected owner metadata-journal-original-
 frozen-D130/D142/D143 unchanged/planning empty. Source-only finite review/no independent
 execution/full milestone exit. Hosted compilation outcome remains a separate actual gate.
+
+
+## D-164: Check writer pin admission and prelaunch rollback
+Status: Confirmed
+Date: 2026-10-05.
+
+M1 consumer: original preservation execute, existing writer, original semantic verifier
+and exclusive publication. Positive source/stage/executable opens previously reached
+admission guards or partial/prelaunch errors before checked ownership. The same concrete
+writer pin owner now starts with selected URLs and optional actual pins, receives every
+positive opened pin before observation/cancellation can refuse, then attempts each eligible
+owned pin close once before returning an admission/body error. Consumed numbers never retry.
+Typed uncertainty preserves original cause and stronger process/source priority and retains
+SAME owner through writer and existing Archive Access/stage registries, after error/Task drop
+and serviced-main-queue activity expiry. Failed OS close does not prove release. Successful
+postlaunch eligibility and all prior source/frame/origin/value/edit limits remain unchanged.
+
+Six generated tests cover real admission guards, same-byte observation substitutions,
+actual Task cancellation at each positive-open role and prelaunch, all-role after-real-close
+reports, partial owner identity/drop/expiry/exclusion and stronger source priority. No new
+helper launches in these refusal cases. Current-PID OS idle assertion observed while the
+worker waits at admission and absent after ordinary settlement. Fake scopes are balancing
+checks, not sandbox grants/revocation. Controlled reports follow actual successful closes,
+not spontaneous OS faults. DEBUG isolation of consumed owners with zero launched children
+is not production release/recovery/cleanup authority. Generated uncertain roots retained.
+
+This qualifies pins only. Pipe constructors/fcntl/spawn rollback/deinit, fallback/deinit,
+metadata/disk/retired-stage/aliases/concurrent direct-admission reservations and production
+recovery remain separate. Native choice/controller/result/trusted non-DEBUG helper remain
+open; unused SPS/VCL wrappers are not universal original-preservation prerequisites. No new
+owner-worker/generic lease/protocol/schema/action/UI/default packaging/release/cleanup API.
+No owner media body/runtime/C/sanitizer/pixel oracle/APFS/Developer-ID/UI qualification.
+
+Actual parent PR137 corrected-head run37345922326/attempt1/job111884325668 compiled under
+hosted Swift6.1.2 and executed631tests/615.464s, FAILED30issues. D163 three-site weak-witness
+compiler repair is qualified; earlier runtime failures remain independently unresolved.
+Twenty-one unchanged120s/six180s bounds, crop-2-complete-nonzero positive-child assertion,
+and Fresh-analysis/Rendering EOF. Crop expired at spawnSetup deadline before actual spawn;
+31 other historical decoder/sample/crop invocations launched and emitted existing callback
+in THISrun, not older failure resolution or universal settlement proof. AV1/TenBit submitted
+before bounds; worker entry/write return/resumption appeared AFTER issue records, not write
+body stall or shared mechanism proof. Full logs retained/no rerun. Live-work20ms different-arm
+and queue-policy proposals remain pending actual human answer; no extra phase observers,
+deadline/assertion/skip/timing/scheduling change. See WRITER-PIN-ADMISSION-EVIDENCE.md.
+All M1-M5 OPEN, no complete resource or milestone exit claim.
+
+
+Actual corrected focus90tests/2suites27.931s PASSED/no warnings. Final ordinary637reported
+tests/105suites217.981s PASSED40UNCHANGED explicit opt-in skips/no warnings/no ordinary retry.
+Six NEW tests add ZERO helper launches/trials; historical bodies/timers/deadlines/assertions/
+skips/scheduling byte-identical. Only concrete writer source changed among98product-build
+files; existing Archive Access and transaction source priority reused unchanged. Explicit
+optimized build23.01s compiler-reported/current strict ad-hoc app/read-only helper signatures/
+minima14.0/11.0 pass; writer/decoder/sample/crop absent. Exact static94source host runs PRIOR
+preservation/review, not new admission fault observers/SPS-VCL/crop/sample/decoder loading.
+Six-file privacy zero/positive sentinel/protected owner metadata-journal-original-frozen-
+D130/D142/D143 unchanged/planning empty. No new compiler/test failure in corrected checks;
+interrupted initial execution remains separately unqualified. Source-only independent
+review/no independent execution/full exit. All M1-M5 OPEN.

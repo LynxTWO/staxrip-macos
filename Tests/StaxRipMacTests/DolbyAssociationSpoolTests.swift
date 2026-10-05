@@ -337,6 +337,20 @@ struct DolbyAssociationSpoolTests {
             }};#expect(escaped?.ownedPinsClosed == true)
         }
     }
+    @Test func repairedPlausibleCropGeometryIsNotIndependentlyReconstructedBySourceCoverage() throws {
+        let root=try directory();defer{try? FileManager.default.removeItem(at:root)}
+        var escaped:Spool?
+        try Spool.withSpool(in:root,sourceBytes:100000){store in
+            escaped=store;try sourceRows(store);try store.startDecoderPass(profile:.cropSamples,cropRequest:cropRequest())
+            var rows=cropRows()
+            for i in [3,4]{rows[i]["width"]=158;rows[i]["height"]=94}
+            let parser=try cropParser(store);try parser.accept(wire(rows));let result=try parser.finish(status:0)
+            try store.finishDecoderPass(result)
+            #expect(result.geometry.width == 158 && result.geometry.height == 94 && result.geometry.sampleAspectRatio == nil)
+            #expect(!result.independentSourceROIProvenanceVerified && !result.independentSampleValuesVerified && !result.editedPictureSemanticsVerified)
+        }
+        #expect(escaped?.ownedPinsClosed == true)
+    }
     @Test func cropMissingDuplicateMixedTypedRowsAndForgedFinalCountsRefuse() throws {
         for variant in 0..<8 {
             let root=try directory();defer{try? FileManager.default.removeItem(at:root)};var escaped:Spool?

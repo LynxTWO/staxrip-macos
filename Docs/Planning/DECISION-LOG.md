@@ -154,6 +154,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-145 | 2026-10-05 | Concrete crop source/spool access ownership | Confirmed | |
 | D-146 | 2026-10-05 | Checked finite source/spool admission rollback closes | Confirmed | |
 | D-147 | 2026-10-05 | Selected original Video declaration binding | Confirmed | |
+| D-148 | 2026-10-05 | Joint source Video and fixed-decoder crop readback | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4374,3 +4375,52 @@ mutation. Other source/component/directory/deinit/retired-stage/distribution/rec
 remain open. Next finite source Video plus actual fixed decoder geometry/caller agreement
 must run on the same source/open-store worker and retain false ROI/value/rendered/edited
 flags until exact independent coordinate provenance is qualified; never infer default SAR.
+
+
+## D-148: Read original Video and fixed-decoder crop facts on one worker
+
+Status: Confirmed
+
+Distinct unused joint Video/crop entry reuses D147 selected source declarations and D144
+source/config/packet/RPU/exact rational one-picture coverage on the same pinned source/open
+SQLite worker. Complete counts/final observations/qualified closes and owned settlement
+precede return. Raw source declarations, fixed decoder coded size/codec crop/caller request
+and two raster equality comparisons remain separate facts. No origin mapping, equality
+requirement or SAR default follows. Existing narrower APIs remain narrower; no second worker,
+closed-store adoption, generic receipt/lease wrapper, Python bridge, protocol/action/default
+packaging change. Source declaration binding and full source/caller agreement can be true;
+ROI provenance/independent values/rendered/edited remain false.
+
+Actual captured unchanged D143 generated21 accepted trials/26direct decoder joins cover
+both spaces/threads/conformance/reorder, source-pass and active/late cancellation, final
+source/spool substitution and after-real-close reported refusal. Real conformance declared
+162x98 differs from coded176x112 but matches codec-visible162x98. Plausible source PixelWidth
+158 with decoder160 is accepted as joint readback with both comparisons false; no provenance
+upgrade. Repaired geometry rows can pass source coverage, preserving explicit independent
+geometry/pixel limits. See SOURCE-VIDEO-CROP-BINDING-EVIDENCE.md for scopes and counterevidence.
+Initial45tests2.678s passed. New one-byte fixture assumption failed; corrected exact eight-byte
+unsigned encoding then required a test-only throwing macro correction. Logs/failed root
+retained. Final47tests4suites15.069s passed/no warnings, actual joint3.347s. Prior93-source
+static host executes previous companion pipeline, not the new joint entry or decoder loading.
+
+PR122 automatic37286813938 failed572tests573.220s11issues: four unchanged120/180-second bounds
+and seven metadata/crop child-close/cancellation/mastering EOF assertions. Full log retained/
+PR updated without retry or individual cause attribution. No historical observer, deadline/
+assertion relaxation, new skip workaround or global scheduling/concurrency change. Full
+regression/build/protection outcomes follow. Caller access remains explicit; future concrete
+controller integration and independent container/user origins remain separate gates.
+
+
+Final ordinary575reported tests/104suites211.291s PASSED37 explicit opt-in skips (36 unchanged
+plus the new private actual joint runtime test), no warnings. Access32.816s/static prior
+companion32.202s passed. Explicit production21.30s/current strict ad-hoc app/read-only helper
+signatures/minima14.0/11.0 pass, writer/decoder/sample/crop absent. Seven-file privacy zero/
+positive sentinel, owner source metadata/current journal/original D142/sample-prefix-frozen-
+D130/D143 runtime unchanged, planning findings empty. New failed and controlled-close roots
+retained privately; no automatic adoption/delete or group authority. No new runtime rebuild/
+C/sanitizer/pixel oracle/APFS/signing/owner media body/full-source/UI qualification.
+Next finite concrete joint Video/crop access/activity integration must reuse D145 explicit
+source/spool grants/pins, checked outer release and existing retained registry. Declaration/
+coded/visible comparisons remain facts with ROI/value/rendered/edited false; no container/user
+origin mapping or default SAR. Other finite resource/deinit/retirement/recovery/distribution
+gates remain open; no whole-program completion.

@@ -649,5 +649,20 @@ struct CompanionOriginalPacketCheckTests {
             #expect(try Data(contentsOf:input) == data)
         }
     }
+    @Test func jointVideoCropEntryRefusesVideoAdmissionBeforeAnyDecoderPinOrLaunch() async throws {
+        let pixels = element(0xb0,unsigned(160))+element(0xba,unsigned(96))
+        for video in [Data(),element(0xe0,pixels+element(0xb0,unsigned(160))),element(0xe0,pixels+element(0x54b2,unsigned(5)))] {
+            let data=source(track(config(),extra:video),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+block(nal(62,Data([0xaa]),width:4))))
+            let (root,input,stage)=try generatedRoot(data);defer{try? FileManager.default.removeItem(at:root)}
+            let ledger=DecoderCloseObservations(),tool=try DolbyDecoderProcess.Tool.developmentCrops(root.appendingPathComponent("Helpers/crop-probe"),
+                expectedSHA256:DolbySampleProcessTests.hash,libraries:Dictionary(uniqueKeysWithValues:DolbySampleProcessTests.names.map{($0,DolbySampleProcessTests.hash)}),versions:[1,1,1])
+            let request=try DolbyCropProcessTests.request()
+            await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{ledger.launch($0)},closed:{ledger.close($0,$1,$2)})){
+                await #expect(throws:NativeExportError.self){try await CompanionDiskCheck.associateOriginalVideoCrops(source:input,in:stage,tool:tool,request:request)}
+            }
+            ledger.expect([],launched:false)
+            #expect(try Data(contentsOf:input) == data)
+        }
+    }
 
 }

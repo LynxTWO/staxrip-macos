@@ -2292,3 +2292,17 @@ is true; frame/ROI/independent values/rendered/edited remain false. D127/D144 ex
 one-picture coverage and independent source-to-decoder geometry are still required before
 container/user ROI provenance. No second worker/protocol/action/default packaging or recovery
 authority. Other finite resource/retirement/distribution gates remain separate.
+
+
+### D148 joint source Video and fixed crop readback
+
+Distinct unused joint entry reads D147 selected original Video and runs D144 fixed crop on
+the same pinned source/open SQLite worker with complete exact timing/coverage/counts/final
+qualified settlement. Raw declarations and actual coded/codec-visible geometry are separate;
+two equality comparisons do not establish origins or default SAR. See D-148 and
+SOURCE-VIDEO-CROP-BINDING-EVIDENCE.md. Actual conformance and changed plausible source width
+show equality/discrepancy without ROI/value/rendered/edited admission. New actual21 accepted
+trials/26direct decoder joins include retained controlled close refusal; no cleanup authority.
+Existing narrower APIs/access contracts remain unchanged. Concrete joint access integration
+and independently established container/user origin policy remain later prerequisites;
+resource retirement/recovery/distribution and all edit/rendered gates remain open.

@@ -3410,4 +3410,130 @@ struct CompanionArchiveOperationTests {
         }
     }
 
+    private final class DiskEnumerationCloses: @unchecked Sendable {
+        private let lock=NSLock(); private var values:[String]=[]
+        func add(_ pass:CompanionDiskCheck.EnumerationPass,_ role:CompanionDiskCheck.EnumerationRole,_ status:Int32,_ code:Int32) {
+            lock.withLock { #expect(status == 0 && code == 0); values.append(pass.rawValue+"/"+role.rawValue) }
+        }
+        func expect(_ expected:[String]) { lock.withLock { #expect(values == expected) } }
+    }
+    private final class WeakDiskEnumerationOwner {
+        weak var directory: CompanionDiskCheck.Directory?
+        weak var stage: ResultSetStaging?
+    }
+    private func checkRetainedEnumeration(_ witness:WeakDiskEnumerationOwner,_ review:UUID) throws {
+        let directory=try #require(witness.directory)
+        #expect(directory === Operation.retainedEnumerationDirectoryForTesting(review))
+        #expect(directory.enumerationConsumedForTesting && witness.stage != nil)
+        var info=stat(); #expect(fstat(directory.descriptorForTesting,&info) == 0 && info.st_mode & mode_t(S_IFMT) == mode_t(S_IFDIR))
+    }
+    @Test func checkedMembershipEnumerationPrecedesBothModeOriginalSemanticPublication() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly,.entireContainer] {
+            let f=try await fixture(), ledger=Ledger(), closes=DiskEnumerationCloses(), original=try Data(contentsOf:f.source)
+            let result=try await Operation.$testEnvironment.withValue(environment(ledger,fakeScopes:true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned:{ ledger.pinned($0) },archiveClosed:{ ledger.closed($0); closes.expect(["initial/stream","final/stream"]) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                            try await CompanionDiskCheck.$testBoundary.withValue(.init(enumerationOpened:{ _,_ in ledger.expectActive(scoped:true) },enumerationClosed:{ closes.add($0,$1,$2,$3) })) {
+                                try await ResultSetStaging.$testBoundary.withValue(.init(beforeCommit:{ closes.expect(["initial/stream","final/stream"]); ledger.expectActive(scoped:true) })) { try await execute(f,mode:mode) }
+                            }
+                        }
+                    }
+                }
+            }
+            ledger.expectJoined(count:2); ledger.expectClosed(); ledger.expectEnded(scoped:true)
+            #expect(try Data(contentsOf:f.source) == original)
+            let names=try FileManager.default.contentsOfDirectory(atPath:result.directory.path); #expect(Set(names) == Set(mode.limits.keys))
+            if mode == .entireContainer { #expect(try Data(contentsOf:result.directory.appendingPathComponent("original-container.mkv")) == original) }
+            f.cleanup()
+        }
+    }
+    @Test func membershipEnumerationReportsRetainSameDirectoryAndAccessAfterDropExpiryAndSourcePriority() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly,.entireContainer] {
+          for point in ["initial/stream","final/stream","initial/duplicate","final/duplicate","initial/source-priority","final/source-priority"] {
+            let f=try await fixture(), ledger=Ledger(), closes=DiskEnumerationCloses(), witness=WeakDiskEnumerationOwner(), original=try Data(contentsOf:f.source)
+            defer { print("GENERATED_ENUMERATION_ACCESS_REVIEW " + f.root.path) }
+            let prior=f.root.appendingPathComponent("prior-output"), priorBytes=Data("Generated prior output".utf8); try priorBytes.write(to:prior)
+            let pass=point.hasPrefix("initial") ? CompanionDiskCheck.EnumerationPass.initial : .final
+            let role=point.hasSuffix("duplicate") ? CompanionDiskCheck.EnumerationRole.duplicate : .stream
+            let expected=pass == .initial ? ["initial/"+role.rawValue] : ["initial/stream","final/"+role.rawValue]
+            var task:Task<ResultSetStaging.Published,Error>?=Task {
+                try await Operation.$testEnvironment.withValue(environment(ledger,fakeScopes:true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned:{ ledger.pinned($0) },archiveClosed:{ _ in Issue.record("Uncertain enumeration released outer pins") })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                                try await CompanionDiskCheck.$testBoundary.withValue(.init(allowEnumerationStream:{ current in !(current == pass && role == .duplicate) },
+                                    enumerationClosed:{ ledger.expectActive(scoped:true); closes.add($0,$1,$2,$3) },refuseEnumerationClose:{ current,currentRole in current == pass && currentRole == role })) {
+                                    try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(refuseClose:{ point.hasSuffix("source-priority") })) { try await execute(f,mode:mode) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            var id:UUID?
+            do { _=try await task!.value; Issue.record("Uncertain enumeration published") }
+            catch let e as Operation.ReviewFailure {
+                id=e.reviewID; #expect(e.published == nil && e.removed == nil)
+                let cause:any Error
+                if point.hasSuffix("source-priority") { cause=(try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure)).operationError }
+                else { cause=(try #require(e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)).operationError }
+                let fault=try #require(cause as? CompanionDiskCheck.EnumerationCloseFailure)
+                #expect(fault.pass == pass && fault.role == role && fault.closeStatus == 0 && fault.closeErrno == 0 && fault.reportedAfterActualClose)
+                if role == .duplicate { #expect(fault.operationError is NativeExportError) } else { #expect(fault.operationError == nil) }
+                witness.directory=fault.directory; witness.stage=Operation.retainedStageForTesting(e.reviewID)
+            }
+            task=nil; let review=try #require(id); closes.expect(expected); ledger.expectJoined(count:pass == .initial ? 1 : 2)
+            try checkRetainedEnumeration(witness,review); ledger.expectRetained()
+            await #expect(throws:NativeExportError.self) { try await execute(f,mode:mode) }
+            try await Task.sleep(for:.milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); try checkRetainedEnumeration(witness,review)
+            #expect(try Data(contentsOf:f.source) == original && Data(contentsOf:prior) == priorBytes)
+            #expect(!FileManager.default.fileExists(atPath:f.root.appendingPathComponent("published").path))
+            Operation.isolateGeneratedEnumerationReviewForTesting(review)
+            #expect(witness.directory != nil && witness.stage != nil); ledger.expectRetained()
+            // Original Directory fd retirement is unqualified. Preserve registry,
+            // concrete owner/access/stage and root; no DEBUG release or cleanup.
+          }
+        }
+    }
+    @Test func actualMembershipCancellationConsumesStreamBeforeReleaseOrRetainedReview() async throws {
+        for point in ["initial/duplicate","initial/stream","final/duplicate","final/stream"] {
+          for reported in [false,true] {
+            let f=try await fixture(), ledger=Ledger(), closes=DiskEnumerationCloses(), gate=Gate(), witness=WeakDiskEnumerationOwner(), original=try Data(contentsOf:f.source)
+            let expected=point.hasPrefix("initial") ? [point] : ["initial/stream",point]
+            var task:Task<ResultSetStaging.Published,Error>?=Task {
+                defer { gate.signal.finish() }
+                return try await Operation.$testEnvironment.withValue(environment(ledger,fakeScopes:true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned:{ ledger.pinned($0) },archiveClosed:{ count in if reported { Issue.record("Uncertain cancelled enumeration released access") }; ledger.closed(count); closes.expect(expected) })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched:{ ledger.launch($0) },settled:{ ledger.join($0) })) {
+                                try await CompanionDiskCheck.$testBoundary.withValue(.init(enumerationOpened:{ pass,role in if point == pass.rawValue+"/"+role.rawValue { gate.hold() } },
+                                    enumerationClosed:{ closes.add($0,$1,$2,$3) },refuseEnumerationClose:{ pass,role in reported && point == pass.rawValue+"/"+role.rawValue })) { try await execute(f) }
+                            }
+                        }
+                    }
+                }
+            }
+            for await _ in gate.entered { break }; ledger.expectActive(scoped:true); #expect(ownAssertion(try assertions()))
+            task!.cancel(); gate.release.signal(); var id:UUID?
+            do { _=try await task!.value; Issue.record("Cancelled enumeration published") }
+            catch let e as Operation.ReviewFailure {
+                #expect(reported); id=e.reviewID
+                let phase=try #require(e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)
+                let fault=try #require(phase.operationError as? CompanionDiskCheck.EnumerationCloseFailure); #expect(fault.operationError is CancellationError)
+                witness.directory=fault.directory; witness.stage=Operation.retainedStageForTesting(e.reviewID)
+            } catch { if error is any CompanionUnsettledOwnership { print("GENERATED_UNEXPECTED_ENUMERATION_REVIEW " + f.root.path); throw error }; #expect(!reported && error is CancellationError) }
+            task=nil; closes.expect(expected); ledger.expectJoined(count:point.hasPrefix("initial") ? 1 : 2)
+            #expect(try Data(contentsOf:f.source) == original && !FileManager.default.fileExists(atPath:f.root.appendingPathComponent("published").path))
+            if reported {
+                let review=try #require(id); try checkRetainedEnumeration(witness,review); ledger.expectRetained()
+                try await Task.sleep(for:.milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); try checkRetainedEnumeration(witness,review)
+                Operation.isolateGeneratedEnumerationReviewForTesting(review)
+                #expect(witness.directory != nil && witness.stage != nil); ledger.expectRetained()
+                print("GENERATED_CANCELLED_ENUMERATION_REVIEW " + f.root.path)
+            } else { ledger.expectClosed(); ledger.expectEnded(scoped:true); #expect(!ownAssertion(try assertions())); f.cleanup() }
+          }
+        }
+    }
+
 }

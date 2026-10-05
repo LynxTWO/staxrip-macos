@@ -17,6 +17,16 @@ enum CompanionDiskCheck {
         let originalMetadata: CompanionOriginalMetadataCheck.Receipt?
         var originalMetadataSemanticsVerified: Bool { originalMetadata != nil }
     }
+    enum EnumerationPass: String, Sendable { case initial, final }
+    enum EnumerationRole: String, Sendable { case duplicate, stream }
+    struct EnumerationCloseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: (any Error)?
+        let pass: EnumerationPass, role: EnumerationRole
+        let closeStatus, closeErrno: Int32
+        let reportedAfterActualClose: Bool
+        let directory: Directory
+        var errorDescription: String? { "Companion directory enumeration ownership is uncertain. Retain needed source and stage access for review." }
+    }
     struct Boundary: Sendable {
         var progress: @Sendable (String, Int64) -> Void = { _, _ in }
         var beforeFinal: @Sendable () -> Void = {}
@@ -25,11 +35,15 @@ enum CompanionDiskCheck {
         var fileOpened: @Sendable (String?) throws -> Void = { _ in }
         var admissionClosed: @Sendable (String?, Int32, Int32) -> Void = { _, _, _ in }
         var refuseAdmissionClose: @Sendable (String?) -> Bool = { _ in false }
+        var enumerationOpened: @Sendable (EnumerationPass, EnumerationRole) throws -> Void = { _, _ in }
+        var allowEnumerationStream: @Sendable (EnumerationPass) -> Bool = { _ in true }
+        var enumerationClosed: @Sendable (EnumerationPass, EnumerationRole, Int32, Int32) -> Void = { _, _, _, _ in }
+        var refuseEnumerationClose: @Sendable (EnumerationPass, EnumerationRole) -> Bool = { _, _ in false }
     }
     #if DEBUG
     @TaskLocal static var testBoundary = Boundary()
     #endif
-    private final class Cancellation: @unchecked Sendable {
+    fileprivate final class Cancellation: @unchecked Sendable {
         private let lock = NSLock(); private var requested = false
         func cancel() { lock.withLock { requested = true } }
         func check() throws { if lock.withLock({ requested }) { throw CancellationError() } }
@@ -517,7 +531,7 @@ enum CompanionDiskCheck {
         try cancelled.check()
         let source = try File(url: url, maximum: 1 << 40, boundary: boundary, checkpoint: cancelled.check), directory = try Directory(urlStage)
         let limits = input.retention.limits, expected = Set(limits.keys), provided = input.provided
-        guard try directory.names() == expected else { throw failure() }
+        guard try directory.names(pass: .initial, cancelled: cancelled, boundary: boundary) == expected else { throw failure() }
         if let c = provided {
             guard source.id == c.sourceID, directory.id == c.stageID, source.bytes == c.sourceBytes,
                   (1...2_000_000).contains(c.packets), (1...2_000_000).contains(c.records),
@@ -628,7 +642,7 @@ enum CompanionDiskCheck {
         boundary.beforeFinal()
         #endif
         try cancelled.check(); try source.check(url); try directory.check()
-        guard try directory.names() == expected else { throw failure() }
+        guard try directory.names(pass: .final, cancelled: cancelled, boundary: boundary) == expected else { throw failure() }
         for (name, file) in opened { try cancelled.check(); try file.check(name: name, directory: directory.fd) }
         try cancelled.check()
         return .init(contents: contents, fullContainerMatchesOriginalBytes: contents.retention == .entireContainer, originalTrack: track, originalPackets: packets, originalIndex: index, originalAudit: audit, originalMetadata: metadata)
@@ -731,8 +745,16 @@ enum CompanionDiskCheck {
             return DolbyInspection.hex(hasher.finalize())
         }
     }
-    private final class Directory {
-        let url: URL, fd: Int32, initial: stat
+    // SAME worker-confined directory; retained by existing outer Access on
+    // enumeration uncertainty. Original descriptor retirement is separate.
+    final class Directory: @unchecked Sendable {
+        fileprivate let url: URL, fd: Int32, initial: stat
+        private var enumerationFD: Int32 = -1
+        private var enumerationStream: UnsafeMutablePointer<DIR>?
+        #if DEBUG
+        var enumerationConsumedForTesting: Bool { enumerationFD < 0 && enumerationStream == nil }
+        var descriptorForTesting: Int32 { fd }
+        #endif
         var id: Transaction.FileID { .init(initial) }
         init(_ url: URL) throws {
             guard url.isFileURL, !url.path.utf8.contains(0) else { throw failure() }
@@ -748,25 +770,63 @@ enum CompanionDiskCheck {
             var info = stat(), path = stat()
             guard fstat(fd, &info) == 0, lstat(url.path, &path) == 0, same(initial, info), same(initial, path) else { throw failure() }
         }
-        func names() throws -> Set<String> {
-            let copy = fcntl(fd, F_DUPFD_CLOEXEC, 0)
-            guard copy >= 0 else { throw failure() }
-            guard let entries = fdopendir(copy) else { Darwin.close(copy); throw failure() }
-            defer { closedir(entries) }
-            rewinddir(entries) // Duplicate descriptors share directory position.
-            var result: Set<String> = []
-            while true {
-                errno = 0
-                guard let entry = readdir(entries) else { guard errno == 0 else { throw failure() }; break }
-                let count = Int(entry.pointee.d_namlen)
-                guard (1...128).contains(count) else { throw failure() }
-                let name = withUnsafePointer(to: &entry.pointee.d_name) {
-                    $0.withMemoryRebound(to: UInt8.self, capacity: count) { String(decoding: UnsafeBufferPointer(start: $0, count: count), as: UTF8.self) }
+        fileprivate func names(pass: EnumerationPass, cancelled: Cancellation, boundary: Boundary) throws -> Set<String> {
+            guard enumerationFD < 0, enumerationStream == nil else { throw failure() }
+            enumerationFD = fcntl(fd, F_DUPFD_CLOEXEC, 0)
+            guard enumerationFD >= 0 else { throw failure() }
+            let outcome = Result<Set<String>, Error> {
+                #if DEBUG
+                try boundary.enumerationOpened(pass, .duplicate)
+                #endif
+                try cancelled.check()
+                #if DEBUG
+                let allowed = boundary.allowEnumerationStream(pass)
+                #else
+                let allowed = true
+                #endif
+                guard allowed, let entries = fdopendir(enumerationFD) else { throw failure() }
+                enumerationStream = entries
+                enumerationFD = -1 // Successful transfer: only closedir owns it.
+                #if DEBUG
+                try boundary.enumerationOpened(pass, .stream)
+                #endif
+                try cancelled.check()
+                rewinddir(entries) // Duplicate descriptors share directory position.
+                var result: Set<String> = []
+                while true {
+                    errno = 0
+                    guard let entry = readdir(entries) else { guard errno == 0 else { throw failure() }; break }
+                    let count = Int(entry.pointee.d_namlen)
+                    guard (1...128).contains(count) else { throw failure() }
+                    let name = withUnsafePointer(to: &entry.pointee.d_name) {
+                        $0.withMemoryRebound(to: UInt8.self, capacity: count) { String(decoding: UnsafeBufferPointer(start: $0, count: count), as: UTF8.self) }
+                    }
+                    if name == "." || name == ".." { continue }
+                    guard result.count < 16, result.insert(name).inserted else { throw failure() }
                 }
-                if name == "." || name == ".." { continue }
-                guard result.count < 16, result.insert(name).inserted else { throw failure() }
+                try cancelled.check(); return result
             }
-            return result
+            let role: EnumerationRole, status: Int32
+            if let entries = enumerationStream {
+                enumerationStream = nil // Consume pointer before sole closedir.
+                role = .stream; status = closedir(entries)
+            } else {
+                let number = enumerationFD; enumerationFD = -1
+                role = .duplicate; status = Darwin.close(number)
+            }
+            let code: Int32 = status == 0 ? 0 : errno
+            #if DEBUG
+            boundary.enumerationClosed(pass, role, status, code)
+            let reported = status == 0 && boundary.refuseEnumerationClose(pass, role)
+            #else
+            let reported = false
+            #endif
+            if status != 0 || reported {
+                let original: Error? = { if case .failure(let error) = outcome { return error }; return nil }()
+                throw EnumerationCloseFailure(operationError: original, pass: pass, role: role,
+                    closeStatus: status, closeErrno: code, reportedAfterActualClose: reported, directory: self)
+            }
+            return try outcome.get()
         }
     }
 }

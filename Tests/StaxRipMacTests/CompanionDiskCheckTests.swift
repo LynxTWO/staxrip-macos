@@ -265,4 +265,84 @@ struct CompanionDiskCheckTests {
         }
     }
 
+    private final class EnumerationCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var values: [String] = []
+        func add(_ pass: CompanionDiskCheck.EnumerationPass, _ role: CompanionDiskCheck.EnumerationRole, _ status: Int32, _ code: Int32) {
+            lock.withLock { #expect(status == 0 && code == 0); values.append(pass.rawValue + "/" + role.rawValue) }
+        }
+        func expect(_ expected: [String]) { lock.withLock { #expect(values == expected) } }
+    }
+    private final class EnumerationJoins: @unchecked Sendable {
+        private let lock = NSLock(); private var launched: [pid_t] = [], joined: [pid_t] = []
+        func launch(_ p: pid_t) { lock.withLock { launched.append(p) } }
+        func join(_ p: pid_t) { lock.withLock { joined.append(p) } }
+        func expectOne() {
+            let values = lock.withLock { (launched,joined) }; #expect(values.0.count == 1 && values.0 == values.1)
+            for p in values.0 { var status: Int32 = 0; #expect(waitpid(p,&status,WNOHANG) == -1 && errno == ECHILD) }
+        }
+    }
+    @Test func actualMembershipEnumerationChecksTransferredStreamAndUntransferredDuplicateBothModes() async throws {
+        for mode in [Transaction.Retention.metadataOnly,.entireContainer] {
+            let joins=EnumerationJoins()
+            let (f,c)=try await Writer.$testBoundary.withValue(.init(launched:{ joins.launch($0) },settled:{ joins.join($0) })) { try await staged(mode) }
+            let original=try Data(contentsOf:f.source); joins.expectOne()
+            for variant in ["normal","initial-denied","final-denied","initial-duplicate-cancel","initial-stream-cancel","final-stream-cancel","body-bound"] {
+                let closes=EnumerationCloses()
+                let extra = variant == "body-bound" ? (0..<17).map { f.stage.appendingPathComponent("generated-extra-"+String($0)) } : []
+                for url in extra { try Data([1]).write(to:url) }
+                do {
+                    let result=try await CompanionDiskCheck.$testBoundary.withValue(.init(
+                        enumerationOpened:{ pass,role in
+                            if variant == pass.rawValue+"-"+role.rawValue+"-cancel" { throw CancellationError() }
+                        },allowEnumerationStream:{ pass in variant != pass.rawValue+"-denied" },
+                        enumerationClosed:{ closes.add($0,$1,$2,$3) })) {
+                        try await CompanionDiskCheck.verify(source:f.source,stage:f.stage,contents:c)
+                    }
+                    #expect(variant == "normal" && result.fullContainerMatchesOriginalBytes == (mode == .entireContainer))
+                } catch {
+                    if error is any CompanionUnsettledOwnership { print("GENERATED_UNCERTAIN_ENUMERATION " + f.root.path); throw error }
+                    #expect(variant != "normal")
+                    if variant.hasSuffix("cancel") { #expect(error is CancellationError) } else { #expect(error is NativeExportError) }
+                }
+                let expected: [String]
+                switch variant {
+                case "initial-denied","initial-duplicate-cancel": expected=["initial/duplicate"]
+                case "initial-stream-cancel","body-bound": expected=["initial/stream"]
+                case "final-denied": expected=["initial/stream","final/duplicate"]
+                default: expected=["initial/stream","final/stream"]
+                }
+                closes.expect(expected)
+                for url in extra { try FileManager.default.removeItem(at:url) }
+                #expect(try Data(contentsOf:f.source) == original)
+            }
+            f.cleanup()
+        }
+    }
+    private final class EnumerationGate: @unchecked Sendable {
+        let entered: AsyncStream<Void>, signal: AsyncStream<Void>.Continuation
+        let release=DispatchSemaphore(value:0)
+        init() { let p=AsyncStream<Void>.makeStream(); entered=p.stream; signal=p.continuation }
+        func hold() { signal.yield(()); signal.finish(); if release.wait(timeout:.now()+30) != .success { Issue.record("Generated enumeration gate expired") } }
+    }
+    @Test func actualEnumerationTaskCancellationWaitsForConsumedDuplicateOrStream() async throws {
+        for point in ["initial/duplicate","initial/stream","final/duplicate","final/stream"] {
+            let joins=EnumerationJoins()
+            let (f,c)=try await Writer.$testBoundary.withValue(.init(launched:{ joins.launch($0) },settled:{ joins.join($0) })) { try await staged() }
+            let original=try Data(contentsOf:f.source), closes=EnumerationCloses(), gate=EnumerationGate(); joins.expectOne()
+            let task=Task {
+                defer { gate.signal.finish() }
+                return try await CompanionDiskCheck.$testBoundary.withValue(.init(enumerationOpened:{ pass,role in
+                    if point == pass.rawValue+"/"+role.rawValue { gate.hold() }
+                },enumerationClosed:{ closes.add($0,$1,$2,$3) })) { try await CompanionDiskCheck.verify(source:f.source,stage:f.stage,contents:c) }
+            }
+            for await _ in gate.entered { break }; task.cancel(); gate.release.signal()
+            do { _=try await task.value; Issue.record("Cancelled enumeration returned receipt") }
+            catch { if error is any CompanionUnsettledOwnership { print("GENERATED_UNCERTAIN_ENUMERATION " + f.root.path); throw error }; #expect(error is CancellationError) }
+            closes.expect(point.hasPrefix("final") ? ["initial/stream",point] : [point])
+            #expect(try Data(contentsOf:f.source) == original)
+            let names=try FileManager.default.contentsOfDirectory(atPath:f.stage.path); #expect(Set(names) == Set(c.members.map(\.name)))
+            f.cleanup()
+        }
+    }
+
 }

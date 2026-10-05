@@ -44,6 +44,17 @@ enum CompanionArchiveOperation {
     static func retainedForTesting(_ id: UUID) -> Bool { retained[id] != nil }
     static func retainedStageForTesting(_ id: UUID) -> ResultSetStaging? { retained[id]?.stage }
     static func retainedWriterPinsForTesting(_ id: UUID) -> CompanionWriterProcess.AdmittedPins? { retained[id]?.writerPins }
+    static func retainedEnumerationDirectoryForTesting(_ id: UUID) -> CompanionDiskCheck.Directory? { retained[id]?.enumerationDirectory }
+    private static var isolatedEnumerationReviews: [UUID: Access] = [:]
+    /// Generated qualification only: preserve every concrete resource without
+    /// releasing access or authorizing cleanup. Production exclusion is unchanged.
+    static func isolateGeneratedEnumerationReviewForTesting(_ id: UUID) {
+        guard let access = retained[id],
+              access.enumerationDirectory?.enumerationConsumedForTesting == true else { return }
+        isolatedEnumerationReviews[id] = access
+        retained.removeValue(forKey: id)
+    }
+
     /// Only controlled generated phases whose settlement was separately proved.
     /// This is deliberately absent from release code, not a recovery authority.
     static func releaseGeneratedReviewForTesting(_ id: UUID) { retained.removeValue(forKey: id)?.finish() }
@@ -564,6 +575,16 @@ enum CompanionArchiveOperation {
         else if let e = error as? OriginalCompanionTransaction.StagingSettlementFailure { access.stage = e.retainedStage }
         else if let e = error as? OriginalCompanionTransaction.UnsettledPhaseFailure { access.stage = e.retainedStage }
         else if let e = error as? OriginalCompanionTransaction.CleanupFailure { access.stage = e.retainedStage }
+        // The registry stores concrete access, not the returned error. Retain
+        // the SAME verifier directory independently of error/Task lifetime.
+        let enumeration: CompanionDiskCheck.EnumerationCloseFailure?
+        if let e = error as? CompanionDiskCheck.EnumerationCloseFailure { enumeration = e }
+        else if let e = error as? OriginalCompanionTransaction.UnsettledPhaseFailure {
+            enumeration = e.operationError as? CompanionDiskCheck.EnumerationCloseFailure
+        } else if let e = error as? OriginalCompanionTransaction.SourceSettlementFailure {
+            enumeration = e.operationError as? CompanionDiskCheck.EnumerationCloseFailure
+        } else { enumeration = nil }
+        access.enumerationDirectory = enumeration?.directory
         // Expiry ends only temporary energy. Dropped errors do not release access
         // or authorize cleanup, adoption, publication or a successful review.
         DispatchQueue.main.asyncAfter(deadline: .now() + environment.retainedActivitySeconds) {
@@ -580,6 +601,7 @@ enum CompanionArchiveOperation {
         var stage: ResultSetStaging?
         let source: URL
         var writerPins: CompanionWriterProcess.AdmittedPins?
+        var enumerationDirectory: CompanionDiskCheck.Directory?
         private var ends: [() -> Void] = []
         private var activityEnd: (() -> Void)?
         init(source: URL, directory: URL) { self.source = source; pins = Pins(source: source, directory: directory) }

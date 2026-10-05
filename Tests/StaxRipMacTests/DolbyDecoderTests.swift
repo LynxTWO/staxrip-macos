@@ -29,6 +29,7 @@ final class DecoderCloseObservations: @unchecked Sendable {
         }else{#expect(facts.1 == 0 && facts.2 == 0)}
     }
     var pid:pid_t{lock.withLock{child}}
+    var observations:(pid_t,pid_t){lock.withLock{(child,joined)}}
 }
 
 @Suite(.serialized)
@@ -127,7 +128,7 @@ struct DolbyDecoderTests {
         let r=try await ToolRunner().run(executable:URL(fileURLWithPath:"/usr/bin/xcrun"),arguments:["clang",c.path,"-o",exe.path]);try #require(r.status == 0)
         return .init(root:root,source:source,executable:exe)
     }
-    private final class Diagnosis: @unchecked Sendable {
+    final class Diagnosis: @unchecked Sendable {
         private let lock = NSLock()
         private var stage = Owner.DiagnosticStage.notEntered, role: Owner.DescriptorRole?
         private var refusal: Owner.CheckRefusal?, spawn: Int32?
@@ -137,8 +138,14 @@ struct DolbyDecoderTests {
         func spawned(_ status: Int32) { lock.withLock { spawn = status } }
         func closed(_ role: Owner.DescriptorRole, _ fd: Int32, _ status: Int32) { lock.withLock { #expect(fd >= 0); closes.append((role,status)) } }
         var snapshot:(stage:Owner.DiagnosticStage, role:Owner.DescriptorRole?, refusal:Owner.CheckRefusal?, spawn:Int32?, closes:[(Owner.DescriptorRole,Int32)]) { lock.withLock { (stage,role,refusal,spawn,closes) } }
-        func report(_ id: String, outcome: String, state: State) {
-            let s = snapshot, pair = state.observations
+        static func category(_ error: any Error) -> String {
+            if error is CancellationError { return "cancelled" }
+            if let error = error as? Owner.OwnershipFailure { return "ownership:" + error.reason }
+            if error is NativeExportError { return "native-invalid" }
+            return "other" // Never print arbitrary descriptions, paths or payloads.
+        }
+        func report(_ id: String, outcome: String, observations: (pid_t,pid_t)) {
+            let s = snapshot, pair = observations
             let closeText = s.closes.map { $0.0.rawValue + ":" + String($0.1) }.joined(separator: ",")
             print("DECODER_CASE id=\(id) outcome=\(outcome) stage=\(s.stage.rawValue) role=\(s.role?.rawValue ?? "none") check=\(s.refusal?.rawValue ?? "none") spawn=\(s.spawn.map(String.init) ?? "none") launched=\(pair.0 > 0) settledEvent=\(pair.0 > 0 && pair.0 == pair.1) closes=\(closeText)")
         }
@@ -148,12 +155,7 @@ struct DolbyDecoderTests {
               admission: { diagnosis.enter($0,$1) }, checkRefused: { diagnosis.check($0,$1,$2) },
               spawnStatus: { diagnosis.spawned($0) }, closed: { diagnosis.closed($0,$1,$2) })
     }
-    private func caughtCategory(_ error: any Error) -> String {
-        if error is CancellationError { return "cancelled" }
-        if let error = error as? Owner.OwnershipFailure { return "ownership:" + error.reason }
-        if error is NativeExportError { return "native-invalid" }
-        return "other" // Never log arbitrary error descriptions, paths or payloads.
-    }
+    private func caughtCategory(_ error: any Error) -> String { Diagnosis.category(error) }
     @Test func categoricalDiagnosticsDistinguishPrelaunchHashPinSpawnAndDeadlineRefusals() async throws {
         for fault in ["executable-hash", "library-hash", "library-missing", "spawn", "deadline"] {
             let f = try await fixture(body: "EMIT"), state = State(), diagnosis = Diagnosis()
@@ -169,7 +171,7 @@ struct DolbyDecoderTests {
             var outcome = "success"
             do { _ = try await Owner.$testBoundary.withValue(diagnosedBoundary(diagnosis,state)) { try await Owner.run(tool:tool,source:f.source,timeout:fault == "deadline" ? Double.leastNonzeroMagnitude : 10) }; Issue.record("Generated diagnostic refusal returned success") }
             catch { outcome = caughtCategory(error); #expect(error is NativeExportError) }
-            diagnosis.report("qualification-" + fault,outcome:outcome,state:state)
+            diagnosis.report("qualification-" + fault,outcome:outcome,observations:state.observations)
             let observed = diagnosis.snapshot
             #expect(state.observations.0 == 0 && state.observations.1 == 0)
             #expect(observed.closes.allSatisfy { $0.1 == 0 })
@@ -197,7 +199,7 @@ struct DolbyDecoderTests {
                 #expect(i == 0 && r.frames == 2 && !r.independentSourceFrameAssociationVerified)
             } catch let e as Owner.OwnershipFailure { outcome = caughtCategory(e); cleanup=false;#expect(i != 0 && e.reason == "group-1-joined-true") }
             catch { outcome = caughtCategory(error); #expect(i != 0) }
-            diagnosis.report(String(i) + "-" + labels[i],outcome:outcome,state:state)
+            diagnosis.report(String(i) + "-" + labels[i],outcome:outcome,observations:state.observations)
             state.assertJoined();#expect(try Data(contentsOf:f.source) == Data(repeating:0x5a,count:100000))
             if i == cases.count-1 {
                 let text=try String(contentsOf:URL(fileURLWithPath:f.source.path+"-holder"),encoding:.utf8),pid=try #require(Int32(text))

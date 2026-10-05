@@ -166,6 +166,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-157 | 2026-10-05 | Checked native writer post-spawn pipe closes | Confirmed | |
 | D-158 | 2026-10-05 | Expose decoder CI case and admission refusal | Confirmed | |
 | D-159 | 2026-10-05 | Explain missing mastering phase terminal outcomes | Confirmed | |
+| D-160 | 2026-10-05 | Identify sample/crop CI invocation and admission category | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4935,3 +4936,43 @@ execution/full exit proof. Product/build97 tracked files unchanged; D15822.29s p
 build reused, CURRENT strict ad-hoc app/helper14.0/11.0 still pass, other helpers absent.
 Static94-source prior preservation/review only. Four-file privacy/protected evidence and
 planning pass; no new compiler/test failure/ordinary retry/owner body/runtime/UI admission.
+
+
+## D-160: Identify sample/crop invocation before repair
+Status: Confirmed
+Date: 2026-10-05.
+
+M5 consumes fixed per-call categories on the existing D158 DEBUG boundary. Six historical
+sample bodies, five crop bodies and eleven close trials share the existing finite collector.
+Original bodies/order/deadlines/assertions/callbacks/refusal injection/cleanup remain;
+product/build files unchanged. Last stage/check/spawn/caught category/actual closes and
+launch/callback booleans precede the original assertions. No new clock/poll/wait/task or
+scheduling/CI workaround. No arbitrary descriptions/path/payload/PID/descriptor number
+added. Callback is not reaping/group/access cleanup proof; setup before capture and escaping
+non-ownership close-loop errors remain limits. See SAMPLE-CROP-CI-DIAGNOSTIC-EVIDENCE.md.
+
+Focused25tests6suites5.087s pass/no warnings with22 new caller labels/15 existing records;
+no new helper trial/test. Independent source-only review finite approval, no execution.
+Parent PR134 exact292bceb6d6caf58860ac6994e0742cffa0aa66ac automatic37330205810/attempt1/
+job111831090036 FAILED625tests569.929s29issues:21unchanged120s/six180s bounds plus
+Fresh-analysis/Rendering EOF. Both records matched callback, ready/candidateReturned,
+received=false: no hidden preparation error in these EOFs. Delayed notification execution/
+yield/cancel-request ordering unobserved, exact queue cause unknown. Measuring receives
+notification then cancels. All10historical decoder cases pass in this run; earlier causes
+and remaining timeouts unestablished. Writer101.789s/source104.288s/access310.660s/
+static293.841s/fixture42s pass; log retained/parent updated without rerun. No new sample/crop
+failure in this run, not earlier invocation diagnosis. Future synchronous phase-entry
+cancellation changes20ms schedule and is not implemented/authorized here or active-work
+proof. All M1-M5 remain open, no weakened assertions/deadlines/skips/global scheduling,
+new UI/release/recovery, syntax/activation/origin/value/rendered/edit or completion claim.
+
+Final ordinary625reported tests/105suites215.827s PASSED40 unchanged explicit opt-in skips/no
+warnings. Access38.538s/source-prefix20.936s/static34.235s/Recovery48.311s pass.
+Product/build97 tracked files byte-identical to D159/D158; actual D15822.29s build reused,
+no new production compilation. Current strict ad-hoc app/read-only helper signatures and
+minima14.0/11.0 pass; writer/decoder/sample/crop absent. Exact static94-source host runs prior
+preservation/review, not decoder/sample/crop/SPS/VCL loading. Six-file privacy zero/positive
+sentinel/protected owner metadata-journal-original-frozen-D130/D142/D143 unchanged; planning
+audit empty. No new compile/test failure or ordinary retry/owner body/runtime rebuild/UI.
+Private bounds-regex/cwd/repo lookup mistakes corrected before execution rerun or remote
+mutation; actual retained logs parsed without changing tests. Source-only review, no full exit.

@@ -2345,3 +2345,13 @@ settlement precedes result; no decoder or controller is added. See D-151 and
 SOURCE-PARAMETER-REFERENCE-PREFIX-EVIDENCE.md. VCL/first-dependent slice and complete parameter
 interpretation/joint picture coverage remain prerequisites before coordinate-origin policy.
 Source/frame/ROI/value/rendered/edited and other finite ownership/distribution gates stay open.
+
+
+### D152 original first-slice VCL PPS prefix binding
+
+An unused source-only subset binds one actual original packet first-slice PPS prefix to fresh
+D151 configuration references on the same pinned source/open SQLite worker. Finite base-layer
+TemporalId0 admission and streamed original signed packet/RPU counts remain separate from
+full slice conformance, active decoding and coordinate origins. See D-152 and
+SOURCE-VCL-PPS-PREFIX-EVIDENCE.md. No decoder/controller/action/default packaging is added;
+source-frame/ROI/value/rendered/edited flags remain false and explicit caller access required.

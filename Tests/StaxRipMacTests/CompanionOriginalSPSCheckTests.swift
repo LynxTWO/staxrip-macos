@@ -150,6 +150,93 @@ struct CompanionOriginalSPSCheckTests {
         let size=(try FileManager.default.attributesOfItem(atPath:stage.appendingPathComponent(DolbyAssociationSpool.name).path)[.size] as? NSNumber)?.intValue
         #expect(size == 8*4096);#expect(try Data(contentsOf:input) == bytes)
     }
+    private func slice(type: UInt8 = 1, pps: Int = 0, first: Int = 1, prior: Int = 0) -> Data {
+        var w=Writer();w.put(first,1);if (16...23).contains(type){w.put(prior,1)};w.ue(pps)
+        return Data([type<<1,1])+w.bytes()
+    }
+    private func prefix(_ nal: Data, payloadBytes: Int64? = nil) throws -> SPS.FirstSlicePrefix {
+        try SPS.readFirstSlicePrefix(header:Data(nal.prefix(2)),prefix:nal.subdata(in:2..<min(4,nal.count)),payloadBytes:payloadBytes ?? Int64(nal.count-2))
+    }
+    @Test func firstSlicePrefixesBoundPPSIDsIRAPAbsenceAndTwoByteStorage() throws {
+        for type in [UInt8(0),1,6,7,8,9,16,17,18,19,20,21] {for id in 0...63 {
+            let r=try prefix(slice(type:type,pps:id,prior:1))
+            #expect(r.ppsID == id && r.nalType == type && r.firstSliceSegmentInPicture && r.prefixBits <= 15 && r.encodedPrefixBytes <= 2)
+            #expect(r.noOutputOfPriorPics == ((16...21).contains(type) ? true:nil))
+            #expect(!r.completeSliceConformanceVerified && !r.activePictureParameterSetSelectionVerified)
+        }}
+        let tiny=slice(type:20,pps:63),r=try prefix(tiny,payloadBytes:1<<30)
+        #expect(r.encodedPrefixBytes == 2 && !r.completeSliceConformanceVerified)
+        // Entire opaque slice suffix, including invalid escape syntax, is not validated.
+        let badSuffix=slice()+Data([0,0,1,0]),partial=try prefix(badSuffix)
+        #expect(partial.ppsID == 0 && !partial.completeSliceConformanceVerified)
+    }
+    @Test func nonFirstReservedTemporalLayerMissingAndOversizedSlicePrefixesRefuse() throws {
+        for n in [slice(first:0),slice(pps:64),slice(pps:65535),Data([2,1]),Data([2,1,0]),Data([2,1,128]),slice(type:2),slice(type:3),slice(type:4),slice(type:5)] {
+            #expect(throws:(any Error).self){try prefix(n)}
+        }
+        for type in [UInt8(10),11,12,13,14,15,22,23,24,31,32,33,34,62,63] {#expect(throws:(any Error).self){try prefix(slice(type:type))}}
+        var forbidden=slice();forbidden[0] |= 128;var layer=slice();layer[0] |= 1;var temporal=slice();temporal[1]=2
+        for n in [forbidden,layer,temporal]{#expect(throws:(any Error).self){try prefix(n)}}
+        #expect(throws:(any Error).self){try SPS.readFirstSlicePrefix(header:Data([2,1]),prefix:Data([0xc0,0,0]),payloadBytes:3)}
+        #expect(throws:(any Error).self){try prefix(slice(),payloadBytes:(1<<40)+1)}
+    }
+    @Test func selectedSourceVCLReadbackPreservesSignedDuplicateRowsAndRefusesAmbiguity() throws {
+        let bytes=source(references(),vcl:[slice()],times:[-2,-2,1,-1],rpuCopies:2),v=view(bytes),track=try CompanionOriginalTrackCheck.readSource(v)
+        var rows:[CompanionOriginalPacketCheck.VCLReference]=[]
+        let r=try CompanionOriginalPacketCheck.readSourceVCLReferences(v,track:track,observeVCL:{rows.append($0)})
+        #expect(rows.map(\.packetIndex) == [0,1,2,3] && rows.map(\.ptsNS) == [-2,-2,1,-1] && rows.allSatisfy{$0.nalIndex == 2})
+        #expect(r.summary.prefixes == 4 && r.packets.records == 8 && r.summary.peakPrefixBytes <= 2 && !r.summary.activePictureParameterSetSelectionVerified)
+        for list in [[],[slice(),slice()],[slice(first:0)],[slice(pps:1)],[slice(type:22)]] {
+            let d=source(references(),vcl:list),t=try CompanionOriginalTrackCheck.readSource(view(d))
+            #expect(throws:(any Error).self){try CompanionOriginalPacketCheck.readSourceVCLReferences(view(d),track:t)}
+            _ = try CompanionOriginalPacketCheck.readSource(view(d),track:t) // Old source framing remains separate.
+        }
+        let changed=source(references(nil,nil,pps(id:1)),vcl:[slice(pps:1)]),stale=try CompanionOriginalTrackCheck.readSource(view(bytes))
+        #expect(throws:(any Error).self){try CompanionOriginalPacketCheck.readSourceVCLReferences(view(changed),track:stale)}
+        let fresh=try CompanionOriginalTrackCheck.readSource(view(changed)),repaired=try CompanionOriginalPacketCheck.readSourceVCLReferences(view(changed),track:fresh)
+        #expect(repaired.parameters.ppsID == 1 && !repaired.summary.activePictureParameterSetSelectionVerified)
+    }
+    @Test func largeOpaqueSourceVCLHashesInChunksAndReadsOnlyTwoAdditionalPrefixBytes() throws {
+        let picture=slice()+Data(repeating:0,count:(1<<21)+17),bytes=source(references(),vcl:[picture]),base=view(bytes)
+        var peak=0,rows:[CompanionOriginalPacketCheck.VCLReference]=[],reads:[(Int64,Int)]=[]
+        let v=CompanionDiskCheck.ReadView(sourceBytes:base.sourceBytes,source:{o,n in peak=max(peak,n);reads.append((o,n));return try base.source(o,n)},component:base.component,checkpoint:base.checkpoint)
+        let t=try CompanionOriginalTrackCheck.readSource(v),r=try CompanionOriginalPacketCheck.readSourceVCLReferences(v,track:t,observeVCL:{rows.append($0)})
+        let row=try #require(rows.first)
+        #expect(peak <= 1<<20 && row.nalBytes > 1<<21 && r.summary.peakPrefixBytes == 2)
+        #expect(reads.contains{$0.0 == row.nalOffset+2 && $0.1 == 2})
+        #expect(!row.prefix.completeSliceConformanceVerified && !r.summary.activePictureParameterSetSelectionVerified)
+    }
+    @Test func actualGeneratedVCLSourceCountsStorageCancellationAndFinalSelection() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-vcl-native-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);defer{print("GENERATED_SOURCE_VCL_REVIEW "+root.path)}
+        _ = try await RustFixtureBuild.generate(.reference,at:root,copiesIn:root)
+        func folder(_ name:String) throws -> URL {let u=root.appendingPathComponent(name);try FileManager.default.createDirectory(at:u,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);return u}
+        for name in ["single","group","wide-vint","conformance","whole-gop"] {
+            let input=root.appendingPathComponent(name+".mkv"),bytes=try Data(contentsOf:input),stage=try folder("spool-"+name)
+            let r=try await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{_ in Issue.record("VCL source-only path launched decoder")})){
+                try await CompanionDiskCheck.spoolOriginalSourceVCLReferences(source:input,in:stage)
+            }
+            #expect(r.vcl.prefixes == (name == "whole-gop" ? 24:4) && r.vcl.prefixes == r.source.packets.packets && r.parameters.ppsID == 0 && r.vcl.peakPrefixBytes == 2)
+            #expect(r.originalFirstSlicePPSPrefixesBoundToSource && !r.activePictureParameterSetSelectionVerified && !r.completeSliceAndParameterConformanceVerified && !r.independentSourceFrameAssociationVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+            #expect(try Data(contentsOf:input) == bytes)
+            print("GENERATED_SOURCE_VCL counts=\(r.vcl.prefixes) iraps=\(r.vcl.irapPrefixes)")
+        }
+        let input=root.appendingPathComponent("single.mkv"),bytes=try Data(contentsOf:input)
+        for kind in ["cap","read-cancel","late-cancel","extra","source-substitute"] {
+            let stage=try folder(kind),gate=DolbySampleProcessTests.Gate(),cancel=kind.hasSuffix("cancel")
+            let task=Task{defer{gate.signal.finish()};return try await CompanionDiskCheck.$testBoundary.withValue(.init(beforeFinal:{if kind == "late-cancel"{gate.hold()};if kind == "extra"{do{try Data([1]).write(to:stage.appendingPathComponent("extra"))}catch{Issue.record("Generated VCL final extra failed")}};if kind == "source-substitute"{do{try FileManager.default.moveItem(at:input,to:input.appendingPathExtension("original"));try bytes.write(to:input)}catch{Issue.record("Generated VCL substitution failed")}}},originalTrackRead:{_,_ in if kind == "read-cancel"{gate.hold()}})){
+                try await CompanionDiskCheck.spoolOriginalSourceVCLReferences(source:input,in:stage,limits:.init(records:kind == "cap" ? 1:2_000_000))
+            }}
+            if cancel{for await _ in gate.stream{break};task.cancel();gate.release.signal()}
+            do{_ = try await task.value;Issue.record("VCL source refusal admitted")}catch is CancellationError{#expect(cancel)}catch{#expect(!cancel)}
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+        let many=root.appendingPathComponent("many.mkv"),manyBytes=source(references(),repeats:2000,vcl:[slice()]),stage=try folder("full")
+        try manyBytes.write(to:many)
+        await #expect(throws:(any Error).self){try await CompanionDiskCheck.spoolOriginalSourceVCLReferences(source:many,in:stage,limits:.init(pages:8))}
+        let size=(try FileManager.default.attributesOfItem(atPath:stage.appendingPathComponent(DolbyAssociationSpool.name).path)[.size] as? NSNumber)?.intValue
+        #expect(size == 8*4096);#expect(try Data(contentsOf:many) == manyBytes)
+    }
     @Test func finitePrefixGeometryChromaUnitsAndOpaqueSublayerRegions() throws {
         for sub in 0...6 {
             for width in 1...4 {
@@ -196,11 +283,12 @@ struct CompanionOriginalSPSCheckTests {
         let size=UInt64(payload.count)|UInt64(1)<<(7*width)
         return Data(ids+(0..<width).reversed().map{UInt8(size>>(8*$0)&255)})+payload
     }
-    private func source(_ cfg: Data, inBand: UInt8? = nil, repeats: Int = 1) -> Data {
+    private func source(_ cfg: Data, inBand: UInt8? = nil, repeats: Int = 1, vcl: [Data] = [], times: [Int16]? = nil, rpuCopies: Int = 1) -> Data {
         let track=element(0xae,element(0xd7,Data([1]))+element(0x83,Data([1]))+element(0x86,Data("V_MPEGH/ISO/HEVC".utf8))+element(0x63a2,cfg))
-        var packet=Data([0,0,0,3,0x7c,1,0xaa])
+        var packet=(0..<rpuCopies).reduce(Data()){d,_ in d+Data([0,0,0,3,0x7c,1,0xaa])}
+        for n in vcl {let size=UInt32(n.count);packet.append(contentsOf:(0..<4).reversed().map{UInt8(size>>(8*$0)&255)});packet.append(n)}
         if let inBand {packet.append(contentsOf:[0,0,0,3,inBand<<1,1,0x80])}
-        let cluster=element(0x1f43b675,element(0xe7,Data([0]))+(0..<repeats).reduce(Data()){d,_ in d+element(0xa3,Data([0x81,0,0,0x80])+packet)})
+        let cluster=element(0x1f43b675,element(0xe7,Data([0]))+(times ?? [Int16](repeating:0,count:repeats)).reduce(Data()){d,t in let bits=UInt16(bitPattern:t);return d+element(0xa3,Data([0x81,UInt8(bits>>8),UInt8(bits&255),0x80])+packet)})
         return element(0x1a45dfa3,element(0x4282,Data("matroska".utf8)))+element(0x18538067,element(0x1549a966,element(0x2ad7b1,Data([1])))+element(0x1654ae6b,track)+cluster)
     }
     private func view(_ d: Data) -> CompanionDiskCheck.ReadView {

@@ -158,6 +158,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-149 | 2026-10-05 | Joint original Video/crop access ownership | Confirmed | |
 | D-150 | 2026-10-05 | Original configuration SPS geometry prefix binding | Confirmed | |
 | D-151 | 2026-10-05 | Source configuration parameter reference prefixes | Confirmed | |
+| D-152 | 2026-10-05 | Original first-slice VCL PPS prefix binding | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4549,3 +4550,38 @@ two absent-positive-child assertions, missing generated pipe-holder marker, Fres
 8.160468vs5 and two EOF expectations. Individual causes unestablished; local passes do not
 resolve hosted failures. Other parameter interpretation/activation/origin/ownership/
 retirement/recovery/distribution and rendered/edited gates remain separate and open.
+
+
+## D-152: Bind finite original first-slice VCL PPS references without active picture proof
+
+Status: Confirmed
+
+Distinct unused source-only entry reads exactly one base-layer TemporalId0 first-slice VCL
+PPS prefix per original selected packet, after fresh D151 source configuration references.
+Existing original source hashing, signed packet/RPU streaming, open SQLite counts, final
+source/spool observations and qualified normal closes/awaited worker precede return. Only
+two additional payload bytes are read for the prefix; packet hashing remains chunked. Missing,
+duplicate, non-first, unsupported/reserved/temporal/layer, invisible, mismatched PPS and in-band
+parameter sets refuse this subset. Existing narrower APIs retain their admission.
+
+See SOURCE-VCL-PPS-PREFIX-EVIDENCE.md for primary H.265 clauses, generated prefix/real HEVC
+cases and source/storage/cancel/substitution checks. Opaque suffix, full slice/parameter
+conformance, active picture selection, exact rational decoder/one-picture association and
+ROI/value/rendered/edited remain unverified. Matching configuration and slice prefix IDs do
+not establish activation, progressive/color/SAR or coordinate origins. No decoder, controller,
+second worker, protocol/action/default packaging, generic wrapper or recovery authority.
+Static exact closure remains94 product sources; execution is prior preservation/review.
+Explicit caller source/spool access/retention and other resource/deinit/retirement/recovery/
+distribution gates remain separate. Parent hosted failure retained without retry or cause
+attribution; no assertion/deadline/skip/global scheduling workaround.
+
+
+Final ordinary599reported tests/105suites214.228s PASSED38 unchanged explicit opt-in skips/
+no emitted warnings; combined SPS/reference/VCL14.587s/access33.804s/static33.379s. Explicit
+production21.48s/current strict ad-hoc app/read-only helper signatures/minima14.0/11.0
+pass; writer/decoder/sample/crop absent. Seven-file privacy zero/positive sentinel, protected
+owner metadata/journal/original sample-prefix-frozen-D130/D142/D143 artifacts unchanged,
+planning findings empty. New generated roots retained privately; no new compile/test failure
+or ordinary retry. New narrow entry still requires explicit caller access/retention; full
+parameter/slice/activation, source origins/values/rendered/edited and other finite ownership/
+retirement/recovery/distribution gates remain open.

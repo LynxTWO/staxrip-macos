@@ -168,6 +168,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-159 | 2026-10-05 | Explain missing mastering phase terminal outcomes | Confirmed | |
 | D-160 | 2026-10-05 | Identify sample/crop CI invocation and admission category | Confirmed | |
 | D-161 | 2026-10-05 | Locate video-copy timeout and awaited chapter-write stages | Confirmed | |
+| D-162 | 2026-10-05 | Settle writer terminal pins before preservation verification | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -5023,3 +5024,57 @@ Explicit production22.75s compiler-reported and current strict ad-hoc app/read-o
 signatures/minima14.0/11.0 pass, writer/decoder/sample/crop absent. This is a new release
 compilation/ordinary bundle check, not DeveloperID/hardened loading/clean-machine/UI release
 qualification or a cold/elapsed benchmark. No runtime artifact was recreated/copied.
+
+
+## D-162: Settle writer terminal pins before preservation verification
+Status: Confirmed
+Date: 2026-10-05.
+
+M1 consumes checked terminal closes of the existing writer's three admitted source,
+private stage-folder and executable pins. Same worker/body/process contract; no new
+worker/generic lease/protocol/action/UI/release capability. All eligible roles consume,
+close and check once even after first refusal; no retry. Process uncertainty retains the
+SAME concrete owner independently of error/Task, with an alias held by existing archive
+Access. Exact same-role selected URL conflicts refuse. No alias/identity-equivalent or
+concurrent direct-admission reservation claim. Actual failed OS close not release proof.
+Pin/body/pipe causes preserved after required settlement; stronger process/source
+priority remains. No cleanup/recovery authority. Constructor/partial admission/pre-spawn/
+fallback/deinit/metadata/disk roles remain separate. See WRITER-TERMINAL-PIN-EVIDENCE.md.
+
+Five new generated tests: 34 new writer direct joins, both-mode normal/individual/pair/all
+pin reports, first/active/late cancellation/pipe cause, final source-stage-tool/nonzero
+cause, error+Task drop/expiry/source priority/exclusions. Existing full original semantic
+verifier/exclusive publication requires all pin and pipe observations first. Current-PID
+OS idle assertion/live non-zombie active writer observed in archive cancellation.
+Reports AFTER successful closes, and opened-pin report AFTER actual eligible body
+settlement, are NOT spontaneous close/group/reap faults. Fake scopes are not sandbox
+grants/revocation. DEBUG isolation is not checked fallback or production recovery.
+
+Initial99tests3suites24.524s43issues retained; source review found three new omitted
+launch/eligibility transitions, corrected on production branches. Corrected99/26.044s
+and strengthened99/27.325s passed. Three new weak-local warning sites corrected by
+compiler-supported weak constants; final five tests/two suites2.787s pass/no warnings.
+Source-only independent approval is not execution/full M1 exit verification.
+
+Actual parentPR136 run37338392952/attempt1/job111858906992/exact535f87020ca71cb37e9263e0f0b409d0f6a2308d
+failed626tests651.828s30issues:21unchanged120/six180/one decoder child/two phaseEOF.
+Both AV1-TenBit writes submitted before bounds; workers enter/API return/body resume AFTER
+those issues. Submission-to-entry delay observed, NOT write-body stall/common starvation
+mechanism. Decoder id5stderr deadline at avutil libraryHash precedes spawn; positive-child
+assertion genuinely fails. Other nine historical decoder cases launch THISrun, no older
+cause resolution. Full log retained/no rerun or historical timer/deadline/assertion/skip/
+queue/global scheduling/cache change. Live-work gate/timer/close proposal remains pending
+actual human answer; liaison design feedback is not authority. M1-M5 remain OPEN.
+
+
+Final ordinary631reported tests/105suites219.036s PASSED40UNCHANGED explicit opt-in skips/no
+warnings. Access43.097s/source-prefix21.644s/static35.904s pass. No ordinary retry. Product
+source changed only concrete writer terminal pin settlement and existing archive retention.
+Existing ChapterPlan/historical decoder-sample-crop-mastering-video bodies/timers/deadlines/
+assertions/skips/scheduling unchanged; source full-value/activation/origin/edit gates unchanged.
+
+Explicit optimized build22.47s compiler-reported/current strict ad-hoc app/read-only helper
+signatures/minima14.0/11.0 pass; writer/decoder/sample/crop absent. Compilation/signature
+checks are not DeveloperID/hardened loading/clean-machine/native UI qualification. Seven-file
+privacy zero/positive sentinel/protected owner metadata-journal-original-frozen-D130/D142/
+D143 unchanged/planning empty. No runtime artifact rebuilt/copied or owner media body read.

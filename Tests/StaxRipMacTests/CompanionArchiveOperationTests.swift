@@ -121,14 +121,24 @@ struct CompanionArchiveOperationTests {
             }
         }
     }
+    private final class WriterPinCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var values: [(CompanionWriterProcess.PinRole,Int32,Int32)] = []
+        func add(_ role: CompanionWriterProcess.PinRole, _ fd: Int32, _ status: Int32) { lock.withLock { values.append((role,fd,status)) } }
+        func expectOnce() {
+            lock.withLock {
+                #expect(values.count == 3 && values.allSatisfy { $0.1 >= 0 && $0.2 == 0 })
+                for role in CompanionWriterProcess.PinRole.allCases { #expect(values.filter { $0.0 == role }.count == 1) }
+            }
+        }
+    }
     @Test func checkedWriterPipesPrecedeBothModeSemanticVerificationAndExclusivePublication() async throws {
         for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
             let f = try await fixture(); defer { f.cleanup() }
-            let ledger = Ledger(), closes = WriterPipeCloses(), original = try Data(contentsOf: f.source)
+            let ledger = Ledger(), closes = WriterPipeCloses(), pinCloses = WriterPinCloses(), original = try Data(contentsOf: f.source)
             let result = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
                 try await Operation.$testBoundary.withValue(.init(phase: { _ in ledger.expectActive(scoped: true) }, pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) })) {
-                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) }, closed: { closes.add($0, $1, $2) })) {
-                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { closes.expectOnce(); ledger.launch($0) }, settled: { ledger.join($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) }, closed: { closes.add($0, $1, $2) }, pinClosed: { pinCloses.add($0,$1,$2) })) {
+                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { closes.expectOnce(); pinCloses.expectOnce(); ledger.launch($0) }, settled: { ledger.join($0) })) {
                             try await execute(f, mode: mode)
                         }
                     }
@@ -3183,6 +3193,70 @@ struct CompanionArchiveOperationTests {
             ledger.expectEnded(scoped: true); ledger.expectClosed(); ledger.expectJoined(count: 0)
             let names = try FileManager.default.contentsOfDirectory(atPath: f.stage.path)
             #expect(names == (phase == "file" ? [DolbyAssociationSpool.name] : []))
+        }
+    }
+
+    @Test func writerPinRefusalsRetainSameOwnerStageAndAccessAfterDropExpiryAndSourcePriority() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly,.entireContainer] {
+            for fault in ["one", "all", "source-priority", "opened", "cancel"] {
+                let f = try await fixture(), ledger = Ledger(), pinCloses = WriterPinCloses(), gate = Gate()
+                defer { print("GENERATED_WRITER_PIN_ACCESS_REVIEW " + f.root.path) }
+                let original = try Data(contentsOf: f.source)
+                var task: Task<ResultSetStaging.Published,Error>? = Task {
+                    defer { gate.signal.finish() }
+                    return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                        try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { _ in Issue.record("Pin refusal released grants") })) {
+                            try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, ready: { if fault == "cancel" { gate.hold() } }, settled: { ledger.join($0) },
+                                pinClosed: { pinCloses.add($0,$1,$2) }, refusePinClose: { role,_,status in status == 0 && fault != "opened" && (fault == "all" || role == .source) },
+                                reportPinSettlementUncertainty: { fault == "opened" })) {
+                                try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Pin refusal launched verifier") })) {
+                                    try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(refuseClose: { fault == "source-priority" })) { try await execute(f, mode: mode) }
+                                }
+                            }
+                        }
+                    }
+                }
+                if fault == "cancel" {
+                    for await _ in gate.entered { break }
+                    ledger.expectActive(scoped: true); #expect(ownAssertion(try assertions()))
+                    let pid = try #require(ledger.latestPID)
+                    let observed = try await ToolRunner().run(executable: URL(fileURLWithPath: "/bin/ps"), arguments: ["-p", String(pid), "-o", "stat="])
+                    #expect(observed.status == 0 && !String(decoding: observed.stdout, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("Z"))
+                    task?.cancel(); gate.release.signal()
+                }
+                var id: UUID?
+                do { _ = try await task!.value; Issue.record("Pin refusal published") }
+                catch let e as Operation.ReviewFailure {
+                    id = e.reviewID; #expect(e.published == nil && e.removed == nil)
+                    let cause: (any Error)?
+                    if fault == "source-priority" {
+                        let source = try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure); cause = source.operationError
+                    } else { cause = (try #require(e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)).operationError }
+                    if fault == "opened" { #expect(cause is CompanionWriterProcess.OwnershipFailure) }
+                    else {
+                        let pin = try #require(cause as? CompanionWriterProcess.PinCloseFailure)
+                        #expect((fault == "cancel" ? pin.operationError is CancellationError : pin.operationError == nil) && Set(pin.roles) == Set(fault == "all" ? CompanionWriterProcess.PinRole.allCases : [.source]))
+                    }
+                }
+                task = nil
+                let review = try #require(id)
+                weak let owner = Operation.retainedWriterPinsForTesting(review)
+                weak let stage = Operation.retainedStageForTesting(review)
+                #expect(owner != nil && owner === CompanionWriterProcess.retainedPins(source: f.source) && stage != nil)
+                ledger.expectJoined(count: 1); ledger.expectRetained()
+                if fault == "opened" {
+                    for fd in try #require(owner?.descriptorsForTesting) { var info = stat(); #expect(fd >= 0 && fstat(fd,&info) == 0) }
+                } else { pinCloses.expectOnce(); #expect(owner?.descriptorsForTesting == [-1,-1,-1]) }
+                await #expect(throws: NativeExportError.self) { try await execute(f, mode: mode) }
+                try await Task.sleep(for: .milliseconds(100))
+                ledger.expectEnded(); ledger.expectRetained(); #expect(owner != nil && stage != nil && Operation.retainedForTesting(review))
+                #expect(try Data(contentsOf: f.source) == original)
+                #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("published").path))
+                CompanionWriterProcess.isolateGeneratedPinsForTesting(try #require(owner))
+                #expect(owner != nil) // Existing Access still owns the SAME concrete pins.
+                Operation.releaseGeneratedReviewForTesting(review)
+                ledger.expectEnded(scoped: true); #expect(owner == nil && stage == nil)
+            }
         }
     }
 

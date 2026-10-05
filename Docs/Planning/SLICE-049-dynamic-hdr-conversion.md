@@ -2524,3 +2524,30 @@ Explicit production22.75s compiler-reported and current strict ad-hoc app/read-o
 signatures/minima14.0/11.0 pass, writer/decoder/sample/crop absent. This is a new release
 compilation/ordinary bundle check, not DeveloperID/hardened loading/clean-machine/UI release
 qualification or a cold/elapsed benchmark. No runtime artifact was recreated/copied.
+
+
+### D162 bounded original-preservation writer terminal pins
+Status: Approved for build by standing owner autonomous generated non-audio ownership scope.
+M1 consumer: existing execute/writer/original-semantic-verifier/exclusive publication.
+Need trace: three admitted source/stage/executable pins must check terminal closes after
+actual eligible child/group/pipe/body settlement. Consume/check once/attempt all/no retry;
+process uncertainty retains SAME concrete pins independently of error/Task, with direct
+conflict refusal and existing outer Access/stage retention. No early settlement exception.
+Controlled reports after real closes/after actual joins are distinct from OS faults.
+Partial admission/pre-spawn/fallback/deinit/other resources remain unqualified. No new
+worker/generic lease/schema/recovery/cleanup/UI/release. Actual PR136 records retained;
+ChapterPlan scheduling/product deadlines/historical asserts unchanged, live-work repair
+pending actual human approval. Full M1-M5 scope and prior protection gates remain open.
+
+
+Final ordinary631reported tests/105suites219.036s PASSED40UNCHANGED explicit opt-in skips/no
+warnings. Access43.097s/source-prefix21.644s/static35.904s pass. No ordinary retry. Product
+source changed only concrete writer terminal pin settlement and existing archive retention.
+Existing ChapterPlan/historical decoder-sample-crop-mastering-video bodies/timers/deadlines/
+assertions/skips/scheduling unchanged; source full-value/activation/origin/edit gates unchanged.
+
+Explicit optimized build22.47s compiler-reported/current strict ad-hoc app/read-only helper
+signatures/minima14.0/11.0 pass; writer/decoder/sample/crop absent. Compilation/signature
+checks are not DeveloperID/hardened loading/clean-machine/native UI qualification. Seven-file
+privacy zero/positive sentinel/protected owner metadata-journal-original-frozen-D130/D142/
+D143 unchanged/planning empty. No runtime artifact rebuilt/copied or owner media body read.

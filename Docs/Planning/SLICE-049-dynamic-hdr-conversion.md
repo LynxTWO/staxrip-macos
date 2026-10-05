@@ -2601,3 +2601,33 @@ Six-file privacy zero/positive sentinel/protected owner metadata-journal-origina
 D130/D142/D143 unchanged/planning empty. No new compiler/test failure in corrected checks;
 interrupted initial execution remains separately unqualified. Source-only independent
 review/no independent execution/full exit. All M1-M5 OPEN.
+
+
+### D165 bounded writer positive-pair pipe admission settlement
+Status: Approved for build by standing owner non-audio M1 ownership correction, 2026-10-05.
+M1 consumer: existing preservation writer, semantic verifier and exclusive publication.
+SAME concrete writer owner takes both actual pipe numbers before constructor configuration
+can fail. Check every opened eligible prelaunch pipe role once before pins, retain original
+cause/stronger process-source priority and same owner/needed outer grants/stage after close
+uncertainty/error-Task drop/energy expiry. No new worker/generic lease/protocol/controller.
+Generated actual opened/configured/nonblocking/prelaunch refusal/cancellation/real invalid
+executable spawn and after-real-successful close reports; zero children for refused cases.
+Existing postlaunch pipe close/settlement order remains; no historical observer/body/deadline/
+assertion/skip/scheduling change. No complete fallback/deinit/action-attribute/metadata-disk/
+retired-stage/aliases/concurrency/recovery/sandbox/UI/distribution qualification or cleanup.
+
+
+Actual first focus95tests/2suites29.981s PASSED/no warnings. Final ordinary642reported
+tests/105suites219.867s PASSED40UNCHANGED explicit opt-in skips/no warnings/no retry.
+Five new tests/43 refused or cancelled prelaunch trials launch ZERO helpers. Existing both-mode
+original semantic verification/exclusive publication checks pass through the changed normal path.
+Only concrete writer changed among98selected product/build files; historical writer/archive
+test prefixes and decoder/sample/crop/mastering/video/metadata files byte-identical. Explicit
+optimized build23.57s compiler-reported/current strict ad-hoc app/read-only helper/minima
+14.0/11.0 pass; writer/decoder/sample/crop absent. Static exact94-source host compiles writer
+but executes PRIOR preservation/review, not new pipe admission fault observers/SPS/VCL/crop/
+sample/decoder loading. Six-file privacy zero/positive sentinel/protected owner metadata-
+journal-original-frozen-D130/D142/D143 unchanged/planning empty. Independent source-only
+review/no execution/full exit. No new compile/test failure, no build/test retry. No native UI
+check for this backend-only finite change; no UI/action/capability/default packaging enabled.
+All M1-M5 OPEN, hosted failures independently retained without rerun.

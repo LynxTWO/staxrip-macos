@@ -501,4 +501,83 @@ struct CompanionWriterProcessTests {
         }
     }
 
+    private final class PrelaunchPipeCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var values: [(Writer.PipeRole,Int32,Int32)] = []
+        func add(_ role: Writer.PipeRole, _ fd: Int32, _ status: Int32) { lock.withLock { values.append((role,fd,status)) } }
+        func expect(_ roles: [Writer.PipeRole]) { lock.withLock {
+            #expect(values.map { $0.0 } == roles && values.allSatisfy { $0.1 >= 0 && $0.2 == 0 })
+            #expect(Set(values.map { $0.1 }).count == values.count)
+        } }
+    }
+    private func prelaunchRoles(_ phase: String) -> [Writer.PipeRole] {
+        phase.hasPrefix("stdin") && !phase.hasSuffix("Nonblocking") ? [.stdinRead,.stdinWrite] :
+        phase.hasPrefix("stdout") && !phase.hasSuffix("Nonblocking") ? [.stdinRead,.stdinWrite,.stdoutRead,.stdoutWrite] : Writer.PipeRole.allCases
+    }
+    private final class PrelaunchGate: @unchecked Sendable {
+        let entered: AsyncStream<Void>, signal: AsyncStream<Void>.Continuation
+        let release = DispatchSemaphore(value:0)
+        init() { let pair = AsyncStream<Void>.makeStream(); entered=pair.stream; signal=pair.continuation }
+        func hold() { signal.yield(()); if release.wait(timeout:.now()+30) != .success { Issue.record("Generated prelaunch gate expired") } }
+    }
+    @Test func writerPipeOpenedConfiguredNonblockingAndSpawnRefusalsCloseAllOwnedPairs() async throws {
+        for phase in Writer.PipeAdmissionStep.allCases.map(\.rawValue) + ["prelaunch","spawn"] {
+            let f = try await Self.fixture(); defer { f.cleanup() }
+            if phase == "spawn" { try Data("Generated invalid executable".utf8).write(to:f.executable) }
+            let tool = try f.tool, pipes = PrelaunchPipeCloses(), pins = AdmissionCloses(), state = State(), original = try Data(contentsOf:f.source)
+            let roles = prelaunchRoles(phase)
+            await #expect(throws: NativeExportError.self) {
+                try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) }, closed: { pipes.add($0,$1,$2) },
+                    pipeAdmission: { step in if step.rawValue == phase { throw NativeExportError.invalid("Generated pipe admission refusal") } },
+                    beforeSpawn: { if phase == "prelaunch" { throw NativeExportError.invalid("Generated prelaunch refusal") } },
+                    pinClosed: { role,fd,status in pipes.expect(roles); pins.add(role,fd,status) })) {
+                    try await Writer.run(tool:tool,source:f.source,stage:f.stage,retention:.metadataOnly)
+                }
+            }
+            pipes.expect(roles); pins.expect(Writer.PinRole.allCases); #expect(state.pid == 0 && Writer.retainedPins(source:f.source) == nil)
+            #expect(try Data(contentsOf:f.source) == original && FileManager.default.contentsOfDirectory(atPath:f.stage.path).isEmpty)
+        }
+    }
+    @Test func writerPartialPipeReportsKeepSameOwnerCauseAfterTaskDropAndConflict() async throws {
+        for phase in ["stdinOpened","stdoutOpened","stderrOpened","prelaunch","spawn"] {
+            for firstOnly in [true,false] {
+                let f = try await Self.fixture(); defer { print("GENERATED_WRITER_PRELAUNCH_PIPE_REVIEW " + f.root.path) }
+                if phase == "spawn" { try Data("Generated invalid executable".utf8).write(to:f.executable) }
+                let tool = try f.tool, pipes = PrelaunchPipeCloses(), pins = AdmissionCloses(), roles = prelaunchRoles(phase)
+                var task: Task<CompanionWriterProtocol.Receipt,Error>? = Task {
+                    try await Writer.$testBoundary.withValue(.init(launched: { _ in Issue.record("Refused prelaunch pipe launched writer") },
+                        closed: { pipes.add($0,$1,$2) }, refuseClose: { role,_,status in status == 0 && (!firstOnly || role == .stdinRead) },
+                        pipeAdmission: { step in if step.rawValue == phase { throw CancellationError() } },
+                        beforeSpawn: { if phase == "prelaunch" { throw CancellationError() } }, pinClosed: { pins.add($0,$1,$2) })) {
+                        try await Writer.run(tool:tool,source:f.source,stage:f.stage,retention:.metadataOnly)
+                    }
+                }
+                do { _ = try await task!.value; Issue.record("Partial pipe report returned receipt") }
+                catch let e as Writer.PipeCloseFailure { #expect(e.roles == (firstOnly ? [.stdinRead] : roles)); #expect(phase == "spawn" ? e.operationError is NativeExportError : e.operationError is CancellationError) }
+                task=nil; pipes.expect(roles); pins.expect(Writer.PinRole.allCases)
+                let witness = WeakWriterPins(Writer.retainedPins(source:f.source))
+                #expect(witness.value != nil && witness.value?.descriptorsForTesting == [-1,-1,-1] && witness.value?.pipeDescriptorsForTesting == Array(repeating:-1,count:6))
+                await #expect(throws: NativeExportError.self) { try await Writer.run(tool:tool,source:f.source,stage:f.stage,retention:.metadataOnly) }
+                Writer.isolateGeneratedPinsForTesting(try #require(witness.value)); #expect(witness.value == nil)
+            }
+        }
+    }
+    @Test func actualTaskCancellationAtPipeAdmissionAndPrelaunchClosesPairsBeforePins() async throws {
+        for phase in Writer.PipeAdmissionStep.allCases.map(\.rawValue) + ["prelaunch"] {
+            let f = try await Self.fixture(); defer { f.cleanup() }
+            let tool = try f.tool, gate = PrelaunchGate(), pipes = PrelaunchPipeCloses(), pins = AdmissionCloses(), roles = prelaunchRoles(phase)
+            let task = Task {
+                defer { gate.signal.finish() }
+                return try await Writer.$testBoundary.withValue(.init(launched: { _ in Issue.record("Cancelled prelaunch pipe launched writer") },
+                    closed: { pipes.add($0,$1,$2) }, pipeAdmission: { step in if step.rawValue == phase { gate.hold() } },
+                    beforeSpawn: { if phase == "prelaunch" { gate.hold() } }, pinClosed: { role,fd,status in pipes.expect(roles); pins.add(role,fd,status) })) {
+                    try await Writer.run(tool:tool,source:f.source,stage:f.stage,retention:.metadataOnly)
+                }
+            }
+            for await _ in gate.entered { break }; task.cancel(); gate.release.signal()
+            await #expect(throws: CancellationError.self) { try await task.value }
+            pipes.expect(roles); pins.expect(Writer.PinRole.allCases); #expect(Writer.retainedPins(source:f.source) == nil)
+            #expect(try FileManager.default.contentsOfDirectory(atPath:f.stage.path).isEmpty)
+        }
+    }
+
 }

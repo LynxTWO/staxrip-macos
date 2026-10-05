@@ -43,6 +43,7 @@ enum CompanionArchiveOperation {
     @TaskLocal static var testBoundary = Boundary()
     static func retainedForTesting(_ id: UUID) -> Bool { retained[id] != nil }
     static func retainedStageForTesting(_ id: UUID) -> ResultSetStaging? { retained[id]?.stage }
+    static func retainedWriterPinsForTesting(_ id: UUID) -> CompanionWriterProcess.AdmittedPins? { retained[id]?.writerPins }
     /// Only controlled generated phases whose settlement was separately proved.
     /// This is deliberately absent from release code, not a recovery authority.
     static func releaseGeneratedReviewForTesting(_ id: UUID) { retained.removeValue(forKey: id)?.finish() }
@@ -556,6 +557,7 @@ enum CompanionArchiveOperation {
     private static func retain(_ access: Access, error: Error, locator: URL, environment: Environment,
                                published: ResultSetStaging.Published? = nil) -> ReviewFailure {
         let id = UUID(); retained[id] = access
+        access.writerPins = CompanionWriterProcess.retainedPins(source: access.source)
         // Retain the concrete transaction owner, not only its review locator.
         // Dropping the error or expiring energy must not run its fallback deinit.
         if let e = error as? OriginalCompanionTransaction.SourceSettlementFailure { access.stage = e.retainedStage }
@@ -576,9 +578,11 @@ enum CompanionArchiveOperation {
         let pins: Pins
         // No production release/recovery API exists for uncertain stage ownership.
         var stage: ResultSetStaging?
+        let source: URL
+        var writerPins: CompanionWriterProcess.AdmittedPins?
         private var ends: [() -> Void] = []
         private var activityEnd: (() -> Void)?
-        init(source: URL, directory: URL) { pins = Pins(source: source, directory: directory) }
+        init(source: URL, directory: URL) { self.source = source; pins = Pins(source: source, directory: directory) }
         func acquire(source: URL, directory: URL, reason: String, environment: Environment) throws {
             if let end = try environment.access(source) { ends.append(end) }
             if let end = try environment.access(directory) { ends.append(end) }

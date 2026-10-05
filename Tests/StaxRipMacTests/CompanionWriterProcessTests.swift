@@ -282,4 +282,119 @@ struct CompanionWriterProcessTests {
         #expect(state.pid == 0 && events.count == 0) // No post-spawn role qualification on this path.
     }
 
+    private final class PinEvents: @unchecked Sendable {
+        private let lock = NSLock(); private var values: [(Writer.PinRole,Int32,Int32)] = []
+        func record(_ role: Writer.PinRole, _ fd: Int32, _ status: Int32) { lock.withLock { values.append((role,fd,status)) } }
+        var count: Int { lock.withLock { values.count } }
+        func assertOnce() {
+            lock.withLock {
+                #expect(values.count == 3 && values.allSatisfy { $0.1 >= 0 && $0.2 == 0 })
+                for role in Writer.PinRole.allCases { #expect(values.filter { $0.0 == role }.count == 1) }
+            }
+        }
+    }
+    @Test func admittedWriterPinsCloseOnceAfterBothModeBodiesAndAllReportCombinations() async throws {
+        let faults: [[Writer.PinRole]] = [[], [.source], [.stage], [.executable], [.source,.stage], [.source,.executable], [.stage,.executable], Writer.PinRole.allCases]
+        for mode in [Transaction.Retention.metadataOnly, .entireContainer] {
+            for faults in faults {
+                let f = try await Self.fixture(), state = State(), pipes = PipeEvents(), pins = PinEvents(), tool = try f.tool
+                let original = try Data(contentsOf: f.source)
+                defer { if faults.isEmpty { f.cleanup() } else { print("GENERATED_WRITER_PIN_REVIEW " + f.root.path) } }
+                do {
+                    let result = try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) }, settled: { state.settle($0) },
+                        closed: { pipes.record($0,$1,$2) }, pinClosed: { role,fd,status in state.assertJoined(); pipes.assertOnce(); pins.record(role,fd,status) },
+                        refusePinClose: { role,_,status in status == 0 && faults.contains(role) })) {
+                        try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: mode)
+                    }
+                    #expect(faults.isEmpty && result.contents.retention == mode)
+                } catch let e as Writer.PinCloseFailure {
+                    #expect(Set(e.roles) == Set(faults) && e.operationError == nil)
+                }
+                state.assertJoined(); pins.assertOnce(); pipes.assertOnce()
+                #expect(try Data(contentsOf: f.source) == original)
+                if mode == .entireContainer { #expect(try Data(contentsOf: f.stage.appendingPathComponent("original-container.mkv")) == original) }
+                if !faults.isEmpty {
+                    let owner = try #require(Writer.retainedPins(source: f.source))
+                    #expect(owner.descriptorsForTesting == [-1,-1,-1]) // Owned fields consumed, NOT an OS-number absence probe.
+                    await #expect(throws: NativeExportError.self) { try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: mode) }
+                    Writer.isolateGeneratedPinsForTesting(owner)
+                }
+            }
+        }
+    }
+    @Test func admittedPinRefusalKeepsFirstActiveLateCancellationAndPipeCause() async throws {
+        for phase in ["first", "active", "late"] {
+            let f = try await Self.fixture(), state = State(), pins = PinEvents(), pipes = PipeEvents(), gate = Gate(), tool = try f.tool
+            defer { print("GENERATED_WRITER_PIN_CANCEL_REVIEW " + f.root.path) }
+            let task = Task {
+                try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) }, ready: { if phase == "active" { gate.hold() } },
+                    settled: { state.settle($0) }, beforeReceipt: { if phase == "late" { gate.hold() } },
+                    closed: { role,fd,status in pipes.record(role,fd,status); if phase == "first" && role == .stdinRead { gate.hold() } },
+                    refuseClose: { role,_,status in status == 0 && role == .stdinRead },
+                    pinClosed: { pins.record($0,$1,$2) }, refusePinClose: { _,_,status in status == 0 })) {
+                    try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: .metadataOnly)
+                }
+            }
+            for await _ in gate.entered { break }; task.cancel(); gate.release.signal()
+            do { _ = try await task.value; Issue.record("Pin refusal returned cancelled receipt") }
+            catch let e as Writer.PinCloseFailure {
+                #expect(Set(e.roles) == Set(Writer.PinRole.allCases))
+                let pipe = try #require(e.operationError as? Writer.PipeCloseFailure)
+                #expect(pipe.roles == [.stdinRead] && pipe.operationError is CancellationError)
+            } catch let e as Writer.OwnershipFailure { #expect(!e.pipeCloseRoles.isEmpty || e.operationError != nil) }
+            state.assertJoined(); pipes.assertOnce()
+            let owner = try #require(Writer.retainedPins(source: f.source))
+            if owner.descriptorsForTesting == [-1,-1,-1] {
+                pins.assertOnce(); Writer.isolateGeneratedPinsForTesting(owner)
+            } else { #expect(pins.count == 0) } // Actual uncertainty remains retained, no isolation/cleanup authority.
+        }
+    }
+    @Test func admittedPinRefusalPreservesFinalIdentityAndNonzeroBodyCauses() async throws {
+        for fault in ["source", "stage", "executable", "malformed"] {
+            let f = try await Self.fixture(), state = State(), pins = PinEvents(), tool = try f.tool
+            defer { print("GENERATED_WRITER_PIN_CAUSE_REVIEW " + f.root.path) }
+            if fault == "malformed" { try Data("Generated malformed container".utf8).write(to: f.source) }
+            let original = try Data(contentsOf: f.source)
+            do {
+                _ = try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) }, settled: { state.settle($0) }, beforeReceipt: {
+                    guard fault != "malformed" else { return }
+                    let target = fault == "source" ? f.source : fault == "stage" ? f.stage : f.executable
+                    let moved = f.root.appendingPathComponent("moved-" + fault)
+                    do { try FileManager.default.moveItem(at: target, to: moved); try FileManager.default.copyItem(at: moved, to: target) }
+                    catch { Issue.record("Generated writer final pin substitution failed") }
+                }, pinClosed: { pins.record($0,$1,$2) }, refusePinClose: { role,_,status in status == 0 && role == .stage })) {
+                    try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: .metadataOnly)
+                }
+                Issue.record("Pin refusal admitted final body refusal")
+            } catch let e as Writer.PinCloseFailure { #expect(e.roles == [.stage] && e.operationError is NativeExportError) }
+            state.assertJoined(); pins.assertOnce(); #expect(try Data(contentsOf: f.source) == original)
+            Writer.isolateGeneratedPinsForTesting(try #require(Writer.retainedPins(source: f.source)))
+        }
+    }
+    // Hosted Swift6.1.2 rejects weak let locals; keep witness storage mutable.
+    // Compatibility awaits changed-head CI. ARC alone changes the weak value.
+    private final class WeakWriterPins {
+        weak var value: Writer.AdmittedPins?
+        init(_ value: Writer.AdmittedPins?) { self.value = value }
+    }
+    @Test func reportedSettlementKeepsSameOpenedPinsAfterTaskErrorDropAndExcludesDirectConflict() async throws {
+        let f = try await Self.fixture(), state = State(), pins = PinEvents(), tool = try f.tool
+        defer { print("GENERATED_WRITER_OPEN_PIN_REVIEW " + f.root.path) }
+        var task: Task<CompanionWriterProtocol.Receipt,Error>? = Task {
+            try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) }, settled: { state.settle($0) },
+                pinClosed: { pins.record($0,$1,$2) }, reportPinSettlementUncertainty: { true })) {
+                try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: .metadataOnly)
+            }
+        }
+        do { _ = try await task!.value; Issue.record("Reported settlement returned receipt") }
+        catch let e as Writer.OwnershipFailure { #expect(e.operationError == nil) }
+        task = nil; state.assertJoined(); #expect(pins.count == 0)
+        let witness = WeakWriterPins(Writer.retainedPins(source: f.source))
+        let numbers = try #require(witness.value?.descriptorsForTesting)
+        for fd in numbers { var info = stat(); #expect(fd >= 0 && fstat(fd,&info) == 0) }
+        await #expect(throws: NativeExportError.self) { try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: .metadataOnly) }
+        #expect(witness.value != nil && witness.value?.descriptorsForTesting == numbers)
+        Writer.isolateGeneratedPinsForTesting(try #require(witness.value)); #expect(witness.value == nil)
+    }
+
 }

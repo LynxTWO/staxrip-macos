@@ -28,8 +28,9 @@ enum CompanionWriterProcess {
     struct OwnershipFailure: CompanionUnsettledOwnership, LocalizedError {
         let operationError: (any Error)?
         let pipeCloseRoles: [PipeRole]
-        init(operationError: (any Error)? = nil, pipeCloseRoles: [PipeRole] = []) {
-            self.operationError = operationError; self.pipeCloseRoles = pipeCloseRoles
+        let pinCloseRoles: [PinRole]
+        init(operationError: (any Error)? = nil, pipeCloseRoles: [PipeRole] = [], pinCloseRoles: [PinRole] = []) {
+            self.operationError = operationError; self.pipeCloseRoles = pipeCloseRoles; self.pinCloseRoles = pinCloseRoles
         }
         var errorDescription: String? { "Companion process ownership could not be fully settled. Retain the temporary stage for review." }
     }
@@ -41,6 +42,52 @@ enum CompanionWriterProcess {
         let roles: [PipeRole]
         var errorDescription: String? { "Companion writer pipe ownership could not be fully settled. Retain needed source and stage access for review." }
     }
+    enum PinRole: String, CaseIterable, Sendable { case source, stage, executable }
+    struct PinCloseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: (any Error)?
+        let roles: [PinRole]
+        var errorDescription: String? { "Companion writer pin ownership could not be settled. Retain source and stage access for review." }
+    }
+    // Concrete writer pins, retained independently of thrown errors or completed Tasks.
+    // No production release/recovery interface exists.
+    final class AdmittedPins: @unchecked Sendable {
+        fileprivate let source, stage, executable: Pin
+        fileprivate var launched = false, terminalEligible = false
+        fileprivate init(source: Pin, stage: Pin, executable: Pin) {
+            self.source = source; self.stage = stage; self.executable = executable
+        }
+        fileprivate func closeChecked(_ boundary: Boundary) -> [PinRole] {
+            var uncertain: [PinRole] = []
+            for (role, pin) in [(PinRole.source, source), (.stage, stage), (.executable, executable)] {
+                if !pin.closeChecked(role, boundary: boundary) { uncertain.append(role) }
+            }
+            return uncertain
+        }
+        fileprivate func conflicts(source: URL, stage: URL, executable: URL) -> Bool {
+            self.source.url == source || self.stage.url == stage || self.executable.url == executable
+        }
+        #if DEBUG
+        var descriptorsForTesting: [Int32] { [source.fd, stage.fd, executable.fd] }
+        #endif
+    }
+    private final class PinRetention: @unchecked Sendable {
+        private let lock = NSLock(); private var values: [AdmittedPins] = []
+        func check(source: URL, stage: URL, executable: URL) throws {
+            guard !lock.withLock({ values.contains { $0.conflicts(source: source, stage: stage, executable: executable) } }) else { throw failure() }
+        }
+        func retain(_ pins: AdmittedPins) { lock.withLock { values.append(pins) } }
+        func owner(source: URL) -> AdmittedPins? { lock.withLock { values.first { $0.source.url == source } } }
+        #if DEBUG
+        // Generated isolation only after separately proving owned child settlement.
+        // No production recovery, group proof or checked fallback-close claim follows.
+        func isolate(_ pins: AdmittedPins) { lock.withLock { values.removeAll { $0 === pins } } }
+        #endif
+    }
+    private static let pinRetention = PinRetention()
+    static func retainedPins(source: URL) -> AdmittedPins? { pinRetention.owner(source: source) }
+    #if DEBUG
+    static func isolateGeneratedPinsForTesting(_ pins: AdmittedPins) { pinRetention.isolate(pins) }
+    #endif
     struct Boundary: Sendable {
         var launched: @Sendable (pid_t) -> Void = { _ in }
         var ready: @Sendable () -> Void = {}
@@ -51,6 +98,10 @@ enum CompanionWriterProcess {
         // DEBUG reports follow each actual close; refusal never masks OS failure.
         var closed: @Sendable (PipeRole, Int32, Int32) -> Void = { _,_,_ in }
         var refuseClose: @Sendable (PipeRole, Int32, Int32) -> Bool = { _,_,_ in false }
+        var pinClosed: @Sendable (PinRole, Int32, Int32) -> Void = { _,_,_ in }
+        var refusePinClose: @Sendable (PinRole, Int32, Int32) -> Bool = { _,_,_ in false }
+        // Controlled report after actual eligible body settlement; not OS process denial.
+        var reportPinSettlementUncertainty: @Sendable () -> Bool = { false }
     }
     #if DEBUG
     @TaskLocal static var testBoundary = Boundary()
@@ -91,30 +142,56 @@ enum CompanionWriterProcess {
     }
     private static func work(tool: Tool, source: URL, stage: URL, retention: Transaction.Retention,
                              timeout: Double, cancellation: Cancellation, boundary: Boundary = .init()) throws -> CompanionWriterProtocol.Receipt {
-        var uncertain: [PipeRole] = []
+        try pinRetention.check(source: source, stage: stage, executable: tool.url)
+        var uncertain: [PipeRole] = [], pins: AdmittedPins?
         let result = Result {
             try workBody(tool: tool, source: source, stage: stage, retention: retention,
                 timeout: timeout, cancellation: cancellation, boundary: boundary,
-                recordClose: { uncertain.append($0) })
+                recordClose: { uncertain.append($0) }, admitted: { pins = $0 })
         }
+        let original: (any Error)?
+        switch result { case .success: original = nil; case .failure(let error): original = error }
+        var operationError = original
         if !uncertain.isEmpty {
-            let original: (any Error)?
-            switch result { case .success: original = nil; case .failure(let error): original = error }
-            // Process/group uncertainty remains the stronger outer refusal.
             if let original = original as? OwnershipFailure {
-                throw OwnershipFailure(operationError: original, pipeCloseRoles: uncertain)
-            }
-            throw PipeCloseFailure(operationError: original, roles: uncertain)
+                operationError = OwnershipFailure(operationError: original, pipeCloseRoles: uncertain)
+            } else { operationError = PipeCloseFailure(operationError: original, roles: uncertain) }
         }
+        if let pins, pins.launched {
+            #if DEBUG
+            if pins.terminalEligible && boundary.reportPinSettlementUncertainty() {
+                pins.terminalEligible = false
+                operationError = OwnershipFailure(operationError: operationError)
+            }
+            #endif
+            if !pins.terminalEligible {
+                // No pin close while process ownership remains uncertain. Retention
+                // survives even a standalone caller dropping its error and Task.
+                pinRetention.retain(pins)
+                throw operationError ?? OwnershipFailure()
+            }
+            let pinRoles = pins.closeChecked(boundary)
+            if !pinRoles.isEmpty {
+                pinRetention.retain(pins)
+                if operationError is OwnershipFailure {
+                    throw OwnershipFailure(operationError: operationError, pinCloseRoles: pinRoles)
+                }
+                throw PinCloseFailure(operationError: operationError, roles: pinRoles)
+            }
+        }
+        // Partial admission/pre-spawn rollback remains a separate qualification.
+        if let operationError { throw operationError }
         return try result.get()
     }
     private static func workBody(tool: Tool, source: URL, stage: URL, retention: Transaction.Retention,
         timeout: Double, cancellation: Cancellation, boundary: Boundary,
-        recordClose: (PipeRole) -> Void) throws -> CompanionWriterProtocol.Receipt {
+        recordClose: (PipeRole) -> Void, admitted: (AdmittedPins) -> Void) throws -> CompanionWriterProtocol.Receipt {
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)
         func check() throws { try cancellation.check(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
         try check()
         let input = try Pin(source), directory = try Pin(stage, directory: true), executable = try Pin(tool.url, executable: true)
+        let pins = AdmittedPins(source: input, stage: directory, executable: executable)
+        admitted(pins)
         guard let names = try? FileManager.default.contentsOfDirectory(atPath: stage.path), names.isEmpty else { throw failure() }
         guard try executable.digest(check: check) == tool.sha256 else { throw failure() }
         try input.check(); try directory.check(); try executable.check(); try check()
@@ -147,6 +224,7 @@ enum CompanionWriterProcess {
             posix_spawn(&pid, tool.url.path, &actions, &attributes, a.baseAddress!, e.baseAddress!)
         } }
         guard launched == 0, pid > 0 else { throw failure() }
+        pins.launched = true
         func close(_ pipe: PipeEnds, read: Bool, role: PipeRole) {
             if !pipe.closeChecked(read: read, role: role, boundary: boundary) { recordClose(role) }
         }
@@ -235,11 +313,13 @@ enum CompanionWriterProcess {
             boundary.settled(pid)
             #endif
             guard groupStopped, reaped else { throw OwnershipFailure(operationError: original) }
+            pins.terminalEligible = true
             throw original
         }
         close(stdin, read: false, role: .stdinWrite)
         close(stdout, read: true, role: .stdoutRead)
         close(stderr, read: true, role: .stderrRead)
+        pins.terminalEligible = true
         #if DEBUG
         boundary.settled(pid); boundary.beforeReceipt()
         #endif
@@ -280,8 +360,9 @@ enum CompanionWriterProcess {
         }
         func nonblock(_ fd: Int32) throws { let flags = fcntl(fd, F_GETFL); guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else { throw failure() } }
     }
-    private final class Pin {
-        let url: URL, fd: Int32, initial: stat, isDirectory: Bool
+    fileprivate final class Pin {
+        let url: URL, initial: stat, isDirectory: Bool
+        private(set) var fd: Int32
         var id: Transaction.FileID { .init(initial) }
         var bytes: Int64 { initial.st_size }
         init(_ url: URL, directory: Bool = false, executable: Bool = false) throws {
@@ -297,7 +378,19 @@ enum CompanionWriterProcess {
             }
             self.url = url; fd = opened; initial = info; isDirectory = directory
         }
-        deinit { Darwin.close(fd) }
+        deinit { if fd >= 0 { Darwin.close(fd) } }
+        func closeChecked(_ role: PinRole, boundary: Boundary) -> Bool {
+            guard fd >= 0 else { return true }
+            let consumed = fd; fd = -1
+            let status = Darwin.close(consumed)
+            #if DEBUG
+            boundary.pinClosed(role, consumed, status)
+            let reported = boundary.refusePinClose(role, consumed, status)
+            #else
+            let reported = false
+            #endif
+            return status == 0 && !reported
+        }
         private static func same(_ a: stat, _ b: stat, directory: Bool) -> Bool {
             Transaction.FileID(a) == Transaction.FileID(b) && a.st_mode == b.st_mode && a.st_uid == b.st_uid &&
                 (directory || (a.st_nlink == b.st_nlink && a.st_size == b.st_size &&

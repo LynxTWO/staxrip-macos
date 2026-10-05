@@ -106,6 +106,26 @@ enum CompanionDiskCheck {
         let independentSampleValuesVerified = false
         let editedPictureSemanticsVerified = false
     }
+    /// Original container declarations, not independently decoded codec geometry.
+    struct SourceVideoReceipt: Sendable {
+        let source: SourceSpoolReceipt
+        let declarations: CompanionOriginalAuditCheck.Declarations
+        let effectiveDisplayDeclarations: [UInt64?]
+        let originalVideoDeclarationsBoundToSource = true
+        let independentSourceFrameAssociationVerified = false
+        let independentSourceROIProvenanceVerified = false
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+    }
+    /// Explicit source-only prerequisite. Existing narrower source/decoder APIs
+    /// neither acquire these facts nor change their admission subset.
+    static func spoolOriginalSourceVideoDeclarations(source: URL, in directory: URL,
+        limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceVideoReceipt {
+        let result = try await sourceWork(source: source, in: directory, limits: limits, decoder: nil, declaredVideo: true)
+        guard let declarations = result.2 else { throw failure() }
+        return try .init(source: result.0, declarations: declarations,
+            effectiveDisplayDeclarations: declarations.displayWithMatroskaDefaults())
+    }
     private struct DecoderRequest: Sendable {
         var profile: DolbyDecoderStream.Profile = .metadata
         let tool: DolbyDecoderProcess.Tool
@@ -162,7 +182,7 @@ enum CompanionDiskCheck {
         try await sourceWork(source:source,in:directory,limits:limits,decoder:nil).0
     }
     private static func sourceWork(source: URL, in directory: URL, limits: DolbyAssociationSpool.Limits,
-                                   decoder: DecoderRequest?) async throws -> (SourceSpoolReceipt,DolbyDecoderStream.Receipt?) {
+                                   decoder: DecoderRequest?, declaredVideo: Bool = false) async throws -> (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?) {
         try Task.checkCancellation()
         let cancelled = Cancellation()
         #if DEBUG
@@ -174,7 +194,7 @@ enum CompanionDiskCheck {
         let decoderBoundary = DolbyDecoderProcess.Boundary()
         let spoolBoundary = DolbyAssociationSpool.AdmissionBoundary()
         #endif
-        let result: (SourceSpoolReceipt,DolbyDecoderStream.Receipt?) = try await withTaskCancellationHandler {
+        let result: (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?) = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue(label: "StaxRip.original-source-spool", qos: .userInitiated).async {
                     continuation.resume(with: Result {
@@ -193,6 +213,7 @@ enum CompanionDiskCheck {
                             let receipt = try DolbyAssociationSpool.withSpool(in: directory, sourceBytes: file.bytes,
                                                                             limits: limits, checkpoint: cancelled.check, admissionBoundary: spoolBoundary) { spool in
                                 let track = try CompanionOriginalTrackCheck.readSource(view)
+                                let video = declaredVideo ? try CompanionOriginalAuditCheck.sourceDeclarations(view, track: track) : nil
                                 var timing: (UInt64, Bool)?
                                 let packets = try CompanionOriginalPacketCheck.readSource(view, track: track, begin: { scale, unknown in
                                     guard timing == nil else { throw failure() }; timing = (scale, unknown)
@@ -231,7 +252,7 @@ enum CompanionDiskCheck {
                                 boundary.beforeFinal()
                                 try file.check(source); try cancelled.check()
                                 return (SourceSpoolReceipt(sourceID: file.id, sourceBytes: file.bytes, sourceSHA256: hash,
-                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1),decoded)
+                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1),decoded,video)
                             }
                             try file.check(source); try cancelled.check()
                             return receipt

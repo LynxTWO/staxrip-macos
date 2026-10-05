@@ -38,6 +38,13 @@ enum CompanionMetadataProcess {
         let reportedAfterActualClose: Bool
         var errorDescription: String? { "Native metadata input ownership could not be settled. Retain needed source and stage access for review." }
     }
+    enum PinRole: String, CaseIterable, Sendable { case source, executable }
+    struct PinCloseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: (any Error)?
+        let roles: [PinRole]
+        let sourcePin, executablePin: Pin
+        var errorDescription: String? { "Native metadata file ownership could not be settled. Retain needed source and stage access for review." }
+    }
     struct Boundary: Sendable {
         var launched: @Sendable (pid_t) -> Void = { _ in }
         var row: @Sendable (Data) -> Void = { _ in }
@@ -48,6 +55,8 @@ enum CompanionMetadataProcess {
         var refuseClose: @Sendable (PipeRole) -> Bool = { _ in false }
         var nullClosed: @Sendable (Int32, Int32) -> Void = { _, _ in }
         var refuseNullClose: @Sendable () -> Bool = { false }
+        var pinClosed: @Sendable (PinRole, Int32, Int32) -> Void = { _, _, _ in }
+        var refusePinClose: @Sendable (PinRole) -> Bool = { _ in false }
     }
     #if DEBUG
     @TaskLocal static var testBoundary = Boundary()
@@ -240,13 +249,24 @@ enum CompanionMetadataProcess {
         #else
         let reported = false
         #endif
+        var terminalOutcome = outcome
         if closed != 0 || reported {
             let cause: (any Error)?
             switch outcome { case .success: cause = nil; case .failure(let error): cause = error }
-            throw NullCloseFailure(operationError: cause, closeStatus: closed, closeErrno: code,
-                reportedAfterActualClose: reported)
+            terminalOutcome = .failure(NullCloseFailure(operationError: cause, closeStatus: closed, closeErrno: code,
+                reportedAfterActualClose: reported))
         }
-        return try outcome.get()
+        // SAME independently eligible terminal transition. Attempt both actual
+        // existing pins even after null or first-pin refusal; never retry.
+        var uncertainPins: [PinRole] = []
+        if !input.closeChecked(role: .source, boundary: boundary) { uncertainPins.append(.source) }
+        if !executable.closeChecked(role: .executable, boundary: boundary) { uncertainPins.append(.executable) }
+        if !uncertainPins.isEmpty {
+            let cause: (any Error)?
+            switch terminalOutcome { case .success: cause = nil; case .failure(let error): cause = error }
+            throw PinCloseFailure(operationError: cause, roles: uncertainPins, sourcePin: input, executablePin: executable)
+        }
+        return try terminalOutcome.get()
     }
     private final class PipeEnds {
         var read: Int32, write: Int32
@@ -279,8 +299,12 @@ enum CompanionMetadataProcess {
         }
         func nonblock(_ fd: Int32) throws { let flags = fcntl(fd, F_GETFL); guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else { throw failure() } }
     }
-    private final class Pin {
-        let url: URL, fd: Int32, initial: stat
+    final class Pin {
+        private let url: URL, initial: stat
+        private var fd: Int32
+        #if DEBUG
+        var descriptorForTesting: Int32 { fd }
+        #endif
         var id: Transaction.FileID { .init(initial) }
         var bytes: Int64 { initial.st_size }
         init(_ url: URL, executable: Bool = false) throws {
@@ -296,7 +320,22 @@ enum CompanionMetadataProcess {
             }
             self.url = url; fd = opened; initial = info
         }
-        deinit { Darwin.close(fd) }
+        deinit { if fd >= 0 { Darwin.close(fd) } }
+        // Admitted, independently eligible postspawn terminal path only.
+        // Admission/prelaunch/ineligible fallback remains separately unqualified.
+        fileprivate func closeChecked(role: PinRole, boundary: Boundary) -> Bool {
+            let number = fd
+            guard number >= 0 else { return true }
+            fd = -1
+            let status = Darwin.close(number), code: Int32 = status == 0 ? 0 : errno
+            #if DEBUG
+            boundary.pinClosed(role, status, code)
+            let reported = status == 0 && boundary.refusePinClose(role)
+            #else
+            let reported = false
+            #endif
+            return status == 0 && !reported
+        }
         private static func same(_ a: stat, _ b: stat) -> Bool {
             Transaction.FileID(a) == Transaction.FileID(b) && a.st_mode == b.st_mode && a.st_uid == b.st_uid &&
                 (a.st_nlink == b.st_nlink && a.st_size == b.st_size &&

@@ -45,6 +45,9 @@ enum CompanionArchiveOperation {
     static func retainedStageForTesting(_ id: UUID) -> ResultSetStaging? { retained[id]?.stage }
     static func retainedWriterPinsForTesting(_ id: UUID) -> CompanionWriterProcess.AdmittedPins? { retained[id]?.writerPins }
     static func retainedEnumerationDirectoryForTesting(_ id: UUID) -> CompanionDiskCheck.Directory? { retained[id]?.enumerationDirectory }
+    static func retainedMetadataPinsForTesting(_ id: UUID) -> (CompanionMetadataProcess.Pin?, CompanionMetadataProcess.Pin?) {
+        (retained[id]?.metadataSourcePin, retained[id]?.metadataExecutablePin)
+    }
     private static var isolatedEnumerationReviews: [UUID: Access] = [:]
     /// Generated qualification only: preserve every concrete resource without
     /// releasing access or authorizing cleanup. Production exclusion is unchanged.
@@ -592,6 +595,10 @@ enum CompanionArchiveOperation {
         else { verifierError = error }
         if let e = verifierError as? CompanionDiskCheck.EnumerationCloseFailure { access.enumerationDirectory = e.directory }
         else if let e = verifierError as? CompanionDiskCheck.DirectoryAdmissionFailure { access.enumerationDirectory = e.directory }
+        if let e = verifierError as? CompanionMetadataProcess.PinCloseFailure {
+            access.metadataSourcePin = e.sourcePin
+            access.metadataExecutablePin = e.executablePin
+        }
         // Expiry ends only temporary energy. Dropped errors do not release access
         // or authorize cleanup, adoption, publication or a successful review.
         DispatchQueue.main.asyncAfter(deadline: .now() + environment.retainedActivitySeconds) {
@@ -609,6 +616,7 @@ enum CompanionArchiveOperation {
         let source: URL
         var writerPins: CompanionWriterProcess.AdmittedPins?
         var enumerationDirectory: CompanionDiskCheck.Directory?
+        var metadataSourcePin, metadataExecutablePin: CompanionMetadataProcess.Pin?
         private var ends: [() -> Void] = []
         private var activityEnd: (() -> Void)?
         init(source: URL, directory: URL) { self.source = source; pins = Pins(source: source, directory: directory) }

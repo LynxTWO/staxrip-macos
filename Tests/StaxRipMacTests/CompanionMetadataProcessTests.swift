@@ -406,4 +406,74 @@ struct CompanionMetadataProcessTests {
         }
     }
 
+
+    private final class CheckedPinCloses: @unchecked Sendable {
+        private let lock=NSLock(); private var roles:[Reader.PinRole]=[]
+        func add(_ role:Reader.PinRole,_ status:Int32,_ code:Int32) { lock.withLock { #expect(status == 0 && code == 0); #expect(!roles.contains(role)); roles.append(role) } }
+        func expectPair() { lock.withLock { #expect(roles == [.source,.executable]) } }
+    }
+    @Test func actualTerminalMetadataPinPairChecksAfterNullAndPreservesOriginalCauses() async throws {
+        for point in ["normal","source","executable","both","mixed","source-path","tool-path"] {
+            let f=try await Self.fixture(), state=State(), pipes=CheckedPipeCloses(), null=NullClose(), pins=CheckedPinCloses(), original=try Data(contentsOf:f.source)
+            let refused:Set<Reader.PinRole> = point == "normal" ? [] : point == "source" ? [.source] : point == "executable" ? [.executable] : Set(Reader.PinRole.allCases)
+            do {
+                _=try await Reader.$testBoundary.withValue(.init(launched:{ state.launch($0) },settled:{ state.settle($0) },beforeReceipt:{
+                    if point == "source-path" || point == "tool-path" {
+                        do { let url=point == "source-path" ? f.source : f.executable, bytes=try Data(contentsOf:url)
+                            try FileManager.default.moveItem(at:url,to:f.root.appendingPathComponent("retained-before-substitution"))
+                            try bytes.write(to:url); if point == "tool-path" { try FileManager.default.setAttributes([.posixPermissions:0o700],ofItemAtPath:url.path) }
+                        } catch { Issue.record(error) }
+                    }
+                },closed:{ pipes.add($0,$1,$2) },refuseClose:{ _ in point == "mixed" },nullClosed:{ status,code in pipes.expectAll(); state.assertJoined(); null.add(status,code) },refuseNullClose:{ point == "mixed" },pinClosed:{ role,status,code in
+                    pipes.expectAll(); null.expectOne(); state.assertJoined(); pins.add(role,status,code)
+                },refusePinClose:{ refused.contains($0) })) { try await Reader.run(tool:f.tool,source:f.source) }
+                #expect(point == "normal")
+            } catch let e as Reader.PinCloseFailure {
+                guard point != "normal" else { print("GENERATED_UNEXPECTED_NORMAL_METADATA_PIN_REVIEW " + f.root.path); throw e }
+                #expect(Set(e.roles) == refused && e.sourcePin !== e.executablePin)
+                #expect(e.sourcePin.descriptorForTesting == -1 && e.executablePin.descriptorForTesting == -1)
+                if point == "mixed" { let n=try #require(e.operationError as? Reader.NullCloseFailure), p=try #require(n.operationError as? Reader.PipeCloseFailure); #expect(n.reportedAfterActualClose && p.operationError == nil && Set(p.roles) == Set(Reader.PipeRole.allCases)) }
+                else if point == "source-path" || point == "tool-path" { #expect(e.operationError is NativeExportError) }
+                else { #expect(e.operationError == nil) }
+            } catch { if error is any CompanionUnsettledOwnership { print("GENERATED_UNEXPECTED_METADATA_PIN_REVIEW " + f.root.path) }; throw error }
+            pins.expectPair(); null.expectOne(); pipes.expectAll(); state.assertJoined(); #expect(try Data(contentsOf:f.source) == original)
+            if point == "normal" { f.cleanup() } else { print("GENERATED_METADATA_PIN_REVIEW " + f.root.path) }
+        }
+    }
+    @Test func actualActiveAndLateMetadataCancellationChecksPairDespiteNullPipeRefusal() async throws {
+        for late in [false,true] {
+          for reported in [false,true] {
+            let f=try await Self.fixture(), state=State(), pipes=CheckedPipeCloses(), null=NullClose(), pins=CheckedPinCloses(), gate=Gate()
+            if !late {
+                let bytes=try Data(contentsOf:f.source)
+                let view=CompanionDiskCheck.ReadView(sourceBytes:Int64(bytes.count),source:{ o,n in bytes.subdata(in:Int(o)..<(Int(o)+n)) },component:{ _ in throw NativeExportError.invalid("Generated pin fixture") },checkpoint:{})
+                let walker=CompanionOriginalTrackCheck.Walker(view), header=try walker.element(0,end:view.sourceBytes), segment=try walker.element(header.end,end:view.sourceBytes)
+                var prefix=Data(), clusters=Data(), offset=segment.payload
+                while offset < segment.end { let element=try walker.element(offset,end:segment.end), data=bytes.subdata(in:Int(offset)..<Int(element.end)); if element.id == 0x1f43b675 { clusters.append(data) } else { prefix.append(data) }; offset=element.end }
+                var longBytes=bytes.prefix(Int(header.end)) + Data([0x18,0x53,0x80,0x67,0xff]) + prefix
+                for _ in 0..<2000 { longBytes.append(clusters) }; try longBytes.write(to:f.source)
+            }
+            let original=try Data(contentsOf:f.source)
+            var task:Task<CompanionMetadataStream.Receipt,Error>?=Task {
+                defer { gate.signal.finish() }
+                return try await Reader.$testBoundary.withValue(.init(launched:{ state.launch($0) },row:{ _ in if !late && state.firstRow() { gate.hold() } },settled:{ state.settle($0) },beforeReceipt:{ if late { pipes.expectAll(); state.assertJoined(); gate.hold() } },closed:{ pipes.add($0,$1,$2) },refuseClose:{ _ in reported },nullClosed:{ status,code in pipes.expectAll(); state.assertJoined(); null.add(status,code) },refuseNullClose:{ reported },pinClosed:{ role,status,code in null.expectOne(); state.assertJoined(); pins.add(role,status,code) },refusePinClose:{ _ in reported })) { try await Reader.run(tool:f.tool,source:f.source) }
+            }
+            for await _ in gate.entered { break }; #expect(state.pid > 0)
+            if !late {
+                let ps=Process(), pipe=Pipe(); ps.executableURL=URL(fileURLWithPath:"/bin/ps"); ps.arguments=["-p",String(state.pid),"-o","stat="]; ps.standardOutput=pipe; ps.standardError=FileHandle.nullDevice
+                try ps.run(); let text=String(decoding:pipe.fileHandleForReading.readDataToEndOfFile(),as:UTF8.self); ps.waitUntilExit(); #expect(ps.terminationStatus == 0 && !text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty && !text.contains("Z"))
+            }
+            task!.cancel(); gate.release.signal()
+            do { _=try await task!.value; Issue.record("Cancelled metadata pin trial returned receipt") }
+            catch let e as Reader.PinCloseFailure {
+                guard reported else { print("GENERATED_UNEXPECTED_ORDINARY_METADATA_PIN_CANCEL_REVIEW " + f.root.path); throw e }
+                #expect(reported && Set(e.roles) == Set(Reader.PinRole.allCases)); #expect(e.sourcePin.descriptorForTesting == -1 && e.executablePin.descriptorForTesting == -1)
+                let n=try #require(e.operationError as? Reader.NullCloseFailure), p=try #require(n.operationError as? Reader.PipeCloseFailure); #expect(n.reportedAfterActualClose && p.operationError is CancellationError && Set(p.roles) == Set(Reader.PipeRole.allCases))
+            } catch { if error is any CompanionUnsettledOwnership { print("GENERATED_UNEXPECTED_METADATA_PIN_CANCEL_REVIEW " + f.root.path); throw error }; #expect(!reported && error is CancellationError) }
+            task=nil; pins.expectPair(); null.expectOne(); pipes.expectAll(); state.assertJoined(); #expect(try Data(contentsOf:f.source) == original)
+            if reported { print("GENERATED_METADATA_PIN_CANCEL_REVIEW " + f.root.path) } else { f.cleanup() }
+          }
+        }
+    }
+
 }

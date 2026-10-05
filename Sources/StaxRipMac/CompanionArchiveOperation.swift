@@ -42,6 +42,7 @@ enum CompanionArchiveOperation {
     }
     @TaskLocal static var testBoundary = Boundary()
     static func retainedForTesting(_ id: UUID) -> Bool { retained[id] != nil }
+    static func retainedStageForTesting(_ id: UUID) -> ResultSetStaging? { retained[id]?.stage }
     /// Only controlled generated phases whose settlement was separately proved.
     /// This is deliberately absent from release code, not a recovery authority.
     static func releaseGeneratedReviewForTesting(_ id: UUID) { retained.removeValue(forKey: id)?.finish() }
@@ -354,6 +355,12 @@ enum CompanionArchiveOperation {
     private static func retain(_ access: Access, error: Error, locator: URL, environment: Environment,
                                published: ResultSetStaging.Published? = nil) -> ReviewFailure {
         let id = UUID(); retained[id] = access
+        // Retain the concrete transaction owner, not only its review locator.
+        // Dropping the error or expiring energy must not run its fallback deinit.
+        if let e = error as? OriginalCompanionTransaction.SourceSettlementFailure { access.stage = e.retainedStage }
+        else if let e = error as? OriginalCompanionTransaction.StagingSettlementFailure { access.stage = e.retainedStage }
+        else if let e = error as? OriginalCompanionTransaction.UnsettledPhaseFailure { access.stage = e.retainedStage }
+        else if let e = error as? OriginalCompanionTransaction.CleanupFailure { access.stage = e.retainedStage }
         // Expiry ends only temporary energy. Dropped errors do not release access
         // or authorize cleanup, adoption, publication or a successful review.
         DispatchQueue.main.asyncAfter(deadline: .now() + environment.retainedActivitySeconds) {
@@ -366,6 +373,8 @@ enum CompanionArchiveOperation {
 
     @MainActor private final class Access {
         let pins: Pins
+        // No production release/recovery API exists for uncertain stage ownership.
+        var stage: ResultSetStaging?
         private var ends: [() -> Void] = []
         private var activityEnd: (() -> Void)?
         init(source: URL, directory: URL) { pins = Pins(source: source, directory: directory) }

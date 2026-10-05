@@ -83,11 +83,11 @@ enum MasteringEngine {
         }
         return Int64(ceil(Double(rate*channels)*seconds*29))+128*1024*1024
     }
-    static func runTool(_ tools: FFmpegTools, _ arguments: [String]) async throws {
-        let result = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-hide_banner","-nostdin","-v","error","-xerror","-n"]+arguments)
+    static func runTool(_ tools: FFmpegTools, _ arguments: [String], checkedReaders: Bool = false) async throws {
+        let result = try await ToolRunner(checkedReaders: checkedReaders).run(executable: tools.ffmpeg, arguments: ["-hide_banner","-nostdin","-v","error","-xerror","-n"]+arguments)
         guard result.status == 0 else { throw NativeExportError.invalid("Audio conversion failed. No candidate was published.") }
     }
-    static func encode(raw: URL, output: URL, rate: Int, channels: Int, dynamic: Bool, tools: FFmpegTools) async throws {
+    static func encode(raw: URL, output: URL, rate: Int, channels: Int, dynamic: Bool, tools: FFmpegTools, checkedReaders: Bool = false) async throws {
         var args = ["-f","f64le","-ar",String(rate),"-ac",String(channels),"-i",raw.path]
         if dynamic {
             args += ["-af", "aresample=\(rate*4),alimiter=limit=0.8413951416:attack=5:release=50:level=false:latency=true,aresample=\(rate)"]
@@ -95,12 +95,12 @@ enum MasteringEngine {
         args += ["-map_metadata","-1","-map_chapters","-1","-ar",String(rate)]
         if output.pathExtension.lowercased() == "flac" { args += ["-c:a","flac","-sample_fmt","s32","-bits_per_raw_sample","24"] }
         else { args += ["-c:a","pcm_s24le","-rf64","auto"] }
-        try await runTool(tools,args+[output.path])
+        try await runTool(tools,args+[output.path],checkedReaders: checkedReaders)
     }
-    static func independent(_ url: URL, tools: FFmpegTools) async throws -> IndependentMasterCheck {
+    static func independent(_ url: URL, tools: FFmpegTools, checkedReaders: Bool = false) async throws -> IndependentMasterCheck {
         func measure(padded: Bool) async throws -> IndependentMasterCheck {
             let filter = (padded ? "apad=pad_dur=1.5," : "")+"ebur128=peak=true"
-            let result = try await ToolRunner().run(executable: tools.ffmpeg, arguments: ["-hide_banner","-nostdin","-nostats","-protocol_whitelist","file,pipe","-i",url.path,"-af",filter,"-f","null","-"])
+            let result = try await ToolRunner(checkedReaders: checkedReaders).run(executable: tools.ffmpeg, arguments: ["-hide_banner","-nostdin","-nostats","-protocol_whitelist","file,pipe","-i",url.path,"-af",filter,"-f","null","-"])
             guard result.status == 0, let summary = String(decoding: result.stderr, as: UTF8.self).components(separatedBy: "Summary:").last else {
                 throw NativeExportError.invalid("Independent output verification failed.")
             }
@@ -148,7 +148,7 @@ enum MasteringEngine {
               source.resolvingSymlinksInPath() != destination.resolvingSymlinksInPath(), !FileManager.default.fileExists(atPath: destination.path) else {
             throw NativeExportError.invalid("Choose a new FLAC or WAV destination. Existing files are never replaced.")
         }
-        let probe = try await MediaProbe.read(source,tools: tools)
+        let probe = try await MediaProbe.read(source,tools: tools,checkedReaders: true)
         guard let stream = probe.streams.first(where: { $0.index == track && $0.codec_type == "audio" }), let rate = Int(stream.sample_rate ?? ""), let channels = stream.channels else { throw NativeExportError.invalid("Select a supported audio stream.") }
         let required = try scratchEstimate(rate: rate, channels: channels, seconds: probe.seconds)
         let parent = destination.deletingLastPathComponent()
@@ -160,33 +160,47 @@ enum MasteringEngine {
         try FileManager.default.createDirectory(at: folder,withIntermediateDirectories: false,attributes: [.posixPermissions: 0o700])
         var retained = false
         defer { if !retained { try? FileManager.default.removeItem(at: folder) } }
+        do {
         status("Fresh analysis and source verification",0)
-        let before = try await MeasuredAnalysis.fresh(source: source,track: track,regions: regions,tools: tools,declaredLayout: layout) { status("Measuring source",$0*0.2) }
+        let before = try await MeasuredAnalysis.fresh(source: source,track: track,regions: regions,tools: tools,declaredLayout: layout,checkedReaders: true) { status("Measuring source",$0*0.2) }
         if let expectedSource, before.report.source != expectedSource { throw NativeExportError.invalid("Source changed since the inspected plan. Build a fresh plan.") }
         // Build now to refuse unsupported targets before copying full PCM.
         let initialPlan = try await GainPlanner.build(before,settings: settings)
         let raw = folder.appendingPathComponent("source.f64"), rendered = folder.appendingPathComponent("render.f64")
         let original = folder.appendingPathComponent("original.wav"), output = folder.appendingPathComponent("candidate."+destination.pathExtension.lowercased())
         status("Decoding selected track for linked rendering",0.2)
-        try await runTool(tools,["-protocol_whitelist","file,pipe","-i",source.path,"-map","0:\(track)","-vn","-sn","-dn","-c:a","pcm_f64le","-f","f64le",raw.path])
+        try await runTool(tools,["-protocol_whitelist","file,pipe","-i",source.path,"-map","0:\(track)","-vn","-sn","-dn","-c:a","pcm_f64le","-f","f64le",raw.path],checkedReaders: true)
         guard try await SourceFingerprint.read(source) == before.report.source else { throw NativeExportError.invalid("Source changed after analysis. Rebuild the plan.") }
-        try await runTool(tools,["-f","f64le","-ar",String(rate),"-ac",String(channels),"-i",raw.path,"-map_metadata","-1","-c:a","pcm_f64le","-rf64","auto",original.path])
+        try await runTool(tools,["-f","f64le","-ar",String(rate),"-ac",String(channels),"-i",raw.path,"-map_metadata","-1","-c:a","pcm_f64le","-rf64","auto",original.path],checkedReaders: true)
         var correction = 0.0, problems = [String]()
         for attempt in 0..<3 {
             try Task.checkCancellation()
             let plan = try await (attempt == 0 ? initialPlan : GainPlanner.build(before,settings: settings,attempt: attempt,correction: correction))
             status("Rendering candidate \(attempt+1) of at most 3",0.3+Double(attempt)*0.2)
             if attempt > 0 { try FileManager.default.removeItem(at: rendered); try FileManager.default.removeItem(at: output) }
-            let renderTask = Task.detached { try LinkedRenderer.render(raw: raw,to: rendered,plan: plan) }
+            #if DEBUG
+            let wroteChunk = LinkedRenderer.wroteChunk, closeReport = LinkedRenderer.closeReport
+            #endif
+            let renderTask = Task.detached {
+                #if DEBUG
+                try LinkedRenderer.$wroteChunk.withValue(wroteChunk) {
+                    try LinkedRenderer.$closeReport.withValue(closeReport) {
+                        try LinkedRenderer.render(raw: raw,to: rendered,plan: plan)
+                    }
+                }
+                #else
+                try LinkedRenderer.render(raw: raw,to: rendered,plan: plan)
+                #endif
+            }
             try await withTaskCancellationHandler { try await renderTask.value } onCancel: { renderTask.cancel() }
-            try await encode(raw: rendered,output: output,rate: rate,channels: channels,dynamic: plan.dynamic,tools: tools)
+            try await encode(raw: rendered,output: output,rate: rate,channels: channels,dynamic: plan.dynamic,tools: tools,checkedReaders: true)
             status("Measuring encoded candidate \(attempt+1)",0.4+Double(attempt)*0.2)
-            let after = try await MeasuredAnalysis.fresh(source: output,track: 0,regions: regions,tools: tools,declaredLayout: channels == 1 ? "mono" : "stereo") { _ in }
-            let format = try await MediaProbe.read(output,tools: tools)
+            let after = try await MeasuredAnalysis.fresh(source: output,track: 0,regions: regions,tools: tools,declaredLayout: channels == 1 ? "mono" : "stereo",checkedReaders: true) { _ in }
+            let format = try await MediaProbe.read(output,tools: tools,checkedReaders: true)
             guard let encoded = format.streams.first, encoded.codec_name == (destination.pathExtension.lowercased() == "flac" ? "flac" : "pcm_s24le"), encoded.bits_per_raw_sample == "24" else {
                 throw NativeExportError.invalid("Encoded candidate is not the requested 24-bit lossless format.")
             }
-            let crosscheck = try await independent(output,tools: tools)
+            let crosscheck = try await independent(output,tools: tools,checkedReaders: true)
             problems = failures(after,plan: plan,independent: crosscheck)
             if !problems.isEmpty { status("Candidate \(attempt+1) rejected: "+problems.joined(separator: " "),0.5+Double(attempt)*0.2) }
             if problems.isEmpty {
@@ -206,5 +220,9 @@ enum MasteringEngine {
             if let measured = GainPlanner.reference(after,settings: settings) { correction += settings.target-measured }
         }
         throw NativeExportError.invalid("The experimental planner did not meet these settings after three bounded attempts. No output was published. "+problems.joined(separator: " ")+" Try other settings or keep the original. This refusal does not prove that the requested result is mathematically impossible.")
+        } catch {
+            if error is CompanionUnsettledOwnership { retained = true }
+            throw error
+        }
     }
 }

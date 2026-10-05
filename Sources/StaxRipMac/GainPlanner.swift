@@ -180,13 +180,29 @@ struct GainPrediction {
 
 /// Applies one identical envelope to all channels; no source PCM is held beyond a chunk.
 enum LinkedRenderer {
+    #if DEBUG
+    @TaskLocal static var wroteChunk: (@Sendable () -> Void)?
+    @TaskLocal static var closeReport: (@Sendable (String, Bool) -> Bool)?
+    #endif
+    struct CloseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let handles: [FileHandle]
+        let roles: [String]
+        let closeErrors: [String: Error]
+        let cause: Error?
+        var errorDescription: String? { "Render file settlement is uncertain. Scratch files must be retained." }
+    }
+    private static let retainedLock = NSLock()
+    private static var retainedHandles: [[FileHandle]] = []
     static func render(raw: URL, to output: URL, plan: GainPlan) throws {
         let input = try FileHandle(forReadingFrom: raw)
-        defer { try? input.close() }
+        var handles: [(String, FileHandle)] = [("input", input)]
+        var bodyError: Error?
+        do {
         guard !FileManager.default.fileExists(atPath: output.path), FileManager.default.createFile(atPath: output.path, contents: nil) else {
             throw NativeExportError.invalid("Cannot create owned render staging file.")
         }
-        let writer = try FileHandle(forWritingTo: output); defer { try? writer.close() }
+        let writer = try FileHandle(forWritingTo: output)
+        handles.append(("output", writer))
         let channels = plan.analysis.report.channelLabels.count, bytesPerFrame = channels*8
         var frame: Int64 = 0
         while true {
@@ -212,10 +228,28 @@ enum LinkedRenderer {
                     }
                 }
                 try writer.write(contentsOf: result)
+                #if DEBUG
+                if frame < plan.frames { wroteChunk?() }
+                #endif
                 return data.count
             }
             if consumed == 0 { break }
         }
         guard frame == plan.frames else { throw NativeExportError.invalid("Source PCM duration differs from the fresh plan.") }
+        } catch { bodyError = error }
+        var refused = [String](), closeErrors = [String: Error]()
+        for (role, handle) in handles.reversed() {
+            var closed = false
+            do { try handle.close(); closed = true } catch { refused.append(role); closeErrors[role] = error }
+            #if DEBUG
+            if closeReport?(role, closed) == true, !refused.contains(role) { refused.append(role) }
+            #endif
+        }
+        if !refused.isEmpty {
+            let owned = handles.map { $0.1 }
+            retainedLock.withLock { retainedHandles.append(owned) }
+            throw CloseFailure(handles: owned, roles: refused, closeErrors: closeErrors, cause: bodyError)
+        }
+        if let bodyError { throw bodyError }
     }
 }

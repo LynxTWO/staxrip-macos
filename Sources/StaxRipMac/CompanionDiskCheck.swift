@@ -92,11 +92,23 @@ enum CompanionDiskCheck {
         let independentSampleValuesVerified = false
         let editedPictureSemanticsVerified = false
     }
+    /// Original-source agreement with a finite caller rectangle. The admitted
+    /// decoder measures values; container/user ROI provenance is not reconstructed.
+    struct SourceCropReceipt: Sendable {
+        let source: SourceSpoolReceipt
+        let decoder: DolbyDecoderStream.Receipt
+        let independentSourceFrameAssociationVerified = true
+        let originalSourceAndCallerCropAgreementVerified = true
+        let independentSourceROIProvenanceVerified = false
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+    }
     private struct DecoderRequest: Sendable {
         var profile: DolbyDecoderStream.Profile = .metadata
         let tool: DolbyDecoderProcess.Tool
         let threads: Int
         let timeout: Double
+        var cropRequest: DolbyDecoderStream.CropRequest? = nil
     }
     /// Unused development association. Caller owns explicit empty private folder
     /// and source access; this establishes no release or edited-picture admission.
@@ -117,6 +129,17 @@ enum CompanionDiskCheck {
         guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         let result = try await sourceWork(source: source, in: directory, limits: limits,
             decoder: .init(profile: .baseSamples, tool: tool, threads: threads, timeout: timeout))
+        guard let decoder = result.1 else { throw failure() }
+        return .init(source: result.0, decoder: decoder)
+    }
+    /// Distinct development crop composition on the existing pinned source/open
+    /// database worker. Caller owns the explicit folder and required access.
+    static func associateOriginalCrops(source: URL, in directory: URL, tool: DolbyDecoderProcess.Tool,
+                                       request: DolbyDecoderStream.CropRequest, threads: Int = 4,
+                                       timeout: Double = 120, limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceCropReceipt {
+        guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        let result = try await sourceWork(source: source, in: directory, limits: limits,
+            decoder: .init(profile: .cropSamples, tool: tool, threads: threads, timeout: timeout, cropRequest: request))
         guard let decoder = result.1 else { throw failure() }
         return .init(source: result.0, decoder: decoder)
     }
@@ -166,7 +189,7 @@ enum CompanionDiskCheck {
                                 guard let timing else { throw failure() }
                                 var decoded: DolbyDecoderStream.Receipt?
                                 if let decoder {
-                                    try spool.startDecoderPass(profile: decoder.profile)
+                                    try spool.startDecoderPass(profile: decoder.profile, cropRequest: decoder.cropRequest)
                                     // No second worker, nested async wait or closed-store adoption.
                                     let actual: DolbyDecoderStream.Receipt
                                     switch decoder.profile {
@@ -179,7 +202,12 @@ enum CompanionDiskCheck {
                                             threads:decoder.threads,observeSamples:{ try spool.acceptSampleObservation($0) },
                                             observe:{ try spool.acceptDecoderRow($0,track:track) },
                                             timeout:decoder.timeout,checkCancellation:cancelled.check,boundary:decoderBoundary)
-                                    case .cropSamples: throw Self.failure()
+                                    case .cropSamples:
+                                        guard let request = decoder.cropRequest else { throw failure() }
+                                        actual = try DolbyDecoderProcess.runOwnedCrops(tool:decoder.tool,source:source,
+                                            request:request,threads:decoder.threads,observeCrops:{ try spool.acceptCropObservation($0) },
+                                            observe:{ try spool.acceptDecoderRow($0,track:track) },
+                                            timeout:decoder.timeout,checkCancellation:cancelled.check,boundary:decoderBoundary)
                                     }
                                     guard actual.source == SourceFingerprint(sha256:hash,byteCount:file.bytes),
                                           actual.configurationSHA256 == track.configurationSHA256,

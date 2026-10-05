@@ -193,7 +193,7 @@ struct DolbyAssociationSpoolTests {
         }
     }
     @Test func missingCoverageAmbiguousRPUsAndInvisibleSourceCannotBeSettled() throws {
-        for profile in [DolbyDecoderStream.Profile.metadata,.baseSamples] {
+        for profile in [DolbyDecoderStream.Profile.metadata,.baseSamples,.cropSamples] {
         for variant in 0..<4 {
             let root=try directory();defer{try? FileManager.default.removeItem(at:root)}
             #expect(throws:(any Error).self) { try Spool.withSpool(in:root,sourceBytes:100_000) { store in
@@ -207,14 +207,14 @@ struct DolbyAssociationSpoolTests {
                         if variant == 2 && i == 1 {try store.append(.rpu(rpu(2,packet:p,nal:3)))}
                     }
                 }
-                _=try store.finishSourcePass(expected:.init(packets:2,rpus:variant == 2 ? 3 : 2));try store.startDecoderPass(profile:profile)
-                let parser=try DolbyDecoderStream(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],profile:profile,observeSamples:{if profile == .baseSamples{try store.acceptSampleObservation($0)}},observe:{ row in
-                    let o=try CompanionArchiveJSON.object(row,maximum:65535,decoderSampleFields:profile == .baseSamples)
+                _=try store.finishSourcePass(expected:.init(packets:2,rpus:variant == 2 ? 3 : 2));try store.startDecoderPass(profile:profile,cropRequest:profile == .cropSamples ? cropRequest():nil)
+                let parser=try DolbyDecoderStream(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],profile:profile,cropRequest:profile == .cropSamples ? cropRequest():nil,observeCrops:{if profile == .cropSamples{try store.acceptCropObservation($0)}},observeSamples:{if profile == .baseSamples{try store.acceptSampleObservation($0)}},observe:{ row in
+                    let o=try CompanionArchiveJSON.object(row,maximum:65535,decoderSampleFields:profile != .metadata)
                     let kind=try CompanionArchiveJSON.string(o,"kind")
-                    if variant == 0 && (kind == "frame" || kind == "sample-frame") { return }
+                    if variant == 0 && (kind == "frame" || kind == "sample-frame" || kind == "crop-frame") { return }
                     try store.acceptDecoderRow(row,track:decoderTrack())
                 })
-                try parser.accept(wire(profile == .metadata ? decoderRows():sampleRows()));try store.finishDecoderPass(parser.finish(status:0))
+                try parser.accept(wire(profile == .metadata ? decoderRows():profile == .baseSamples ? sampleRows():cropRows()));try store.finishDecoderPass(parser.finish(status:0))
             } }
         }
         }
@@ -290,6 +290,77 @@ struct DolbyAssociationSpoolTests {
                 }else{try store.finishDecoderPass(result)}
             }}
             #expect(escaped?.ownedPinsClosed == true)
+        }
+    }
+
+    private func cropRequest() throws -> DolbyDecoderStream.CropRequest {
+        try .init(space:.codecVisible,x:2,y:2,width:16,height:10)
+    }
+    private func cropRows() -> [[String:Any]] {
+        var rows=sampleRows();rows[0]["kind"]="crop-begin";rows[5]["kind"]="crop-complete"
+        for i in [1,2]{rows[i]["kind"]="crop-packet"}
+        for i in [3,4] {
+            for k in ["best_effort_pts","sample_aspect_ratio","coded","codec_visible"]{rows[i].removeValue(forKey:k)}
+            rows[i]["kind"]="crop-frame";rows[i]["request_space"]="codec-visible"
+            rows[i]["requested_rect"]=[2,2,16,10];rows[i]["coded_rect"]=[2,2,16,10]
+            rows[i]["roi"]=[DolbySampleProcessTests.plane(16,10),DolbySampleProcessTests.plane(8,5),DolbySampleProcessTests.plane(8,5)]
+            rows[i]["source_roi_provenance_verified"]=false;rows[i]["independent_sample_values_verified"]=false
+        }
+        return rows
+    }
+    private func cropParser(_ store:Spool? = nil) throws -> DolbyDecoderStream {
+        try .init(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],profile:.cropSamples,
+            cropRequest:cropRequest(),observeCrops:{try store?.acceptCropObservation($0)},observe:{try store?.acceptDecoderRow($0,track:decoderTrack())})
+    }
+    @Test func cropCoveragePreservesReorderAndAbsencesWithoutProvingPixelsOrOrigin() throws {
+        let root=try directory();defer{try? FileManager.default.removeItem(at:root)};var escaped:Spool?
+        try Spool.withSpool(in:root,sourceBytes:100000){store in
+            escaped=store;try sourceRows(store);try store.startDecoderPass(profile:.cropSamples,cropRequest:cropRequest())
+            var rows=cropRows();var planes=try #require(rows[3]["roi"] as? [[String:Any]])
+            planes[0]=DolbySampleProcessTests.plane(16,10,value:513);planes[0]["sha256"]=String(repeating:"e",count:64);rows[3]["roi"]=planes
+            let parser=try cropParser(store);try parser.accept(wire(rows));let result=try parser.finish(status:0)
+            try store.finishDecoderPass(result)
+            #expect(result.cropFrameSummaryCount == 2 && result.sampleFrameSummaryCount == 0 && result.geometry.sampleAspectRatio == nil)
+            #expect(!result.independentSourceFrameAssociationVerified && !result.independentSourceROIProvenanceVerified && !result.independentSampleValuesVerified && !result.editedPictureSemanticsVerified)
+            for i in Int64(0)...1{#expect(try store.packet(i) == visible(i));#expect(try store.rpu(i) == rpu(i,packet:visible(i)))}
+        };#expect(escaped?.ownedPinsClosed == true)
+    }
+    @Test func cropPlausibleSourceForgeriesRefuseAfterPassingPartialShape() throws {
+        let faults:[(Int,String,Any)]=[(0,"configuration_bytes",24),(0,"configuration_sha256",String(repeating:"e",count:64)),(0,"time_base",[1,2000]),(1,"pts",41),(1,"block_input_byte_offset",9),(1,"encoded_bytes",999),(1,"sha256",String(repeating:"e",count:64)),(3,"packet_index",0),(3,"block_input_byte_offset",1033),(3,"packet_size",999),(3,"rpu_bytes",99),(3,"rpu_sha256",String(repeating:"e",count:64))]
+        for (i,key,value) in faults {
+            var rows=cropRows();rows[i][key]=value
+            let partial=try cropParser();try partial.accept(wire(rows));_=try partial.finish(status:0)
+            let root=try directory();defer{try? FileManager.default.removeItem(at:root)};var escaped:Spool?
+            #expect(throws:(any Error).self){try Spool.withSpool(in:root,sourceBytes:100000){store in
+                escaped=store;try sourceRows(store);try store.startDecoderPass(profile:.cropSamples,cropRequest:cropRequest())
+                let parser=try cropParser(store);try parser.accept(wire(rows));try store.finishDecoderPass(parser.finish(status:0))
+            }};#expect(escaped?.ownedPinsClosed == true)
+        }
+    }
+    @Test func cropMissingDuplicateMixedTypedRowsAndForgedFinalCountsRefuse() throws {
+        for variant in 0..<8 {
+            let root=try directory();defer{try? FileManager.default.removeItem(at:root)};var escaped:Spool?
+            #expect(throws:(any Error).self){try Spool.withSpool(in:root,sourceBytes:100000){store in
+                escaped=store;try sourceRows(store)
+                let request=try cropRequest()
+                if variant == 6 {try store.startDecoderPass(profile:.metadata,cropRequest:request);return}
+                if variant == 7 {try store.startDecoderPass(profile:.cropSamples);return}
+                try store.startDecoderPass(profile:variant == 2 ? .metadata:.cropSamples,cropRequest:variant == 2 ? nil:request)
+                let parser=try DolbyDecoderStream(source:.init(sha256:String(repeating:"a",count:64),byteCount:100000),threads:4,versions:[1,1,1],profile:.cropSamples,cropRequest:request,observeCrops:{f in
+                    if variant != 0 {try store.acceptCropObservation(f)}
+                    if variant == 1 {try store.acceptCropObservation(f)}
+                },observe:{row in
+                    let o=try CompanionArchiveJSON.object(row,maximum:65535,decoderSampleFields:true)
+                    let kind=try CompanionArchiveJSON.string(o,"kind")
+                    if variant == 3 && kind == "crop-frame" {return}
+                    try store.acceptDecoderRow(row,track:decoderTrack())
+                })
+                try parser.accept(wire(variant == 4 ? sampleRows():cropRows()));let r=try parser.finish(status:0)
+                if variant == 5 {
+                    let forged=DolbyDecoderStream.Receipt(source:r.source,packets:r.packets,frames:r.frames,geometry:r.geometry,configurationSHA256:r.configurationSHA256,timeBase:r.timeBase)
+                    try store.finishDecoderPass(forged)
+                }else{try store.finishDecoderPass(r)}
+            }};#expect(escaped?.ownedPinsClosed == true)
         }
     }
 

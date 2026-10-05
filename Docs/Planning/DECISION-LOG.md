@@ -163,6 +163,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-154 | 2026-10-05 | Concrete joint parameter/crop access ownership | Confirmed | |
 | D-155 | 2026-10-05 | Bind finite source SPS coding-tree grid prefix | Confirmed | |
 | D-156 | 2026-10-05 | Original source VCL segment prefix/reference/address binding | Confirmed | |
+| D-157 | 2026-10-05 | Checked native writer post-spawn pipe closes | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4817,3 +4818,39 @@ writer/decoder/sample/crop absent. Exact static94-source closure unchanged/prior
 Seven-file privacy zero/positive sentinel/protected owner metadata/current journal/original
 sample-prefix-frozen-D130/D142/D143 unchanged and planning findings empty. No whole-program
 completion claim; new concrete source-only access integration and other gates remain open.
+
+
+## D-157: Checked writer pipe closes for original preservation
+Status: Confirmed
+Date: 2026-10-05.
+
+M1 consumes this finite correction on the existing preservation pipeline; SPS/VCL wrappers
+are not prerequisite consumers of original byte/semantic retention. Six existing post-spawn
+pipe fields consume/check actual close once without retry or early process-settlement exit.
+Typed shared uncertainty preserves original cause/stronger source-process priority and
+prevents receipt/verifier/publication. Existing D105/D134/D141 retains concrete stage/access
+through dropped errors/expiry/exclusions. Failed close does not prove release.
+
+See WRITER-PIPE-CLOSE-EVIDENCE.md for five actual generated tests/35 new direct helper joins,
+both retention modes/normal full semantic verification/exclusive publication, active/late/
+first-close cancellation and identity/nonzero/close priority/retention checks. Initial new
+Task-held-error ARC assertions failed; test drops completed Task before isolation/lifetime
+observation, preserving the assertions and product. Final55tests5suites16.863s passed/no
+warnings. Static94-source host compiles this change and executes prior preservation/review.
+Parent PR131 actual618tests645.297s9issues remains failed without rerun or cause attribution.
+
+Writer pins/constructor/pre-spawn/deinit and other resource retirement remain separate;
+native choice/controller/result and trusted non-DEBUG helper remain M1 dependencies.
+No generic owner/worker/runtime bridge/protocol/UI/default packaging/release/recovery API,
+owner body/captured-artifact/signing-loading execution or whole-program completion claim.
+All five outcome milestones and independent verification exits remain open.
+
+Final ordinary623 reported tests/105 suites/244.877s PASSED40 unchanged explicit opt-in
+skips/no emitted warnings. Access49.769s/writer21.929s/
+source-prefix23.067s/static50.745s passed. No ordinary retry.
+
+Explicit optimized build23.70s compiler-reported/no warnings and CURRENT strict ad-hoc
+app/read-only helper signatures/minima14.0/11.0 pass. Writer/decoder/sample/crop absent.
+Six-file privacy zero/positive sentinel/protected owner metadata-current journal-original
+sample-prefix-frozen-D130/D142/D143 unchanged; planning findings empty. No new C/runtime
+build-copy/sanitizer/pixel oracle/APFS/DeveloperID/owner body/full-source/UI qualification.

@@ -193,4 +193,93 @@ struct CompanionWriterProcessTests {
             }
         }
     }
+    private final class PipeEvents: @unchecked Sendable {
+        private let lock = NSLock(); private var events: [(Writer.PipeRole,Int32,Int32)] = []
+        func record(_ role: Writer.PipeRole, _ fd: Int32, _ status: Int32) { lock.withLock { events.append((role,fd,status)) } }
+        func assertOnce() {
+            let all = lock.withLock { events }
+            #expect(all.count == 6 && Set(all.map { $0.0 }) == Set(Writer.PipeRole.allCases))
+            #expect(all.allSatisfy { $0.1 >= 0 && $0.2 == 0 })
+            for role in Writer.PipeRole.allCases { #expect(all.filter { $0.0 == role }.count == 1) }
+        }
+        var count: Int { lock.withLock { events.count } }
+    }
+    @Test func actualBothModePipeRolesCloseOnceAndReportsPreventReceiptWithoutRetry() async throws {
+        for mode in [Transaction.Retention.metadataOnly,.entireContainer] {
+            for fault in ["normal"] + Writer.PipeRole.allCases.map(\.rawValue) + ["all"] {
+                let f = try await Self.fixture(); var keep = fault != "normal"
+                defer { if keep { print("GENERATED_WRITER_PIPE_REVIEW " + f.root.path) } else { f.cleanup() } }
+                let state = State(), events = PipeEvents(), original = try Data(contentsOf: f.source), tool = try f.tool
+                do {
+                    let result = try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) },
+                        settled: { state.settle($0) }, closed: { events.record($0,$1,$2) },
+                        refuseClose: { role,_,status in status == 0 && (fault == "all" || fault == role.rawValue) })) {
+                        try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: mode)
+                    }
+                    #expect(fault == "normal" && result.contents.retention == mode)
+                    keep = false
+                } catch let error as Writer.PipeCloseFailure {
+                    #expect(fault != "normal" && error.operationError == nil)
+                    #expect(Set(error.roles) == (fault == "all" ? Set(Writer.PipeRole.allCases) : Set([try #require(Writer.PipeRole(rawValue: fault))])))
+                }
+                state.assertJoined(); events.assertOnce()
+                let manifest = try Data(contentsOf: f.stage.appendingPathComponent("manifest.json"))
+                #expect(!manifest.isEmpty)
+                #expect(try Data(contentsOf: f.source) == original)
+                if mode == .entireContainer { #expect(try Data(contentsOf: f.stage.appendingPathComponent("original-container.mkv")) == original) }
+            }
+        }
+    }
+    @Test func reportedPipeCloseKeepsActiveLateAndFirstCloseCancellationCauseAfterJoin() async throws {
+        for phase in ["first-close","ready","late"] {
+            let f = try await Self.fixture(); defer { print("GENERATED_WRITER_PIPE_CANCEL_REVIEW " + f.root.path) }
+            let state = State(), events = PipeEvents(), gate = Gate(), tool = try f.tool, original = try Data(contentsOf: f.source)
+            let task = Task {
+                try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) },
+                    ready: { if phase == "ready" { gate.hold() } }, settled: { state.settle($0) },
+                    beforeReceipt: { if phase == "late" { gate.hold() } },
+                    closed: { role,fd,status in events.record(role,fd,status); if phase == "first-close" && role == .stdinRead { gate.hold() } },
+                    refuseClose: { _,_,status in status == 0 })) {
+                    try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: .metadataOnly)
+                }
+            }
+            for await _ in gate.entered { break }; task.cancel(); gate.release.signal()
+            do { _ = try await task.value; Issue.record("Reported pipe close admitted cancelled writer") }
+            catch let e as Writer.PipeCloseFailure { #expect(e.operationError is CancellationError && Set(e.roles) == Set(Writer.PipeRole.allCases)) }
+            catch let e as Writer.OwnershipFailure {
+                #expect(e.operationError is Writer.OwnershipFailure && Set(e.pipeCloseRoles) == Set(Writer.PipeRole.allCases))
+                let originalError = try #require(e.operationError as? Writer.OwnershipFailure)
+                #expect(originalError.operationError is CancellationError)
+            }
+            state.assertJoined(); events.assertOnce(); #expect(try Data(contentsOf: f.source) == original)
+        }
+    }
+    @Test func reportedPipeClosePreservesFinalIdentityAndNonzeroRefusalsWithoutPrelaunchClaims() async throws {
+        for fault in ["source","stage","executable","malformed-source"] {
+            let f = try await Self.fixture(); defer { print("GENERATED_WRITER_PIPE_CAUSE_REVIEW " + f.root.path) }
+            if fault == "malformed-source" { try Data("Generated malformed container".utf8).write(to: f.source) }
+            let state = State(), events = PipeEvents(), tool = try f.tool, original = try Data(contentsOf: f.source)
+            do {
+                _ = try await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) }, settled: { state.settle($0) },
+                    beforeReceipt: {
+                        guard fault != "malformed-source" else { return }
+                        let target = fault == "source" ? f.source : fault == "stage" ? f.stage : f.executable
+                        let moved = f.root.appendingPathComponent("moved-" + fault)
+                        do { try FileManager.default.moveItem(at: target, to: moved); try FileManager.default.copyItem(at: moved, to: target) }
+                        catch { Issue.record("Generated same-byte final identity substitution failed") }
+                    }, closed: { events.record($0,$1,$2) }, refuseClose: { role,_,status in status == 0 && role == .stderrRead })) {
+                    try await Writer.run(tool: tool, source: f.source, stage: f.stage, retention: .metadataOnly)
+                }
+                Issue.record("Reported close/ordinary cause returned receipt")
+            } catch let e as Writer.PipeCloseFailure { #expect(e.roles == [.stderrRead] && e.operationError is NativeExportError) }
+            state.assertJoined(); events.assertOnce(); #expect(try Data(contentsOf: f.source) == original)
+        }
+        let f = try await Self.fixture(); defer { f.cleanup() }; let state = State(), events = PipeEvents()
+        let wrong = try Writer.Tool.development(f.executable, expectedSHA256: String(repeating:"0",count:64))
+        await Writer.$testBoundary.withValue(.init(launched: { state.launch($0) }, closed: { events.record($0,$1,$2) })) {
+            await #expect(throws: NativeExportError.self) { try await Writer.run(tool: wrong, source: f.source, stage: f.stage, retention: .metadataOnly) }
+        }
+        #expect(state.pid == 0 && events.count == 0) // No post-spawn role qualification on this path.
+    }
+
 }

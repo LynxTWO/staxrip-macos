@@ -2398,3 +2398,16 @@ SOURCE-VCL-SEGMENT-PREFIX-EVIDENCE.md. Synthetic non-first/dependent cases do no
 picture grouping/activation/full conformance or coordinate origin/value/rendered/edited proof.
 Next concrete explicit source/spool access integration remains separate; other ownership and
 distribution gates remain open.
+
+
+### D157 original-preservation writer pipe settlement
+
+The M1 preservation consumer now checks six actual post-spawn writer pipe ends on its
+existing synchronous owner, defers uncertainty until required process settlement, and
+retains concrete stage/access through existing transaction/controller review. See D-157
+and WRITER-PIPE-CLOSE-EVIDENCE.md. This correction advances the actual writer → full original
+semantic verifier → exclusive publication chain; unused SPS/VCL source-only access wrappers
+are not automatically its critical path. Remaining writer pins/pre-spawn/fallback, applicable
+metadata/disk resources, trusted helper and native choice/result boundary remain open.
+M2 conversion/media-plus-companion, M3 edited HDR, M4 reconstruction and M5 production
+acceptance remain distinct; all required semantic/ownership/permission gates persist.

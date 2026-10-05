@@ -42,6 +42,11 @@ enum CompanionWriterProcess {
         let roles: [PipeRole]
         var errorDescription: String? { "Companion writer pipe ownership could not be fully settled. Retain needed source and stage access for review." }
     }
+    enum PipeStream: Sendable { case stdin, stdout, stderr }
+    enum PipeAdmissionStep: String, CaseIterable, Sendable {
+        case stdinOpened, stdinConfigured, stdoutOpened, stdoutConfigured, stderrOpened, stderrConfigured
+        case stdinNonblocking, stdoutNonblocking, stderrNonblocking
+    }
     enum PinRole: String, CaseIterable, Sendable { case source, stage, executable }
     struct PinCloseFailure: CompanionUnsettledOwnership, LocalizedError {
         let operationError: (any Error)?
@@ -53,6 +58,7 @@ enum CompanionWriterProcess {
     final class AdmittedPins: @unchecked Sendable {
         fileprivate let sourceURL, stageURL, executableURL: URL
         fileprivate var source, stage, executable: Pin?
+        fileprivate var stdin, stdout, stderr: PipeEnds?
         fileprivate var launched = false, terminalEligible = false
         fileprivate init(source: URL, stage: URL, executable: URL) {
             sourceURL = source; stageURL = stage; executableURL = executable
@@ -71,6 +77,28 @@ enum CompanionWriterProcess {
             try check()
             return pin
         }
+        fileprivate func openPipe(_ stream: PipeStream, check: () throws -> Void, boundary: Boundary) throws -> PipeEnds {
+            let pipe = try PipeEnds(open: ())
+            switch stream { case .stdin: stdin = pipe; case .stdout: stdout = pipe; case .stderr: stderr = pipe }
+            #if DEBUG
+            try boundary.pipeAdmission(stream == .stdin ? .stdinOpened : stream == .stdout ? .stdoutOpened : .stderrOpened)
+            #endif
+            try check(); try pipe.configure()
+            #if DEBUG
+            try boundary.pipeAdmission(stream == .stdin ? .stdinConfigured : stream == .stdout ? .stdoutConfigured : .stderrConfigured)
+            #endif
+            try check(); return pipe
+        }
+        fileprivate func closePrelaunchPipes(_ boundary: Boundary) -> [PipeRole] {
+            var uncertain: [PipeRole] = []
+            for (pipe, readRole, writeRole) in [(stdin, PipeRole.stdinRead, PipeRole.stdinWrite),
+                (stdout, .stdoutRead, .stdoutWrite), (stderr, .stderrRead, .stderrWrite)] {
+                guard let pipe else { continue }
+                if !pipe.closeChecked(read: true, role: readRole, boundary: boundary) { uncertain.append(readRole) }
+                if !pipe.closeChecked(read: false, role: writeRole, boundary: boundary) { uncertain.append(writeRole) }
+            }
+            return uncertain
+        }
         fileprivate func closeChecked(_ boundary: Boundary) -> [PinRole] {
             var uncertain: [PinRole] = []
             for (role, pin) in [(PinRole.source, source), (.stage, stage), (.executable, executable)] {
@@ -83,6 +111,7 @@ enum CompanionWriterProcess {
         }
         #if DEBUG
         var descriptorsForTesting: [Int32] { [source?.fd ?? -1, stage?.fd ?? -1, executable?.fd ?? -1] }
+        var pipeDescriptorsForTesting: [Int32] { [stdin?.read ?? -1, stdin?.write ?? -1, stdout?.read ?? -1, stdout?.write ?? -1, stderr?.read ?? -1, stderr?.write ?? -1] }
         #endif
     }
     private final class PinRetention: @unchecked Sendable {
@@ -113,6 +142,7 @@ enum CompanionWriterProcess {
         // DEBUG reports follow each actual close; refusal never masks OS failure.
         var closed: @Sendable (PipeRole, Int32, Int32) -> Void = { _,_,_ in }
         var refuseClose: @Sendable (PipeRole, Int32, Int32) -> Bool = { _,_,_ in false }
+        var pipeAdmission: @Sendable (PipeAdmissionStep) throws -> Void = { _ in }
         var pinOpened: @Sendable (PinRole) throws -> Void = { _ in }
         var beforeSpawn: @Sendable () throws -> Void = {}
         var pinClosed: @Sendable (PinRole, Int32, Int32) -> Void = { _,_,_ in }
@@ -167,6 +197,9 @@ enum CompanionWriterProcess {
                 timeout: timeout, cancellation: cancellation, boundary: boundary,
                 recordClose: { uncertain.append($0) }, pins: pins)
         }
+        // No successful launch means no child/body remains. Constructor and
+        // prelaunch rollback use the SAME consumed fields as postlaunch closes.
+        if !pins.launched { uncertain.append(contentsOf: pins.closePrelaunchPipes(boundary)) }
         let original: (any Error)?
         switch result { case .success: original = nil; case .failure(let error): original = error }
         var operationError = original
@@ -199,6 +232,7 @@ enum CompanionWriterProcess {
                 }
                 throw PinCloseFailure(operationError: operationError, roles: pinRoles)
         }
+        if !pins.launched && !uncertain.isEmpty { pinRetention.retain(pins) }
         if let operationError { throw operationError }
         return try result.get()
     }
@@ -217,8 +251,22 @@ enum CompanionWriterProcess {
         let operation = UUID().uuidString.replacingOccurrences(of: "-", with: "").lowercased()
         let parser = try CompanionWriterProtocol(operation: operation, retention: retention, sourceID: input.id,
                                                 stageID: directory.id, sourceBytes: input.bytes)
-        let stdin = try PipeEnds(), stdout = try PipeEnds(), stderr = try PipeEnds()
-        try stdin.nonblock(stdin.write); try stdout.nonblock(stdout.read); try stderr.nonblock(stderr.read)
+        let stdin = try pins.openPipe(.stdin, check: check, boundary: boundary)
+        let stdout = try pins.openPipe(.stdout, check: check, boundary: boundary)
+        let stderr = try pins.openPipe(.stderr, check: check, boundary: boundary)
+        try stdin.nonblock(stdin.write)
+        #if DEBUG
+        try boundary.pipeAdmission(.stdinNonblocking)
+        #endif
+        try check(); try stdout.nonblock(stdout.read)
+        #if DEBUG
+        try boundary.pipeAdmission(.stdoutNonblocking)
+        #endif
+        try check(); try stderr.nonblock(stderr.read)
+        #if DEBUG
+        try boundary.pipeAdmission(.stderrNonblocking)
+        #endif
+        try check()
         var actions: posix_spawn_file_actions_t?, attributes: posix_spawnattr_t?
         guard posix_spawn_file_actions_init(&actions) == 0 else { throw failure() }
         defer { posix_spawn_file_actions_destroy(&actions) }
@@ -352,22 +400,23 @@ enum CompanionWriterProcess {
         let result = try parser.finish(status: exitStatus)
         try check(); return result
     }
-    private final class PipeEnds {
+    fileprivate final class PipeEnds {
         var read: Int32, write: Int32
-        init() throws {
+        init(open: Void) throws {
             var fds: [Int32] = [-1, -1]
             guard Darwin.pipe(&fds) == 0 else { throw failure() }
             read = fds[0]; write = fds[1]
+        }
+        // Both actual numbers are already in the same concrete writer owner.
+        func configure() throws {
             guard fcntl(read, F_SETFD, FD_CLOEXEC) == 0, fcntl(write, F_SETFD, FD_CLOEXEC) == 0,
-                  fcntl(write, F_SETNOSIGPIPE, 1) == 0 else {
-                Darwin.close(read); Darwin.close(write); read = -1; write = -1; throw failure()
-            }
+                  fcntl(write, F_SETNOSIGPIPE, 1) == 0 else { throw failure() }
         }
         deinit { closeRead(); closeWrite() }
         func closeRead() { if read >= 0 { Darwin.close(read); read = -1 } }
         func closeWrite() { if write >= 0 { Darwin.close(write); write = -1 } }
-        /// Finite post-spawn role only. Consume before close, check once, never retry.
-        /// Admission rollback/deinit and Pin retirement remain separate qualifications.
+        /// Finite owned prelaunch rollback and postspawn roles. Consume before
+        /// close, check once, never retry. Unowned fallback/deinit stays separate.
         func closeChecked(read reading: Bool, role: PipeRole, boundary: Boundary) -> Bool {
             let fd = reading ? read : write
             guard fd >= 0 else { return true }

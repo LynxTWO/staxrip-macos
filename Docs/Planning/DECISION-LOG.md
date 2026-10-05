@@ -143,6 +143,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-134 | 2026-10-05 | Checked companion outer close settlement | Confirmed | |
 | D-135 | 2026-10-05 | Checked internal transaction source close | Confirmed | |
 | D-136 | 2026-10-05 | Shared concrete development fixture build ownership | Confirmed | |
+| D-137 | 2026-10-05 | Checked staging transient closes and actual commit review | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3879,3 +3880,45 @@ Initial harness-selection/missing-try/four new copy-inventory failures retained 
 corrected without changing stage/semantic/assertion/deadline/global concurrency policy.
 PR110 automatic515tests1111.249s85issues retained, no retry. Changed hosted qualification
 pending; individual residual causes and no-logic-defect claim remain unestablished.
+
+
+## D-137: Checked staging transient closes and actual commit review
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+Select finite D099 transient member/directory-stream/admission-rollback ownership
+before altering long-lived parent/stage pins and creation/deinit contracts. Concrete
+owners consume/check actual closes once, accumulate uncertainty after the body settles
+and retain causes. Stream transfer is explicit; no retry/number-absence proof. Stream
+close uncertainty refuses discard before unlink; shared marker blocks further stage use.
+
+Actual exclusive rename records Published before callback/close. After-commit refusal
+preserves committed state and directory/bytes/count through D105/D134 even when normal
+return is impossible. Source-plus-stage refusal preserves both causes; dropped review
+errors retain needed grants/exclusion. Ordinary late cancellation success remains when
+qualified ownership settles. Energy expiry, callback or direct child join is not cleanup
+or access-release authority. Controlled reported refusals follow real close; no OS fault,
+fdopendir failure, sandbox revocation or universal descendant claim.
+
+Actual generated full native verification/publication both modes, refusal/rollback/
+active and late cancellation/combined source close/cleanup stream/drop/expiry/exclusions
+are qualified in STAGING-TRANSIENT-CLOSE-EVIDENCE.md. Parent/stage create/deinit/pin close
+and other helper/disk resource roles remain explicitly unqualified. No generic lease/
+receipt wrapper, new worker, Python runtime bridge, schema/action/UI/default packaging/
+release/recovery-release. Hosted PR111 residual failures retained without retry or
+assertion/deadline/global concurrency changes; individual causes remain unestablished.
+
+
+D137 final ordinary regression:525reported tests/101suites220.356s passed with33unchanged
+explicit opt-in skips/no emitted warnings. Final composed68tests/3suites11.265s passed
+without warnings. Existing cancellation/collision/identity/hash/member membership tests
+remain strict. No new fixture compile failure, assertion/deadline/global concurrency
+change or historical observer. New generated reported-uncertainty roots retained;
+no group/OS-fault/production cleanup authority follows those controlled tests.
+
+Explicit STAXRIP_CONFIGURATION=release production build and current strict ad-hoc
+app/read-only helper signatures passed without warnings, minima14.0/11.0; writer/
+decoder/sample absent. Static93-source host ordinary execution compiles changed code
+and runs its prior native companion pipeline, not decoder/sample loading. No new
+product file or UI/controller/session action; no UI walkthrough claimed. Separate
+C sample/sanitizer/APFS/frozen/owner-source receipts reused, not new executions.

@@ -47,7 +47,7 @@ enum OriginalCompanionTransaction {
         let immutableSnapshot: Bool
         let stableImporter: Bool
     }
-    struct CleanupFailure: Error, LocalizedError {
+    struct CleanupFailure: CompanionUnsettledOwnership, LocalizedError {
         let operationError: Error
         let cleanupError: Error
         let intendedStage: URL
@@ -69,6 +69,12 @@ enum OriginalCompanionTransaction {
             published == nil ? "Companion source close is unsettled; its stage needs review."
                 : "Companion result was published; source close needs ownership review."
         }
+    }
+    struct StagingSettlementFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: ResultSetStaging.SettlementFailure
+        let intendedStage: URL
+        let published: ResultSetStaging.Published?
+        var errorDescription: String? { operationError.errorDescription }
     }
     struct SourceCloseFailure: CompanionUnsettledOwnership {
         let systemError: Int32
@@ -154,6 +160,7 @@ enum OriginalCompanionTransaction {
             return result
         } catch {
             let operation = error
+            if let staging = operation as? ResultSetStaging.SettlementFailure { published = staging.published }
             var closeError: Error?
             do { try source.closeChecked() } catch { closeError = error }
             let directory = published?.directory ?? ownedStage?.originalDirectoryURL ?? parent
@@ -162,6 +169,10 @@ enum OriginalCompanionTransaction {
                 // commit. Keep a stronger phase failure as the operation cause.
                 throw SourceSettlementFailure(operationError: operation, closeError: close,
                     intendedStage: directory, published: published)
+            }
+            if let staging = operation as? ResultSetStaging.SettlementFailure {
+                throw StagingSettlementFailure(operationError: staging, intendedStage: staging.intendedStage,
+                                               published: staging.published)
             }
             if operation is CompanionUnsettledOwnership {
                 // Do not delete files while an owned writer may still be active.

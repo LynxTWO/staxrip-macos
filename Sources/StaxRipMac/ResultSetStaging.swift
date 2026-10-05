@@ -15,7 +15,23 @@ final class ResultSetStaging: @unchecked Sendable {
         let verifiedBytes: Int64
         let memberCount: Int
     }
-    private enum State { case available, publishing, published, discarded }
+    enum CloseRole: Sendable, Hashable { case member(String), directoryStream, enumerationDescriptor }
+    struct CloseFailure: Error, Sendable {
+        let role: CloseRole
+        let systemError: Int32
+        let reportedAfterActualClose: Bool
+    }
+    struct SettlementFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: Error?
+        let closeFailures: [CloseFailure]
+        let intendedStage: URL
+        let published: Published?
+        var errorDescription: String? {
+            published == nil ? "Result-set verification close is unsettled; its stage needs review."
+                : "Result set was published; verification close needs ownership review."
+        }
+    }
+    private enum State { case available, publishing, published, discarded, review }
     private let lock = NSLock()
     private var state: State = .available
     private let parent: URL
@@ -23,6 +39,7 @@ final class ResultSetStaging: @unchecked Sendable {
     private let directoryFD: Int32
     private let name: String
     private let identity: stat
+    private let closing = CloseObservation()
 
     #if DEBUG
     // Generated filesystem mutations only; absent from optimized product code.
@@ -30,9 +47,47 @@ final class ResultSetStaging: @unchecked Sendable {
         var progress: @Sendable (Int64) throws -> Void = { _ in }
         var beforeCommit: @Sendable () throws -> Void = {}
         var afterCommit: @Sendable () -> Void = {}
+        var closed: @Sendable (CloseRole) -> Void = { _ in }
+        // A controlled report follows actual successful close, never an OS fault claim.
+        var refuseClose: @Sendable (CloseRole) -> Bool = { _ in false }
+        var refuseStreamAdmission: @Sendable () -> Bool = { false }
     }
     @TaskLocal static var testBoundary = TestBoundary()
     #endif
+
+    /// Observes only this concrete verifier's transient descriptor/stream roles.
+    private struct CloseObservation: Sendable {
+        #if DEBUG
+        private let boundary = ResultSetStaging.testBoundary
+        #endif
+        func result(_ status: Int32, role: CloseRole) -> CloseFailure? {
+            if status != 0 { return .init(role: role, systemError: errno, reportedAfterActualClose: false) }
+            #if DEBUG
+            boundary.closed(role)
+            if boundary.refuseClose(role) { return .init(role: role, systemError: 0, reportedAfterActualClose: true) }
+            #endif
+            return nil
+        }
+        func streamAllowed() -> Bool {
+            #if DEBUG
+            return !boundary.refuseStreamAdmission()
+            #else
+            return true
+            #endif
+        }
+        func descriptor(_ fd: inout Int32, role: CloseRole) -> CloseFailure? {
+            guard fd >= 0 else { return nil }
+            let owned = fd; fd = -1 // Consume before syscall; never retry uncertain numbers.
+            return result(Darwin.close(owned), role: role)
+        }
+    }
+    private func settlement(operation: Error?, failures: [CloseFailure], published: Published? = nil) -> SettlementFailure {
+        let prior = operation as? SettlementFailure
+        return .init(operationError: prior?.operationError ?? operation,
+                     closeFailures: (prior?.closeFailures ?? []) + failures,
+                     intendedStage: published?.directory ?? prior?.intendedStage ?? originalDirectoryURL,
+                     published: published ?? prior?.published)
+    }
 
     private static func failure(_ message: String) -> NativeExportError {
         .invalid("Result set: \(message)")
@@ -105,24 +160,39 @@ final class ResultSetStaging: @unchecked Sendable {
     }
 
     private func names(limit: Int) throws -> Set<String> {
-        // A fresh open description prevents repeated enumeration sharing an offset.
-        let fd = openat(directoryFD, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC)
+        // Fresh description; fdopendir success transfers descriptor ownership once.
+        var fd = openat(directoryFD, ".", O_RDONLY | O_DIRECTORY | O_CLOEXEC)
         guard fd >= 0 else { throw Self.failure("Cannot enumerate stage.") }
-        guard let directory = fdopendir(fd) else { Darwin.close(fd); throw Self.failure("Cannot enumerate stage.") }
-        defer { closedir(directory) }
-        var result = Set<String>()
-        while true {
-            errno = 0
-            guard let entry = readdir(directory) else {
-                guard errno == 0 else { throw Self.failure("Stage enumeration failed.") }
-                return result
+        let opened = closing.streamAllowed() ? fdopendir(fd) : nil
+        guard let directory = opened else {
+            let operation = Self.failure("Cannot enumerate stage.")
+            if let close = closing.descriptor(&fd, role: .enumerationDescriptor) {
+                throw settlement(operation: operation, failures: [close])
             }
-            let value = withUnsafePointer(to: &entry.pointee.d_name) {
-                $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXNAMLEN) + 1) { String(cString: $0) }
-            }
-            if value == "." || value == ".." { continue }
-            guard result.count < limit, result.insert(value).inserted else { throw Self.failure("Stage membership exceeds its bound.") }
+            throw operation
         }
+        fd = -1 // The stream alone owns the number; no descriptor fallback/retry.
+        let result = Result<Set<String>, Error> {
+            var values = Set<String>()
+            while true {
+                errno = 0
+                guard let entry = readdir(directory) else {
+                    guard errno == 0 else { throw Self.failure("Stage enumeration failed.") }
+                    return values
+                }
+                let value = withUnsafePointer(to: &entry.pointee.d_name) {
+                    $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXNAMLEN) + 1) { String(cString: $0) }
+                }
+                if value == "." || value == ".." { continue }
+                guard values.count < limit, values.insert(value).inserted else { throw Self.failure("Stage membership exceeds its bound.") }
+            }
+        }
+        // One actual closedir, before return/throw or any eligible discard unlink.
+        if let close = closing.result(closedir(directory), role: .directoryStream) {
+            let operation: Error? = { if case .failure(let e) = result { return e }; return nil }()
+            throw settlement(operation: operation, failures: [close])
+        }
+        return try result.get()
     }
 
     /// Removes only this stage's immediate entries, never following links or recursing.
@@ -131,7 +201,9 @@ final class ResultSetStaging: @unchecked Sendable {
         try lock.withLock {
             guard state == .available else { throw Self.failure("Cannot discard a settled or active stage.") }
             try checkIdentity()
-            let entries = try names(limit: 64)
+            let entries: Set<String>
+            do { entries = try names(limit: 64) }
+            catch { if error is any CompanionUnsettledOwnership { state = .review }; throw error }
             for entry in entries {
                 guard unlinkat(directoryFD, entry, 0) == 0 else {
                     throw Self.failure("Owned temporary cleanup failed (system error \(errno)); temporary entries remain.")
@@ -207,10 +279,13 @@ final class ResultSetStaging: @unchecked Sendable {
                     self.lock.withLock {
                         switch result {
                         case .success: self.state = .published
-                        case .failure: self.state = .available
+                        case .failure(let error):
+                            if let e = error as? SettlementFailure, e.published != nil { self.state = .published }
+                            else if error is any CompanionUnsettledOwnership { self.state = .review }
+                            else { self.state = .available }
                         }
                     }
-                    // All verification descriptors have closed before the waiter can clean up.
+                    // Transient closes were attempted/checked before resuming; uncertainty forbids cleanup.
                     continuation.resume(with: result)
                 }
             }
@@ -220,13 +295,14 @@ final class ResultSetStaging: @unchecked Sendable {
     private func verifyAndCommit(destinationName: String, members: [Member], cancellation: Cancellation,
                                  preCommit: () throws -> Void, progress: (Int64) throws -> Void, beforeCommit: () throws -> Void,
                                  afterCommit: () -> Void) throws -> Published {
+        var files: [(Member, Int32, stat)] = []
+        var published: Published?
+        let result = Result<Published, Error> {
         try cancellation.check(); try checkIdentity()
         let expected = Set(members.map(\.name))
         guard try names(limit: 16) == expected else { throw Self.failure("Requested components are missing or unexpected entries exist. Nothing published.") }
         var initialDirectory = stat()
         guard fstat(directoryFD, &initialDirectory) == 0 else { throw Self.failure("Cannot inspect stage.") }
-        var files: [(Member, Int32, stat)] = []
-        defer { for (_, fd, _) in files { Darwin.close(fd) } }
         var total: Int64 = 0
         var buffer = [UInt8](repeating: 0, count: 1_048_576)
         try progress(0)
@@ -234,12 +310,14 @@ final class ResultSetStaging: @unchecked Sendable {
             try cancellation.check()
             let fd = openat(directoryFD, member.name, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC | O_NOCTTY)
             guard fd >= 0 else { throw Self.failure("Cannot open a requested component. Nothing published.") }
+            // Ownership precedes admission; malformed members still close exactly once.
+            files.append((member, fd, stat()))
             var value = stat()
             guard fstat(fd, &value) == 0, value.st_mode & mode_t(S_IFMT) == mode_t(S_IFREG),
                   value.st_uid == geteuid(), value.st_nlink == 1, value.st_size == member.byteCount else {
-                Darwin.close(fd); throw Self.failure("A component is linked, special, missing or has changed length. Nothing published.")
+                throw Self.failure("A component is linked, special, missing or has changed length. Nothing published.")
             }
-            files.append((member, fd, value))
+            files[files.count - 1].2 = value
             var hasher = SHA256(), count: Int64 = 0
             while count < member.byteCount {
                 try cancellation.check()
@@ -278,7 +356,20 @@ final class ResultSetStaging: @unchecked Sendable {
                 throw Self.failure("Exclusive result publication failed (system error \(code)). Nothing published; no fallback attempted.")
             }
         }
+        let actual = Published(directory: parent.appendingPathComponent(destinationName), verifiedBytes: total, memberCount: members.count)
+        published = actual // Capture actual rename before callback or close settlement.
         afterCommit()
-        return Published(directory: parent.appendingPathComponent(destinationName), verifiedBytes: total, memberCount: members.count)
+        return actual
+        }
+        var failures: [CloseFailure] = []
+        for i in files.indices {
+            let role = CloseRole.member(files[i].0.name)
+            if let close = closing.descriptor(&files[i].1, role: role) { failures.append(close) }
+        }
+        if !failures.isEmpty {
+            let operation: Error? = { if case .failure(let e) = result { return e }; return nil }()
+            throw settlement(operation: operation, failures: failures, published: published)
+        }
+        return try result.get()
     }
 }

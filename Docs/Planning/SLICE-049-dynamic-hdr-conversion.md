@@ -2364,3 +2364,15 @@ D148 Video readback with actual D144 fixed crop coverage on the same source/open
 Source SPS and fixed decoder geometry comparisons remain separate from active picture
 selection and container/user origin. See D-153 and SOURCE-PARAMETER-CROP-EVIDENCE.md. New
 concrete source/spool access integration remains separate; ROI/value/rendered/edited false.
+
+
+### D154 concrete joint parameter/crop access ownership
+
+The unused concrete entry directly awaits D153 under existing explicit source/spool scopes,
+no-follow pins/activity and retained Access registry. Qualified worker/helper/database/source
+settlement, final selected identities and checked outer closes precede reverse ordinary
+release; shared uncertainty survives error drop/energy expiry without cleanup authority.
+See D-154 and NATIVE-PARAMETER-CROP-ACCESS-EVIDENCE.md. Full parameter/slice/active selection,
+ROI/value/rendered/edited remain false. Local ordinary metadata pipe-holder failure is retained
+without retry or cause claim. Next finite source SPS coding-tree-block/grid readback is only
+a read-only selection pending primary verification, not non-first slice/origin qualification.

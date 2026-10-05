@@ -41,12 +41,25 @@ enum DolbyDecoderProcess {
         case source, executable, avcodec, avformat, avutil
         case stdoutRead, stdoutWrite, stderrRead, stderrWrite, nullInput
     }
+    // Finite DEBUG diagnosis only. These facts confer no admission/settlement authority.
+    enum DiagnosticStage: String, Sendable {
+        case notEntered, options, sourcePin, executablePin, executableHash, identityChecks
+        case libraryPin, libraryHash, sourceHash, stream, pipes, spawnSetup, spawn, process
+        case finalIdentityChecks, finalStream, finalLibraryHash, finalSourceHash, finalExecutableHash, complete
+    }
+    enum CheckRefusal: String, Sendable { case cancellation, externalCheck, deadline }
     struct Boundary: Sendable {
         var launched: @Sendable (pid_t) -> Void = { _ in }
         var row: @Sendable (Data) -> Void = { _ in }
         var poll: @Sendable () -> Void = {}
         var settled: @Sendable (pid_t) -> Void = { _ in }
         var beforeReceipt: @Sendable () -> Void = {}
+        #if DEBUG
+        // Categorical facts only, no timestamps, payloads, paths or changed checks.
+        var admission: @Sendable (DiagnosticStage, DescriptorRole?) -> Void = { _,_ in }
+        var checkRefused: @Sendable (DiagnosticStage, DescriptorRole?, CheckRefusal) -> Void = { _,_,_ in }
+        var spawnStatus: @Sendable (Int32) -> Void = { _ in }
+        #endif
         // DEBUG reports real close outcomes; refusal injection never masks OS failure.
         var closed: @Sendable (DescriptorRole, Int32, Int32) -> Void = { _,_,_ in }
         var refuseClose: @Sendable (DescriptorRole, Int32, Int32) -> Bool = { _,_,_ in false }
@@ -164,13 +177,40 @@ enum DolbyDecoderProcess {
                                        observe: @escaping (Data) throws -> Void,
                                        timeout: Double, checkCancellation: @escaping () throws -> Void,
                                        boundary: Boundary, descriptors: OwnedDescriptors) throws -> DolbyDecoderStream.Receipt {
+        var stage = DiagnosticStage.options, role: DescriptorRole?
+        func enter(_ next: DiagnosticStage, _ nextRole: DescriptorRole? = nil) {
+            stage = next; role = nextRole
+            #if DEBUG
+            boundary.admission(next, nextRole)
+            #endif
+        }
+        enter(.options)
         guard tool.profile == profile, (profile == .cropSamples) == (cropRequest != nil), [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
         let deadline = DispatchTime.now().uptimeNanoseconds + UInt64(timeout * 1_000_000_000)
-        func check() throws { try checkCancellation(); guard DispatchTime.now().uptimeNanoseconds < deadline else { throw failure() } }
+        func check() throws {
+            do { try checkCancellation() }
+            catch {
+                #if DEBUG
+                boundary.checkRefused(stage, role, error is CancellationError ? .cancellation : .externalCheck)
+                #endif
+                throw error
+            }
+            guard DispatchTime.now().uptimeNanoseconds < deadline else {
+                #if DEBUG
+                boundary.checkRefused(stage, role, .deadline)
+                #endif
+                throw failure()
+            }
+        }
         try check()
-        let input = try Pin(source, descriptors: descriptors, role: .source), executable = try Pin(tool.url, executable: true, descriptors: descriptors, role: .executable)
+        enter(.sourcePin, .source)
+        let input = try Pin(source, descriptors: descriptors, role: .source)
+        enter(.executablePin, .executable)
+        let executable = try Pin(tool.url, executable: true, descriptors: descriptors, role: .executable)
         defer { withExtendedLifetime((input,executable)) {} }
+        enter(.executableHash, .executable)
         guard try executable.digest(check: check) == tool.sha256 else { throw failure() }
+        enter(.identityChecks)
         try input.check(); try executable.check(); try check()
         let directory = tool.url.deletingLastPathComponent().deletingLastPathComponent().appendingPathComponent("Frameworks",isDirectory:true)
         var libraries = [(Pin,String)]()
@@ -182,13 +222,17 @@ enum DolbyDecoderProcess {
             case "libavutil.61.dylib": role = .avutil
             default: throw failure()
             }
+            enter(.libraryPin, role)
             let pin = try Pin(directory.appendingPathComponent(name), library:true, descriptors: descriptors, role: role)
             let digest = tool.librarySHA256[name]!
+            enter(.libraryHash, role)
             guard try pin.digest(check:check) == digest else { throw failure() }
             libraries.append((pin,digest))
         }
         defer { withExtendedLifetime(libraries) {} }
+        enter(.sourceHash, .source)
         let fingerprint = SourceFingerprint(sha256: try input.digest(check: check), byteCount: input.bytes)
+        enter(.stream)
         let parser = try DolbyDecoderStream(source: fingerprint, threads:threads, versions:tool.versions,profile:profile,cropRequest:cropRequest,
             observeCrops:{ frame in try check();try observeCrops(frame);try check() },
             observeSamples:{ frame in try check();try observeSamples(frame);try check() }) { row in
@@ -197,10 +241,12 @@ enum DolbyDecoderProcess {
             #endif
             try check(); try observe(row); try check()
         }
+        enter(.pipes)
         let stdout = try PipeEnds(descriptors: descriptors, output: true), stderr = try PipeEnds(descriptors: descriptors, output: false)
         let null = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
         guard null >= 0 else { throw failure() }; descriptors.own(null, as: .nullInput)
         try stdout.nonblock(stdout.read); try stderr.nonblock(stderr.read)
+        enter(.spawnSetup)
         var actions: posix_spawn_file_actions_t?, attributes: posix_spawnattr_t?
         guard posix_spawn_file_actions_init(&actions) == 0 else { throw failure() }
         defer { posix_spawn_file_actions_destroy(&actions) }
@@ -219,15 +265,20 @@ enum DolbyDecoderProcess {
         defer { for p in argv + env { free(p) } }
         guard argv.dropLast().allSatisfy({ $0 != nil }), env.dropLast().allSatisfy({ $0 != nil }) else { throw failure() }
         try check(); try input.check(); try executable.check()
+        enter(.spawn)
         var pid: pid_t = 0
         let launched = argv.withUnsafeMutableBufferPointer { a in env.withUnsafeMutableBufferPointer { e in
             posix_spawn(&pid, tool.url.path, &actions, &attributes, a.baseAddress!, e.baseAddress!)
         } }
+        #if DEBUG
+        boundary.spawnStatus(launched)
+        #endif
         guard launched == 0, pid > 0 else { throw failure() }
         stdout.closeWrite(); stderr.closeWrite()
         #if DEBUG
         boundary.launched(pid)
         #endif
+        enter(.process)
         var reaped = false, status: Int32 = 0
         do {
             var stderrBytes = 0
@@ -285,13 +336,23 @@ enum DolbyDecoderProcess {
         #if DEBUG
         boundary.settled(pid); boundary.beforeReceipt()
         #endif
+        enter(.finalIdentityChecks)
         try check(); try input.check(); try executable.check()
         guard status & 0x7f == 0 else { throw failure() }
+        enter(.finalStream)
         let result = try parser.finish(status: (status >> 8) & 0xff)
+        enter(.finalSourceHash, .source)
         guard try input.digest(check: check) == fingerprint.sha256 else { throw failure() }
+        enter(.finalExecutableHash, .executable)
         guard try executable.digest(check:check) == tool.sha256 else { throw failure() }
-        for (pin,digest) in libraries { guard try pin.digest(check:check) == digest else { throw failure() }; try pin.check() }
-        try input.check(); try executable.check(); try check(); return result
+        for (pin,digest) in libraries {
+            let finalRole: DescriptorRole = pin.url.lastPathComponent == "libavcodec.63.dylib" ? .avcodec : pin.url.lastPathComponent == "libavformat.63.dylib" ? .avformat : .avutil
+            enter(.finalLibraryHash, finalRole)
+            guard try pin.digest(check:check) == digest else { throw failure() }; try pin.check()
+        }
+        enter(.finalIdentityChecks)
+        try input.check(); try executable.check(); try check()
+        enter(.complete); return result
     }
     /// Concrete fixed decoder roles only, on the single owning worker. No public
     /// lease/import/cleanup authority; numbers leave ownership before each close.

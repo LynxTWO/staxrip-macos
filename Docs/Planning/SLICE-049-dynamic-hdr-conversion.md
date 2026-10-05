@@ -2411,3 +2411,26 @@ are not automatically its critical path. Remaining writer pins/pre-spawn/fallbac
 metadata/disk resources, trusted helper and native choice/result boundary remain open.
 M2 conversion/media-plus-companion, M3 edited HDR, M4 reconstruction and M5 production
 acceptance remain distinct; all required semantic/ownership/permission gates persist.
+
+
+### D158 bounded decoder CI discriminator
+
+Approved for build by: owner standing autonomous delegation and explicit 2026-10-05
+heartbeat instruction to prepare a minimal case/error/admission discriminator when retained
+evidence is insufficient. Consumer: M5 exact-head hosted failure diagnosis before unrelated
+features. Four retained decoder child-zero assertions do not identify their ten-case loop
+iteration, caught error or admission cause. Add fixed categorical DEBUG admission/check-
+refusal/spawn status and test terminal records at existing operations. No new clock/elapsed
+observer, checks/polls/waits, failure semantics, worker, historical observer/assertion,
+timeout/skip/scheduling change or private path/body/command/error-description capture.
+Exit artifacts: source-linked historical unknowns, deterministic generated diagnostic
+admission cases, original ten-case outcomes with unchanged assertions, ordered focused/
+ordinary checks, exact draft PR/retained CI/head/protected evidence and handoff. Historical
+causes remain unknown until actual captured failure. Claude metadata pipe-holder, missing
+mastering phase and AV1/TenBit timeout evidence remain distinct pending lanes. No M1-M5 exit,
+product capability/UI/release/recovery or kernel/group settlement upgrade is implied.
+
+D158 final: ordinary624/105suites219.705s passes40 unchanged skips/no warnings;
+label-only test correction separately passes11/2suites5.319s. Optimized22.29s/current
+strict ad-hoc app/helper14.0/11.0; five-file protection/privacy and planning pass.
+Hosted per-case cause capture remains the next acceptance artifact, not a local-pass exit.

@@ -164,6 +164,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-155 | 2026-10-05 | Bind finite source SPS coding-tree grid prefix | Confirmed | |
 | D-156 | 2026-10-05 | Original source VCL segment prefix/reference/address binding | Confirmed | |
 | D-157 | 2026-10-05 | Checked native writer post-spawn pipe closes | Confirmed | |
+| D-158 | 2026-10-05 | Expose decoder CI case and admission refusal | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4854,3 +4855,45 @@ app/read-only helper signatures/minima14.0/11.0 pass. Writer/decoder/sample/crop
 Six-file privacy zero/positive sentinel/protected owner metadata-current journal-original
 sample-prefix-frozen-D130/D142/D143 unchanged; planning findings empty. No new C/runtime
 build-copy/sanitizer/pixel oracle/APFS/DeveloperID/owner body/full-source/UI qualification.
+
+
+## D-158: Expose decoder refusal before behavior repair
+Status: Confirmed
+Date: 2026-10-05.
+
+M5 consumes a bounded categorical decoder diagnostic. Retained PR131/132 child-zero
+assertions cannot identify their ten-case loop iteration, caught category or cause. DEBUG
+admission/check-refusal/existing spawn-status callbacks and terminal test case records
+expose those missing facts. No new clock/elapsed observer/check/poll/wait/retry/worker,
+public error, historical callback/assertion/body/order/timeout/skip/scheduling change.
+No path/body/command/arbitrary error description is added. See
+DECODER-CI-DIAGNOSTIC-EVIDENCE.md and R059/Slice049 D158 acceptance.
+
+One new test verifies actual executable/library-hash, missing-library, spawn refusal and
+zero-nanosecond-duration admission deadline categories. Initial11tests2suites5.732s and
+expanded20tests6suites15.879s pass. Source review corrects only the diagnostic label from
+joined to settledEvent because notification can precede reap verification. Original
+assertions/process behavior stay unchanged. Final-label focus follows ordinary product
+verification. No historical failure cause or M1-M5 exit is established by local passes.
+
+PR132 exact e48eb642e9b89963ea039e58b22bc2143fa38e42 automatic37322910457/attempt1/
+job111806230574 FAILED623tests525.378s8issues. Three decoder child-zero observations,
+Fresh-analysis5.914658vs<5, two unchanged120s AV1/TenBit bounds and Rendering/Measuring phase
+EOF remain unexplained. Actual writer/source/access/static/shared fixture checks passed;
+full log retained/parent updated without retry or cause attribution. Other retained failures
+remain distinct. New changed-head hosted capture must precede behavior repair. Separate
+phase/timeout diagnostics remain pending; Claude metadata pipe-holder lane is not duplicated.
+No denied serial-CI/cache patch, deadline/assertion/skip/global scheduling workaround,
+owner body/runtime/signing-loading execution, new product admission/UI/release/recovery
+or whole-program completion claim. All five milestones stay open.
+
+Final product ordinary624 reported tests/105 suites219.705s PASSED40 unchanged explicit
+opt-in skips/no warnings. It used the earlier test output label; the sole later test-only
+label correction passed final11tests/2suites5.319s, with15 categorical records using
+settledEvent. No ordinary retry; no callback/assertion/process behavior change.
+Explicit optimized22.29s compiler-reported/current strict ad-hoc app/read-only helper
+signatures/minima14.0/11.0 pass; writer/decoder/sample/crop absent. Static94-source host
+runs prior preservation/review only. Five-file privacy zero/positive sentinel/protected
+owner metadata-journal-original-frozen-D130/D142/D143 unchanged; planning empty.
+Initial private build receipt regex assumed s; actual log says sec. Corrected read-only
+receipt parsing without build rerun or product mutation. No new compile/test failure.

@@ -86,17 +86,12 @@ struct DolbyInspectionTests {
         #expect(throws: (any Error).self) { try a.accept(packet(Int64.max)) }
     }
     @Test(.timeLimit(.minutes(2))) func realHelperFFprobeAndContentRecheckOnGeneratedReorderedHEVC() async throws {
-        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("dolby-native-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: root) }
         let source = root.appendingPathComponent("generated.mkv")
-        let generated = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
-            "STAXRIP_GENERATED_DOLBY_FIXTURE=" + source.path, "cargo", "test", "--locked", "--manifest-path", repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path,
-            "--test", "matroska", "actual_hevc_packets_and_rpu_association_match_independent_ffprobe", "--", "--exact"])
-        try #require(generated.status == 0, "Generated Rust fixture test failed")
-        let helper = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/release/staxrip-dolby-metadata-audit")
-        try #require(FileManager.default.isExecutableFile(atPath: helper.path), "Build the locked release helper before Swift integration tests")
+        let helpers = try await RustFixtureBuild.generate(.inspection, at: source, copiesIn: root)
+        let helper = helpers.reader
         let tools = try #require(FFmpegTools.discover()), probe = try await MediaProbe.read(source, tools: tools)
         let bytes = try Data(contentsOf: source)
         let result = try await DolbyInspection.read(source: source, probe: probe, helper: helper, tools: tools)

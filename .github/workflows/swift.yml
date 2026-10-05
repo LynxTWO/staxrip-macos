@@ -16,6 +16,8 @@ jobs:
         run: brew install ffmpeg rust
       - name: Build read-only Dolby inspection helper
         run: cargo build --locked --release --manifest-path Tools/DolbyMetadataAudit/Cargo.toml
+      - name: Prepare shared native development test fixtures
+        run: ./scripts/prepare-native-test-fixtures.command
       - name: Build and test
         run: swift test
       - name: Build preview bundle and icon fallback

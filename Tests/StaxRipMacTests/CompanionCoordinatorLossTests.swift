@@ -157,7 +157,7 @@ struct CompanionCoordinatorLossTests {
             return
         }
         // Own isolated Rust artifacts; child never invokes Cargo or an app action.
-        let f = try await CompanionOriginalMetadataCheckTests.fixture(targetName: "native-companion-loss-fixtures")
+        let f = try await CompanionOriginalMetadataCheckTests.fixture()
         var allSettled = false
         defer { if allSettled { f.cleanup() } else { print("GENERATED_COORDINATOR_REVIEW " + f.root.path) } }
         let executable = URL(fileURLWithPath: CommandLine.arguments[0])

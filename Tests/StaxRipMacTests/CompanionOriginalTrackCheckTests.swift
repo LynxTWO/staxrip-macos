@@ -14,24 +14,14 @@ struct CompanionOriginalTrackCheckTests {
         func cleanup() { try? FileManager.default.removeItem(at: root) }
     }
     private static var repo: URL { URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent() }
-    private static var buildTarget: URL { repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-CompanionOriginalTrackCheckTests") }
     private static func fixture() async throws -> Fixture {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("native-companion-process-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
         do {
             let generated = root.appendingPathComponent("generated")
             try FileManager.default.createDirectory(at: generated, withIntermediateDirectories: false)
-            let cargo = repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml")
-            let f = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
-                "STAXRIP_GENERATED_STAGED_COMPANION_DIRECTORY=" + generated.path, "cargo", "test", "--locked",
-                "--target-dir", buildTarget.path, "--manifest-path", cargo.path, "owned_stage_packages_preserve_originals_and_match_disk_receipts"])
-            try #require(f.status == 0)
-            let b = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
-                "cargo", "build", "--release", "--locked", "--features", "development-companion-writer", "--bin",
-                "staxrip-dolby-companion-writer", "--bin", "staxrip-dolby-metadata-audit", "--target-dir", buildTarget.path, "--manifest-path", cargo.path])
-            try #require(b.status == 0)
-            let executable = root.appendingPathComponent("staxrip-dolby-companion-writer")
-            try FileManager.default.copyItem(at: buildTarget.appendingPathComponent("release/staxrip-dolby-companion-writer"), to: executable)
+            let helpers = try await RustFixtureBuild.generate(.staged, at: generated, copiesIn: root)
+            let executable = helpers.writer
             let stage = root.appendingPathComponent("stage")
             try FileManager.default.createDirectory(at: stage, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
             return .init(root: root, source: generated.appendingPathComponent("generated-source.mkv"), stage: stage, executable: executable)
@@ -59,7 +49,7 @@ struct CompanionOriginalTrackCheckTests {
             #expect(track.configurationSHA256 == DolbyInspection.hex(SHA256.hash(data: config)))
             #expect(track.trackNumber == 1 && track.nalLengthBytes == 4)
             let adapter = Self.repo.appendingPathComponent("Tools/DolbyCompanionCheck/native_transaction_fixture.py")
-            let reader = Self.buildTarget.appendingPathComponent("release/staxrip-dolby-metadata-audit")
+            let reader = f.root.appendingPathComponent("staxrip-dolby-metadata-audit")
             let oracle = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: ["python3", adapter.path,
                 "verify", f.source.path, f.stage.path, mode == .metadataOnly ? "metadata" : "full", f.executable.path, reader.path], stdoutLimit: 16384)
             try #require(oracle.status == 0 && !oracle.truncated) // Explicit test-only original semantic oracle.
@@ -98,7 +88,7 @@ struct CompanionOriginalTrackCheckTests {
         #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("result").path))
         #expect(try Data(contentsOf: prior) == Data("keep prior generated result".utf8))
         #expect(try Data(contentsOf: f.source) == original)
-        #expect(Set(try FileManager.default.contentsOfDirectory(atPath: f.root.path)) == ["generated", "stage", "staxrip-dolby-companion-writer", "prior-result"])
+        #expect(Set(try FileManager.default.contentsOfDirectory(atPath: f.root.path)) == ["generated", "stage", "staxrip-dolby-companion-writer", "staxrip-dolby-metadata-audit", "prior-result"])
     }
 
     private final class Gate: @unchecked Sendable {

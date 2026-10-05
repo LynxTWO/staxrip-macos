@@ -14,24 +14,14 @@ struct CompanionDiskCheckTests {
         func cleanup() { try? FileManager.default.removeItem(at: root) }
     }
     private static var repo: URL { URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent() }
-    private static var buildTarget: URL { repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-CompanionDiskCheckTests") }
     private static func fixture() async throws -> Fixture {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("native-companion-process-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
         do {
             let generated = root.appendingPathComponent("generated")
             try FileManager.default.createDirectory(at: generated, withIntermediateDirectories: false)
-            let cargo = repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml")
-            let f = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
-                "STAXRIP_GENERATED_STAGED_COMPANION_DIRECTORY=" + generated.path, "cargo", "test", "--locked",
-                "--target-dir", buildTarget.path, "--manifest-path", cargo.path, "owned_stage_packages_preserve_originals_and_match_disk_receipts"])
-            try #require(f.status == 0)
-            let b = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
-                "cargo", "build", "--release", "--locked", "--features", "development-companion-writer", "--bin",
-                "staxrip-dolby-companion-writer", "--bin", "staxrip-dolby-metadata-audit", "--target-dir", buildTarget.path, "--manifest-path", cargo.path])
-            try #require(b.status == 0)
-            let executable = root.appendingPathComponent("staxrip-dolby-companion-writer")
-            try FileManager.default.copyItem(at: buildTarget.appendingPathComponent("release/staxrip-dolby-companion-writer"), to: executable)
+            let helpers = try await RustFixtureBuild.generate(.staged, at: generated, copiesIn: root)
+            let executable = helpers.writer
             let stage = root.appendingPathComponent("stage")
             try FileManager.default.createDirectory(at: stage, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
             return .init(root: root, source: generated.appendingPathComponent("generated-source.mkv"), stage: stage, executable: executable)
@@ -73,7 +63,7 @@ struct CompanionDiskCheckTests {
     @Test func actualNativeWriterDiskAndIndependentTestSemanticsPublishBothModes() async throws {
         let f = try await Self.fixture(); defer { f.cleanup() }
         let original = try Data(contentsOf: f.source), tool = try f.tool
-        let reader = Self.buildTarget.appendingPathComponent("release/staxrip-dolby-metadata-audit")
+        let reader = f.root.appendingPathComponent("staxrip-dolby-metadata-audit")
         let adapter = Self.repo.appendingPathComponent("Tools/DolbyCompanionCheck/native_transaction_fixture.py")
         for (mode, name) in [(Transaction.Retention.metadataOnly, "metadata"), (.entireContainer, "full")] {
             let result = try await Transaction.execute(source: f.source, in: f.root, destinationName: "result-" + name,

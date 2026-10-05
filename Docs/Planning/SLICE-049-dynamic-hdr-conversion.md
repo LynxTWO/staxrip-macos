@@ -2136,3 +2136,18 @@ retry; D090 timing/phase/prelaunch causes unknown. Current local pass does not r
 that failure. No historical observer/assertion/deadline/global scheduling/concurrency
 change or whole-program completion claim. Source/journal/runtime/privacy/planning
 receipts are separately recorded. D099 internal finite/transient closes remain next.
+
+
+### D136 concrete test fixture resource prerequisite
+
+Before further native ownership or sample feature work, consolidate Rust test fixture
+preparation under a fixed separate development target and native build/generation/copy
+lock. CI prebuilds fixed writer/reader release and debug harness profiles before
+Swift test clocks. Per-fixture helper copies retain mutation/signing isolation. Existing
+suite concurrency, assertions, deadlines and opt-in skips remain strict. Cold duplicated
+compilation is a material contention mechanism; individual residual causes remain
+unestablished. See NATIVE-FIXTURE-BUILD-EVIDENCE.md and D-136 for actual checks and
+changed hosted qualification. No product action, runtime bridge or readiness upgrade.
+Remaining D099 descriptor roles must preserve actual committed state on uncertainty;
+source/outer closes do not prove their settlement. Edited-picture and release gates
+remain separate.

@@ -148,6 +148,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-139 | 2026-10-05 | Checked published staging parent and directory pins | Confirmed | |
 | D-140 | 2026-10-05 | Checked removed staging terminal pins and actual removal propagation | Confirmed | |
 | D-141 | 2026-10-05 | Concrete stage owner retained through uncertain transaction/access review | Confirmed | |
+| D-142 | 2026-10-05 | Explicit decoded crop sample prerequisite | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4106,3 +4107,35 @@ and runs prior companion preservation/review, not decoder/sample loading. Eight-
 privacy zero/positive sentinel, protected source metadata/current journal/original sample/
 prefix/frozen/captured runtime unchanged, planning empty. No UI walkthrough/new sample/
 sanitizer/APFS/signing/owner full-source qualification.
+
+## D-142: Measure explicit decoded base-plane crop rectangles
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+A separate DEVELOPMENT C artifact resolves coded or codec-visible rectangles against
+actual progressive10-bit420 decoded plane storage. Even phase, explicit strides/chroma,
+subtraction-before-addition bounds and atomic three-plane refusal keep raw sample hashes/
+counts/extrema/moments bounded without extra picture copies. Container/user origin, native
+profile/source/access binding, independent pixel values and rendered/edited semantics
+remain partial/false. Existing tools/protocols/captured artifacts/product sources unchanged.
+See DECODED-CROP-SAMPLE-EVIDENCE.md for finite caps, ownership and causal limits.
+
+Four generated groups pass installed3.377s/compatible3.260s, then final3.211s/2.356s after
+explicit live parent deadline coverage and import-bytecode correction. Each run includes
+24 actual accepted crop trials across both spaces/threads, coded176x112 versus visible
+162x98 conformance, raw-row FFmpeg oracle and ASan/UBSan known-plane/phase/storage/overflow/
+late refusal. Live cancel/deadline/substitution and exclusive builder/refusal direct joins
+pass; generated/new artifacts retained, originals unchanged. Shared decoder oracle is not
+independent HEVC or rendering/EL/resize/metadata conversion. No new native proof flags.
+
+Ordinary543reported tests/101suites210.770s passed33unchanged skips/no warnings. Product
+optimized D141 build20.77s reused, new current strict app/read-only helper signatures and
+minima14.0/11.0 pass; writer/decoder/sample/crop absent. Static93-source prior companion
+pipeline only. Ten-file privacy/protected identities/planning recorded separately; no
+owner body/full-source/APFS/signing/UI trial or historical check workaround.
+
+PR116 automatic37267245058 failed543tests529.299s9issues: two120s limits, three metadata/
+two sample absent-positive-child assertions and two mastering phase EOF expectations.
+Full log retained/PR116 updated without retry, residual causes unestablished. Next concrete
+native crop admission/source-resource integration remains distinct; D141 pin retirement/
+standalone drop and other resource/recovery/distribution/rendered/edited gates stay open.

@@ -2,9 +2,9 @@ name: Dolby metadata reader
 on:
   push:
     branches: [main]
-    paths: ['Tools/DolbyMetadataAudit/**', 'Tools/DolbyFrameReference/**', 'Tools/DolbyPictureSamples/**', 'Tools/DolbyCompanionCheck/**', '.github/workflows/dolby-metadata.yml']
+    paths: ['Tools/DolbyMetadataAudit/**', 'Tools/DolbyFrameReference/**', 'Tools/DolbyPictureSamples/**', 'Tools/DolbyPictureCrops/**', 'Tools/DolbyCompanionCheck/**', '.github/workflows/dolby-metadata.yml']
   pull_request:
-    paths: ['Tools/DolbyMetadataAudit/**', 'Tools/DolbyFrameReference/**', 'Tools/DolbyPictureSamples/**', 'Tools/DolbyCompanionCheck/**', '.github/workflows/dolby-metadata.yml']
+    paths: ['Tools/DolbyMetadataAudit/**', 'Tools/DolbyFrameReference/**', 'Tools/DolbyPictureSamples/**', 'Tools/DolbyPictureCrops/**', 'Tools/DolbyCompanionCheck/**', '.github/workflows/dolby-metadata.yml']
 permissions:
   contents: read
 jobs:
@@ -30,6 +30,8 @@ jobs:
         run: python3 Tools/DolbyFrameReference/test_reference.py -v
       - name: Generated bounded base-plane samples and codec crop
         run: python3 Tools/DolbyPictureSamples/test_samples.py -v
+      - name: Generated bounded explicit decoded sample crop regions
+        run: python3 Tools/DolbyPictureCrops/test_crops.py -v
       - name: Generated original companion semantic verification and owned refusal cleanup
         run: python3 Tools/DolbyCompanionCheck/test_check.py -v
       - name: Generated unbundled companion writer process ownership

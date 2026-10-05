@@ -1,0 +1,27 @@
+# Verified Directory terminal close evidence
+
+D172 completes a bounded M1 ownership correction in the existing Archive.execute -> full original metadata verifier -> exclusive publication consumer. It does not implement the newly requested Dolby Vision conversion route.
+
+## Behavior and boundary
+
+The same worker retires the same admitted original Directory descriptor only when the originalMetadata receipt is nonnil and every final source/directory/member/membership/cancellation check succeeded. The actual metadata helper must already have returned with its required pipe/null/pin checks. The descriptor is consumed before one actual checked close, status/errno are captured before DEBUG observation, and no retry occurs. A newly requested late cancellation waits for that independently eligible close and propagates afterward. A typed DirectoryTerminalFailure preserves its cancellation cause and the SAME Directory when the actual close fails or a test reports refusal after a successful close. No receipt or commit follows uncertainty.
+
+Existing Archive Access extracts the concrete Directory from direct, transaction-phase and stronger source-error shapes independently of dropped errors/completed Tasks. Access, grants and stage remain retained through energy expiry/exclusions. Failed OS close is not release proof. DEBUG isolation holds the same resources strongly without finish/close/release/cleanup; it is not production recovery.
+
+Earlier admission, enumeration, helper/shared, semantic, final identity or mid-body failures never enter this new transition. Existing D166 enumeration uncertainty keeps the original descriptor open. Other terminal/error/fallback/deinit exits and the verifier source/member File set remain unqualified. No new owner, worker, generic lease, protocol, cleanup/recovery interface, native action or default packaging is introduced.
+
+## Actual generated checks
+
+Four new tests cover both retention modes' original semantic verification and exclusive publication, checked helper-pipe/null/pair and final membership ordering before Directory close before commit, reported close refusal, stronger source priority, same consumed owner after error/Task drop/expiry/conflicts, actual read-only candidate extraction and late actual Task cancellation. Current-process idle activity is observed at the held worker and absent after ordinary settlement. Earlier admission, initial/final enumeration, helper-pin and final-source refusals receive zero terminal-entry/close attempts. An earlier enumeration-uncertain candidate keeps its actual original descriptor owned; no consumed-number absence probes are used. Generated uncertain roots are preserved.
+
+Initial three-test focus passed in 4.348 seconds; broader 116 tests/three suites passed in 55.639 seconds before the fourth test. The initial four-test run failed one new expectation: final source substitution correctly retained outer Access, while the test had expected ordinary release. The failed log/root remains retained. Corrected four tests passed in 5.274 seconds. Later source review strengthened only the new test's intended cancellation/typed-cause assertions; final focus is retained separately. Product behavior and historical assertions/deadlines/bodies/observers/scheduling were unchanged by these test corrections.
+
+Final product ordinary run: 667 reported tests/105 suites passed in 220.156 seconds, 40 identical explicit opt-in skips, no emitted warnings and no ordinary retry. This precedes the sole later new-test assertion-strength correction; the final new-test focus qualifies that correction. Optimized/signature receipts and planning/privacy/current-journal protection checks are retained privately. Static host's 94-source closure compiles the changes and executes prior preservation/review, not the new fault hooks or decoder/sample/crop/SPS/VCL loading. Reports after actual successful closes are not spontaneous OS faults; fake scope balance is not sandbox grants; direct joins/callbacks/energy expiry are not universal group/descendant settlement or cleanup authority.
+
+## Protection and new owner direction
+
+The owner expressly chose to keep current queue/recovery, retain the earlier comparison and use a fresh current-state observation for future preservation checks. That observation was captured without inspecting/copying payload or restoring/overwriting the journal. The earlier D169 mismatch remains false with unknown actor; the new future comparison is separately bound to the owner instruction. All generated test and app-demonstration journals must remain isolated from normal app state.
+
+Parent PR144 documentation head's automatic run failed acquiring a hosted runner, with no compiler/test result or counts. Provider annotations and earlier full compiler/runtime logs remain retained without manual rerun or repair inference.
+
+[Dolby conversion workflow plan](DOLBY-CONVERSION-WORKFLOW-PLAN.md) is now the next user-facing target. HDR10 base-layer copy with explicit Dolby Vision loss is the first candidate; P8.1 and genuine tone-mapped SDR remain separate unavailable contracts until qualified. Actual live-work cancellation at the same 20 ms delay is now approved by the human; the under-five-second bound/assertions and uncertain-resource retention remain. ChapterPlan queue changes remain on hold. No conversion or app demonstration is yet claimed. All five milestones retain full scope and remain open.

@@ -595,6 +595,7 @@ enum CompanionArchiveOperation {
         else { verifierError = error }
         if let e = verifierError as? CompanionDiskCheck.EnumerationCloseFailure { access.enumerationDirectory = e.directory }
         else if let e = verifierError as? CompanionDiskCheck.DirectoryAdmissionFailure { access.enumerationDirectory = e.directory }
+        else if let e = verifierError as? CompanionDiskCheck.DirectoryTerminalFailure { access.enumerationDirectory = e.directory }
         if let e = verifierError as? CompanionMetadataProcess.PinCloseFailure {
             access.metadataSourcePin = e.sourcePin
             access.metadataExecutablePin = e.executablePin

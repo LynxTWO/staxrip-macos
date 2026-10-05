@@ -33,6 +33,7 @@ struct CompanionArchiveOperationTests {
         func endScope() { lock.withLock { #expect(scopes > 0); scopes -= 1; stopped += 1 } }
         func expectActive(scoped: Bool = false) { lock.withLock { #expect(active == 1); checkPins(); if scoped { #expect(scopes == 2) } } }
         func expectEnded(scoped: Bool = false) { lock.withLock { #expect(active == 0 && ended == 1); if scoped { #expect(scopes == 0 && stopped == 2) } } }
+        func expectRetainedGrants() { lock.withLock { #expect(scopes == 2 && stopped == 0) } }
         func expectRetained() { lock.withLock { #expect(scopes == 2 && stopped == 0); checkPins() } }
         private var closedCount = 0
         func closed(_ count: Int) { lock.withLock { #expect(closedCount == 0 && count == 2); closedCount = count } }
@@ -87,7 +88,7 @@ struct CompanionArchiveOperationTests {
             let f = try await fixture(); defer { f.cleanup() }
             let ledger = Ledger(), original = try Data(contentsOf: f.source)
             let result = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: false)) {
-                try await Operation.$testBoundary.withValue(.init(phase: { _ in ledger.expectActive() }, pinned: { ledger.pinned($0) })) {
+                try await Operation.$testBoundary.withValue(.init(phase: { _ in ledger.expectActive() }, pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) })) {
                     try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
                         try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
                             try await ResultSetStaging.$testBoundary.withValue(.init(beforeCommit: { ledger.expectActive() }, afterCommit: { ledger.expectActive() })) {
@@ -97,7 +98,7 @@ struct CompanionArchiveOperationTests {
                     }
                 }
             }
-            ledger.expectJoined(count: 2); ledger.expectEnded()
+            ledger.expectJoined(count: 2); ledger.expectEnded(); ledger.expectClosed()
             #expect(!ownAssertion(try assertions()))
             #expect(try Data(contentsOf: f.source) == original)
             #expect(Set(try FileManager.default.contentsOfDirectory(atPath: result.directory.path)) == Set(mode.limits.keys))
@@ -280,7 +281,7 @@ struct CompanionArchiveOperationTests {
                 return { stopped.append(url); ledger.endScope() }
             }
             let result = try await Operation.$testEnvironment.withValue(env) {
-                try await Operation.$testBoundary.withValue(.init(phase: { phase in #expect(phase == "reviewer"); ledger.expectActive(scoped: true) }, pinned: { ledger.pinned($0) })) {
+                try await Operation.$testBoundary.withValue(.init(phase: { phase in #expect(phase == "reviewer"); ledger.expectActive(scoped: true) }, pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) })) {
                     try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
                         try await review(f, mode: mode)
                     }
@@ -288,7 +289,7 @@ struct CompanionArchiveOperationTests {
             }
             #expect(requested == [f.source, f.stage] && stopped == [f.stage, f.source])
             #expect(result.originalMetadataSemanticsVerified && result.fullContainerMatchesOriginalBytes == (mode == .entireContainer))
-            ledger.expectJoined(count: 1); ledger.expectEnded(scoped: true)
+            ledger.expectJoined(count: 1); ledger.expectEnded(scoped: true); ledger.expectClosed()
             #expect(!ownAssertion(try assertions(), reason: "StaxRip original companion review"))
             #expect(try snapshot(f.stage) == before && Data(contentsOf: f.source) == original && Data(contentsOf: prior) == priorBytes)
         }
@@ -349,13 +350,13 @@ struct CompanionArchiveOperationTests {
         m["components"] = components; try JSONSerialization.data(withJSONObject: m, options: [.sortedKeys]).write(to: manifest)
         let original = try Data(contentsOf: f.source), before = try snapshot(f.stage)
         await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
-            await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) })) {
+            await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) })) {
                 await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
                     await #expect(throws: NativeExportError.self) { try await review(f) }
                 }
             }
         }
-        ledger.expectJoined(count: 1); ledger.expectEnded(scoped: true)
+        ledger.expectJoined(count: 1); ledger.expectEnded(scoped: true); ledger.expectClosed()
         #expect(try snapshot(f.stage) == before && Data(contentsOf: f.source) == original)
     }
     @Test func liveReadOnlyCancellationHoldsOSActivityAndExcludesWriterUntilSettlement() async throws {
@@ -1138,6 +1139,124 @@ struct CompanionArchiveOperationTests {
         Operation.releaseGeneratedReviewForTesting(id)
         var info = stat(); #expect(fstat(later, &info) == 0 && stopped == [missing, f.source] && reports.value == 1)
         #expect(try Data(contentsOf: f.source) == original && !FileManager.default.fileExists(atPath: missing.path))
+    }
+    @Test func candidateSemanticRefusalReportedCloseSupersedesOrdinaryError() async throws {
+        let f = try await candidate(); defer { f.cleanup() }; let ledger = Ledger()
+        // Reuse the independently qualified semantic-forgery fixture machinery.
+        let audit = f.stage.appendingPathComponent("source-audit.jsonl")
+        var rows = try Data(contentsOf: audit).split(separator: 10).map { try #require(JSONSerialization.jsonObject(with: Data($0)) as? [String: Any]) }
+        let index = try #require(rows.firstIndex { $0["kind"] as? String == "rpu-summary" })
+        var summary = try #require(rows[index]["summary"] as? [String: Any])
+        summary["cmv29_present"] = !(try #require(summary["cmv29_present"] as? Bool)); rows[index]["summary"] = summary
+        var bytes = Data()
+        for row in rows { bytes.append(try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys])); bytes.append(10) }
+        try bytes.write(to: audit)
+        let manifest = f.stage.appendingPathComponent("manifest.json")
+        var m = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: manifest)) as? [String: Any])
+        var components = try #require(m["components"] as? [[String: Any]])
+        let member = try #require(components.firstIndex { $0["name"] as? String == "source-audit.jsonl" })
+        components[member]["bytes"] = bytes.count; components[member]["sha256"] = DolbyInspection.hex(SHA256.hash(data: bytes))
+        m["components"] = components; try JSONSerialization.data(withJSONObject: m, options: [.sortedKeys]).write(to: manifest)
+        let original = try Data(contentsOf: f.source), before = try snapshot(f.stage)
+        final class Report: @unchecked Sendable {
+            private let lock = NSLock(); private var count = 0
+            func refuse() -> Bool { lock.withLock { count += 1 }; return true }
+            var value: Int { lock.withLock { count } }
+        }
+        let report = Report(); var reviewID: UUID?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { _ in Issue.record("Reported close released semantic refusal access") }, refuseArchiveClose: { report.refuse() })) {
+                    try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) { try await review(f) }
+                }
+            }
+            Issue.record("Semantic/close refusal returned success")
+        } catch let e as Operation.ReviewFailure { reviewID = e.reviewID; #expect(e.published == nil && e.operationError is any CompanionUnsettledOwnership) }
+        let id = try #require(reviewID); ledger.expectJoined(count: 1); ledger.expectRetainedGrants()
+        #expect(report.value == 1 && Operation.retainedForTesting(id))
+        try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetainedGrants()
+        Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+        #expect(try snapshot(f.stage) == before && Data(contentsOf: f.source) == original)
+    }
+
+    @Test func exclusiveCommitLateCancellationAndReportedOuterCloseKeepActualPublishedState() async throws {
+        final class Report: @unchecked Sendable {
+            private let lock = NSLock(); private var count = 0
+            func refuse() -> Bool { lock.withLock { count += 1 }; return true }
+            var value: Int { lock.withLock { count } }
+        }
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+          for refuse in [false, true] {
+            let f = try await fixture(); var keep = true
+            defer { if keep { print("GENERATED_COMMITTED_CLOSE_REVIEW " + f.root.path) } else { f.cleanup() } }
+            let ledger = Ledger(), gate = Gate(), report = Report(), original = try Data(contentsOf: f.source)
+            let prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8); try priorBytes.write(to: prior)
+            let task = Task {
+                defer { gate.signal.finish() }
+                return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) }, refuseArchiveClose: { refuse ? report.refuse() : false })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                                try await ResultSetStaging.$testBoundary.withValue(.init(afterCommit: { gate.hold() })) { try await execute(f, mode: mode) }
+                            }
+                        }
+                    }
+                }
+            }
+            for await _ in gate.entered { break }
+            ledger.expectJoined(count: 2); ledger.expectActive(scoped: true)
+            let directory = f.root.appendingPathComponent("published"), before = try snapshot(directory)
+            task.cancel(); gate.release.signal()
+            if refuse {
+                var reviewID: UUID?
+                do { _ = try await task.value; Issue.record("Committed close refusal returned ordinary success") }
+                catch let e as Operation.ReviewFailure {
+                    reviewID = e.reviewID
+                    let actual = try #require(e.published)
+                    #expect(actual.directory == directory && actual.memberCount == mode.limits.count && actual.verifiedBytes > 0)
+                    #expect(e.intendedStage == directory && e.operationError is any CompanionUnsettledOwnership)
+                    #expect(e.errorDescription?.contains("was published") == true)
+                }
+                let id = try #require(reviewID); ledger.expectRetainedGrants(); #expect(report.value == 1)
+                await #expect(throws: NativeExportError.self) { try await execute(f) }
+                await #expect(throws: NativeExportError.self) { try await review(f) }
+                await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
+                await #expect(throws: NativeExportError.self) { try await associateSamples(f, tool: try sampleAccessTool(in: f.root)) }
+                try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetainedGrants(); #expect(Operation.retainedForTesting(id))
+                let later = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
+                try #require(later >= 0); defer { #expect(Darwin.close(later) == 0) }
+                Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+                var info = stat(); #expect(fstat(later, &info) == 0 && report.value == 1)
+            } else {
+                let actual = try await task.value
+                #expect(actual.directory == directory && actual.memberCount == mode.limits.count)
+                ledger.expectEnded(scoped: true); ledger.expectClosed(); keep = false
+            }
+            ledger.expectJoined(count: 2)
+            #expect(try snapshot(directory) == before && Data(contentsOf: f.source) == original && Data(contentsOf: prior) == priorBytes)
+            #expect(Set(try FileManager.default.contentsOfDirectory(atPath: directory.path)) == Set(mode.limits.keys))
+            if mode == .entireContainer { #expect(try Data(contentsOf: directory.appendingPathComponent("original-container.mkv")) == original) }
+          }
+        }
+    }
+    @Test func candidateSuccessfulFullReviewReportedCloseRetainsWithoutMutatingCandidate() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+            let f = try await candidate(mode); defer { print("GENERATED_CANDIDATE_CLOSE_REVIEW " + f.root.path) }
+            let ledger = Ledger(), original = try Data(contentsOf: f.source), before = try snapshot(f.stage)
+            var reviewID: UUID?
+            do {
+                _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, refuseArchiveClose: { true })) {
+                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) { try await review(f, mode: mode) }
+                    }
+                }
+                Issue.record("Read-only close uncertainty returned ordinary result")
+            } catch let e as Operation.ReviewFailure { reviewID = e.reviewID; #expect(e.published == nil && e.intendedStage == f.stage && e.operationError is any CompanionUnsettledOwnership) }
+            let id = try #require(reviewID); ledger.expectJoined(count: 1); ledger.expectRetainedGrants()
+            try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetainedGrants()
+            Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+            #expect(try snapshot(f.stage) == before && Data(contentsOf: f.source) == original)
+        }
     }
 
 }

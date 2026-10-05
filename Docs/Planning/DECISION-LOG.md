@@ -153,6 +153,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-144 | 2026-10-05 | Native original-source and caller crop association | Confirmed | |
 | D-145 | 2026-10-05 | Concrete crop source/spool access ownership | Confirmed | |
 | D-146 | 2026-10-05 | Checked finite source/spool admission rollback closes | Confirmed | |
+| D-147 | 2026-10-05 | Selected original Video declaration binding | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4329,3 +4330,47 @@ Remaining admitted component/directory/deinit/retired-stage/helper resource role
 ROI/value/rendered/edited/recovery/distribution gates remain open. Next bounded independent
 source declaration prerequisite must reuse existing D112 source Video parser and check
 primary Matroska geometry semantics before any container/user ROI provenance claim.
+
+
+## D-147: Bind selected original Video declarations on the source worker
+
+Status: Confirmed
+
+D112 already parsed bounded source Video declarations. Reuse that parser in a distinct
+source-only entry on the existing pinned source/open SQLite synchronous worker, with a fresh
+selected TrackEntry/configuration reconstruction before interpreting its Video. Preserve raw
+omissions and recognized field presence. Apply Matroska display defaults only for pixel unit
+0; physical/aspect-ratio/unknown units retain missing dimensions. Original signed packets,
+source/config/hash/offset and escaped RPU reconstruction, complete source/table counts, final
+observations and normal checked closes/worker settlement remain mandatory. Existing narrower
+APIs retain their prior subset. No decoder, second worker, closed-spool adoption, generic
+receipt/lease wrapper, Python runtime bridge or protocol/app/default packaging change.
+
+Primary official Matroska schema and FFmpeg coded/crop contracts inspected. Source pixel and
+display declarations do not independently establish SPS/codec-visible/container/user origins
+or SAR. Only original Video declaration binding becomes true; source-frame/ROI/value/edited
+flags remain false. One-picture/rational timing association stays D127/D144's separate gate.
+See SOURCE-VIDEO-DECLARATION-EVIDENCE.md for primary links, six new tests, actual generated
+both-mode writer/oracle/source-only readback and finite scope. Initial new assertions used
+another generator's defaults; retained six issues corrected to this fixed fixture's explicit
+unit-3 16:9 declarations. Corrected35tests3suites14.130s passed/no warnings. Static93-source
+host compiles changed files but executes the prior companion pipeline, not the new finding.
+
+PR121 automatic37283533521 failed566tests567.194s13issues: four unchanged120/180-second bounds
+and nine other child/close/mastering EOF assertions. Full log retained/PR updated without
+retry or individual cause attribution. No historical observer, assertion/deadline/skip/global
+scheduling/concurrency workaround. Full regression/build/protection results follow. Other
+resource/retirement/recovery/distribution and source ROI/rendered/edited gates remain open.
+
+
+Final ordinary572reported tests/104suites230.384s PASSED36 unchanged explicit opt-in skips
+and no warnings, access32.313s/static prior companion32.038s. Explicit production21.22s/
+current strict ad-hoc app/read-only helper signatures/minima14.0/11.0 pass; writer/decoder/
+sample/crop absent. Six-file privacy zero/positive sentinel, owner source metadata/current
+journal/original D142/sample-prefix-frozen-D130/D143 runtime unchanged. Missing decision index
+row corrected; planning findings empty. No product UI change or native UI qualification.
+Evidence-time regex corrected to observed whitespace before sec without build rerun or repo
+mutation. Other source/component/directory/deinit/retired-stage/distribution/recovery gates
+remain open. Next finite source Video plus actual fixed decoder geometry/caller agreement
+must run on the same source/open-store worker and retain false ROI/value/rendered/edited
+flags until exact independent coordinate provenance is qualified; never infer default SAR.

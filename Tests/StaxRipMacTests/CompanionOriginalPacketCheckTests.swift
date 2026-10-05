@@ -502,4 +502,152 @@ struct CompanionOriginalPacketCheckTests {
         #expect(try #require(rpu).nalIndex == 1 && r.peakRecordBytes == 65_536)
         #expect(r.packets == 1 && r.records == 1)
     }
+    private func declaredVideo(_ unit: UInt64 = 0, explicit: Bool = false) -> Data {
+        var fields = element(0xb0,unsigned(160)) + element(0xba,unsigned(96))
+        fields += element(0x54cc,unsigned(2)) + element(0x54dd,unsigned(4)) + element(0x54bb,unsigned(6)) + element(0x54aa,unsigned(8))
+        if explicit { fields += element(0x54b2,unsigned(unit)) + element(0x54b0,unsigned(128)) }
+        return element(0xe0,fields)
+    }
+    @Test func actualNativeBothModeSourceVideoReadbackNeedsNoCompanionOrDecoder() async throws {
+        for mode in [Transaction.Retention.metadataOnly, .entireContainer] {
+            let (f,c) = try await staged(mode); defer { f.cleanup() }
+            let original = try Data(contentsOf:f.source)
+            let audit = try await CompanionDiskCheck.verifyOriginalAudit(source:f.source,stage:f.stage,contents:c)
+            #expect(try #require(audit.originalAudit).originalDeclaredGeometryMatchesSource)
+            let oracle = try await ToolRunner().run(executable:URL(fileURLWithPath:"/usr/bin/env"),arguments:["python3",
+                Self.repo.appendingPathComponent("Tools/DolbyCompanionCheck/native_transaction_fixture.py").path,
+                "verify",f.source.path,f.stage.path,mode == .metadataOnly ? "metadata":"full",f.executable.path,
+                f.root.appendingPathComponent("staxrip-dolby-metadata-audit").path],stdoutLimit:16384)
+            try #require(oracle.status == 0 && !oracle.truncated)
+            // Only this generated, fully settled companion is removed. The new
+            // source worker must reconstruct facts without its retained members.
+            try FileManager.default.removeItem(at:f.stage)
+            try FileManager.default.createDirectory(at:f.stage,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+            let r = try await CompanionDiskCheck.spoolOriginalSourceVideoDeclarations(source:f.source,in:f.stage)
+            // Exact declarations of the fixed original Rust fixture, not SPS.
+            #expect(r.declarations.width == 160 && r.declarations.height == 96 && r.declarations.crop == [0,0,1,0])
+            #expect(r.declarations.display == [16,9] && r.declarations.unit == 3 && r.effectiveDisplayDeclarations == [16,9])
+            #expect(r.declarations.presentFields == [0xb0,0xba,0x54bb,0x54b2,0x54b0,0x54ba])
+            #expect(r.source.packets.packets == 4 && r.source.packets.records == 5 && r.source.packets.enhancementNALs == 1)
+            #expect(!r.independentSourceFrameAssociationVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+            #expect(r.source.sourceSHA256 == DolbyInspection.hex(SHA256.hash(data:original)))
+            #expect(try Data(contentsOf:f.source) == original)
+        }
+    }
+    @Test func sourceVideoPresenceUnknownFieldsAndBoundedStorageRemainExplicit() async throws {
+        let pixels = element(0xb0,unsigned(160))+element(0xba,unsigned(96))
+        for unit in UInt64(0)...4 {
+            let video = element(0xe0,pixels+element(0x54b2,unsigned(unit))+element(0x54cc,unsigned(0))+element(0x9a,unsigned(0)))
+            let data = source(track(config(),extra:video),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+block(nal(62,Data([0xaa]),width:4))))
+            let (root,input,stage) = try generatedRoot(data); defer { try? FileManager.default.removeItem(at:root) }
+            let r = try await CompanionDiskCheck.spoolOriginalSourceVideoDeclarations(source:input,in:stage)
+            #expect(r.declarations.presentFields == [0xb0,0xba,0x54b2,0x54cc])
+            #expect(r.declarations.display == [nil,nil] && r.declarations.crop == [0,0,0,0])
+            #expect(r.effectiveDisplayDeclarations == (unit == 0 ? [160,96]:[nil,nil]))
+        }
+        for full in [false,true] {
+            let packets = (0..<1000).reduce(into:Data()) { data,_ in data += block(nal(62,Data([0xaa]),width:4)) }
+            let data = source(track(config(),extra:element(0xe0,pixels)),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+packets))
+            let (root,input,stage) = try generatedRoot(data); defer { try? FileManager.default.removeItem(at:root) }
+            if full {
+                await #expect(throws:DolbyAssociationSpool.Failure.storageFull) {
+                    try await CompanionDiskCheck.spoolOriginalSourceVideoDeclarations(source:input,in:stage,limits:.init(pages:8))
+                }
+            } else {
+                await #expect(throws:(any Error).self) {
+                    try await CompanionDiskCheck.spoolOriginalSourceVideoDeclarations(source:input,in:stage,limits:.init(records:1))
+                }
+            }
+            #expect(try Data(contentsOf:input) == data)
+        }
+    }
+    @Test func sourceVideoWorkerBindsDeclarationsPreservesSignedRowsAndUnitSpecificDefaults() async throws {
+        for width in 1...4 { for unknown in [false,true] {
+            let raw = nal(62,Data([0xaa,0,0,3,1,0xbb]),width:width)
+            let packets = block(raw,relative:-10) + block(raw,relative:-10) + block(raw,relative:-20)
+            let data = source(track(config(width),extra:declaredVideo()),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+packets),unknown:unknown)
+            let (root,input,stage) = try generatedRoot(data); defer { try? FileManager.default.removeItem(at:root) }
+            let r = try await CompanionDiskCheck.spoolOriginalSourceVideoDeclarations(source:input,in:stage)
+            #expect(r.originalVideoDeclarationsBoundToSource && !r.independentSourceFrameAssociationVerified && !r.independentSourceROIProvenanceVerified && !r.independentSampleValuesVerified && !r.editedPictureSemanticsVerified)
+            #expect(r.declarations.width == 160 && r.declarations.height == 96 && r.declarations.crop == [2,4,6,8])
+            #expect(r.declarations.unit == 0 && r.declarations.display == [nil,nil] && r.effectiveDisplayDeclarations == [154,82])
+            #expect(r.declarations.presentFields == [0xb0,0xba,0x54cc,0x54dd,0x54bb,0x54aa])
+            #expect(r.source.track.nalLengthBytes == width && r.source.unknownSegment == unknown && r.source.packets.packets == 3 && r.source.packets.records == 3)
+            let rows = try storedRows(stage,table:"packets"); #expect(rows.map { $0[1] } == ["-10000000","-10000000","-20000000"])
+            #expect(r.source.sourceSHA256 == DolbyInspection.hex(SHA256.hash(data:data)))
+            #expect(try Data(contentsOf:input) == data)
+        } }
+        for unit in UInt64(0)...4 {
+            let data = source(track(config(),extra:declaredVideo(unit,explicit:true)+element(0x23e383,unsigned(UInt64.max))),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+block(nal(62,Data([0xaa]),width:4))))
+            let (root,input,stage) = try generatedRoot(data); defer { try? FileManager.default.removeItem(at:root) }
+            let r = try await CompanionDiskCheck.spoolOriginalSourceVideoDeclarations(source:input,in:stage)
+            #expect(r.declarations.unit == unit && r.declarations.display == [128,nil] && r.declarations.duration == UInt64.max)
+            #expect(r.effectiveDisplayDeclarations == (unit == 0 ? [128,82] : [128,nil]))
+            #expect(r.declarations.presentFields.contains(0x54b2) && r.declarations.presentFields.contains(0x54b0) && !r.declarations.presentFields.contains(0x54ba))
+            #expect(!r.independentSourceROIProvenanceVerified && !r.independentSourceFrameAssociationVerified)
+        }
+    }
+    @Test func sourceVideoBindingRefusesPlausibleForgedTrackAndStaleGeometryPayload() throws {
+        let video = declaredVideo(), raw = nal(62,Data([0xaa]),width:4)
+        let data = source(track(config(),extra:video),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+block(raw)))
+        let view = sourceOnlyView(data), original = try CompanionOriginalTrackCheck.readSource(view)
+        let real = try CompanionOriginalAuditCheck.sourceDeclarations(view,track:original); #expect(real.width == 160)
+        for field in ["number","offset","size","configuration-size","nal-width","payload-hash","configuration-hash"] {
+            let forged = CompanionOriginalTrackCheck.Receipt(trackNumber:original.trackNumber+(field == "number" ? 1:0),
+                originalPayloadOffset:original.originalPayloadOffset+(field == "offset" ? 1:0),payloadBytes:original.payloadBytes+(field == "size" ? 1:0),
+                configurationBytes:original.configurationBytes+(field == "configuration-size" ? 1:0),nalLengthBytes:field == "nal-width" ? 3:original.nalLengthBytes,
+                payloadSHA256:field == "payload-hash" ? String(repeating:"0",count:64):original.payloadSHA256,
+                configurationSHA256:field == "configuration-hash" ? String(repeating:"0",count:64):original.configurationSHA256,originalTrackAndConfigurationMatch:false)
+            #expect(throws:(any Error).self) { try CompanionOriginalAuditCheck.sourceDeclarations(view,track:forged) }
+        }
+        let changedVideo = element(0xe0,element(0xb0,unsigned(120))+element(0xba,unsigned(96))+element(0x54cc,unsigned(2))+element(0x54dd,unsigned(4))+element(0x54bb,unsigned(6))+element(0x54aa,unsigned(8)))
+        let changed = source(track(config(),extra:changedVideo),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+block(raw)))
+        let changedView = sourceOnlyView(changed)
+        // Same encoded length/configuration and plausible geometry can pass the
+        // old local declaration parser; selected payload/source binding refuses.
+        let local = try CompanionOriginalAuditCheck.declarations(changedView,track:original); #expect(local.width == 120)
+        #expect(throws:(any Error).self) { try CompanionOriginalAuditCheck.sourceDeclarations(changedView,track:original) }
+        let repaired = try CompanionOriginalTrackCheck.readSource(changedView)
+        #expect(try CompanionOriginalAuditCheck.sourceDeclarations(changedView,track:repaired).width == 120)
+    }
+    @Test func sourceVideoMalformedFieldsRefuseWhileNarrowerSourceAPIStaysNarrow() async throws {
+        let pixels = element(0xb0,unsigned(160))+element(0xba,unsigned(96))
+        let invalid = [Data(), element(0xe0,element(0xb0,unsigned(160))), element(0xe0,pixels+element(0xb0,unsigned(160))),
+            element(0xe0,pixels+element(0x54b2,unsigned(5))), element(0xe0,pixels+element(0x54cc,unsigned(UInt64.max))+element(0x54dd,unsigned(1))),
+            element(0xe0,pixels+element(0x54b0,unsigned(0))), element(0xe0,pixels)+element(0x23e383,unsigned(0))]
+        for video in invalid {
+            let data = source(track(config(),extra:video),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+block(nal(62,Data([0xaa]),width:4))))
+            let (root,input,stage) = try generatedRoot(data); defer { try? FileManager.default.removeItem(at:root) }
+            await #expect(throws:(any Error).self) { try await CompanionDiskCheck.spoolOriginalSourceVideoDeclarations(source:input,in:stage) }
+            #expect(try Data(contentsOf:input) == data)
+        }
+        let (root,input,stage) = try generatedRoot(generatedSource()); defer { try? FileManager.default.removeItem(at:root) }
+        let narrow = try await CompanionDiskCheck.spoolOriginalSource(source:input,in:stage)
+        #expect(narrow.packets.packets == 1 && !narrow.independentSourceFrameAssociationVerified)
+    }
+    @Test func sourceVideoWorkerCancellationAndFinalSubstitutionCannotReturnBinding() async throws {
+        let data = source(track(config(),extra:declaredVideo()),clusters:element(0x1f43b675,element(0xe7,unsigned(0))+block(nal(62,Data([0xaa]),width:4))))
+        for phase in ["read","late","source-substitution","spool-extra"] {
+            let (root,input,stage) = try generatedRoot(data), gate = Gate()
+            defer { try? FileManager.default.removeItem(at:root) }
+            let task = Task {
+                try await CompanionDiskCheck.$testBoundary.withValue(.init(beforeFinal: {
+                    if phase == "late" { gate.hold() }
+                    if phase == "source-substitution" {
+                        do { try FileManager.default.moveItem(at:input,to:root.appendingPathComponent("original.mkv"));try data.write(to:input) }
+                        catch { Issue.record("Generated source replacement failed") }
+                    }
+                    if phase == "spool-extra" { do { try Data("prior".utf8).write(to:stage.appendingPathComponent("extra")) } catch { Issue.record("Generated spool mutation failed") } }
+                }, originalTrackRead: { offset,_ in if phase == "read" && offset == 0 { gate.hold() } })) {
+                    try await CompanionDiskCheck.spoolOriginalSourceVideoDeclarations(source:input,in:stage)
+                }
+            }
+            if ["read","late"].contains(phase) {
+                for await _ in gate.entered { break };task.cancel();gate.release.signal()
+                await #expect(throws:CancellationError.self) { try await task.value }
+            } else { await #expect(throws:(any Error).self) { try await task.value } }
+            #expect(try Data(contentsOf:input) == data)
+        }
+    }
+
 }

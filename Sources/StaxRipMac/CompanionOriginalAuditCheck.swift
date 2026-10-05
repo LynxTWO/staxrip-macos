@@ -18,6 +18,17 @@ enum CompanionOriginalAuditCheck {
         var width: UInt64 = 0, height: UInt64 = 0, unit: UInt64 = 0
         var crop: [UInt64] = [0,0,0,0], display: [UInt64?] = [nil,nil]
         var duration: UInt64?
+        // Recognized fields actually present; zero/default is not presence.
+        var presentFields: Set<UInt64> = []
+        /// Display declarations only. Never coded size, decoder origin or SAR.
+        func displayWithMatroskaDefaults() throws -> [UInt64?] {
+            guard crop.count == 4, display.count == 2, unit <= 4 else { throw refused() }
+            let (h, ho) = crop[0].addingReportingOverflow(crop[1])
+            let (v, vo) = crop[2].addingReportingOverflow(crop[3])
+            guard !ho, !vo, h < width, v < height else { throw refused() }
+            guard unit == 0 else { return display }
+            return [display[0] ?? (width-h), display[1] ?? (height-v)]
+        }
     }
     private static func refused() -> NativeExportError { .invalid("Original audit source verification refused. No complete semantic receipt.") }
     static func declarations(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt) throws -> Declarations {
@@ -37,11 +48,13 @@ enum CompanionOriginalAuditCheck {
             if field.id == 0x23e383 {
                 guard !duration else { throw refused() }; duration = true
                 result.duration = try walker.unsigned(field); guard result.duration != 0 else { throw refused() }
+                result.presentFields.insert(field.id)
             } else if field.id == 0xe0 {
                 guard !video else { throw refused() }; video = true; var seen: Set<UInt64> = []
                 try children(field.payload, field.end) { f in
                     guard [UInt64(0xb0),0xba,0x54cc,0x54dd,0x54bb,0x54aa,0x54b0,0x54ba,0x54b2].contains(f.id) else { return }
                     guard seen.insert(f.id).inserted else { throw refused() }; let n = try walker.unsigned(f)
+                    result.presentFields.insert(f.id)
                     switch f.id {
                     case 0xb0: result.width = n
                     case 0xba: result.height = n
@@ -62,6 +75,18 @@ enum CompanionOriginalAuditCheck {
         let (vertical, vOverflow) = result.crop[2].addingReportingOverflow(result.crop[3])
         guard !hOverflow, !vOverflow, horizontal < result.width, vertical < result.height else { throw refused() }
         return result
+    }
+    /// Reconstructs selected original track again before interpreting its Video.
+    /// A caller-supplied offset/hash/count alone is not selected-source binding.
+    static func sourceDeclarations(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt) throws -> Declarations {
+        let actual = try Track.readSource(view)
+        guard actual.trackNumber == track.trackNumber,
+              actual.originalPayloadOffset == track.originalPayloadOffset,
+              actual.payloadBytes == track.payloadBytes, actual.payloadSHA256 == track.payloadSHA256,
+              actual.configurationBytes == track.configurationBytes,
+              actual.configurationSHA256 == track.configurationSHA256,
+              actual.nalLengthBytes == track.nalLengthBytes else { throw refused() }
+        return try declarations(view, track: actual)
     }
     static func read(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt,
                      contents: OriginalCompanionTransaction.Contents) throws -> Receipt {

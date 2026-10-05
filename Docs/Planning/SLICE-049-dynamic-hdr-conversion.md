@@ -2278,3 +2278,17 @@ Source ROI/independent values/rendered/edited flags remain false. Next independe
 selected-source Video/crop/display declaration prerequisite must reuse D112 declarations,
 check primary Matroska semantics and D098 origins before container/user ROI proof; current
 fixed decoder/caller agreement alone supplies none of those origins.
+
+
+### D147 selected original Video declarations
+
+A distinct unused source-only entry reuses D112 declarations on the existing pinned source/
+open SQLite worker, independently reselecting original TrackEntry/configuration before
+interpreting Video and requiring source/table/final/checked-close settlement. Raw omission
+and recognized presence stay explicit; only pixel-unit display defaults apply. Primary
+Matroska/FFmpeg contracts inspected, no automatic declared-pixel-to-codec-visible origin or
+SAR. See D-147 and SOURCE-VIDEO-DECLARATION-EVIDENCE.md. Only source Video declaration binding
+is true; frame/ROI/independent values/rendered/edited remain false. D127/D144 exact timing/
+one-picture coverage and independent source-to-decoder geometry are still required before
+container/user ROI provenance. No second worker/protocol/action/default packaging or recovery
+authority. Other finite resource/retirement/distribution gates remain separate.

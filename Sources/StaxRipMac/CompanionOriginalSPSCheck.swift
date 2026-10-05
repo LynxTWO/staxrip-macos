@@ -120,6 +120,32 @@ enum CompanionOriginalSPSCheck {
             extraSliceHeaderBits: extra, vpsArrayComplete: vps.complete,
             spsArrayComplete: sps.complete, ppsArrayComplete: pps.complete)
     }
+    struct FirstSlicePrefix: Sendable, Equatable {
+        let nalType, ppsID, prefixBits, encodedPrefixBytes: Int
+        let noOutputOfPriorPics: Bool?
+        let prefixSHA256: String
+        let firstSliceSegmentInPicture = true
+        let completeSliceConformanceVerified = false
+        let activePictureParameterSetSelectionVerified = false
+    }
+    /// Explicit TemporalId0 base-layer first-slice subset. Its first bit is one;
+    /// at most 15 bits follow through PPS ID, so no EPB fits this two-byte prefix.
+    /// Never run the whole-parameter-NAL unescaper over a picture buffer.
+    static func readFirstSlicePrefix(header: Data, prefix: Data, payloadBytes: Int64) throws -> FirstSlicePrefix {
+        guard header.count == 2, header[0] & 0x81 == 0, header[1] == 1,
+              payloadBytes > 0, payloadBytes <= 1 << 40,
+              prefix.count == Int(min(2, payloadBytes)) else { throw refused() }
+        let type = Int(header[0] >> 1 & 63)
+        guard (0...1).contains(type) || (6...9).contains(type) || (16...21).contains(type) else { throw refused() }
+        var bits = Bits(data: prefix)
+        guard try bits.read(1) == 1 else { throw refused() }
+        let prior = (16...21).contains(type) ? try bits.read(1) == 1 : nil
+        let ppsID = try bits.ue(maximum: 63)
+        guard Int64(bits.position) < payloadBytes*8 else { throw refused() }
+        return .init(nalType: type, ppsID: ppsID, prefixBits: bits.position,
+            encodedPrefixBytes: prefix.count, noOutputOfPriorPics: prior,
+            prefixSHA256: DolbyInspection.hex(SHA256.hash(data: header + prefix)))
+    }
     private static func rbsp(_ nal: Data, type: UInt8, checkpoint: () throws -> Void) throws -> Data {
         guard nal.count > 2, nal[0] == type << 1, nal[1] == 1, nal.last != 0 else { throw refused() }
         var result = Data(), zeros = 0, i = 2

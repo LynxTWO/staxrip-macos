@@ -189,6 +189,27 @@ enum CompanionDiskCheck {
         guard let references = result.4 else { throw failure() }
         return .init(source: result.0, references: references)
     }
+    struct SourceVCLReferencesReceipt: Sendable {
+        let source: SourceSpoolReceipt
+        let parameters: CompanionOriginalSPSCheck.ParameterReferences
+        let vcl: CompanionOriginalPacketCheck.VCLSummary
+        let originalFirstSlicePPSPrefixesBoundToSource = true
+        let selectedPacketParameterSetNALsAbsent = true
+        let activePictureParameterSetSelectionVerified = false
+        let completeSliceAndParameterConformanceVerified = false
+        let independentSourceFrameAssociationVerified = false
+        let independentSourceROIProvenanceVerified = false
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+    }
+    /// Caller holds explicit source/spool access and retention on shared uncertainty.
+    static func spoolOriginalSourceVCLReferences(source: URL, in directory: URL,
+        limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceVCLReferencesReceipt {
+        let result = try await sourceWork(source: source, in: directory, limits: limits,
+            decoder: nil, vclReferences: true)
+        guard let vcl = result.5 else { throw failure() }
+        return .init(source: result.0, parameters: vcl.parameters, vcl: vcl.summary)
+    }
     private struct DecoderRequest: Sendable {
         var profile: DolbyDecoderStream.Profile = .metadata
         let tool: DolbyDecoderProcess.Tool
@@ -257,7 +278,7 @@ enum CompanionDiskCheck {
         try await sourceWork(source:source,in:directory,limits:limits,decoder:nil).0
     }
     private static func sourceWork(source: URL, in directory: URL, limits: DolbyAssociationSpool.Limits,
-                                   decoder: DecoderRequest?, declaredVideo: Bool = false, sourceSPSPrefix: Bool = false, parameterReferences: Bool = false) async throws -> (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?,CompanionOriginalSPSCheck.GeometryPrefix?,CompanionOriginalSPSCheck.ParameterReferences?) {
+                                   decoder: DecoderRequest?, declaredVideo: Bool = false, sourceSPSPrefix: Bool = false, parameterReferences: Bool = false, vclReferences: Bool = false) async throws -> (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?,CompanionOriginalSPSCheck.GeometryPrefix?,CompanionOriginalSPSCheck.ParameterReferences?,CompanionOriginalPacketCheck.VCLReadback?) {
         try Task.checkCancellation()
         let cancelled = Cancellation()
         #if DEBUG
@@ -269,7 +290,7 @@ enum CompanionDiskCheck {
         let decoderBoundary = DolbyDecoderProcess.Boundary()
         let spoolBoundary = DolbyAssociationSpool.AdmissionBoundary()
         #endif
-        let result: (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?,CompanionOriginalSPSCheck.GeometryPrefix?,CompanionOriginalSPSCheck.ParameterReferences?) = try await withTaskCancellationHandler {
+        let result: (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?,CompanionOriginalSPSCheck.GeometryPrefix?,CompanionOriginalSPSCheck.ParameterReferences?,CompanionOriginalPacketCheck.VCLReadback?) = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue(label: "StaxRip.original-source-spool", qos: .userInitiated).async {
                     continuation.resume(with: Result {
@@ -292,9 +313,20 @@ enum CompanionDiskCheck {
                                 let references = parameterReferences ? try CompanionOriginalSPSCheck.readSourceReferences(view, track: track) : nil
                                 let sps = sourceSPSPrefix ? try CompanionOriginalSPSCheck.readSource(view, track: track) : nil
                                 var timing: (UInt64, Bool)?
-                                let packets = try CompanionOriginalPacketCheck.readSource(view, track: track, begin: { scale, unknown in
+                                let begin: (UInt64, Bool) throws -> Void = { scale, unknown in
                                     guard timing == nil else { throw failure() }; timing = (scale, unknown)
-                                }, observe: { try spool.append($0) }, refuseInBandParameterSets: sourceSPSPrefix || parameterReferences)
+                                }
+                                let vcl: CompanionOriginalPacketCheck.VCLReadback?
+                                let packets: CompanionOriginalPacketCheck.Receipt
+                                if vclReferences {
+                                    let actual = try CompanionOriginalPacketCheck.readSourceVCLReferences(view, track: track,
+                                        begin: begin, observe: { try spool.append($0) })
+                                    vcl = actual; packets = actual.packets
+                                } else {
+                                    vcl = nil
+                                    packets = try CompanionOriginalPacketCheck.readSource(view, track: track, begin: begin,
+                                        observe: { try spool.append($0) }, refuseInBandParameterSets: sourceSPSPrefix || parameterReferences)
+                                }
                                 _ = try spool.finishSourcePass(expected: .init(packets: packets.packets, rpus: packets.records))
                                 guard let timing else { throw failure() }
                                 var decoded: DolbyDecoderStream.Receipt?
@@ -329,7 +361,7 @@ enum CompanionDiskCheck {
                                 boundary.beforeFinal()
                                 try file.check(source); try cancelled.check()
                                 return (SourceSpoolReceipt(sourceID: file.id, sourceBytes: file.bytes, sourceSHA256: hash,
-                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1),decoded,video,sps,references)
+                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1),decoded,video,sps,references,vcl)
                             }
                             try file.check(source); try cancelled.check()
                             return receipt

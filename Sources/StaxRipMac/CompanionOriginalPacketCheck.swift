@@ -25,6 +25,39 @@ enum CompanionOriginalPacketCheck {
         let sourceEncodedPacketFramingReconstructed = true
         let originalPacketRPUSemanticsVerified = false
     }
+    struct VCLReference: Sendable, Equatable {
+        let packetIndex, nalIndex, ptsNS, nalOffset, nalBytes: Int64
+        let prefix: CompanionOriginalSPSCheck.FirstSlicePrefix
+    }
+    struct VCLSummary: Sendable, Equatable {
+        let prefixes, irapPrefixes: Int64
+        let peakPrefixBytes: Int
+        let sequenceSHA256: String
+        let sourceFirstSlicePPSReferencesAgree = true
+        let completeSliceConformanceVerified = false
+        let activePictureParameterSetSelectionVerified = false
+    }
+    struct VCLReadback: Sendable {
+        let packets: Receipt
+        let parameters: CompanionOriginalSPSCheck.ParameterReferences
+        let summary: VCLSummary
+    }
+    /// Fresh configuration binding and single first-slice VCL per selected packet.
+    /// Observations are streamed; production readback holds no picture/row collection.
+    static func readSourceVCLReferences(_ view: CompanionDiskCheck.ReadView, track: Track.Receipt,
+        begin: @escaping (UInt64, Bool) throws -> Void = { _, _ in },
+        observe: @escaping (Observation) throws -> Void = { _ in },
+        observeVCL: @escaping (VCLReference) throws -> Void = { _ in }) throws -> VCLReadback {
+        let references = try CompanionOriginalSPSCheck.readSourceReferences(view, track: track)
+        let scan = Scanner(view, track, observe, begin, compareRetained: false,
+            refuseInBandParameterSets: true, references: references, observeVCL: observeVCL)
+        let packets = try scan.read()
+        guard scan.vcls == packets.packets else { throw refused() }
+        return .init(packets: packets, parameters: references,
+            summary: .init(prefixes: scan.vcls, irapPrefixes: scan.iraps,
+                peakPrefixBytes: scan.prefixPeak,
+                sequenceSHA256: DolbyInspection.hex(scan.vclSequence.finalize())))
+    }
     private struct Block {
         let payload: Int64, end: Int64, blockOffset: Int64, pts: Int64
         let invisible: Bool, keyframe: Bool?, discardable: Bool?
@@ -70,10 +103,14 @@ enum CompanionOriginalPacketCheck {
         let begin: (UInt64, Bool) throws -> Void
         let compareRetained: Bool, refuseInBandParameterSets: Bool
         var packets: Int64 = 0, records: Int64 = 0, enhancement: Int64 = 0, archive: Int64 = 0
+        let references: CompanionOriginalSPSCheck.ParameterReferences?
+        let observeVCL: (VCLReference) throws -> Void
+        var vcls: Int64 = 0, iraps: Int64 = 0, prefixPeak = 0, vclSequence = SHA256()
         var blocks = 0, peak = 0, sequence = SHA256()
-        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void, compareRetained: Bool, refuseInBandParameterSets: Bool = false) {
+        init(_ view: CompanionDiskCheck.ReadView, _ track: Track.Receipt, _ observe: @escaping (Observation) throws -> Void, _ begin: @escaping (UInt64, Bool) throws -> Void, compareRetained: Bool, refuseInBandParameterSets: Bool = false, references: CompanionOriginalSPSCheck.ParameterReferences? = nil, observeVCL: @escaping (VCLReference) throws -> Void = { _ in }) {
             self.view = view; self.track = track; self.observe = observe; self.begin = begin
             self.compareRetained = compareRetained; self.refuseInBandParameterSets = refuseInBandParameterSets
+            self.references = references; self.observeVCL = observeVCL
             walker = Track.Walker(view, elementLimit: 128_000_000)
         }
         func children(_ e: Element, _ body: (Element) throws -> Void) throws {
@@ -235,7 +272,7 @@ enum CompanionOriginalPacketCheck {
                          discardable: e.id == 0xa3 ? flags & 1 != 0 : nil)
         }
         func emit(_ b: Block, duration: UInt64?) throws {
-            guard packets < 2_000_000 else { throw refused() }
+            guard packets < 2_000_000, references == nil || !b.invisible else { throw refused() }
             var hash = SHA256(), cursor = b.payload
             while cursor < b.end {
                 try view.checkpoint()
@@ -251,7 +288,7 @@ enum CompanionOriginalPacketCheck {
             try observe(.packet(.init(index: packets, inputOffset: b.payload, blockOffset: b.blockOffset, ptsNS: b.pts,
                                       durationNS: duration, invisible: b.invisible, keyframe: b.keyframe, discardable: b.discardable,
                                       encodedBytes: b.end - b.payload, sha256: DolbyInspection.hex(digest))))
-            cursor = b.payload; var ordinal: Int64 = 0
+            cursor = b.payload; var ordinal: Int64 = 0, vcl: VCLReference?
             while cursor < b.end {
                 try view.checkpoint()
                 guard Int64(track.nalLengthBytes) <= b.end - cursor else { throw refused() }
@@ -262,6 +299,14 @@ enum CompanionOriginalPacketCheck {
                 guard h[0] & 0x80 == 0, h[1] & 7 != 0 else { throw refused() }
                 let type = h[0] >> 1 & 0x3f
                 guard !refuseInBandParameterSets || ![32,33,34].contains(type) else { throw refused() }
+                if let references, type <= 31 {
+                    guard vcl == nil, length > 2 else { throw refused() }
+                    let prefix = try CompanionOriginalSPSCheck.readFirstSlicePrefix(header: h,
+                        prefix: view.source(cursor + 2, Int(min(2, length - 2))), payloadBytes: Int64(length - 2))
+                    guard prefix.ppsID == references.ppsID else { throw refused() }
+                    vcl = .init(packetIndex: packets, nalIndex: ordinal, ptsNS: b.pts,
+                        nalOffset: cursor, nalBytes: Int64(length), prefix: prefix)
+                }
                 switch type {
                 case 62:
                     guard h[0] & 1 == 0, h[1] >> 3 == 0, length > 2, length - 2 <= 65_536,
@@ -280,6 +325,19 @@ enum CompanionOriginalPacketCheck {
                 default: break
                 }
                 cursor += Int64(length); ordinal += 1
+            }
+            if references != nil {
+                guard let vcl else { throw refused() }
+                vclSequence.update(data: Data(digest))
+                for value in [vcl.packetIndex,vcl.nalIndex,vcl.ptsNS,vcl.nalOffset,vcl.nalBytes,
+                    Int64(vcl.prefix.nalType),Int64(vcl.prefix.ppsID),Int64(vcl.prefix.prefixBits),
+                    Int64(vcl.prefix.encodedPrefixBytes),vcl.prefix.noOutputOfPriorPics.map { $0 ? Int64(1):0 } ?? -1] {
+                    vclSequence.update(data: little(value))
+                }
+                vclSequence.update(data: Data(vcl.prefix.prefixSHA256.utf8))
+                try observeVCL(vcl); vcls += 1
+                if vcl.prefix.noOutputOfPriorPics != nil { iraps += 1 }
+                prefixPeak = max(prefixPeak, vcl.prefix.encodedPrefixBytes)
             }
             packets += 1
         }

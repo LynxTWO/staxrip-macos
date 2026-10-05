@@ -117,6 +117,27 @@ enum CompanionDiskCheck {
         let independentSampleValuesVerified = false
         let editedPictureSemanticsVerified = false
     }
+    /// Joint source declarations and fixed-decoder caller-crop observations.
+    /// Raster equality is a comparison, never container/user coordinate provenance.
+    struct SourceVideoCropReceipt: Sendable {
+        let source: SourceSpoolReceipt
+        let decoder: DolbyDecoderStream.Receipt
+        let declarations: CompanionOriginalAuditCheck.Declarations
+        let effectiveDisplayDeclarations: [UInt64?]
+        let originalVideoDeclarationsBoundToSource = true
+        let independentSourceFrameAssociationVerified = true
+        let originalSourceAndCallerCropAgreementVerified = true
+        let independentSourceROIProvenanceVerified = false
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+        var declaredPixelsEqualDecoderCodedPixels: Bool {
+            declarations.width == UInt64(decoder.geometry.width) && declarations.height == UInt64(decoder.geometry.height)
+        }
+        var declaredPixelsEqualDecoderCodecVisiblePixels: Bool {
+            declarations.width == UInt64(decoder.geometry.width-decoder.geometry.crop[0]-decoder.geometry.crop[1]) &&
+            declarations.height == UInt64(decoder.geometry.height-decoder.geometry.crop[2]-decoder.geometry.crop[3])
+        }
+    }
     /// Explicit source-only prerequisite. Existing narrower source/decoder APIs
     /// neither acquire these facts nor change their admission subset.
     static func spoolOriginalSourceVideoDeclarations(source: URL, in directory: URL,
@@ -165,6 +186,18 @@ enum CompanionDiskCheck {
             decoder: .init(profile: .cropSamples, tool: tool, threads: threads, timeout: timeout, cropRequest: request))
         guard let decoder = result.1 else { throw failure() }
         return .init(source: result.0, decoder: decoder)
+    }
+    /// Distinct joint readback on the same pinned source/open-store worker.
+    /// No source raster-to-decoder origin mapping or sample-aspect default follows.
+    static func associateOriginalVideoCrops(source: URL, in directory: URL, tool: DolbyDecoderProcess.Tool,
+        request: DolbyDecoderStream.CropRequest, threads: Int = 4, timeout: Double = 120,
+        limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceVideoCropReceipt {
+        guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        let result = try await sourceWork(source:source,in:directory,limits:limits,
+            decoder:.init(profile:.cropSamples,tool:tool,threads:threads,timeout:timeout,cropRequest:request),declaredVideo:true)
+        guard let decoder=result.1, let video=result.2 else { throw failure() }
+        return try .init(source:result.0,decoder:decoder,declarations:video,
+            effectiveDisplayDeclarations:video.displayWithMatroskaDefaults())
     }
     struct SourceOwnershipFailure: CompanionUnsettledOwnership { var operationError: Error? = nil }
     /// Finite file admission rollback only; later component/deinit closes remain separate.

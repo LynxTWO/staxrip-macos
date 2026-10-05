@@ -22,7 +22,15 @@ enum CompanionMetadataProcess {
     }
     struct OwnershipFailure: CompanionUnsettledOwnership, LocalizedError {
         let reason: String
+        var operationError: (any Error)? = nil
+        var pipeCloseRoles: [PipeRole] = []
         var errorDescription: String? { "Native metadata process ownership could not be fully settled. Retain the temporary stage for review." }
+    }
+    enum PipeRole: String, CaseIterable, Sendable { case stdoutRead, stdoutWrite, stderrRead, stderrWrite }
+    struct PipeCloseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: (any Error)?
+        let roles: [PipeRole]
+        var errorDescription: String? { "Native metadata pipe ownership could not be settled. Retain needed source and stage access for review." }
     }
     struct Boundary: Sendable {
         var launched: @Sendable (pid_t) -> Void = { _ in }
@@ -30,6 +38,8 @@ enum CompanionMetadataProcess {
         var poll: @Sendable () -> Void = {}
         var settled: @Sendable (pid_t) -> Void = { _ in }
         var beforeReceipt: @Sendable () -> Void = {}
+        var closed: @Sendable (PipeRole, Int32, Int32) -> Void = { _, _, _ in }
+        var refuseClose: @Sendable (PipeRole) -> Bool = { _ in false }
     }
     #if DEBUG
     @TaskLocal static var testBoundary = Boundary()
@@ -112,7 +122,19 @@ enum CompanionMetadataProcess {
             posix_spawn(&pid, tool.url.path, &actions, &attributes, a.baseAddress!, e.baseAddress!)
         } }
         guard launched == 0, pid > 0 else { throw failure() }
-        stdout.closeWrite(); stderr.closeWrite()
+        var uncertain: [PipeRole] = []
+        func close(_ pipe: PipeEnds, read: Bool, role: PipeRole) {
+            if !pipe.closeChecked(read: read, role: role, boundary: boundary) { uncertain.append(role) }
+        }
+        func settledError(_ original: any Error) -> any Error {
+            guard !uncertain.isEmpty else { return original }
+            if original is any CompanionUnsettledOwnership {
+                return OwnershipFailure(reason: "earlier-ownership", operationError: original, pipeCloseRoles: uncertain)
+            }
+            return PipeCloseFailure(operationError: original, roles: uncertain)
+        }
+        // Close refusal is deferred until the SAME required process/body settlement.
+        close(stdout, read: false, role: .stdoutWrite); close(stderr, read: false, role: .stderrWrite)
         #if DEBUG
         boundary.launched(pid)
         #endif
@@ -128,7 +150,7 @@ enum CompanionMetadataProcess {
                 for (pipe, isOutput) in [(stdout, true), (stderr, false)] where pipe.read >= 0 {
                     var buffer = [UInt8](repeating: 0, count: 16_384)
                     let count = Darwin.read(pipe.read, &buffer, buffer.count)
-                    if count == 0 { pipe.closeRead() }
+                    if count == 0 { close(pipe, read: true, role: isOutput ? .stdoutRead : .stderrRead) }
                     else if count > 0 {
                         if isOutput {
                             try parser.accept(Data(buffer.prefix(count)))
@@ -153,11 +175,11 @@ enum CompanionMetadataProcess {
         } catch {
             let original = error
             // An unexpected external reap removes PID ownership; never signal it.
-            guard !reaped else { throw OwnershipFailure(reason:"unexpected-reap") }
+            guard !reaped else { throw OwnershipFailure(reason:"unexpected-reap", operationError: original, pipeCloseRoles: uncertain) }
             let signal = Darwin.kill(-pid, SIGKILL), signalError = errno
             let groupStopped = signal == 0 || signalError == ESRCH
             if !groupStopped { _ = Darwin.kill(pid, SIGKILL) }
-            stdout.closeRead(); stderr.closeRead()
+            close(stdout, read: true, role: .stdoutRead); close(stderr, read: true, role: .stderrRead)
             if !reaped {
                 var waited: pid_t
                 repeat { waited = waitpid(pid, &status, 0) } while waited < 0 && errno == EINTR
@@ -166,18 +188,23 @@ enum CompanionMetadataProcess {
             #if DEBUG
             boundary.settled(pid)
             #endif
-            guard groupStopped, reaped else { throw OwnershipFailure(reason:"group-\(signalError)-joined-\(reaped)") }
-            throw original
+            guard groupStopped, reaped else { throw OwnershipFailure(reason:"group-\(signalError)-joined-\(reaped)", operationError: original, pipeCloseRoles: uncertain) }
+            throw settledError(original)
         }
-        stdout.closeRead(); stderr.closeRead()
-        #if DEBUG
-        boundary.settled(pid); boundary.beforeReceipt()
-        #endif
-        try check(); try input.check(); try executable.check()
-        guard status & 0x7f == 0 else { throw failure() }
-        let result = try parser.finish(status: (status >> 8) & 0xff)
-        guard try input.digest(check: check) == fingerprint.sha256 else { throw failure() }
-        try input.check(); try executable.check(); try check(); return result
+        close(stdout, read: true, role: .stdoutRead); close(stderr, read: true, role: .stderrRead)
+        let result: CompanionMetadataStream.Receipt
+        do {
+            #if DEBUG
+            boundary.settled(pid); boundary.beforeReceipt()
+            #endif
+            try check(); try input.check(); try executable.check()
+            guard status & 0x7f == 0 else { throw failure() }
+            result = try parser.finish(status: (status >> 8) & 0xff)
+            guard try input.digest(check: check) == fingerprint.sha256 else { throw failure() }
+            try input.check(); try executable.check(); try check()
+        } catch { throw settledError(error) }
+        guard uncertain.isEmpty else { throw PipeCloseFailure(operationError: nil, roles: uncertain) }
+        return result
     }
     private final class PipeEnds {
         var read: Int32, write: Int32
@@ -193,6 +220,21 @@ enum CompanionMetadataProcess {
         deinit { closeRead(); closeWrite() }
         func closeRead() { if read >= 0 { Darwin.close(read); read = -1 } }
         func closeWrite() { if write >= 0 { Darwin.close(write); write = -1 } }
+        // Only actual admitted postspawn roles use this checked path. Constructor,
+        // prelaunch and fallback/deinit outcomes remain separate qualifications.
+        func closeChecked(read reading: Bool, role: PipeRole, boundary: Boundary) -> Bool {
+            let number = reading ? read : write
+            guard number >= 0 else { return true }
+            if reading { read = -1 } else { write = -1 }
+            let status = Darwin.close(number), code: Int32 = status == 0 ? 0 : errno
+            #if DEBUG
+            boundary.closed(role, status, code)
+            let reported = status == 0 && boundary.refuseClose(role)
+            #else
+            let reported = false
+            #endif
+            return status == 0 && !reported
+        }
         func nonblock(_ fd: Int32) throws { let flags = fcntl(fd, F_GETFL); guard flags >= 0, fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0 else { throw failure() } }
     }
     private final class Pin {

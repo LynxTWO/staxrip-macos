@@ -3,7 +3,7 @@ import Darwin
 
 // Local intent and historical status only. Reading this never starts a process or deletes media.
 struct BatchJournal: Codable {
-    var version = 9
+    var version = 10
     var jobs: [QueueJob]
     var statuses: [UUID: BatchStatus]
     var updated = Date()
@@ -45,7 +45,10 @@ struct BatchJournal: Codable {
     #endif
 
     func validated() throws -> Self {
-        guard (1...9).contains(version) else { throw SessionError.invalid("Unsupported batch recovery version.") }
+        guard (1...10).contains(version) else { throw SessionError.invalid("Unsupported batch recovery version.") }
+        guard version >= 10 || jobs.allSatisfy({ $0.configuration.colorMode != DolbyConversionIntent.hdr10Copy && $0.configuration.dolbyLossAcknowledgement == nil }) else {
+            throw SessionError.invalid("Dolby conversion intent requires recovery version 10.")
+        }
         guard version >= 9 || jobs.allSatisfy({ $0.configuration.hevcBufferLimits == nil }) else {
             throw SessionError.invalid("HEVC buffer limits require recovery version 9.")
         }

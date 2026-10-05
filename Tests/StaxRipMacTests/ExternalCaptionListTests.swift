@@ -14,7 +14,7 @@ struct ExternalCaptionListTests {
         let item = job(c)
         let session = SessionDocument(sourcePath: item.source, configuration: c, outputFolder: "/generated", outputStem: "workspace", jobs: [item])
         let restored = try JSONDecoder().decode(SessionDocument.self, from: JSONEncoder().encode(session)).validated()
-        #expect(restored.version == 10 && restored.configuration.externalCaptions == [b, a])
+        #expect(restored.version == 11 && restored.configuration.externalCaptions == [b, a])
         #expect(restored.jobs[0].configuration.externalCaptions == [b, a])
         #expect(restored.configuration.externalCaptions.allSatisfy { $0.access == nil })
         for version in 1...7 {
@@ -28,7 +28,7 @@ struct ExternalCaptionListTests {
         }
         let journal = BatchJournal(jobs: [item], statuses: [item.id: BatchStatus(phase: "Verifying")])
         let recovery = try JSONDecoder().decode(BatchJournal.self, from: JSONEncoder().encode(journal)).validated()
-        #expect(recovery.version == 9 && recovery.jobs[0].configuration.externalCaptions == [b, a])
+        #expect(recovery.version == 10 && recovery.jobs[0].configuration.externalCaptions == [b, a])
         #expect(recovery.restoredStatuses()[item.id]?.phase == "Interrupted")
         for version in 1...6 {
             var old = journal; old.version = version

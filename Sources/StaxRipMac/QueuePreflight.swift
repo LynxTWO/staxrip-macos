@@ -43,6 +43,7 @@ enum QueuePreflight {
     static func inspect(_ job: QueueJob, tools: FFmpegTools, encoders: Set<String>, timeout: Double = 15) async throws -> QueueCheck {
         guard !job.isDemo else { throw NativeExportError.invalid("Demo source: open a real video and add its configuration.") }
         try SessionDocument.validate(job.configuration)
+        try DolbyConversionIntent.requireRunnable(job.configuration)
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         guard job.source.hasPrefix("/"), job.destination.hasPrefix("/"), ![job.source, job.destination].contains(where: { $0.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) }) else {
             throw NativeExportError.invalid("Source and destination must be valid absolute local paths.")

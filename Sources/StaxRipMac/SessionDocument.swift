@@ -2,7 +2,7 @@ import Foundation
 
 struct SessionDocument: Codable, Equatable {
     var format = "staxrip-mac-session"
-    var version = 10
+    var version = 11
     var sourcePath: String?
     var configuration: EncodeConfiguration
     var outputFolder: String
@@ -10,7 +10,7 @@ struct SessionDocument: Codable, Equatable {
     var jobs: [QueueJob]
 
     func validated() throws -> SessionDocument {
-        guard format == "staxrip-mac-session", (1...10).contains(version) else {
+        guard format == "staxrip-mac-session", (1...11).contains(version) else {
             throw SessionError.invalid("This session version is not supported.")
         }
         guard jobs.count <= 1000 else { throw SessionError.invalid("This session contains too many queue items.") }
@@ -29,16 +29,21 @@ struct SessionDocument: Codable, Equatable {
         guard version >= 10 || ([configuration] + jobs.map(\.configuration)).allSatisfy({ $0.hevcBufferLimits == nil }) else {
             throw SessionError.invalid("HEVC buffer limits require session version 10.")
         }
+        guard version >= 11 || ([configuration] + jobs.map(\.configuration)).allSatisfy({ $0.colorMode != DolbyConversionIntent.hdr10Copy && $0.dolbyLossAcknowledgement == nil }) else {
+            throw SessionError.invalid("Dolby conversion intent requires session version 11.")
+        }
         let chapterCount = (configuration.chapterEdits?.entries.count ?? 0) + jobs.reduce(0) { $0 + ($1.configuration.chapterEdits?.entries.count ?? 0) }
         guard chapterCount <= 10000 else { throw SessionError.invalid("A session can store at most 10000 authored chapter entries across its workspace and queue.") }
         try Self.validate(configuration)
         try Self.validatePath(outputFolder)
         if let path = sourcePath { try Self.validatePath(path) }
+        try Self.validateAcknowledgement(configuration, source: sourcePath)
         guard WorkspaceModel.filenameIssue(outputStem) == nil else { throw SessionError.invalid("The output name is invalid.") }
         guard Set(jobs.map(\.id)).count == jobs.count else { throw SessionError.invalid("Queue item IDs must be unique.") }
         var destinations = Set<String>()
         for job in jobs {
             try Self.validate(job.configuration)
+            try Self.validateAcknowledgement(job.configuration, source: job.isDemo ? nil : job.source)
             if !job.isDemo { try Self.validatePath(job.source) }
             try Self.validatePath(job.destination)
             let url = URL(fileURLWithPath: job.destination)
@@ -56,6 +61,14 @@ struct SessionDocument: Codable, Equatable {
         return self
     }
 
+    static func validateAcknowledgement(_ config: EncodeConfiguration, source: String?) throws {
+        if let acknowledgement = config.dolbyLossAcknowledgement {
+            guard let source, URL(fileURLWithPath: source).standardizedFileURL.path == acknowledgement.sourcePath else {
+                throw SessionError.invalid("Dolby Vision loss acknowledgement belongs to a different source. Review this source again.")
+            }
+        }
+    }
+
     private static func validatePath(_ value: String) throws {
         guard value.hasPrefix("/"), !value.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
             throw SessionError.invalid("Session paths must be absolute local paths.")
@@ -63,6 +76,7 @@ struct SessionDocument: Codable, Equatable {
     }
 
     static func validate(_ config: EncodeConfiguration) throws {
+        try DolbyConversionIntent.validate(config)
         try config.validateExternalCaptions()
         try config.chapterEdits?.validate()
         if let limits = config.hevcBufferLimits {
@@ -74,7 +88,7 @@ struct SessionDocument: Codable, Equatable {
                 throw SessionError.invalid("Target bitrate exceeds the custom HEVC peak limit.")
             }
         }
-        guard ["SDR", "Preserve static HDR10"].contains(config.colorMode) else {
+        guard ["SDR", "Preserve static HDR10", DolbyConversionIntent.hdr10Copy].contains(config.colorMode) else {
             throw SessionError.invalid("Unknown video color intent.")
         }
         guard ["Software", "Apple hardware"].contains(config.rate.backend),

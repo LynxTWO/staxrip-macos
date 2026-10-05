@@ -2724,3 +2724,7 @@ D173: actual generated P7/L6/CCID6/MEL source inspection in an isolated native a
 
 
 D174: Implement the explicitly approved active-work cancellation repair. The same 20 ms delay starts at consumed PCM or a written render chunk with work remaining; the five-second bound and original preservation/publication/cleanup assertions remain. Checked reader closes are opt-in only within the reviewed preparation consumer, and renderer closes retain original causes. Same concrete resources and scratch survive close uncertainty after error and Task drop. Other callers and the ChapterPlan queue remain unchanged. See [active-work cancellation evidence](ACTIVE-WORK-CANCELLATION-EVIDENCE.md). This completes a finite M5 repair, not the native Dolby conversion journey; all M1-M5 remain open.
+
+### D175 configuration consumer
+
+Native HDR10 base-layer-copy intent and inspected-source loss acknowledgement are separate from execution qualification. Current schema boundaries, source-change/preset behavior and actual workspace restore are tested; unqualified execution is explicitly refused. The next acceptance unit is the complete route-specific source/output verifier and concrete queue integration, followed by isolated native publication/result behavior. P8.1, tone-mapped SDR and all M1-M5 remain open. D175 evidence records the finite generated hvcC comparison and the still-failing exact D174 hosted cancellation run; no local pass resolves it.

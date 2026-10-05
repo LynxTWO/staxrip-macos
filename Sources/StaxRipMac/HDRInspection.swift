@@ -62,3 +62,46 @@ enum HDRInspection {
         return result
     }
 }
+
+
+// Saved user intent, never an admission or output-verification receipt. Execution
+// must independently bind this content identity and qualify the complete route.
+struct DolbyLossAcknowledgement: Codable, Equatable, Sendable {
+    let sourcePath: String
+    let sha256: String
+    let bytes: Int64
+
+    init(source: URL, fingerprint: SourceFingerprint) throws {
+        sourcePath = source.standardizedFileURL.path
+        sha256 = fingerprint.sha256; bytes = fingerprint.byteCount
+        try validate()
+    }
+    func validate() throws {
+        guard sourcePath.hasPrefix("/"), sourcePath.utf8.count <= 16384,
+              !sourcePath.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
+              URL(fileURLWithPath: sourcePath).standardizedFileURL.path == sourcePath,
+              bytes > 0, bytes <= DolbyInspection.maximumFileBytes,
+              sha256.count == 64, sha256.utf8.allSatisfy({ (48...57).contains($0) || (97...102).contains($0) }) else {
+            throw SessionError.invalid("Invalid source identity for Dolby Vision loss acknowledgement.")
+        }
+    }
+    func matches(source: URL, fingerprint: SourceFingerprint) -> Bool {
+        source.standardizedFileURL.path == sourcePath && sha256 == fingerprint.sha256 && bytes == fingerprint.byteCount
+    }
+}
+
+enum DolbyConversionIntent {
+    static let hdr10Copy = "HDR10 base-layer copy"
+    static let unavailable = "HDR10 base-layer copy is not available for execution yet. Complete source and output verification must be qualified before this route can run. No output was created."
+    static func validate(_ configuration: EncodeConfiguration) throws {
+        if let acknowledgement = configuration.dolbyLossAcknowledgement {
+            try acknowledgement.validate()
+            guard configuration.colorMode == hdr10Copy else {
+                throw SessionError.invalid("Dolby Vision loss acknowledgement belongs only to HDR10 base-layer copy.")
+            }
+        }
+    }
+    static func requireRunnable(_ configuration: EncodeConfiguration) throws {
+        if configuration.colorMode == hdr10Copy { throw NativeExportError.invalid(unavailable) }
+    }
+}

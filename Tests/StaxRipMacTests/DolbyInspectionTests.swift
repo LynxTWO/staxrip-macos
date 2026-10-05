@@ -181,3 +181,94 @@ struct DolbyInspectionTests {
     }
 
 }
+
+import Foundation
+import Testing
+@testable import StaxRipMac
+
+@MainActor
+struct DolbyConversionIntentTests {
+    private let first = URL(fileURLWithPath: "/generated-dolby-intent/first.mkv")
+    private let second = URL(fileURLWithPath: "/generated-dolby-intent/second.mkv")
+    private var fingerprint: SourceFingerprint { .init(sha256: String(repeating: "a", count: 64), byteCount: 1234) }
+    private func configuration() throws -> EncodeConfiguration {
+        var c = EncodeConfiguration()
+        c.selectCodec("Copy original"); c.colorMode = DolbyConversionIntent.hdr10Copy
+        c.dolbyLossAcknowledgement = try .init(source: first, fingerprint: fingerprint)
+        return c
+    }
+
+    @Test func acknowledgementBindsContentAndSelectionAndCannotMoveThroughPresetOrUndo() throws {
+        let c = try configuration(), ack = try #require(c.dolbyLossAcknowledgement)
+        #expect(ack.matches(source: first, fingerprint: fingerprint))
+        #expect(!ack.matches(source: second, fingerprint: fingerprint))
+        #expect(!ack.matches(source: first, fingerprint: .init(sha256: String(repeating: "b", count: 64), byteCount: 1234)))
+        #expect(!ack.matches(source: first, fingerprint: .init(sha256: fingerprint.sha256, byteCount: 1235)))
+        let model = WorkspaceModel(); model.sourceURL = first; model.config = c
+        model.sourceURL = second
+        #expect(model.config.dolbyLossAcknowledgement == nil)
+        model.undoSettings()
+        #expect(model.config.dolbyLossAcknowledgement == nil)
+        var changed = c; changed.colorMode = "SDR"
+        #expect(changed.dolbyLossAcknowledgement == nil)
+        let recipe = CustomPreset.recipe(c)
+        #expect(recipe.colorMode == DolbyConversionIntent.hdr10Copy)
+        #expect(recipe.dolbyLossAcknowledgement == nil)
+        let preset = CustomPreset(name: "HDR10 copy intent", configuration: recipe)
+        #expect(try preset.applying(to: c).dolbyLossAcknowledgement == nil)
+        #expect(throws: (any Error).self) { try CustomPreset(name: "Invalid consent transfer", configuration: c).validate() }
+    }
+
+    @Test func savedIntentVersionAndSourceBindingsAreStrictWithoutTouchingNormalJournal() throws {
+        let c = try configuration()
+        let job = QueueJob(id: UUID(), source: first.path, isDemo: false, destination: "/generated-dolby-intent/output.mkv", configuration: c, created: Date(timeIntervalSince1970: 1000))
+        let session = SessionDocument(sourcePath: first.path, configuration: c, outputFolder: "/generated-dolby-intent", outputStem: "output", jobs: [job])
+        let encoder = JSONEncoder(), decoder = JSONDecoder()
+        let restored = try decoder.decode(SessionDocument.self, from: encoder.encode(session)).validated()
+        #expect(restored == session)
+        let workspace = WorkspaceModel(); workspace.restoreSession(restored)
+        #expect(workspace.config.dolbyLossAcknowledgement == c.dolbyLossAcknowledgement)
+        #expect(workspace.sessionSnapshot == restored)
+        #expect(workspace.sourceNeedsReview)
+        var old = session; old.version = 10
+        #expect(throws: (any Error).self) { try old.validated() }
+        var mismatched = session; mismatched.sourcePath = second.path
+        #expect(throws: (any Error).self) { try mismatched.validated() }
+        var oldOrdinary = SessionDocument(configuration: EncodeConfiguration(), outputFolder: "/", outputStem: "old", jobs: [])
+        oldOrdinary.version = 1
+        #expect(try oldOrdinary.validated() == oldOrdinary)
+        let journal = BatchJournal(jobs: [job], statuses: [:])
+        #expect(try decoder.decode(BatchJournal.self, from: encoder.encode(journal)).validated().jobs == [job])
+        var oldJournal = journal; oldJournal.version = 9
+        #expect(throws: (any Error).self) { try oldJournal.validated() }
+        let preset = CustomPreset(name: "Copy intent", configuration: CustomPreset.recipe(c))
+        #expect(try PresetDocument.decode(PresetDocument(presets: [preset]).encoded()).presets == [preset])
+        var oldPreset = PresetDocument(presets: [preset]); oldPreset.version = 2
+        #expect(throws: (any Error).self) { try oldPreset.validated() }
+        var malformed = try #require(JSONSerialization.jsonObject(with: encoder.encode(c)) as? [String: Any])
+        malformed["dolbyLossAcknowledgement"] = ["sourcePath": first.path, "sha256": "bad", "bytes": -1]
+        let decoded = try decoder.decode(EncodeConfiguration.self, from: JSONSerialization.data(withJSONObject: malformed))
+        #expect(throws: (any Error).self) { try SessionDocument.validate(decoded) }
+    }
+
+    @Test func inspectionReportIsBoundToItsSourceAndResetRevokesIt() async throws {
+        let controller = DolbyInspectionController(reader: { _, _, _ in try DolbyFixture.report() })
+        await controller.start(source: first, probe: try DolbyFixture.probe()).value
+        #expect(controller.report(for: first) != nil)
+        #expect(controller.report(for: second) == nil)
+        await controller.reset().value
+        #expect(controller.report(for: first) == nil)
+    }
+
+    @Test func savedAcknowledgementDoesNotAdmitUnqualifiedConversion() async throws {
+        let c = try configuration()
+        let job = QueueJob(id: UUID(), source: first.path, isDemo: false, destination: "/generated-dolby-intent/output.mkv", configuration: c, created: Date())
+        #expect(throws: (any Error).self) { try DolbyConversionIntent.requireRunnable(c) }
+        #expect(throws: (any Error).self) { try EncodePlan.make(job: job, probe: DolbyFixture.probe(), encoders: [], staged: second) }
+        // The explicit refusal happens before any source or destination access.
+        do {
+            _ = try await QueuePreflight.inspect(job, tools: FFmpegTools(ffmpeg: first, ffprobe: second), encoders: [])
+            Issue.record("Unqualified route was admitted")
+        } catch { #expect(error.localizedDescription == DolbyConversionIntent.unavailable) }
+    }
+}

@@ -206,6 +206,30 @@ struct CompanionOriginalSPSCheckTests {
         #expect(reads.contains{$0.0 == row.nalOffset+2 && $0.1 == 2})
         #expect(!row.prefix.completeSliceConformanceVerified && !r.summary.activePictureParameterSetSelectionVerified)
     }
+    @Test func parameterCropAdmissionRequiresVideoConfigurationAndUniqueVisibleVCLBeforeDecoder() async throws {
+        let root=FileManager.default.temporaryDirectory.appendingPathComponent("parameter-crop-admission-"+UUID().uuidString)
+        try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+        defer{print("GENERATED_PARAMETER_CROP_ADMISSION_REVIEW "+root.path)}
+        let video=element(0xe0,element(0xb0,Data([160]))+element(0xba,Data([96])))
+        let cases=[source(configuration([nal()]),vcl:[slice()],video:video),
+            source(references(),vcl:[slice(pps:1)],video:video),
+            source(references(),vcl:[slice(),slice()],video:video),
+            source(references(),video:video),source(references(),vcl:[slice(first:0)],video:video),
+            source(references(),vcl:[slice(type:22)],video:video),
+            source(references(),inBand:34,vcl:[slice()],video:video),
+            source(references(),vcl:[slice()],video:video,invisible:true),source(references(),vcl:[slice()])]
+        let tool=try DolbyDecoderProcess.Tool.developmentCrops(root.appendingPathComponent("Helpers/crop-probe"),
+            expectedSHA256:DolbySampleProcessTests.hash,libraries:Dictionary(uniqueKeysWithValues:DolbySampleProcessTests.names.map{($0,DolbySampleProcessTests.hash)}),versions:[1,1,1])
+        let request=try DolbyCropProcessTests.request()
+        for (index,bytes) in cases.enumerated() {
+            let input=root.appendingPathComponent(String(index)+".mkv"),folder=root.appendingPathComponent("spool"+String(index)),ledger=DecoderCloseObservations()
+            try bytes.write(to:input);try FileManager.default.createDirectory(at:folder,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
+            await DolbyDecoderProcess.$testBoundary.withValue(.init(launched:{ledger.launch($0)},closed:{ledger.close($0,$1,$2)})){
+                await #expect(throws:NativeExportError.self){try await CompanionDiskCheck.associateOriginalParameterCrops(source:input,in:folder,tool:tool,request:request)}
+            };ledger.expect([],launched:false)
+            #expect(try Data(contentsOf:input) == bytes)
+        }
+    }
     @Test func actualGeneratedVCLSourceCountsStorageCancellationAndFinalSelection() async throws {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent("source-vcl-native-"+UUID().uuidString)
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);defer{print("GENERATED_SOURCE_VCL_REVIEW "+root.path)}
@@ -283,12 +307,12 @@ struct CompanionOriginalSPSCheckTests {
         let size=UInt64(payload.count)|UInt64(1)<<(7*width)
         return Data(ids+(0..<width).reversed().map{UInt8(size>>(8*$0)&255)})+payload
     }
-    private func source(_ cfg: Data, inBand: UInt8? = nil, repeats: Int = 1, vcl: [Data] = [], times: [Int16]? = nil, rpuCopies: Int = 1) -> Data {
-        let track=element(0xae,element(0xd7,Data([1]))+element(0x83,Data([1]))+element(0x86,Data("V_MPEGH/ISO/HEVC".utf8))+element(0x63a2,cfg))
+    private func source(_ cfg: Data, inBand: UInt8? = nil, repeats: Int = 1, vcl: [Data] = [], times: [Int16]? = nil, rpuCopies: Int = 1, video: Data? = nil, invisible: Bool = false) -> Data {
+        let track=element(0xae,element(0xd7,Data([1]))+element(0x83,Data([1]))+element(0x86,Data("V_MPEGH/ISO/HEVC".utf8))+element(0x63a2,cfg)+(video ?? Data()))
         var packet=(0..<rpuCopies).reduce(Data()){d,_ in d+Data([0,0,0,3,0x7c,1,0xaa])}
         for n in vcl {let size=UInt32(n.count);packet.append(contentsOf:(0..<4).reversed().map{UInt8(size>>(8*$0)&255)});packet.append(n)}
         if let inBand {packet.append(contentsOf:[0,0,0,3,inBand<<1,1,0x80])}
-        let cluster=element(0x1f43b675,element(0xe7,Data([0]))+(times ?? [Int16](repeating:0,count:repeats)).reduce(Data()){d,t in let bits=UInt16(bitPattern:t);return d+element(0xa3,Data([0x81,UInt8(bits>>8),UInt8(bits&255),0x80])+packet)})
+        let cluster=element(0x1f43b675,element(0xe7,Data([0]))+(times ?? [Int16](repeating:0,count:repeats)).reduce(Data()){d,t in let bits=UInt16(bitPattern:t);return d+element(0xa3,Data([0x81,UInt8(bits>>8),UInt8(bits&255),invisible ? 0x88:0x80])+packet)})
         return element(0x1a45dfa3,element(0x4282,Data("matroska".utf8)))+element(0x18538067,element(0x1549a966,element(0x2ad7b1,Data([1])))+element(0x1654ae6b,track)+cluster)
     }
     private func view(_ d: Data) -> CompanionDiskCheck.ReadView {

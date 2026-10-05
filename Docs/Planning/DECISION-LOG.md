@@ -159,6 +159,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-150 | 2026-10-05 | Original configuration SPS geometry prefix binding | Confirmed | |
 | D-151 | 2026-10-05 | Source configuration parameter reference prefixes | Confirmed | |
 | D-152 | 2026-10-05 | Original first-slice VCL PPS prefix binding | Confirmed | |
+| D-153 | 2026-10-05 | Joint source parameter/VCL and fixed-decoder crop readback | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4585,3 +4586,53 @@ planning findings empty. New generated roots retained privately; no new compile/
 or ordinary retry. New narrow entry still requires explicit caller access/retention; full
 parameter/slice/activation, source origins/values/rendered/edited and other finite ownership/
 retirement/recovery/distribution gates remain open.
+
+
+## D-153: Compose original parameter/VCL prefixes and fixed-decoder crop on one owner
+
+Status: Confirmed
+
+Distinct unused associateOriginalParameterCrops combines D152 fresh source configuration
+references/single first-slice VCL readback, original Video declarations and D144 fixed crop
+decoder on the same pinned synchronous source/open SQLite worker. Original source/config/
+packet/RPU/exact rational clock/one-picture counts and final qualified observations/closes/
+worker-child-group-pipes settlement precede return. The two additional prefix bytes and
+finite pending records remain bounded; no second source pass/worker, closed-store adoption,
+protocol/default packaging/action/generic wrapper or recovery authority. Older APIs unchanged.
+
+Source SPS coded/conformance syntax, raw Video/presence/display and actual decoder geometry/
+caller request remain distinct. Two SPS-to-decoder equality booleans are comparisons without
+origin or required-equality policy. Active selection/full slice-parameter conformance, source
+ROI/value/rendered/edited remain false. Full source-frame/caller agreement derives from the
+existing complete composition, not prefix equality. See SOURCE-PARAMETER-CROP-EVIDENCE.md.
+Explicit caller source/spool access/retention is required; D149 controller does not
+automatically cover this new entry. Concrete access integration is the next prerequisite.
+
+New generated compatible trials exercise both spaces/threads/conformance/reorder, plausible
+changed Video declaration and actual settled fault paths; nine default source admission
+refusals launch zero decoders. Existing repaired source/config/packet/RPU/clock/geometry/
+statistic/coverage tests retain their distinctions and false flags. Static exact closure
+remains94 sources, executing prior preservation/review. Other full parameter/activation/
+origin/ownership/retirement/recovery/distribution gates remain open; no whole-program claim.
+
+
+Final ordinary601reported tests/105suites212.109s PASSED39 explicit opt-in skips (38unchanged
+plus new private actual joint case)/no emitted warnings. Combined source prefix13.490s/
+access33.759s/static prior companion32.511s passed. Explicit production21.60s/current strict
+ad-hoc app/read-only helper signatures/minima14.0/11.0 pass; writer/decoder/sample/crop
+absent. Six-file privacy zero/positive sentinel, owner metadata/journal/original sample-
+prefix-frozen-D130/D142/D143 captured artifacts unchanged, planning findings empty. New
+generated actual close-review and default admission roots retained privately; no new compile/
+test failure or ordinary retry.
+
+Parent PR127 automatic37303196861 failed599tests582.941s14issues: zero60s/two unchanged120s/
+two180s bounds plus ten other assertions (three decoder-surrogate absent-positive-child,
+four crop role-close/child, Fresh-analysis cancellation7.309678vs5 and Rendering-candidate/
+Measuring-encoded-candidate EOF expectations). Exact shared fixture preparation passed42s;
+source prefix75.749s/access273.563s/static258.642s passed. Full failed log/summary retained
+and parent updated without retry or individual cause attribution. D136 supported duplicate
+compilation correction is not attribution of every residual or exclusion of defects. Local
+passes do not resolve hosted failures. No historical observer/CI margin/assertion/deadline/
+skip/global suite-job scheduling/concurrency workaround. Explicit new access controller,
+full parameter/slice/active selection/origin/value/rendered/edited and other finite resource/
+retirement/recovery/distribution gates remain separate and open.

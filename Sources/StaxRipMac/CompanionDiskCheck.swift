@@ -210,6 +210,33 @@ enum CompanionDiskCheck {
         guard let vcl = result.5 else { throw failure() }
         return .init(source: result.0, parameters: vcl.parameters, vcl: vcl.summary)
     }
+    /// Joint original prefix references and settled fixed-decoder caller crop.
+    /// Geometry comparisons do not establish active selection or coordinate origins.
+    struct SourceParameterCropReceipt: Sendable {
+        let source: SourceSpoolReceipt
+        let decoder: DolbyDecoderStream.Receipt
+        let declarations: CompanionOriginalAuditCheck.Declarations
+        let effectiveDisplayDeclarations: [UInt64?]
+        let parameters: CompanionOriginalSPSCheck.ParameterReferences
+        let vcl: CompanionOriginalPacketCheck.VCLSummary
+        let originalVideoDeclarationsBoundToSource = true
+        let originalFirstSlicePPSPrefixesBoundToSource = true
+        let selectedPacketParameterSetNALsAbsent = true
+        let independentSourceFrameAssociationVerified = true
+        let originalSourceAndCallerCropAgreementVerified = true
+        let activePictureParameterSetSelectionVerified = false
+        let completeSliceAndParameterConformanceVerified = false
+        let independentSourceROIProvenanceVerified = false
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+        var sourceSPSPrefixEqualsDecoderCodedGeometry: Bool {
+            parameters.geometry.codedWidth == decoder.geometry.width &&
+            parameters.geometry.codedHeight == decoder.geometry.height
+        }
+        var sourceSPSPrefixEqualsDecoderConformanceWindow: Bool {
+            sourceSPSPrefixEqualsDecoderCodedGeometry && parameters.geometry.conformanceCrop == decoder.geometry.crop
+        }
+    }
     private struct DecoderRequest: Sendable {
         var profile: DolbyDecoderStream.Profile = .metadata
         let tool: DolbyDecoderProcess.Tool
@@ -261,6 +288,20 @@ enum CompanionDiskCheck {
         guard let decoder=result.1, let video=result.2 else { throw failure() }
         return try .init(source:result.0,decoder:decoder,declarations:video,
             effectiveDisplayDeclarations:video.displayWithMatroskaDefaults())
+    }
+    /// Caller holds explicit source/spool access and retention. Same worker/store;
+    /// full parameter/slice conformance and active picture selection remain false.
+    static func associateOriginalParameterCrops(source: URL, in directory: URL, tool: DolbyDecoderProcess.Tool,
+        request: DolbyDecoderStream.CropRequest, threads: Int = 4, timeout: Double = 120,
+        limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceParameterCropReceipt {
+        guard [1,4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw failure() }
+        let result = try await sourceWork(source: source, in: directory, limits: limits,
+            decoder: .init(profile: .cropSamples, tool: tool, threads: threads, timeout: timeout, cropRequest: request),
+            declaredVideo: true, vclReferences: true)
+        guard let decoder = result.1, let video = result.2, let vcl = result.5,
+              vcl.summary.prefixes == decoder.frames else { throw failure() }
+        return try .init(source: result.0, decoder: decoder, declarations: video,
+            effectiveDisplayDeclarations: video.displayWithMatroskaDefaults(), parameters: vcl.parameters, vcl: vcl.summary)
     }
     struct SourceOwnershipFailure: CompanionUnsettledOwnership { var operationError: Error? = nil }
     /// Finite file admission rollback only; later component/deinit closes remain separate.

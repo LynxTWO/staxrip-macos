@@ -27,6 +27,9 @@ final class DolbyAssociationSpool {
     private var decoderProfile: DolbyDecoderStream.Profile = .metadata
     private var sampleObservations: Int64 = 0
     private var pendingSample: (index: Int64, packet: Int64)?
+    private var decoderCropRequest: DolbyDecoderStream.CropRequest?
+    private var cropObservations: Int64 = 0
+    private var pendingCrop: (index: Int64, packet: Int64, rectangle: [Int])?
     private let ownerThread = pthread_self()
     private static let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
 
@@ -222,11 +225,13 @@ final class DolbyAssociationSpool {
     }
     /// Additional fixed disposable coverage only after source settlement. Source
     /// rows remain intact; unsupported multiplicity is refusal, never deduplication.
-    func startDecoderPass(profile: DolbyDecoderStream.Profile = .metadata) throws {
+    func startDecoderPass(profile: DolbyDecoderStream.Profile = .metadata,
+                          cropRequest: DolbyDecoderStream.CropRequest? = nil) throws {
         try operation(false) {
-            guard sealed, !decoderStarted, packets > 0, rpus == packets else { throw Failure.refused }
+            guard sealed, !decoderStarted, packets > 0, rpus == packets,
+                  (cropRequest != nil) == (profile == .cropSamples) else { throw Failure.refused }
             try sql("CREATE TABLE checked(idx INTEGER PRIMARY KEY, frame INTEGER NOT NULL)")
-            decoderProfile=profile; decoderStarted=true
+            decoderProfile=profile; decoderCropRequest=cropRequest; decoderStarted=true
         }
     }
     /// Typed sample callback precedes its raw frame on the same owning worker.
@@ -241,20 +246,32 @@ final class DolbyAssociationSpool {
             pendingSample = (frame.index, frame.packetIndex); sampleObservations += 1
         }
     }
+    /// Typed crop callback and its raw row must agree on the same worker. Only
+    /// indices and four coordinates survive until that row; pixels are not retained.
+    func acceptCropObservation(_ frame: DolbyDecoderStream.CropFrame) throws {
+        try operation(false) {
+            guard decoderProfile == .cropSamples, decoderStarted, decoderBegan, !decoderComplete,
+                  pendingCrop == nil, frame.index == decoderFrames,
+                  frame.packetIndex >= 0, frame.packetIndex < decoderPackets,
+                  cropObservations == decoderFrames, frame.request == decoderCropRequest,
+                  frame.codedRectangle.count == 4, frame.planes.count == 3 else { throw Failure.refused }
+            pendingCrop = (frame.index, frame.packetIndex, frame.codedRectangle); cropObservations += 1
+        }
+    }
     /// Called synchronously by D124's strict owning stream parser. This checks
     /// source relationships, not executable authenticity or joined EOF/status.
     func acceptDecoderRow(_ data: Data, track: CompanionOriginalTrackCheck.Receipt) throws {
         try operation(false) {
             guard sealed, decoderStarted, !decoderComplete else { throw Failure.refused }
             typealias J = CompanionArchiveJSON
-            let row=try J.object(data,maximum:65_535,decoderSampleFields:decoderProfile == .baseSamples), kind=try J.string(row,"kind")
+            let row=try J.object(data,maximum:65_535,decoderSampleFields:decoderProfile != .metadata), kind=try J.string(row,"kind")
             func n(_ key: String) throws -> Int64 {
                 Int64(try J.unsigned(row,key,0...UInt64(Int64.max)))
             }
             func time(_ key: String) throws -> Int64 { try Self.nanoseconds(J.signed(row,key),timeBase:decoderTimeBase) }
             switch kind {
-            case "begin", "sample-begin":
-                guard kind == (decoderProfile == .metadata ? "begin" : "sample-begin"), !decoderBegan, try n("input_bytes") == sourceBytes,
+            case "begin", "sample-begin", "crop-begin":
+                guard kind == (decoderProfile == .metadata ? "begin" : decoderProfile == .baseSamples ? "sample-begin" : "crop-begin"), !decoderBegan, try n("input_bytes") == sourceBytes,
                       try n("configuration_bytes") == track.configurationBytes,
                       try J.digest(row,"configuration_sha256") == track.configurationSHA256,
                       case .array(let base)? = row["time_base"], base.count == 2 else { throw Failure.refused }
@@ -262,8 +279,8 @@ final class DolbyAssociationSpool {
                     guard case .unsigned(let v)=item, (1...UInt64(Int32.max)).contains(v) else { throw Failure.refused }; return Int(v)
                 }
                 decoderBegan=true
-            case "packet":
-                guard decoderBegan, decoderPackets < packets, try n("index") == decoderPackets else { throw Failure.refused }
+            case "packet", "crop-packet":
+                guard kind == (decoderProfile == .cropSamples ? "crop-packet" : "packet"), decoderBegan, decoderPackets < packets, try n("index") == decoderPackets else { throw Failure.refused }
                 let original=try loadPacket(decoderPackets)
                 guard !original.invisible, try time("pts") == original.ptsNS,
                       try n("block_input_byte_offset") == original.blockOffset,
@@ -273,28 +290,42 @@ final class DolbyAssociationSpool {
                     try integer(q,1,decoderPackets); try checked(sqlite3_step(q))
                 }
                 decoderPackets += 1
-            case "frame", "sample-frame":
-                guard kind == (decoderProfile == .metadata ? "frame" : "sample-frame"), decoderBegan, decoderFrames < packets, try n("index") == decoderFrames else { throw Failure.refused }
+            case "frame", "sample-frame", "crop-frame":
+                guard kind == (decoderProfile == .metadata ? "frame" : decoderProfile == .baseSamples ? "sample-frame" : "crop-frame"), decoderBegan, decoderFrames < packets, try n("index") == decoderFrames else { throw Failure.refused }
                 let index=try n("packet_index")
                 guard index >= 0, index < decoderPackets else { throw Failure.refused }
                 if decoderProfile == .baseSamples {
                     guard pendingSample?.index == decoderFrames, pendingSample?.packet == index else { throw Failure.refused }
                     pendingSample = nil
                 } else { guard pendingSample == nil, sampleObservations == 0 else { throw Failure.refused } }
+                if decoderProfile == .cropSamples {
+                    guard let request=decoderCropRequest, pendingCrop?.index == decoderFrames,
+                          pendingCrop?.packet == index, try J.string(row,"request_space") == request.space.rawValue,
+                          case .array(let requested)? = row["requested_rect"],
+                          case .array(let coded)? = row["coded_rect"] else { throw Failure.refused }
+                    func coordinates(_ a: [J.Value]) throws -> [Int] {
+                        try a.map { v in guard case .unsigned(let n)=v, n <= 8192 else { throw Failure.refused }; return Int(n) }
+                    }
+                    guard try coordinates(requested) == request.rectangle,
+                          try coordinates(coded) == pendingCrop?.rectangle else { throw Failure.refused }
+                    pendingCrop = nil
+                } else { guard pendingCrop == nil, cropObservations == 0 else { throw Failure.refused } }
                 let original=try loadPacket(index), raw=try rpu(index)
                 guard !original.invisible, raw.packetIndex == index, raw.ptsNS == original.ptsNS,
                       try time("pts") == original.ptsNS, try time("packet_pts") == original.ptsNS,
-                      try time("best_effort_pts") == original.ptsNS,
                       try n("block_input_byte_offset") == original.blockOffset,
                       try n("packet_size") == original.encodedBytes,
                       try n("rpu_bytes") == raw.payloadBytes,
                       try J.digest(row,"rpu_sha256") == raw.sha256 else { throw Failure.refused }
+                // Crop schema has no best-effort clock. Never invent that fact.
+                if decoderProfile != .cropSamples { guard try time("best_effort_pts") == original.ptsNS else { throw Failure.refused } }
                 try statement("UPDATE checked SET frame=1 WHERE idx=? AND frame=0") { q in
                     try integer(q,1,index); try checked(sqlite3_step(q)); guard let db, sqlite3_changes(db) == 1 else { throw Failure.refused }
                 }
                 decoderFrames += 1
-            case "complete", "sample-complete":
-                guard kind == (decoderProfile == .metadata ? "complete" : "sample-complete"), pendingSample == nil,
+            case "complete", "sample-complete", "crop-complete":
+                guard kind == (decoderProfile == .metadata ? "complete" : decoderProfile == .baseSamples ? "sample-complete" : "crop-complete"), pendingSample == nil, pendingCrop == nil,
+                      cropObservations == (decoderProfile == .cropSamples ? packets : 0),
                       sampleObservations == (decoderProfile == .baseSamples ? packets : 0), decoderBegan, decoderPackets == packets, decoderFrames == packets,
                       try n("packets") == packets, try n("frames") == packets,
                       try scalar("SELECT COUNT(*) FROM checked") == packets,
@@ -308,7 +339,9 @@ final class DolbyAssociationSpool {
     /// matching source fingerprint/configuration and final source/tool settlement.
     func finishDecoderPass(_ result: DolbyDecoderStream.Receipt) throws {
         try operation(false) {
-            guard decoderComplete, pendingSample == nil,
+            guard decoderComplete, pendingSample == nil, pendingCrop == nil,
+                  result.cropFrameSummaryCount == cropObservations, result.cropRequest == decoderCropRequest,
+                  (result.cropColorDeclarations != nil) == (decoderProfile == .cropSamples),
                   result.sampleFrameSummaryCount == sampleObservations,
                   (result.sampleColorDeclarations != nil) == (decoderProfile == .baseSamples), result.packets == packets, result.frames == packets,
                   result.timeBase == decoderTimeBase,

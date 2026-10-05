@@ -2231,3 +2231,18 @@ Actual generated compatible22-trial/29-direct-join evidence includes retained co
 ownership uncertainty. See D-143 and NATIVE-CROP-PROCESS-EVIDENCE.md. Next source/open-spool
 crop binding and concrete access remain separate; row shape is not pixel/provenance proof.
 Container/user origin/rendered/color/EL/resize/edited/distribution/recovery gates stay open.
+
+
+### D144 original-source and caller crop association
+
+Explicit native crop composition now binds bounded typed/raw observations to independently
+reconstructed original source/config/packet/hash/offset/escaped RPU/exact clock/one-picture
+coverage on the existing source worker and OPEN SQLite store. Only complete counts/final
+observations/actual closes and joins return fixed decoder original-source/caller-request
+agreement. SAR/best-effort facts remain absent; no silent profile normalization. See D-144
+and NATIVE-SOURCE-CROP-ASSOCIATION-EVIDENCE.md. Container/user ROI provenance, independent
+sample values/rendered/linear/color/EL/resize/edits remain false/unqualified. Concrete crop
+access/activity ownership is next; no app action/default packaging/release capability or
+automatic spool cleanup. Stage retirement/other resources/recovery/import/distribution stay
+separate gates. Actual generated22 accepted cases/30direct joins include retained active
+group uncertainty; direct child join is not cleanup authority. No owner body/full-source run.

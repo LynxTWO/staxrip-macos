@@ -150,6 +150,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-141 | 2026-10-05 | Concrete stage owner retained through uncertain transaction/access review | Confirmed | |
 | D-142 | 2026-10-05 | Explicit decoded crop sample prerequisite | Confirmed | |
 | D-143 | 2026-10-05 | Native development crop role and admission | Confirmed | |
+| D-144 | 2026-10-05 | Native original-source and caller crop association | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4179,3 +4180,44 @@ signatures pass, minima14.0/11.0; writer/decoder/sample/crop absent. Copied DEVE
 signature/minimum14.0 checked separately, not hardened/DeveloperID trust. Seven-file privacy
 zero/positive sentinel, owner metadata/current journal/original D142/sample-prefix-frozen-
 D130/new runtime unchanged, planning empty. No UI/owner media/full-source/APFS/signing retry.
+
+
+## D-144: Bind native crop observations to original source and caller request
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+Distinct source/crop composition reuses the sole pinned source worker and OPEN SQLite
+coverage store, invoking fixed runOwnedCrops synchronously. Independent source TrackEntry/
+hvcC/encoded packet/hash/offset/escaped RPU/exact rational clock and one-picture coverage
+precede complete source/table/decoder/crop counts, final observations and actual closes/
+joins. Pending typed/raw indices plus finite caller coordinates stay bounded. No metadata/
+sample normalization, invented SAR/timestamp, second worker or app action follows.
+See NATIVE-SOURCE-CROP-ASSOCIATION-EVIDENCE.md. Complete source-frame/caller-ROI agreement
+is fixed decoder agreement; source ROI provenance/independent pixel/rendered/edited flags
+remain false. Container/user origin, linear/color/EL/resize/metadata conversion remain open.
+
+Corrected17tests2suites2.954s/final31tests6suites14.802s pass/no warnings, actual22 accepted
+both-space/thread/conformance/reorder trials/30 direct helpers. Three reported real-close
+refusals prevent completion; short active cancellation retains actual group-1-joined-true
+uncertainty, live repeated2000cluster cancellation ordinarily settles. Twelve plausible
+source forgeries and coverage/profile/request/count refusals pass. Original/runtime bytes
+unchanged; new test compile errors retained/corrected. Static93-source host runs prior
+companion pipeline, not crop loading. Full ordinary/build/protection outcomes follow.
+
+PR118 automatic37272448865 failed548tests486.835s36issues:21unchanged120s/seven180s plus
+eight other crop/metadata/sample child-role/phase assertions. Full log retained/PR118
+updated without retry; individual causes unestablished. No historical observer/assertion/
+deadline/skip/global scheduling change. Next concrete crop Access/spool/activity controller
+qualification remains separate; caller owns explicit folder/access. Retained stage pin
+retirement, other resource roles/recovery/distribution/rendered/edited gates stay open.
+
+
+Final ordinary552reported tests/104suites211.126s PASSED35 explicit opt-in skips (34 unchanged
+plus new private source/crop test), no emitted warnings. Explicit production20.92s/current
+strict ad-hoc app/read-only helper signatures and minima14.0/11.0 pass; writer/decoder/sample/
+crop absent. Seven-file privacy zero matches/positive sentinel, owner source metadata/current
+journal/original D142/sample-prefix-frozen-D130/D143 runtime unchanged, planning findings
+empty. No UI walkthrough, owner body/full-source, new C/sanitizer/oracle/APFS or signing retry.
+Retained stage retirement, standalone drop, other helper/disk resources, recovery/import/
+distribution/rendered/edited gates remain separately open. Concrete crop access/activity is
+next; complete source-dependent finding does not itself grant sandbox access or cleanup.

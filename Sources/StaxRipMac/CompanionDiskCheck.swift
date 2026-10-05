@@ -190,6 +190,28 @@ enum CompanionDiskCheck {
         guard let codingTree = result.6 else { throw failure() }
         return .init(source: result.0, codingTree: codingTree)
     }
+    struct SourceSegmentPrefixReceipt: Sendable {
+        let source: SourceSpoolReceipt
+        let segments: CompanionOriginalPacketCheck.SegmentReadback
+        let originalVCLSegmentPrefixesBoundToSource = true
+        let selectedPacketParameterSetNALsAbsent = true
+        let completeSliceAndParameterConformanceVerified = false
+        let pictureGroupingVerified = false
+        let activePictureParameterSetSelectionVerified = false
+        let independentSourceFrameAssociationVerified = false
+        let independentSourceROIProvenanceVerified = false
+        let independentSampleValuesVerified = false
+        let editedPictureSemanticsVerified = false
+    }
+    /// Caller retains explicit source/private-spool access on shared uncertainty.
+    /// Matching one segment prefix per packet is not a complete picture association.
+    static func spoolOriginalSourceSegmentPrefixes(source: URL, in directory: URL,
+        limits: DolbyAssociationSpool.Limits = .init()) async throws -> SourceSegmentPrefixReceipt {
+        let result = try await sourceWork(source: source, in: directory, limits: limits,
+                                         decoder: nil, segmentPrefixes: true)
+        guard let segments = result.7 else { throw failure() }
+        return .init(source: result.0, segments: segments)
+    }
     struct SourceParameterReferencesReceipt: Sendable {
         let source: SourceSpoolReceipt
         let references: CompanionOriginalSPSCheck.ParameterReferences
@@ -340,7 +362,7 @@ enum CompanionDiskCheck {
         try await sourceWork(source:source,in:directory,limits:limits,decoder:nil).0
     }
     private static func sourceWork(source: URL, in directory: URL, limits: DolbyAssociationSpool.Limits,
-                                   decoder: DecoderRequest?, declaredVideo: Bool = false, sourceSPSPrefix: Bool = false, parameterReferences: Bool = false, vclReferences: Bool = false, codingTreePrefix: Bool = false) async throws -> (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?,CompanionOriginalSPSCheck.GeometryPrefix?,CompanionOriginalSPSCheck.ParameterReferences?,CompanionOriginalPacketCheck.VCLReadback?,CompanionOriginalSPSCheck.CodingTreePrefix?) {
+                                   decoder: DecoderRequest?, declaredVideo: Bool = false, sourceSPSPrefix: Bool = false, parameterReferences: Bool = false, vclReferences: Bool = false, codingTreePrefix: Bool = false, segmentPrefixes: Bool = false) async throws -> (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?,CompanionOriginalSPSCheck.GeometryPrefix?,CompanionOriginalSPSCheck.ParameterReferences?,CompanionOriginalPacketCheck.VCLReadback?,CompanionOriginalSPSCheck.CodingTreePrefix?,CompanionOriginalPacketCheck.SegmentReadback?) {
         try Task.checkCancellation()
         let cancelled = Cancellation()
         #if DEBUG
@@ -352,7 +374,7 @@ enum CompanionDiskCheck {
         let decoderBoundary = DolbyDecoderProcess.Boundary()
         let spoolBoundary = DolbyAssociationSpool.AdmissionBoundary()
         #endif
-        let result: (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?,CompanionOriginalSPSCheck.GeometryPrefix?,CompanionOriginalSPSCheck.ParameterReferences?,CompanionOriginalPacketCheck.VCLReadback?,CompanionOriginalSPSCheck.CodingTreePrefix?) = try await withTaskCancellationHandler {
+        let result: (SourceSpoolReceipt,DolbyDecoderStream.Receipt?,CompanionOriginalAuditCheck.Declarations?,CompanionOriginalSPSCheck.GeometryPrefix?,CompanionOriginalSPSCheck.ParameterReferences?,CompanionOriginalPacketCheck.VCLReadback?,CompanionOriginalSPSCheck.CodingTreePrefix?,CompanionOriginalPacketCheck.SegmentReadback?) = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue(label: "StaxRip.original-source-spool", qos: .userInitiated).async {
                     continuation.resume(with: Result {
@@ -380,13 +402,19 @@ enum CompanionDiskCheck {
                                     guard timing == nil else { throw failure() }; timing = (scale, unknown)
                                 }
                                 let vcl: CompanionOriginalPacketCheck.VCLReadback?
+                                let segments: CompanionOriginalPacketCheck.SegmentReadback?
                                 let packets: CompanionOriginalPacketCheck.Receipt
-                                if vclReferences {
+                                if segmentPrefixes {
+                                    let actual = try CompanionOriginalPacketCheck.readSourceSegmentPrefixes(view, track: track,
+                                        begin: begin, observe: { try spool.append($0) })
+                                    segments = actual; vcl = nil; packets = actual.packets
+                                } else if vclReferences {
+                                    segments = nil
                                     let actual = try CompanionOriginalPacketCheck.readSourceVCLReferences(view, track: track,
                                         begin: begin, observe: { try spool.append($0) })
                                     vcl = actual; packets = actual.packets
                                 } else {
-                                    vcl = nil
+                                    segments = nil; vcl = nil
                                     packets = try CompanionOriginalPacketCheck.readSource(view, track: track, begin: begin,
                                         observe: { try spool.append($0) }, refuseInBandParameterSets: sourceSPSPrefix || parameterReferences || codingTreePrefix)
                                 }
@@ -424,7 +452,7 @@ enum CompanionDiskCheck {
                                 boundary.beforeFinal()
                                 try file.check(source); try cancelled.check()
                                 return (SourceSpoolReceipt(sourceID: file.id, sourceBytes: file.bytes, sourceSHA256: hash,
-                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1),decoded,video,sps,references,vcl,codingTree)
+                                    track: track, packets: packets, timestampScale: timing.0, unknownSegment: timing.1),decoded,video,sps,references,vcl,codingTree,segments)
                             }
                             try file.check(source); try cancelled.check()
                             return receipt

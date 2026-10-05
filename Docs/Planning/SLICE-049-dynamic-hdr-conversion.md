@@ -2386,3 +2386,15 @@ remain separate from full SPS/VPS/level/transform/slice validity or active pictu
 D-155 and SOURCE-SPS-CODING-TREE-PREFIX-EVIDENCE.md. No decoder/controller/action is added;
 explicit caller access remains required. Non-first/dependent slice-address admission and
 full conformance/active/origin/value/rendered/edited remain later separate prerequisites.
+
+
+### D156 original VCL segment prefix/reference/address binding
+
+The unused source-only entry reuses fresh D155 parameter/coded-grid binding and incrementally
+reads first/non-first/dependent PPS/address syntax within seven encoded payload bytes on the
+same pinned source/open SQLite worker. Complete original source/table/final checked settlement
+precedes return. D152/D153 stay narrower; no decoder/controller is added. See D-156 and
+SOURCE-VCL-SEGMENT-PREFIX-EVIDENCE.md. Synthetic non-first/dependent cases do not establish
+picture grouping/activation/full conformance or coordinate origin/value/rendered/edited proof.
+Next concrete explicit source/spool access integration remains separate; other ownership and
+distribution gates remain open.

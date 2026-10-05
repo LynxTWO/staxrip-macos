@@ -204,6 +204,80 @@ enum CompanionOriginalSPSCheck {
             encodedPrefixBytes: prefix.count, noOutputOfPriorPics: prior,
             prefixSHA256: DolbyInspection.hex(SHA256.hash(data: header + prefix)))
     }
+    /// Prefix declarations only. Nil records syntax absence, not an inferred value.
+    struct SliceSegmentPrefix: Sendable, Equatable {
+        let nalType, ppsID, prefixBits, encodedPrefixBytes: Int
+        let firstSliceSegmentInPicture: Bool
+        let noOutputOfPriorPics, dependentSliceSegment: Bool?
+        let address: Int?
+        let prefixSHA256: String
+        let completeSliceConformanceVerified = false
+        let activePictureParameterSetSelectionVerified = false
+    }
+    /// At most36 syntax bits plus one opaque following bit = five RBSP bytes.
+    /// At most two EPBs can precede them: seven encoded payload bytes, never pictures.
+    static func readSliceSegmentPrefix(header: Data, payloadBytes: Int64,
+        grid: CodingTreePrefix, readByte: @escaping (Int) throws -> UInt8) throws -> SliceSegmentPrefix {
+        guard header.count == 2, header[0] & 0x81 == 0, header[1] == 1,
+              payloadBytes > 0, payloadBytes <= 1 << 40, (1...(1 << 20)).contains(grid.ctbs),
+              grid.addressBits == (grid.ctbs == 1 ? 0 : Int.bitWidth-(grid.ctbs-1).leadingZeroBitCount) else { throw refused() }
+        let type = Int(header[0] >> 1 & 63)
+        guard (0...1).contains(type) || (6...9).contains(type) || (16...21).contains(type) else { throw refused() }
+        var bits = SegmentBits(payloadBytes: payloadBytes, byte: readByte)
+        let first = try bits.read(1) == 1
+        let prior = (16...21).contains(type) ? try bits.read(1) == 1 : nil
+        let pps = try bits.ppsID()
+        guard pps == grid.parameters.ppsID else { throw refused() }
+        let dependent: Bool?, address: Int?
+        if first { dependent = nil; address = nil }
+        else {
+            dependent = grid.parameters.dependentSliceSegmentsEnabled ? try bits.read(1) == 1 : nil
+            let value = try bits.read(grid.addressBits)
+            guard value < grid.ctbs else { throw refused() }
+            address = value
+        }
+        let count = bits.position
+        _ = try bits.read(1) // Presence of an opaque following bit; no suffix semantics.
+        return .init(nalType: type, ppsID: pps, prefixBits: count, encodedPrefixBytes: bits.encoded.count,
+            firstSliceSegmentInPicture: first, noOutputOfPriorPics: prior,
+            dependentSliceSegment: dependent, address: address,
+            prefixSHA256: DolbyInspection.hex(SHA256.hash(data: header + bits.encoded)))
+    }
+    private struct SegmentBits {
+        let payloadBytes: Int64, byte: (Int) throws -> UInt8
+        var encoded = Data(), position = 0, zeros = 0, remaining = 0
+        var current: UInt8 = 0
+        mutating func encodedByte() throws -> UInt8 {
+            guard encoded.count < 7, Int64(encoded.count) < payloadBytes else { throw refused() }
+            let b = try byte(encoded.count); encoded.append(b); return b
+        }
+        mutating func rbspByte() throws -> UInt8 {
+            var b = try encodedByte()
+            if zeros == 2 {
+                guard b >= 3 else { throw refused() }
+                if b == 3 {
+                    b = try encodedByte(); guard b <= 3 else { throw refused() }; zeros = 0
+                }
+            }
+            zeros = b == 0 ? zeros+1 : 0
+            return b
+        }
+        mutating func read(_ count: Int) throws -> Int {
+            guard (0...20).contains(count), count <= 37-position else { throw refused() }
+            var value = 0
+            for _ in 0..<count {
+                if remaining == 0 { current = try rbspByte(); remaining = 8 }
+                remaining -= 1; value = value << 1 | Int(current >> remaining & 1); position += 1
+            }
+            return value
+        }
+        mutating func ppsID() throws -> Int {
+            var zeros = 0
+            while try read(1) == 0 { zeros += 1; guard zeros <= 6 else { throw refused() } }
+            let value = (1 << zeros)-1 + (try read(zeros))
+            guard value <= 63 else { throw refused() }; return value
+        }
+    }
     private static func rbsp(_ nal: Data, type: UInt8, checkpoint: () throws -> Void) throws -> Data {
         guard nal.count > 2, nal[0] == type << 1, nal[1] == 1, nal.last != 0 else { throw refused() }
         var result = Data(), zeros = 0, i = 2

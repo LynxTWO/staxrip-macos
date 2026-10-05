@@ -32,6 +32,12 @@ enum CompanionMetadataProcess {
         let roles: [PipeRole]
         var errorDescription: String? { "Native metadata pipe ownership could not be settled. Retain needed source and stage access for review." }
     }
+    struct NullCloseFailure: CompanionUnsettledOwnership, LocalizedError {
+        let operationError: (any Error)?
+        let closeStatus, closeErrno: Int32
+        let reportedAfterActualClose: Bool
+        var errorDescription: String? { "Native metadata input ownership could not be settled. Retain needed source and stage access for review." }
+    }
     struct Boundary: Sendable {
         var launched: @Sendable (pid_t) -> Void = { _ in }
         var row: @Sendable (Data) -> Void = { _ in }
@@ -40,6 +46,8 @@ enum CompanionMetadataProcess {
         var beforeReceipt: @Sendable () -> Void = {}
         var closed: @Sendable (PipeRole, Int32, Int32) -> Void = { _, _, _ in }
         var refuseClose: @Sendable (PipeRole) -> Bool = { _ in false }
+        var nullClosed: @Sendable (Int32, Int32) -> Void = { _, _ in }
+        var refuseNullClose: @Sendable () -> Bool = { false }
     }
     #if DEBUG
     @TaskLocal static var testBoundary = Boundary()
@@ -97,114 +105,148 @@ enum CompanionMetadataProcess {
             try check(); try observe(row); try check()
         }
         let stdout = try PipeEnds(), stderr = try PipeEnds()
-        let null = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
-        guard null >= 0 else { throw failure() }; defer { Darwin.close(null) }
-        try stdout.nonblock(stdout.read); try stderr.nonblock(stderr.read)
-        var actions: posix_spawn_file_actions_t?, attributes: posix_spawnattr_t?
-        guard posix_spawn_file_actions_init(&actions) == 0 else { throw failure() }
-        defer { posix_spawn_file_actions_destroy(&actions) }
-        guard posix_spawnattr_init(&attributes) == 0 else { throw failure() }
-        defer { posix_spawnattr_destroy(&attributes) }
-        guard posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_CLOEXEC_DEFAULT)) == 0,
-              posix_spawnattr_setpgroup(&attributes, 0) == 0,
-              posix_spawn_file_actions_adddup2(&actions, null, STDIN_FILENO) == 0,
-              posix_spawn_file_actions_adddup2(&actions, stdout.write, STDOUT_FILENO) == 0,
-              posix_spawn_file_actions_adddup2(&actions, stderr.write, STDERR_FILENO) == 0 else { throw failure() }
-        let args = [tool.url.path, "mkv-summary", source.path]
-        var argv: [UnsafeMutablePointer<CChar>?] = args.map { $0.withCString { strdup($0) } } + [nil]
-        let environment: [String] = ["PATH=/usr/bin:/bin", "LANG=C", "LC_ALL=C"]
-        var env: [UnsafeMutablePointer<CChar>?] = environment.map { $0.withCString { strdup($0) } } + [nil]
-        defer { for p in argv + env { free(p) } }
-        guard argv.dropLast().allSatisfy({ $0 != nil }), env.dropLast().allSatisfy({ $0 != nil }) else { throw failure() }
-        try check(); try input.check(); try executable.check()
-        var pid: pid_t = 0
-        let launched = argv.withUnsafeMutableBufferPointer { a in env.withUnsafeMutableBufferPointer { e in
-            posix_spawn(&pid, tool.url.path, &actions, &attributes, a.baseAddress!, e.baseAddress!)
-        } }
-        guard launched == 0, pid > 0 else { throw failure() }
-        var uncertain: [PipeRole] = []
-        func close(_ pipe: PipeEnds, read: Bool, role: PipeRole) {
-            if !pipe.closeChecked(read: read, role: role, boundary: boundary) { uncertain.append(role) }
-        }
-        func settledError(_ original: any Error) -> any Error {
-            guard !uncertain.isEmpty else { return original }
-            if original is any CompanionUnsettledOwnership {
-                return OwnershipFailure(reason: "earlier-ownership", operationError: original, pipeCloseRoles: uncertain)
-            }
-            return PipeCloseFailure(operationError: original, roles: uncertain)
-        }
-        // Close refusal is deferred until the SAME required process/body settlement.
-        close(stdout, read: false, role: .stdoutWrite); close(stderr, read: false, role: .stderrWrite)
-        #if DEBUG
-        boundary.launched(pid)
-        #endif
-        var reaped = false, status: Int32 = 0
-        do {
-            var stderrBytes = 0
-            while true {
-                try check()
-                #if DEBUG
-                boundary.poll()
-                #endif
-                try check()
-                for (pipe, isOutput) in [(stdout, true), (stderr, false)] where pipe.read >= 0 {
-                    var buffer = [UInt8](repeating: 0, count: 16_384)
-                    let count = Darwin.read(pipe.read, &buffer, buffer.count)
-                    if count == 0 { close(pipe, read: true, role: isOutput ? .stdoutRead : .stderrRead) }
-                    else if count > 0 {
-                        if isOutput {
-                            try parser.accept(Data(buffer.prefix(count)))
-                        } else {
-                            stderrBytes += count; guard stderrBytes <= 65_536 else { throw failure() }
-                        }
-                    } else if errno != EAGAIN && errno != EINTR { throw failure() }
-                }
-                // Do not reap before both EOFs: a pipe-holding descendant must not
-                // outlive ownership by allowing reuse of the group leader's PID.
-                if stdout.read < 0 && stderr.read < 0 {
-                    let waited = waitpid(pid, &status, WNOHANG)
-                    if waited == pid { reaped = true; break }
-                    if waited < 0 && errno != EINTR { if errno == ECHILD { reaped = true }; throw OwnershipFailure(reason:"unexpected-reap") }
-                }
-                var descriptors = [pollfd]()
-                if stdout.read >= 0 { descriptors.append(pollfd(fd: stdout.read, events: Int16(POLLIN), revents: 0)) }
-                if stderr.read >= 0 { descriptors.append(pollfd(fd: stderr.read, events: Int16(POLLIN), revents: 0)) }
-                let polled = descriptors.withUnsafeMutableBufferPointer { Darwin.poll($0.baseAddress, nfds_t($0.count), 10) }
-                if polled < 0 && errno != EINTR { throw failure() }
-            }
-        } catch {
-            let original = error
-            // An unexpected external reap removes PID ownership; never signal it.
-            guard !reaped else { throw OwnershipFailure(reason:"unexpected-reap", operationError: original, pipeCloseRoles: uncertain) }
-            let signal = Darwin.kill(-pid, SIGKILL), signalError = errno
-            let groupStopped = signal == 0 || signalError == ESRCH
-            if !groupStopped { _ = Darwin.kill(pid, SIGKILL) }
-            close(stdout, read: true, role: .stdoutRead); close(stderr, read: true, role: .stderrRead)
-            if !reaped {
-                var waited: pid_t
-                repeat { waited = waitpid(pid, &status, 0) } while waited < 0 && errno == EINTR
-                reaped = waited == pid
-            }
-            #if DEBUG
-            boundary.settled(pid)
-            #endif
-            guard groupStopped, reaped else { throw OwnershipFailure(reason:"group-\(signalError)-joined-\(reaped)", operationError: original, pipeCloseRoles: uncertain) }
-            throw settledError(original)
-        }
-        close(stdout, read: true, role: .stdoutRead); close(stderr, read: true, role: .stderrRead)
-        let result: CompanionMetadataStream.Receipt
-        do {
-            #if DEBUG
-            boundary.settled(pid); boundary.beforeReceipt()
-            #endif
+        var null = Darwin.open("/dev/null", O_RDONLY | O_CLOEXEC)
+        guard null >= 0 else { throw failure() }
+        // Prelaunch/fallback/unresolved ownership remains a separate qualification.
+        defer { if null >= 0 { Darwin.close(null) } }
+        var nullTerminalEligible = false
+        // Same worker scope: existing argv/attribute/action defers unwind BEFORE
+        // the selected null close, preserving its prior worker-unwind position.
+        let outcome = Result<CompanionMetadataStream.Receipt, Error> {
+            try stdout.nonblock(stdout.read); try stderr.nonblock(stderr.read)
+            var actions: posix_spawn_file_actions_t?, attributes: posix_spawnattr_t?
+            guard posix_spawn_file_actions_init(&actions) == 0 else { throw failure() }
+            defer { posix_spawn_file_actions_destroy(&actions) }
+            guard posix_spawnattr_init(&attributes) == 0 else { throw failure() }
+            defer { posix_spawnattr_destroy(&attributes) }
+            guard posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_CLOEXEC_DEFAULT)) == 0,
+                  posix_spawnattr_setpgroup(&attributes, 0) == 0,
+                  posix_spawn_file_actions_adddup2(&actions, null, STDIN_FILENO) == 0,
+                  posix_spawn_file_actions_adddup2(&actions, stdout.write, STDOUT_FILENO) == 0,
+                  posix_spawn_file_actions_adddup2(&actions, stderr.write, STDERR_FILENO) == 0 else { throw failure() }
+            let args = [tool.url.path, "mkv-summary", source.path]
+            var argv: [UnsafeMutablePointer<CChar>?] = args.map { $0.withCString { strdup($0) } } + [nil]
+            let environment: [String] = ["PATH=/usr/bin:/bin", "LANG=C", "LC_ALL=C"]
+            var env: [UnsafeMutablePointer<CChar>?] = environment.map { $0.withCString { strdup($0) } } + [nil]
+            defer { for p in argv + env { free(p) } }
+            guard argv.dropLast().allSatisfy({ $0 != nil }), env.dropLast().allSatisfy({ $0 != nil }) else { throw failure() }
             try check(); try input.check(); try executable.check()
-            guard status & 0x7f == 0 else { throw failure() }
-            result = try parser.finish(status: (status >> 8) & 0xff)
-            guard try input.digest(check: check) == fingerprint.sha256 else { throw failure() }
-            try input.check(); try executable.check(); try check()
-        } catch { throw settledError(error) }
-        guard uncertain.isEmpty else { throw PipeCloseFailure(operationError: nil, roles: uncertain) }
-        return result
+            var pid: pid_t = 0
+            let launched = argv.withUnsafeMutableBufferPointer { a in env.withUnsafeMutableBufferPointer { e in
+                posix_spawn(&pid, tool.url.path, &actions, &attributes, a.baseAddress!, e.baseAddress!)
+            } }
+            guard launched == 0, pid > 0 else { throw failure() }
+            var uncertain: [PipeRole] = []
+            func close(_ pipe: PipeEnds, read: Bool, role: PipeRole) {
+                if !pipe.closeChecked(read: read, role: role, boundary: boundary) { uncertain.append(role) }
+            }
+            func settledError(_ original: any Error) -> any Error {
+                guard !uncertain.isEmpty else { return original }
+                if original is any CompanionUnsettledOwnership {
+                    return OwnershipFailure(reason: "earlier-ownership", operationError: original, pipeCloseRoles: uncertain)
+                }
+                return PipeCloseFailure(operationError: original, roles: uncertain)
+            }
+            // Close refusal is deferred until the SAME required process/body settlement.
+            close(stdout, read: false, role: .stdoutWrite); close(stderr, read: false, role: .stderrWrite)
+            #if DEBUG
+            boundary.launched(pid)
+            #endif
+            var reaped = false, status: Int32 = 0
+            do {
+                var stderrBytes = 0
+                while true {
+                    try check()
+                    #if DEBUG
+                    boundary.poll()
+                    #endif
+                    try check()
+                    for (pipe, isOutput) in [(stdout, true), (stderr, false)] where pipe.read >= 0 {
+                        var buffer = [UInt8](repeating: 0, count: 16_384)
+                        let count = Darwin.read(pipe.read, &buffer, buffer.count)
+                        if count == 0 { close(pipe, read: true, role: isOutput ? .stdoutRead : .stderrRead) }
+                        else if count > 0 {
+                            if isOutput {
+                                try parser.accept(Data(buffer.prefix(count)))
+                            } else {
+                                stderrBytes += count; guard stderrBytes <= 65_536 else { throw failure() }
+                            }
+                        } else if errno != EAGAIN && errno != EINTR { throw failure() }
+                    }
+                    // Do not reap before both EOFs: a pipe-holding descendant must not
+                    // outlive ownership by allowing reuse of the group leader's PID.
+                    if stdout.read < 0 && stderr.read < 0 {
+                        let waited = waitpid(pid, &status, WNOHANG)
+                        if waited == pid { reaped = true; break }
+                        if waited < 0 && errno != EINTR { if errno == ECHILD { reaped = true }; throw OwnershipFailure(reason:"unexpected-reap") }
+                    }
+                    var descriptors = [pollfd]()
+                    if stdout.read >= 0 { descriptors.append(pollfd(fd: stdout.read, events: Int16(POLLIN), revents: 0)) }
+                    if stderr.read >= 0 { descriptors.append(pollfd(fd: stderr.read, events: Int16(POLLIN), revents: 0)) }
+                    let polled = descriptors.withUnsafeMutableBufferPointer { Darwin.poll($0.baseAddress, nfds_t($0.count), 10) }
+                    if polled < 0 && errno != EINTR { throw failure() }
+                }
+            } catch {
+                let original = error
+                // An unexpected external reap removes PID ownership; never signal it.
+                guard !reaped else { throw OwnershipFailure(reason:"unexpected-reap", operationError: original, pipeCloseRoles: uncertain) }
+                let signal = Darwin.kill(-pid, SIGKILL), signalError = errno
+                let groupStopped = signal == 0 || signalError == ESRCH
+                if !groupStopped { _ = Darwin.kill(pid, SIGKILL) }
+                close(stdout, read: true, role: .stdoutRead); close(stderr, read: true, role: .stderrRead)
+                if !reaped {
+                    var waited: pid_t
+                    repeat { waited = waitpid(pid, &status, 0) } while waited < 0 && errno == EINTR
+                    reaped = waited == pid
+                }
+                #if DEBUG
+                boundary.settled(pid)
+                #endif
+                guard groupStopped, reaped else { throw OwnershipFailure(reason:"group-\(signalError)-joined-\(reaped)", operationError: original, pipeCloseRoles: uncertain) }
+                nullTerminalEligible = !(original is any CompanionUnsettledOwnership)
+                throw settledError(original)
+            }
+            close(stdout, read: true, role: .stdoutRead); close(stderr, read: true, role: .stderrRead)
+            nullTerminalEligible = true // Actual normal EOF and owned waitpid above.
+            let result: CompanionMetadataStream.Receipt
+            do {
+                #if DEBUG
+                boundary.settled(pid); boundary.beforeReceipt()
+                #endif
+                try check(); try input.check(); try executable.check()
+                guard status & 0x7f == 0 else { throw failure() }
+                result = try parser.finish(status: (status >> 8) & 0xff)
+                guard try input.digest(check: check) == fingerprint.sha256 else { throw failure() }
+                try input.check(); try executable.check(); try check()
+            } catch {
+                // A supplied checkpoint may carry an earlier shared owner. Its
+                // type is not this invocation's pipe-close provenance.
+                if error is any CompanionUnsettledOwnership { nullTerminalEligible = false }
+                throw settledError(error)
+            }
+            guard uncertain.isEmpty else { throw PipeCloseFailure(operationError: nil, roles: uncertain) }
+            return result
+        }
+        guard nullTerminalEligible else { return try outcome.get() }
+        // A prior shared marker is not additional release authority. Only the
+        // selected settled pipe refusal may accompany this terminal transition.
+        if case .failure(let error) = outcome, error is any CompanionUnsettledOwnership,
+           !(error is PipeCloseFailure) { return try outcome.get() }
+        let number = null; null = -1 // Consume before sole close; no retry/fallback.
+        let closed = Darwin.close(number), code: Int32 = closed == 0 ? 0 : errno
+        #if DEBUG
+        boundary.nullClosed(closed, code)
+        let reported = closed == 0 && boundary.refuseNullClose()
+        #else
+        let reported = false
+        #endif
+        if closed != 0 || reported {
+            let cause: (any Error)?
+            switch outcome { case .success: cause = nil; case .failure(let error): cause = error }
+            throw NullCloseFailure(operationError: cause, closeStatus: closed, closeErrno: code,
+                reportedAfterActualClose: reported)
+        }
+        return try outcome.get()
     }
     private final class PipeEnds {
         var read: Int32, write: Int32

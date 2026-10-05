@@ -337,4 +337,73 @@ struct CompanionMetadataProcessTests {
         }
     }
 
+    private final class NullClose: @unchecked Sendable {
+        private let lock=NSLock(); private var count=0
+        func add(_ status:Int32,_ code:Int32) { lock.withLock { #expect(status == 0 && code == 0); count += 1 } }
+        func expectOne() { lock.withLock { #expect(count == 1) } }
+    }
+    @Test func actualKnownSettledNullClosePrecedesReceiptAndPreservesPipeAndSourceCauses() async throws {
+        for point in ["normal","null","mixed","source"] {
+            let f=try await Self.fixture(), state=State(), pipes=CheckedPipeCloses(), null=NullClose(), original=try Data(contentsOf:f.source)
+            do {
+                _=try await Reader.$testBoundary.withValue(.init(launched:{ state.launch($0) },settled:{ state.settle($0) },beforeReceipt:{
+                    if point == "source" {
+                        do { try FileManager.default.moveItem(at:f.source,to:f.root.appendingPathComponent("retained-original-source")); try original.write(to:f.source) }
+                        catch { Issue.record("Generated final source replacement failed") }
+                    }
+                },closed:{ pipes.add($0,$1,$2) },refuseClose:{ _ in point == "mixed" },nullClosed:{ status,code in
+                    pipes.expectAll(); state.assertJoined(); null.add(status,code)
+                },refuseNullClose:{ point != "normal" })) { try await Reader.run(tool:f.tool,source:f.source) }
+                #expect(point == "normal")
+            } catch let e as Reader.NullCloseFailure {
+                #expect(point != "normal" && e.closeStatus == 0 && e.closeErrno == 0 && e.reportedAfterActualClose)
+                if point == "mixed" { let cause=try #require(e.operationError as? Reader.PipeCloseFailure); #expect(cause.operationError == nil && Set(cause.roles) == Set(Reader.PipeRole.allCases)) }
+                else if point == "source" { #expect(e.operationError is NativeExportError) }
+                else { #expect(e.operationError == nil) }
+            } catch { if error is any CompanionUnsettledOwnership { print("GENERATED_UNEXPECTED_METADATA_NULL_REVIEW " + f.root.path) }; throw error }
+            null.expectOne(); pipes.expectAll(); state.assertJoined(); #expect(try Data(contentsOf:f.source) == original)
+            if point == "normal" { f.cleanup() } else { print("GENERATED_METADATA_NULL_REVIEW " + f.root.path) }
+        }
+    }
+    @Test func actualActiveAndLateCancellationChecksNullAfterOwnedSettlement() async throws {
+        for late in [false,true] {
+          for reported in [false,true] {
+            let f=try await Self.fixture(), state=State(), pipes=CheckedPipeCloses(), null=NullClose(), gate=Gate()
+            if !late {
+                let bytes=try Data(contentsOf:f.source)
+                let view=CompanionDiskCheck.ReadView(sourceBytes:Int64(bytes.count),source:{ o,n in bytes.subdata(in:Int(o)..<(Int(o)+n)) },component:{ _ in throw NativeExportError.invalid("Generated null fixture") },checkpoint:{})
+                let walker=CompanionOriginalTrackCheck.Walker(view), header=try walker.element(0,end:view.sourceBytes), segment=try walker.element(header.end,end:view.sourceBytes)
+                var prefix=Data(), clusters=Data(), offset=segment.payload
+                while offset < segment.end {
+                    let element=try walker.element(offset,end:segment.end), data=bytes.subdata(in:Int(offset)..<Int(element.end))
+                    if element.id == 0x1f43b675 { clusters.append(data) } else { prefix.append(data) }; offset=element.end
+                }
+                var longBytes=bytes.prefix(Int(header.end)) + Data([0x18,0x53,0x80,0x67,0xff]) + prefix
+                for _ in 0..<2000 { longBytes.append(clusters) }; try longBytes.write(to:f.source)
+            }
+            let original=try Data(contentsOf:f.source)
+            var task:Task<CompanionMetadataStream.Receipt,Error>?=Task {
+                defer { gate.signal.finish() }
+                return try await Reader.$testBoundary.withValue(.init(launched:{ state.launch($0) },row:{ _ in if !late && state.firstRow() { gate.hold() } },settled:{ state.settle($0) },
+                    beforeReceipt:{ if late { pipes.expectAll(); state.assertJoined(); gate.hold() } },closed:{ pipes.add($0,$1,$2) },refuseClose:{ _ in reported },
+                    nullClosed:{ status,code in pipes.expectAll(); state.assertJoined(); null.add(status,code) },refuseNullClose:{ reported })) { try await Reader.run(tool:f.tool,source:f.source) }
+            }
+            for await _ in gate.entered { break }; #expect(state.pid > 0)
+            if !late {
+                let ps=Process(), pipe=Pipe(); ps.executableURL=URL(fileURLWithPath:"/bin/ps"); ps.arguments=["-p",String(state.pid),"-o","stat="]; ps.standardOutput=pipe; ps.standardError=FileHandle.nullDevice
+                try ps.run(); let text=String(decoding:pipe.fileHandleForReading.readDataToEndOfFile(),as:UTF8.self); ps.waitUntilExit()
+                #expect(ps.terminationStatus == 0 && !text.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty && !text.contains("Z"))
+            }
+            task!.cancel(); gate.release.signal()
+            do { _=try await task!.value; Issue.record("Cancelled metadata null trial returned receipt") }
+            catch let e as Reader.NullCloseFailure {
+                #expect(reported && e.closeStatus == 0 && e.closeErrno == 0 && e.reportedAfterActualClose)
+                let cause=try #require(e.operationError as? Reader.PipeCloseFailure); #expect(cause.operationError is CancellationError && Set(cause.roles) == Set(Reader.PipeRole.allCases))
+            } catch { if error is any CompanionUnsettledOwnership { print("GENERATED_UNEXPECTED_METADATA_NULL_CANCEL_REVIEW " + f.root.path); throw error }; #expect(!reported && error is CancellationError) }
+            task=nil; null.expectOne(); pipes.expectAll(); state.assertJoined(); #expect(try Data(contentsOf:f.source) == original)
+            if reported { print("GENERATED_METADATA_NULL_CANCEL_REVIEW " + f.root.path) } else { f.cleanup() }
+          }
+        }
+    }
+
 }

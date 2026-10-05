@@ -2175,3 +2175,13 @@ publication follows failure. Successful transfer remains separate from unqualifi
 long-lived terminal pin closes. See D-138 and STAGING-CREATION-CLOSE-EVIDENCE.md.
 Committed/actually removed terminal state, other helper resource roles and rendered/
 edited/distribution/recovery/import gates remain open.
+
+
+### D139 published staging pins
+
+Checked actual terminal parent/directory closes follow complete ordinary publication
+verification/transient settlement. Actual Published survives refusal through D105/D134,
+with retained access/source priority and no discard/reset/unpublished claim. Consumed
+numbers are never retried; other fallback/removed/pre-commit lifecycles stay unqualified.
+See D-139 and PUBLISHED-STAGING-PIN-EVIDENCE.md. No action/default packaging/release or
+rendered/edited proof follows this finite owner correction.

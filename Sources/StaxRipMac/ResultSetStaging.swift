@@ -15,7 +15,7 @@ final class ResultSetStaging: @unchecked Sendable {
         let verifiedBytes: Int64
         let memberCount: Int
     }
-    enum CloseRole: Sendable, Hashable { case member(String), directoryStream, enumerationDescriptor, creationParent, creationDirectory }
+    enum CloseRole: Sendable, Hashable { case member(String), directoryStream, enumerationDescriptor, creationParent, creationDirectory, publishedParent, publishedDirectory }
     struct CloseFailure: Error, Sendable {
         let role: CloseRole
         let systemError: Int32
@@ -49,8 +49,8 @@ final class ResultSetStaging: @unchecked Sendable {
     private let lock = NSLock()
     private var state: State = .available
     private let parent: URL
-    private let parentFD: Int32
-    private let directoryFD: Int32
+    private var parentFD: Int32
+    private var directoryFD: Int32
     private let name: String
     private let identity: stat
     private let closing = CloseObservation()
@@ -69,9 +69,10 @@ final class ResultSetStaging: @unchecked Sendable {
         var creationOpened: @Sendable (CloseRole) -> Void = { _ in }
     }
     @TaskLocal static var testBoundary = TestBoundary()
+    var publishedPinsConsumedForTesting: Bool { lock.withLock { state == .published && parentFD < 0 && directoryFD < 0 } }
     #endif
 
-    /// Observes finite verifier and creation-rollback roles; terminal stage pins are separate.
+    /// Observes finite verifier, creation rollback and settled-publication pin roles.
     private struct CloseObservation: Sendable {
         #if DEBUG
         private let boundary = ResultSetStaging.testBoundary
@@ -190,7 +191,11 @@ final class ResultSetStaging: @unchecked Sendable {
         self.name = name; self.identity = identity
     }
     // Cleanup is explicit so a failed removal cannot be silently described as success.
-    deinit { Darwin.close(directoryFD); Darwin.close(parentFD) }
+    deinit {
+        // Unqualified fallback on other paths; never retry a consumed published pin.
+        if directoryFD >= 0 { let fd = directoryFD; directoryFD = -1; _ = Darwin.close(fd) }
+        if parentFD >= 0 { let fd = parentFD; parentFD = -1; _ = Darwin.close(fd) }
+    }
 
     // A review locator only, never authorization to delete an unverified path.
     var originalDirectoryURL: URL { parent.appendingPathComponent(name) }
@@ -431,6 +436,13 @@ final class ResultSetStaging: @unchecked Sendable {
         if !failures.isEmpty {
             let operation: Error? = { if case .failure(let e) = result { return e }; return nil }()
             throw settlement(operation: operation, failures: failures, published: published)
+        }
+        if let published, case .success = result {
+            // Verification/readers and transient closes settled before terminal pins.
+            // Actual commit is already recorded; a close refusal cannot undo it.
+            if let close = closing.descriptor(&directoryFD, role: .publishedDirectory) { failures.append(close) }
+            if let close = closing.descriptor(&parentFD, role: .publishedParent) { failures.append(close) }
+            if !failures.isEmpty { throw settlement(operation: nil, failures: failures, published: published) }
         }
         return try result.get()
     }

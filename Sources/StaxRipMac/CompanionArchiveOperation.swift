@@ -332,6 +332,73 @@ enum CompanionArchiveOperation {
             throw error
         }
     }
+    /// Development original crop association. The caller owns an explicit
+    /// empty private spool folder. This operation neither removes nor publishes it.
+    static func associateOriginalCrops(source: URL, spoolDirectory: URL,
+                                       tool: DolbyDecoderProcess.Tool, request: DolbyDecoderStream.CropRequest, threads: Int = 4,
+                                       timeout: Double = 120,
+                                       limits: DolbyAssociationSpool.Limits = .init()) async throws -> CompanionDiskCheck.SourceCropReceipt {
+        try Task.checkCancellation()
+        guard [source, spoolDirectory].allSatisfy({ $0.isFileURL && !$0.path.utf8.contains(0) }),
+              [1, 4].contains(threads), timeout.isFinite, timeout > 0, timeout <= 120 else { throw refused() }
+        #if DEBUG
+        let environment = testEnvironment, boundary = testBoundary
+        #else
+        let environment = Environment()
+        #endif
+        guard !executing, retained.isEmpty, environment.retainedActivitySeconds.isFinite,
+              environment.retainedActivitySeconds > 0, environment.retainedActivitySeconds <= 120 else { throw refused() }
+        executing = true
+        defer { executing = false }
+        let access = try acquire(source: source, directory: spoolDirectory,
+                                reason: "StaxRip original source crop association", environment: environment)
+        let pins = access.pins
+        #if DEBUG
+        boundary.pinned(pins.descriptors)
+        #endif
+        do {
+            try pins.check()
+            #if DEBUG
+            try boundary.phase("crop-association")
+            #endif
+            let result = try await CompanionDiskCheck.associateOriginalCrops(source: source, in: spoolDirectory,
+                tool: tool, request: request, threads: threads, timeout: timeout, limits: limits)
+            try pins.check()
+            try Task.checkCancellation()
+            #if DEBUG
+            try boundary.beforeAssociationRelease()
+            #endif
+            let closed = try access.finishChecked()
+            #if DEBUG
+            boundary.associationClosed(closed)
+            #else
+            _ = closed
+            #endif
+            return result
+        } catch {
+            // D144/D132 return after its worker/database/source/helper unwind except
+            // for the shared uncertainty marker. Keep grants on either that marker
+            // or loss of the explicit outer path identity. No file cleanup follows.
+            if error is any CompanionUnsettledOwnership {
+                throw retain(access, error: error, locator: spoolDirectory, environment: environment)
+            }
+            do { try pins.check() }
+            catch { throw retain(access, error: error, locator: spoolDirectory, environment: environment) }
+            do {
+                #if DEBUG
+                try boundary.beforeAssociationRelease()
+                #endif
+                let closed = try access.finishChecked()
+                #if DEBUG
+                boundary.associationClosed(closed)
+                #else
+                _ = closed
+                #endif
+            }
+            catch { throw retain(access, error: error, locator: spoolDirectory, environment: environment) }
+            throw error
+        }
+    }
     /// Concrete rollback ownership exists before scopes or descriptors are tried.
     /// An uncertain partial close retains grants even before activity begins.
     private static func acquire(source: URL, directory: URL, reason: String,

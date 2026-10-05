@@ -103,6 +103,10 @@ enum CompanionArchiveOperation {
                 throw retain(access, error: inner, locator: inner.intendedStage,
                              environment: environment, published: inner.published)
             }
+            if let inner = error as? OriginalCompanionTransaction.StagingSettlementFailure {
+                throw retain(access, error: inner, locator: inner.intendedStage,
+                             environment: environment, published: inner.published)
+            }
             if let published {
                 // Transaction already returned its exclusive commit. Never discard
                 // or classify this as an unpublished pre-commit failure.

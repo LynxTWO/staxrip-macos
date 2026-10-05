@@ -1354,4 +1354,137 @@ struct CompanionArchiveOperationTests {
         #expect(try snapshot(directory) == before && Data(contentsOf: f.source) == original && Data(contentsOf: prior) == priorBytes)
     }
 
+
+    private final class StageCloses: @unchecked Sendable {
+        private let lock = NSLock(); private var roles: [ResultSetStaging.CloseRole] = []
+        func add(_ r: ResultSetStaging.CloseRole) { lock.withLock { roles.append(r) } }
+        func count(_ r: ResultSetStaging.CloseRole) -> Int { lock.withLock { roles.filter { $0 == r }.count } }
+    }
+    @Test func nativeTransientStagingCloseReviewPreservesBothModesAndActualCommitAfterLateCancel() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+          for postCommit in [false, true] {
+            let f = try await fixture(), ledger = Ledger(), gate = Gate(), closes = StageCloses()
+            defer { print("GENERATED_NATIVE_TRANSIENT_STAGE_REVIEW " + f.root.path) }
+            let original = try Data(contentsOf: f.source), prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8)
+            try priorBytes.write(to: prior)
+            let role = postCommit ? ResultSetStaging.CloseRole.member("manifest.json") : .directoryStream
+            let task = Task {
+                defer { gate.signal.finish() }
+                return try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                                try await ResultSetStaging.$testBoundary.withValue(.init(afterCommit: { if postCommit { gate.hold() } }, closed: { closes.add($0) }, refuseClose: { $0 == role })) {
+                                    try await execute(f, mode: mode)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if postCommit {
+                var iterator = gate.entered.makeAsyncIterator(); try #require(await iterator.next() != nil)
+                ledger.expectJoined(count: 2); ledger.expectActive(scoped: true)
+                task.cancel(); gate.release.signal()
+            }
+            var reviewID: UUID?, locator: URL?
+            do { _ = try await task.value; Issue.record("Transient close refusal returned ordinary result") }
+            catch let e as Operation.ReviewFailure {
+                reviewID = e.reviewID; locator = e.intendedStage
+                let inner = try #require(e.operationError as? OriginalCompanionTransaction.StagingSettlementFailure)
+                #expect(inner.operationError.closeFailures.count == 1 && inner.operationError.closeFailures[0].role == role)
+                #expect(inner.operationError.closeFailures[0].reportedAfterActualClose && inner.operationError.operationError == nil)
+                if postCommit {
+                    let actual = try #require(e.published)
+                    #expect(actual.directory == f.root.appendingPathComponent("published") && e.intendedStage == actual.directory)
+                    #expect(actual.memberCount == mode.limits.count && actual.verifiedBytes > 0 && inner.published?.directory == actual.directory)
+                    #expect(e.errorDescription?.contains("was published") == true)
+                } else { #expect(e.published == nil && inner.published == nil && e.intendedStage.lastPathComponent.hasPrefix(".staxrip-result-")) }
+            }
+            let id = try #require(reviewID), directory = try #require(locator), before = try snapshot(directory)
+            ledger.expectJoined(count: 2); ledger.expectRetained(); #expect(closes.count(role) == 1)
+            if postCommit { for name in mode.limits.keys { #expect(closes.count(.member(name)) == 1) }; #expect(closes.count(.directoryStream) == 2) }
+            else { #expect(closes.count(.directoryStream) == 1 && !FileManager.default.fileExists(atPath: f.root.appendingPathComponent("published").path)) }
+            await #expect(throws: NativeExportError.self) { try await execute(f) }
+            await #expect(throws: NativeExportError.self) { try await review(f) }
+            await #expect(throws: NativeExportError.self) { try await associate(f, tool: try associationTool(in: f.root)) }
+            await #expect(throws: NativeExportError.self) { try await associateSamples(f, tool: try sampleAccessTool(in: f.root)) }
+            try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id))
+            let after = try snapshot(directory), sourceAfter = try Data(contentsOf: f.source), priorAfter = try Data(contentsOf: prior)
+            #expect(after == before && sourceAfter == original && priorAfter == priorBytes)
+            #expect(Set(try FileManager.default.contentsOfDirectory(atPath: directory.path)) == Set(mode.limits.keys))
+            if mode == .entireContainer { #expect(try Data(contentsOf: directory.appendingPathComponent("original-container.mkv")) == original) }
+            // Controlled reports followed real successful closes and fixed children joined.
+            // DEBUG isolation is not a production recovery-release or cleanup authority.
+            Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+            #expect(closes.count(role) == 1)
+          }
+        }
+    }
+    @Test func combinedStagingAndSourceCloseRefusalRetainsActualCommittedState() async throws {
+        let f = try await fixture(), ledger = Ledger(), closes = StageCloses()
+        defer { print("GENERATED_COMBINED_STAGE_SOURCE_REVIEW " + f.root.path) }
+        let original = try Data(contentsOf: f.source)
+        var reviewID: UUID?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                        try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(refuseClose: { true })) {
+                                try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.add($0) }, refuseClose: { $0 == .member("manifest.json") })) { try await execute(f) }
+                            }
+                        }
+                    }
+                }
+            }
+            Issue.record("Combined close refusal returned success")
+        } catch let e as Operation.ReviewFailure {
+            reviewID = e.reviewID
+            let inner = try #require(e.operationError as? OriginalCompanionTransaction.SourceSettlementFailure)
+            let stage = try #require(inner.operationError as? ResultSetStaging.SettlementFailure), actual = try #require(e.published)
+            #expect(stage.published?.directory == actual.directory && inner.published?.directory == actual.directory && e.intendedStage == actual.directory)
+            #expect(actual.directory == f.root.appendingPathComponent("published") && stage.closeFailures.count == 1)
+            #expect(stage.closeFailures[0].reportedAfterActualClose && inner.closeError is OriginalCompanionTransaction.SourceCloseFailure)
+        }
+        let id = try #require(reviewID), before = try snapshot(f.root.appendingPathComponent("published"))
+        ledger.expectJoined(count: 2); ledger.expectRetained(); #expect(closes.count(.member("manifest.json")) == 1)
+        try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id))
+        let after = try snapshot(f.root.appendingPathComponent("published")), sourceAfter = try Data(contentsOf: f.source)
+        #expect(after == before && sourceAfter == original)
+        Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+    }
+
+    @Test func joinedWriterOrdinaryVerifierRefusalWithCleanupStreamUncertaintyRetainsStageAndCause() async throws {
+        let f = try await fixture(), ledger = Ledger(), closes = StageCloses()
+        defer { print("GENERATED_CLEANUP_STREAM_STAGE_REVIEW " + f.root.path) }
+        let original = try Data(contentsOf: f.source), prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8)
+        try priorBytes.write(to: prior)
+        var reviewID: UUID?, directory: URL?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(phase: { if $0 == "verifier" { throw NativeExportError.invalid("Generated verifier admission refused") } }, pinned: { ledger.pinned($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                        try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.add($0) }, refuseClose: { $0 == .directoryStream })) { try await execute(f) }
+                    }
+                }
+            }
+            Issue.record("Cleanup stream close uncertainty returned success")
+        } catch let e as Operation.ReviewFailure {
+            reviewID = e.reviewID; directory = e.intendedStage
+            let cleanup = try #require(e.operationError as? OriginalCompanionTransaction.CleanupFailure)
+            let close = try #require(cleanup.cleanupError as? ResultSetStaging.SettlementFailure)
+            #expect(cleanup.operationError is NativeExportError && e.operationError is any CompanionUnsettledOwnership)
+            #expect(close.closeFailures.count == 1 && close.closeFailures[0].reportedAfterActualClose && e.published == nil)
+        }
+        let id = try #require(reviewID), stage = try #require(directory), before = try snapshot(stage)
+        ledger.expectJoined(count: 1); ledger.expectRetained(); #expect(closes.count(.directoryStream) == 1)
+        #expect(stage.lastPathComponent.hasPrefix(".staxrip-result-") && !FileManager.default.fileExists(atPath: f.root.appendingPathComponent("published").path))
+        #expect(Set(try FileManager.default.contentsOfDirectory(atPath: stage.path)) == Set(OriginalCompanionTransaction.Retention.metadataOnly.limits.keys))
+        await #expect(throws: NativeExportError.self) { try await execute(f) }
+        try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id))
+        let after = try snapshot(stage), sourceAfter = try Data(contentsOf: f.source), priorAfter = try Data(contentsOf: prior)
+        #expect(after == before && sourceAfter == original && priorAfter == priorBytes)
+        Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+    }
 }

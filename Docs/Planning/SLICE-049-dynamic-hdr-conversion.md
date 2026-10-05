@@ -2151,3 +2151,16 @@ changed hosted qualification. No product action, runtime bridge or readiness upg
 Remaining D099 descriptor roles must preserve actual committed state on uncertainty;
 source/outer closes do not prove their settlement. Edited-picture and release gates
 remain separate.
+
+
+### D137 finite staging transient ownership
+
+Checked actual member and directory-stream/admission-rollback closes accumulate
+uncertainty after synchronous verification settles. Actual rename state survives
+post-commit refusal through D105/D134 retained review; no discard/reset-available or
+unpublished classification follows commit. Source/phase causes remain, controlled
+reports are not OS faults and expiry is not access release. See D-137 and
+STAGING-TRANSIENT-CLOSE-EVIDENCE.md for actual checks. Long-lived parent/stage create/
+deinit/terminal pin closes and other helper resource roles remain next, with all
+rendered/edited/distribution/import gates unchanged. PR111 automatic residual failures
+remain retained, without deadline/assertion/global scheduling workarounds.

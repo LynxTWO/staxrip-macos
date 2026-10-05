@@ -261,4 +261,105 @@ struct ResultSetStagingTests {
         if marker == 11 { try b.discard() } else { try a.discard() }
         #expect(try FileManager.default.contentsOfDirectory(atPath: root.path) == ["result"])
     }
+
+    private final class Closes: @unchecked Sendable {
+        private let lock = NSLock(); private var roles: [ResultSetStaging.CloseRole] = []
+        func record(_ role: ResultSetStaging.CloseRole) { lock.withLock { roles.append(role) } }
+        func count(_ role: ResultSetStaging.CloseRole) -> Int { lock.withLock { roles.filter { $0 == role }.count } }
+    }
+    @Test func checkedTransientClosesAndAfterCommitRefusalPreserveActualResult() async throws {
+        for refusal in [false, true] {
+            let root = try folder(), closes = Closes(); var keep = refusal
+            defer { if keep { print("GENERATED_STAGE_TRANSIENT_REVIEW " + root.path) } else { try? FileManager.default.removeItem(at: root) } }
+            try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { refusal && $0 == .member("media.bin") })) {
+                let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+                let actual: ResultSetStaging.Published
+                do { actual = try await stage.publish(as: "result", members: members); #expect(!refusal) }
+                catch let e as ResultSetStaging.SettlementFailure {
+                    #expect(refusal && e.closeFailures.count == 1 && e.operationError == nil)
+                    #expect(e.closeFailures[0].reportedAfterActualClose && e.closeFailures[0].role == .member("media.bin"))
+                    actual = try #require(e.published)
+                    #expect(e.intendedStage == actual.directory && e.errorDescription?.contains("was published") == true)
+                }
+                #expect(actual.directory == root.appendingPathComponent("result") && actual.memberCount == 3)
+                #expect(actual.verifiedBytes == members.reduce(0) { $0 + $1.byteCount })
+                for member in members { #expect(closes.count(.member(member.name)) == 1); #expect(try Data(contentsOf: actual.directory.appendingPathComponent(member.name)).count == Int(member.byteCount)) }
+                #expect(closes.count(.directoryStream) == 2)
+                #expect(throws: (any Error).self) { try stage.discard() }
+                await #expect(throws: (any Error).self) { try await stage.publish(as: "second", members: members) }
+                for member in members { #expect(closes.count(.member(member.name)) == 1) }
+                if !refusal { keep = false }
+            }
+        }
+    }
+    @Test func streamCloseRefusesBeforePublicationOrAnyDiscardUnlink() async throws {
+        for discarding in [false, true] {
+            let root = try folder(), closes = Closes()
+            defer { print("GENERATED_STAGE_STREAM_REVIEW " + root.path) }
+            try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { $0 == .directoryStream })) {
+                let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+                let before = try members.map { try Data(contentsOf: stage.fileURL($0.name)) }
+                do {
+                    if discarding { try stage.discard() } else { _ = try await stage.publish(as: "result", members: members) }
+                    Issue.record("Stream close refusal returned ordinary result")
+                } catch let e as ResultSetStaging.SettlementFailure {
+                    #expect(e.published == nil && e.closeFailures.count == 1 && e.closeFailures[0].reportedAfterActualClose)
+                    #expect(e.intendedStage == stage.originalDirectoryURL)
+                }
+                #expect(closes.count(.directoryStream) == 1 && !exists(root.appendingPathComponent("result")))
+                for (i, member) in members.enumerated() { #expect(try Data(contentsOf: stage.originalDirectoryURL.appendingPathComponent(member.name)) == before[i]) }
+                #expect(throws: (any Error).self) { try stage.discard() }
+                await #expect(throws: (any Error).self) { try await stage.publish(as: "second", members: members) }
+                #expect(closes.count(.directoryStream) == 1)
+            }
+        }
+    }
+    @Test func failedMemberAdmissionClosesBeforeRefusalAndPreservesCause() async throws {
+        let root = try folder(), closes = Closes(); defer { print("GENERATED_STAGE_MEMBER_REVIEW " + root.path) }
+        try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { $0 == .member("media.bin") })) {
+            let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+            try Data([1]).write(to: stage.fileURL("media.bin"))
+            do { _ = try await stage.publish(as: "result", members: members); Issue.record("Malformed member returned success") }
+            catch let e as ResultSetStaging.SettlementFailure {
+                #expect(e.operationError is NativeExportError && e.published == nil && e.closeFailures.count == 1)
+                #expect(e.closeFailures[0].reportedAfterActualClose)
+            }
+            #expect(closes.count(.member("media.bin")) == 1 && closes.count(.directoryStream) == 1)
+            #expect(throws: (any Error).self) { try stage.discard() }
+            #expect(try Data(contentsOf: stage.originalDirectoryURL.appendingPathComponent("media.bin")) == Data([1]))
+        }
+    }
+    @Test func refusedStreamAdmissionChecksActualDescriptorRollbackWithoutRetry() async throws {
+        for reported in [false, true] {
+            let root = try folder(), closes = Closes(); defer { print("GENERATED_STAGE_ENUMERATION_REVIEW " + root.path) }
+            try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.record($0) }, refuseClose: { reported && $0 == .enumerationDescriptor }, refuseStreamAdmission: { true })) {
+                let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+                do { _ = try await stage.publish(as: "result", members: members); Issue.record("Stream admission returned result") }
+                catch let e as ResultSetStaging.SettlementFailure { #expect(reported && e.published == nil && e.operationError is NativeExportError) }
+                catch { #expect(!reported && error is NativeExportError) }
+                #expect(closes.count(.enumerationDescriptor) == 1 && closes.count(.directoryStream) == 0)
+                if reported { #expect(throws: (any Error).self) { try stage.fileURL("manifest.json") }; #expect(throws: (any Error).self) { try stage.discard() } }
+                else { #expect(try stage.fileURL("manifest.json") == stage.originalDirectoryURL.appendingPathComponent("manifest.json")) }
+                #expect(closes.count(.enumerationDescriptor) == 1 && !exists(root.appendingPathComponent("result")))
+            }
+        }
+    }
+
+    @Test func activeCancellationWithMemberCloseRefusalSettlesWorkerAndRetainsCause() async throws {
+        let root = try folder(), gate = Gate(), closes = Closes()
+        defer { print("GENERATED_CANCELLED_STAGE_CLOSE_REVIEW " + root.path) }
+        try await ResultSetStaging.$testBoundary.withValue(.init(progress: { n in if n > 0 { try gate.holdOnce() } }, closed: { closes.record($0) }, refuseClose: { $0 == .member("media.bin") })) {
+            let stage = try ResultSetStaging.create(in: root), members = try fixture(stage)
+            let task = Task { try await stage.publish(as: "result", members: members) }
+            try await gate.waitForEntry(); task.cancel(); gate.release.signal()
+            do { _ = try await task.value; Issue.record("Cancelled close refusal returned success") }
+            catch let e as ResultSetStaging.SettlementFailure {
+                #expect(e.operationError is CancellationError && e.published == nil && e.closeFailures.count == 1)
+                #expect(e.closeFailures[0].reportedAfterActualClose)
+            }
+            #expect(closes.count(.member("media.bin")) == 1 && !exists(root.appendingPathComponent("result")))
+            #expect(throws: (any Error).self) { try stage.discard() }
+            #expect(closes.count(.member("media.bin")) == 1)
+        }
+    }
 }

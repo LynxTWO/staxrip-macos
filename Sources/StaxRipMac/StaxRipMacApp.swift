@@ -12,8 +12,26 @@ struct StaxRipMacApp: App {
     @StateObject private var motionPreview = MotionPreviewController()
     @StateObject private var dolby = DolbyInspectionController()
     @StateObject private var chapters = ChapterEditorController()
-    @StateObject private var batch = BatchController(journalURL: BatchJournal.defaultURL)
+    @StateObject private var batch: BatchController
     @AppStorage("appearance") private var appearance = "System"
+    init() {
+        #if DEBUG
+        switch BatchJournal.demoSelection(root: ProcessInfo.processInfo.environment["STAXRIP_DEMO_JOURNAL_ROOT"]) {
+        case .notRequested:
+            _batch = StateObject(wrappedValue: BatchController(journalURL: BatchJournal.defaultURL))
+        case .isolated(let url):
+            let controller = BatchController(journalURL: url)
+            controller.configureDemoJournal(refused: false)
+            _batch = StateObject(wrappedValue: controller)
+        case .refused:
+            let controller = BatchController(journalURL: nil)
+            controller.configureDemoJournal(refused: true)
+            _batch = StateObject(wrappedValue: controller)
+        }
+        #else
+        _batch = StateObject(wrappedValue: BatchController(journalURL: BatchJournal.defaultURL))
+        #endif
+    }
     var body: some Scene {
         Window("StaxRip", id: "main") {
             WorkspaceView()

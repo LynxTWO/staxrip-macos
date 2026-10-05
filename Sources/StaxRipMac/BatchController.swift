@@ -93,6 +93,16 @@ final class BatchController: ObservableObject {
     private var task: Task<Void, Never>?
     private var sourceCheck: (id: UUID, jobID: UUID, acceptsProgress: Bool)?
 
+    #if DEBUG
+    private var demoJournalRefused = false
+    private(set) var isolatedDemoJournal = false
+    func configureDemoJournal(refused: Bool) {
+        demoJournalRefused = refused
+        isolatedDemoJournal = !refused
+        if refused { recoveryError = "Demonstration journal unavailable. Queue execution is disabled; the normal recovery journal was not selected." }
+    }
+    #endif
+
     init(journalURL: URL? = nil,
          readInspection: @escaping (URL, FFmpegTools) async throws -> MediaProbe = { try await MediaProbe.read($0, tools: $1) },
          readSource: @escaping ExportSourceFingerprint.Reader = { try await ExportSourceFingerprint.read($0, progress: $1) },
@@ -169,6 +179,9 @@ final class BatchController: ObservableObject {
     }
 
     func start(_ jobs: [QueueJob]) {
+        #if DEBUG
+        guard !demoJournalRefused else { return }
+        #endif
         guard !running, !reviewing, let tools else { return }
         let selected = pendingJobs(in: jobs)
         guard !selected.isEmpty else { return }

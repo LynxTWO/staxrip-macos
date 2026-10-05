@@ -146,6 +146,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-137 | 2026-10-05 | Checked staging transient closes and actual commit review | Confirmed | |
 | D-138 | 2026-10-05 | Checked staging creation rollback and observed directory state | Confirmed | |
 | D-139 | 2026-10-05 | Checked published staging parent and directory pins | Confirmed | |
+| D-140 | 2026-10-05 | Checked removed staging terminal pins and actual removal propagation | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4004,3 +4005,52 @@ remain explicitly unqualified.
 
 Explicit production build20.36s/current strict ad-hoc app/read-only helper signatures
 passed without warnings, minima14.0/11.0; writer/decoder/sample absent.
+
+
+## D-140: Checked removed staging parent and directory pins
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+After actual eligible nonrecursive discard removes the owned directory, record the
+actual Removed directory/entry count before consuming/checking both terminal pins.
+Attempt both actual closes once even on first refusal; never retry consumed numbers.
+Typed close uncertainty carries actual removal through D105 CleanupFailure and D134
+retained ReviewFailure, preserving original operation cause and needed access. No
+claim of surviving stage files, available reset, ordinary success or cleanup authority.
+A removed locator records this attempt, not current immutable namespace or persisted
+recovery/adoption authority. Stable explicit directory URLs avoid Foundation changing
+trailing-slash form after unlink. Actual published state retains D139 propagation.
+
+Three opaque/two concrete native tests cover empty/nonempty removal, normal/individual/
+both reported pin refusals, incomplete cleanup and identity substitution, full original
+semantic verification before deliberate ordinary refusal in both modes, cancellation
+only after actual removal, source priority, drop/expiry/exclusions and source/prior
+preservation. Seventeen new helper direct joins. Controlled reports after successful
+actual close are not spontaneous OS faults; fake grants are not sandbox rights.
+Generated uncertain roots remain retained. Failed OS close does not prove release;
+DEBUG consumed-state observation is not a reused-FD absence test or recovery release.
+
+Initial composed84tests/3suites17.277s failed twelve new URL-equality expectations;
+actual removal/close/retention checks otherwise passed. Log/roots retained; explicit
+stable directory construction fixes that concrete locator issue. Corrected focus
+84tests/3suites17.069s passed/no warnings. Ordinary/build results recorded in evidence.
+Partial discard failure and precommit/phase/transient unsettled pin fallback/deinit,
+other helper/disk resources and rendered/edited/distribution/import gates remain open.
+No generic lease/receipt/Python bridge/new owner/worker/product file/schema/action/UI/
+default packaging/release/recovery API or source/sample/edited proof upgrade.
+
+PR114 automatic37263064976 failed536tests600.755s8issues: two120s bounds plus three
+metadata absent-positive-child assertions, Fresh-analysis cancellation5.580860vs5 and
+two mastering phase EOF expectations. Staging17.401s/access286.395s/fixture77.021s/
+static278.179s passed. Full log retained/PR114 updated without retry; individual causes
+remain unestablished. No historical observer/assertion/deadline/skip/global scheduling/
+concurrency change or all-starvation/no-logic-defect claim.
+
+
+Final ordinary541reported tests/101suites210.078s passed33unchanged explicit opt-in
+skips/no emitted warnings. Access27.652s/staging0.714s/static30.221s passed. Explicit
+production build20.63s/current strict ad-hoc app/read-only helper signatures pass
+without warnings, minima14.0/11.0; writer/decoder/sample absent. Static93-source host
+compiles changed code and runs prior companion preservation/review, not decoder/sample
+loading. Privacy/protected source/journal/original runtime/planning recorded separately.
+No UI walkthrough/new sample/sanitizer/APFS/signing/owner full-source qualification.

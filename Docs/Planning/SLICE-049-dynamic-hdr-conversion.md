@@ -2185,3 +2185,15 @@ with retained access/source priority and no discard/reset/unpublished claim. Con
 numbers are never retried; other fallback/removed/pre-commit lifecycles stay unqualified.
 See D-139 and PUBLISHED-STAGING-PIN-EVIDENCE.md. No action/default packaging/release or
 rendered/edited proof follows this finite owner correction.
+
+
+### D140 removed staging pins
+
+Actual eligible discard now records completed removal before checking both concrete
+terminal pin closes once. Removal-close uncertainty carries actual removed directory/
+entry count through D105/D134 while retaining needed access and original refusal.
+No surviving-file claim, availability reset, retry or cleanup/adoption authority.
+Stable explicit directory URLs preserve the locator across unlink. See D-140 and
+REMOVED-STAGING-PIN-EVIDENCE.md. Partial removal/phase/transient unsettled fallback
+and other resource lifecycles remain unqualified. No action/default packaging/release/
+recovery API or rendered/edited/source/sample proof follows this finite correction.

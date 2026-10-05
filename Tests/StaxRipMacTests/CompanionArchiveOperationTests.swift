@@ -1647,4 +1647,85 @@ struct CompanionArchiveOperationTests {
         Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
     }
 
+    @Test func nativeVerifiedRefusalCleanupCarriesActualRemovedStateAndRetainsAccess() async throws {
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+          for refusal in ["none", "directory", "parent", "both"] {
+            let f = try await fixture(), ledger = Ledger(), closes = StageCloses()
+            defer { if refusal == "none" { f.cleanup() } else { print("GENERATED_NATIVE_REMOVED_PIN_REVIEW " + f.root.path) } }
+            let source = try Data(contentsOf: f.source), prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8)
+            try priorBytes.write(to: prior)
+            let initialNames = Set(try FileManager.default.contentsOfDirectory(atPath: f.root.path))
+            let operation = Task {
+                try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                                try await ResultSetStaging.$testBoundary.withValue(.init(beforeCommit: { throw NativeExportError.invalid("Generated refusal after full original verification") }, closed: { role in
+                                    closes.add(role)
+                                    if role == .removedDirectory { withUnsafeCurrentTask { $0?.cancel() } }
+                                }, refuseClose: { role in
+                                    (role == .removedDirectory && ["directory", "both"].contains(refusal)) || (role == .removedParent && ["parent", "both"].contains(refusal))
+                                })) { try await execute(f, mode: mode) }
+                            }
+                        }
+                    }
+                }
+            }
+            var reviewID: UUID?
+            do { _ = try await operation.value; Issue.record("Generated verified refusal returned success") }
+            catch let e as Operation.ReviewFailure {
+                #expect(refusal != "none"); reviewID = e.reviewID
+                let cleanup = try #require(e.operationError as? OriginalCompanionTransaction.CleanupFailure)
+                let removed = try #require(e.removed), inner = try #require(cleanup.cleanupError as? ResultSetStaging.RemovalSettlementFailure)
+                #expect(cleanup.operationError is NativeExportError && cleanup.operationError.localizedDescription.contains("Generated refusal"))
+                #expect(removed.directory == inner.removed.directory && cleanup.removed?.directory == removed.directory && e.intendedStage == removed.directory)
+                #expect(removed.entryCount == mode.limits.count && inner.closeFailures.count == (refusal == "both" ? 2 : 1))
+                #expect(inner.closeFailures.allSatisfy { $0.reportedAfterActualClose })
+                #expect(e.published == nil && e.errorDescription?.contains("was removed") == true && cleanup.errorDescription?.contains("was removed") == true)
+                #expect(!FileManager.default.fileExists(atPath: removed.directory.path))
+            } catch { #expect(refusal == "none" && error is NativeExportError); ledger.expectEnded(scoped: true); ledger.expectClosed() }
+            ledger.expectJoined(count: 2)
+            #expect(closes.count(.removedDirectory) == 1 && closes.count(.removedParent) == 1)
+            #expect(closes.count(.publishedDirectory) == 0 && closes.count(.publishedParent) == 0)
+            let afterNames = Set(try FileManager.default.contentsOfDirectory(atPath: f.root.path)), sourceAfter = try Data(contentsOf: f.source), priorAfter = try Data(contentsOf: prior)
+            #expect(afterNames == initialNames && sourceAfter == source && priorAfter == priorBytes)
+            #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("published").path))
+            if let id = reviewID {
+                ledger.expectRetained()
+                await #expect(throws: NativeExportError.self) { try await execute(f) }
+                await #expect(throws: NativeExportError.self) { try await review(f) }
+                try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id))
+                Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+            }
+            #expect(closes.count(.removedDirectory) == 1 && closes.count(.removedParent) == 1)
+          }
+        }
+    }
+    @Test func strongerSourceUncertaintyPreventsEligibleDiscardAndRemovedClaims() async throws {
+        let f = try await fixture(), ledger = Ledger(), closes = StageCloses()
+        defer { print("GENERATED_PRE_REMOVAL_SOURCE_REVIEW " + f.root.path) }
+        var reviewID: UUID?, directory: URL?
+        do {
+            _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                try await Operation.$testBoundary.withValue(.init(phase: { if $0 == "verifier" { throw NativeExportError.invalid("Generated verifier refusal") } }, pinned: { ledger.pinned($0) })) {
+                    try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                        try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(refuseClose: { true })) {
+                            try await ResultSetStaging.$testBoundary.withValue(.init(closed: { closes.add($0) })) { try await execute(f) }
+                        }
+                    }
+                }
+            }
+            Issue.record("Source uncertainty returned ordinary cleanup")
+        } catch let e as Operation.ReviewFailure {
+            reviewID = e.reviewID; directory = e.intendedStage
+            #expect(e.operationError is OriginalCompanionTransaction.SourceSettlementFailure && e.removed == nil && e.published == nil)
+        }
+        let id = try #require(reviewID), stage = try #require(directory), before = try snapshot(stage)
+        ledger.expectJoined(count: 1); ledger.expectRetained()
+        #expect(closes.count(.removedDirectory) == 0 && closes.count(.removedParent) == 0)
+        try await Task.sleep(for: .milliseconds(100)); ledger.expectEnded(); ledger.expectRetained()
+        #expect(try snapshot(stage) == before)
+        Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+    }
+
 }

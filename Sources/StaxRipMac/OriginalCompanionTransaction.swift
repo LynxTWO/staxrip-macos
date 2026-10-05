@@ -51,7 +51,11 @@ enum OriginalCompanionTransaction {
         let operationError: Error
         let cleanupError: Error
         let intendedStage: URL
-        var errorDescription: String? { "Companion operation failed; its temporary stage needs cleanup review." }
+        var removed: ResultSetStaging.Removed? { (cleanupError as? ResultSetStaging.RemovalSettlementFailure)?.removed }
+        var errorDescription: String? {
+            removed == nil ? "Companion operation failed; its temporary stage needs cleanup review."
+                : "Companion operation failed; its owned stage was removed and close needs ownership review."
+        }
     }
     struct UnsettledPhaseFailure: CompanionUnsettledOwnership, LocalizedError {
         let operationError: Error

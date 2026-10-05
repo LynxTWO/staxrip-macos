@@ -367,20 +367,10 @@ struct OriginalCompanionTransactionTests {
         let root = try folder(); defer { try? FileManager.default.removeItem(at: root) }
         let generated = root.appendingPathComponent("generated")
         try FileManager.default.createDirectory(at: generated, withIntermediateDirectories: false)
-        let cargo = repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml")
-        let buildTarget = repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-OriginalCompanionTransactionTests")
-        let fixture = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
-            "STAXRIP_GENERATED_STAGED_COMPANION_DIRECTORY=" + generated.path,
-            "cargo", "test", "--locked", "--target-dir", buildTarget.path, "--manifest-path", cargo.path,
-            "owned_stage_packages_preserve_originals_and_match_disk_receipts"])
-        try #require(fixture.status == 0, "Generated Rust source fixture failed")
-        let built = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: [
-            "cargo", "build", "--release", "--locked", "--features", "development-companion-writer",
-            "--bin", "staxrip-dolby-companion-writer", "--bin", "staxrip-dolby-metadata-audit", "--target-dir", buildTarget.path, "--manifest-path", cargo.path])
-        try #require(built.status == 0, "Generated writer build failed")
+        let helpers = try await RustFixtureBuild.generate(.staged, at: generated, copiesIn: root)
         let src = generated.appendingPathComponent("generated-source.mkv"), original = try Data(contentsOf: src)
-        let executable = buildTarget.appendingPathComponent("release/staxrip-dolby-companion-writer")
-        let reader = buildTarget.appendingPathComponent("release/staxrip-dolby-metadata-audit")
+        let executable = helpers.writer
+        let reader = helpers.reader
         let adapter = repo.appendingPathComponent("Tools/DolbyCompanionCheck/native_transaction_fixture.py")
         for (mode, name) in [(Transaction.Retention.metadataOnly, "metadata"), (.entireContainer, "full")] {
             let phase: @Sendable (String, URL) async throws -> Wire = { role, directory in
@@ -407,6 +397,6 @@ struct OriginalCompanionTransactionTests {
             let manifest = try JSONSerialization.jsonObject(with: Data(contentsOf: result.directory.appendingPathComponent("manifest.json"))) as! [String: Any]
             #expect(manifest["source_path_identity_bound"] as? Bool == false)
         }
-        #expect(try remains(root) == ["generated", "result-metadata", "result-full"])
+        #expect(try remains(root) == ["generated", "result-metadata", "result-full", "staxrip-dolby-companion-writer", "staxrip-dolby-metadata-audit"])
     }
 }

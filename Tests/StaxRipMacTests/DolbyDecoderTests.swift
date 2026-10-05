@@ -268,9 +268,7 @@ struct FrozenNativeDolbyDecoderTests {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent("native-frozen-decoder-"+UUID().uuidString)
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false);var cleanup=false, unsettled=false
         defer{if cleanup{try? FileManager.default.removeItem(at:root)}}
-        let target=Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/native-decoder-fixtures")
-        let fixture=try await ToolRunner().run(executable:URL(fileURLWithPath:"/usr/bin/env"),arguments:["STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY="+root.path,"cargo","test","--locked","--target-dir",target.path,"--manifest-path",Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path,"actual_hevc_packets_and_rpu_association_match_independent_ffprobe"])
-        try #require(fixture.status == 0)
+        _ = try await RustFixtureBuild.generate(.reference, at: root, copiesIn: root)
         for name in ["single","group","wide-vint","conformance","whole-gop"] {
             let source=root.appendingPathComponent(name+".mkv"),original=try Self.digest(source)
             for threads in [1,4] {
@@ -322,9 +320,7 @@ struct FrozenNativeDolbyDecoderTests {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent("native-source-frame-"+UUID().uuidString)
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
         var cleanup=false;defer{if cleanup{try? FileManager.default.removeItem(at:root)}}
-        let target=Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-NativeFrameAssociationTests")
-        let generated=try await ToolRunner().run(executable:URL(fileURLWithPath:"/usr/bin/env"),arguments:["STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY="+root.path,"cargo","test","--locked","--target-dir",target.path,"--manifest-path",Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path,"actual_hevc_packets_and_rpu_association_match_independent_ffprobe"])
-        try #require(generated.status == 0)
+        _ = try await RustFixtureBuild.generate(.reference, at: root, copiesIn: root)
         let prior=root.appendingPathComponent("prior-output");try Data("prior".utf8).write(to:prior)
         var joins=0
         for name in ["single","group","wide-vint","conformance","whole-gop"] {

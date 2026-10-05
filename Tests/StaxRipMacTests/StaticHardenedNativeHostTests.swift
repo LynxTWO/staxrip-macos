@@ -110,7 +110,7 @@ struct StaticHardenedNativeHostTests {
         return generated
     }
     @Test func staticallyLinkedHardenedHostRunsBothNativeModesAndSettlesActualReaderCancellation() async throws {
-        let bundle = try await HardenedReaderBundleFixture.make(targetName: "static-hardened-native-fixtures")
+        let bundle = try await HardenedReaderBundleFixture.make()
         var settled = false
         defer { if settled { bundle.cleanup() } else { print("GENERATED_STATIC_NATIVE_REVIEW " + bundle.original.root.path) } }
         let root = bundle.original.root, main = bundle.bundle.appendingPathComponent("Contents/MacOS/StaticNativeHost")

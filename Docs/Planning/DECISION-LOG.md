@@ -142,6 +142,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-133 | 2026-10-05 | Native sample source/spool access ownership | Confirmed | |
 | D-134 | 2026-10-05 | Checked companion outer close settlement | Confirmed | |
 | D-135 | 2026-10-05 | Checked internal transaction source close | Confirmed | |
+| D-136 | 2026-10-05 | Shared concrete development fixture build ownership | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -3844,3 +3845,37 @@ retry; D090 timing/phase/prelaunch causes unknown. Current local pass does not r
 that failure. No historical observer/assertion/deadline/global scheduling/concurrency
 change or whole-program completion claim. Source/journal/runtime/privacy/planning
 receipts are separately recorded. D099 internal finite/transient closes remain next.
+
+
+## D-136: Shared concrete development fixture build ownership
+Status: Confirmed
+Date:2026-10-05, owner standing delegation and external CI diagnosis,R059.
+
+Prioritize structural test preparation before expanding native features. Fixed separate
+development Cargo target, consistent development-companion-writer features and locked
+dependencies prepare both release helpers and debug library/binary/matroska harnesses.
+Native flock spans preparation, exact named generator execution and exclusive private
+copies. All later signatures/mutations/execution use private copies. App/default outputs
+and historical private caches are preserved. CI prepares these exact profiles before
+timed Swift tests. Existing concurrency, bounds, assertions and skips remain unchanged;
+only concrete shared artifact/generation/copy acquisition serializes.
+
+Cold duplicated compilation is a supported mechanism, not attribution of every failed
+assertion or proof of no logic defect. Prior missing-output observations and all failed
+runs remain retained. New owned empty-target concurrent requests, checked lock waiting
+cancellation/release, exact copy refusal and native generated-source semantics qualify
+this bounded correction. Direct-child/pipe completion is not universal descendant or
+all-resource settlement. See NATIVE-FIXTURE-BUILD-EVIDENCE.md for executed scope,
+failures/corrections and pending changed hosted qualification. No app code, packaging,
+release/recovery capability, UI, owner-body read or deadline/scheduling workaround.
+D099 remaining stage resources and all rendered/edited/distribution gates remain open.
+
+D136 acceptance: new owned cold2tests10.117s; final inventory/lock focus52tests8.976s;
+ordinary517reported tests/101suites210.071s with33unchanged skips/no emitted warnings.
+Warm exact CI preparation passes. Product build reused D135/current strict ad-hoc
+app/read-only helper validity passes, writer/decoder/sample absent. Source/journal/
+captured runtime/privacy preserved; planning empty after retained hygiene correction.
+Initial harness-selection/missing-try/four new copy-inventory failures retained and
+corrected without changing stage/semantic/assertion/deadline/global concurrency policy.
+PR110 automatic515tests1111.249s85issues retained, no retry. Changed hosted qualification
+pending; individual residual causes and no-logic-defect claim remain unestablished.

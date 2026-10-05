@@ -15,7 +15,7 @@ struct HelperSignatureAdmissionTests {
         func cleanup() { original.cleanup() }
     }
     private func fixture() async throws -> Fixture {
-        let original = try await CompanionOriginalMetadataCheckTests.fixture(targetName: "native-helper-signature-fixtures")
+        let original = try await CompanionOriginalMetadataCheckTests.fixture()
         do {
             let bundle = original.root.appendingPathComponent("GeneratedHelperFixture.app")
             try FileManager.default.createDirectory(at: bundle.appendingPathComponent("Contents/Helpers"), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])

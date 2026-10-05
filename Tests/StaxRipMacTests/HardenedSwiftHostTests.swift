@@ -141,7 +141,7 @@ struct HardenedSwiftHostTests {
         // Never admit an arbitrary basename or media-selected executable.
         try #require(["StaxRipMacTests", "StaxRipMacPackageTests"].contains(originalModule.lastPathComponent))
         let hostBefore = try Self.hash(originalHost), moduleBefore = try Self.hash(originalModule)
-        let b = try await HardenedReaderBundleFixture.make(targetName: "native-hardened-swift-host-fixtures")
+        let b = try await HardenedReaderBundleFixture.make()
         var settled = false
         defer { if settled { b.cleanup() } else { print("GENERATED_SWIFT_HOST_REVIEW " + b.original.root.path) } }
         let contents = b.bundle.appendingPathComponent("Contents"), main = contents.appendingPathComponent("MacOS/SwiftNativeHost")

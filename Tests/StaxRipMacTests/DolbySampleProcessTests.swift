@@ -217,9 +217,7 @@ struct CompatibleNativeDolbySampleTests {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent("compatible-native-samples-"+UUID().uuidString)
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
         var cleanup=false;defer{if cleanup{try? FileManager.default.removeItem(at:root)}}
-        let target=Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-NativeSampleDecoderTests")
-        let generated=try await ToolRunner().run(executable:URL(fileURLWithPath:"/usr/bin/env"),arguments:["STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY="+root.path,"cargo","test","--locked","--target-dir",target.path,"--manifest-path",Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path,"actual_hevc_packets_and_rpu_association_match_independent_ffprobe"])
-        try #require(generated.status == 0)
+        _ = try await RustFixtureBuild.generate(.reference, at: root, copiesIn: root)
         let prior=root.appendingPathComponent("prior-output");try Data("prior".utf8).write(to:prior)
         var joins=0
         for name in ["single","group","wide-vint","conformance","whole-gop"] {
@@ -309,9 +307,7 @@ struct CompatibleNativeDolbySampleTests {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent("native-source-samples-"+UUID().uuidString)
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700])
         var cleanup=false;defer{if cleanup{try? FileManager.default.removeItem(at:root)}}
-        let target=Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-SourceSampleAssociationTests")
-        let generated=try await ToolRunner().run(executable:URL(fileURLWithPath:"/usr/bin/env"),arguments:["STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY="+root.path,"cargo","test","--locked","--target-dir",target.path,"--manifest-path",Self.repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path,"actual_hevc_packets_and_rpu_association_match_independent_ffprobe"])
-        try #require(generated.status == 0)
+        _ = try await RustFixtureBuild.generate(.reference, at: root, copiesIn: root)
         let prior=root.appendingPathComponent("prior");try Data("prior".utf8).write(to:prior)
         func spool(_ name:String) throws -> URL {
             let u=root.appendingPathComponent(name);try FileManager.default.createDirectory(at:u,withIntermediateDirectories:false,attributes:[.posixPermissions:0o700]);return u

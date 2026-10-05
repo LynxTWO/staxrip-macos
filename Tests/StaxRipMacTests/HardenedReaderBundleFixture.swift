@@ -36,8 +36,8 @@ struct HardenedReaderBundleFixture {
             "--force", "--sign", "-", "--timestamp=none", "--options", "runtime", "--identifier", identifier, url.path])
         try #require(r.status == 0)
     }
-    static func make(targetName: String = "native-relocated-signature-bundle-fixtures") async throws -> Self {
-        let f = try await CompanionOriginalMetadataCheckTests.fixture(targetName: targetName)
+    static func make() async throws -> Self {
+        let f = try await CompanionOriginalMetadataCheckTests.fixture()
         do {
             let initial = f.root.appendingPathComponent("GeneratedReaderHost.app")
             let resources = initial.appendingPathComponent("Contents/Resources")

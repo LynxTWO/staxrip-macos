@@ -9,7 +9,7 @@ struct CompanionCandidateReviewTests {
     typealias Fixture = CompanionOriginalMetadataCheckTests.Fixture
     typealias T = OriginalCompanionTransaction
     private func staged(_ mode: T.Retention = .metadataOnly) async throws -> Fixture {
-        let f = try await CompanionOriginalMetadataCheckTests.fixture(targetName: "native-companion-candidate-fixtures")
+        let f = try await CompanionOriginalMetadataCheckTests.fixture()
         do { _ = try await CompanionWriterProcess.run(tool: f.tool, source: f.source, stage: f.stage, retention: mode); return f }
         catch { f.cleanup(); throw error }
     }

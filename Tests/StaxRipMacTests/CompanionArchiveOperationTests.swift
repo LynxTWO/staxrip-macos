@@ -56,7 +56,7 @@ struct CompanionArchiveOperationTests {
         func hold() { signal.yield(()); signal.finish(); if release.wait(timeout: .now() + 30) != .success { Issue.record("Generated access gate expired") } }
     }
     private func fixture() async throws -> Fixture {
-        try await CompanionOriginalMetadataCheckTests.fixture(targetName: "native-companion-access-fixtures")
+        try await CompanionOriginalMetadataCheckTests.fixture()
     }
     private func environment(_ ledger: Ledger, fakeScopes: Bool) -> Operation.Environment {
         .init(access: { url in
@@ -438,7 +438,7 @@ struct CompanionArchiveOperationTests {
     }
 
     @Test func relocatedSealedRustReaderHostRunsBothNativeModesAndReadOnlyReviewWithJoinedAccess() async throws {
-        let b = try await HardenedReaderBundleFixture.make(targetName: "native-relocated-access-bundle-fixtures"); defer { b.cleanup() }
+        let b = try await HardenedReaderBundleFixture.make(); defer { b.cleanup() }
         let original = try Data(contentsOf: b.original.source), (writer, reader) = try b.admit()
         let prior = b.original.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior output".utf8)
         try priorBytes.write(to: prior)
@@ -473,7 +473,7 @@ struct CompanionArchiveOperationTests {
         #expect(!ownAssertion(osState) && !ownAssertion(osState, reason: "StaxRip original companion review"))
     }
     @Test func relocatedHardenedReaderHostCancellationKeepsAccessUntilJoinOrTypedReview() async throws {
-        let b = try await HardenedReaderBundleFixture.make(targetName: "native-relocated-access-bundle-fixtures"); var keep = false
+        let b = try await HardenedReaderBundleFixture.make(); var keep = false
         defer { if keep { print("GENERATED_HARDENED_BUNDLE_REVIEW " + b.original.root.path) } else { b.cleanup() } }
         let (writer, reader) = try b.admit()
         _ = try await CompanionWriterProcess.run(tool: writer, source: b.original.source, stage: b.original.stage, retention: .metadataOnly)
@@ -811,9 +811,7 @@ struct CompanionArchiveOperationTests {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         var keep = true
         defer { if keep { print("GENERATED_ASSOCIATION_ACCESS_REVIEW " + root.path) } else { try? FileManager.default.removeItem(at: root) } }
-        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let generated = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: ["STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY=" + root.path, "cargo", "test", "--locked", "--target-dir", repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-NativeFrameAccessTests").path, "--manifest-path", repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path, "actual_hevc_packets_and_rpu_association_match_independent_ffprobe"])
-        try #require(generated.status == 0)
+        _ = try await RustFixtureBuild.generate(.reference, at: root, copiesIn: root)
         let original = root.appendingPathComponent("single.mkv"), originalBytes = try Data(contentsOf: original)
         let prior = root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8); try priorBytes.write(to: prior)
         func folder() throws -> URL {
@@ -945,9 +943,7 @@ struct CompanionArchiveOperationTests {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         var keep = true
         defer { if keep { print("GENERATED_SAMPLE_ACCESS_REVIEW " + root.path) } else { try? FileManager.default.removeItem(at: root) } }
-        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        let generated = try await ToolRunner().run(executable: URL(fileURLWithPath: "/usr/bin/env"), arguments: ["STAXRIP_GENERATED_DOLBY_REFERENCE_DIRECTORY=" + root.path, "cargo", "test", "--locked", "--target-dir", repo.appendingPathComponent("Tools/DolbyMetadataAudit/target/owned-NativeSampleAccessTests").path, "--manifest-path", repo.appendingPathComponent("Tools/DolbyMetadataAudit/Cargo.toml").path, "actual_hevc_packets_and_rpu_association_match_independent_ffprobe"])
-        try #require(generated.status == 0)
+        _ = try await RustFixtureBuild.generate(.reference, at: root, copiesIn: root)
         let original = root.appendingPathComponent("single.mkv"), originalBytes = try Data(contentsOf: original)
         let prior = root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8); try priorBytes.write(to: prior)
         func folder() throws -> URL {

@@ -232,12 +232,20 @@ private final class MasterCancellation: @unchecked Sendable {
     private let lock = NSLock()
     private var task: Task<MasterCandidate,Error>?
     private var requested = false
+    private var retainedForReview: MasterCancellation?
     func install(_ task: Task<MasterCandidate,Error>) {
         lock.lock(); self.task = task; let cancel = requested; lock.unlock()
         if cancel { task.cancel() }
     }
     func cancel() {
         lock.lock(); requested = true; let task = task; lock.unlock(); task?.cancel()
+    }
+    // A failed notification gives no cleanup authority. Retain the exact completed
+    // task, including any returned candidate whose deinit would remove scratch.
+    func joinAndRetainAfterMissingNotification(_ owned: Task<MasterCandidate, Error>) async {
+        owned.cancel()
+        _ = await owned.result
+        lock.withLock { task = owned; retainedForReview = self }
     }
     func clearAfterJoin() { lock.withLock { task = nil } }
 }
@@ -292,36 +300,127 @@ private final class MasterPhaseDiagnosis: @unchecked Sendable {
 // One generated-test gate holds the actual selected worker, never a phase label.
 private final class MasterLiveGate: @unchecked Sendable {
     private let lock = NSLock()
-    private var selected = false, entered = false
-    private var actualLiveAtRequest = false, releasedBeforeTimeout = false
+    private enum Resolution { case idle, waiting, completed, expired }
+    private var selected = false
+    private var resolution = Resolution.idle
+    private var actualLiveAtRequest = false
     private var closes = [Bool]()
     func select(_ value: Bool) { lock.withLock { selected = value } }
     func close(_ role: String, _ succeeded: Bool) -> Bool {
         lock.withLock { closes.append(succeeded) }; return false
     }
-    func hold(runner: ToolRunner?, cancellation: MasterCancellation, notification: AsyncStream<Date>.Continuation) {
-        let take = lock.withLock { () -> Bool in
-            guard selected, !entered else { return false }; entered = true; return true
+    func begin() -> Bool {
+        lock.withLock {
+            guard selected, resolution == .idle else { return false }
+            resolution = .waiting; return true
         }
-        guard take else { return }
+    }
+    func complete(live: () -> Bool, deliver: () -> Void) {
+        lock.withLock {
+            guard resolution == .waiting else { return }
+            actualLiveAtRequest = live()
+            deliver()
+            resolution = .completed
+        }
+    }
+    func expire(failure: () -> Void) {
+        lock.withLock {
+            guard resolution == .waiting else { return }
+            resolution = .expired
+            failure()
+        }
+    }
+    func hold(runner: ToolRunner?, cancellation: MasterCancellation, notification: AsyncStream<Date>.Continuation) {
+        guard begin() else { return }
         let release = DispatchSemaphore(value: 0)
         DispatchQueue.global().asyncAfter(deadline: .now()+0.02) { [self] in
-            // nil is the renderer: this exact worker is still inside its chunk callback.
-            let live = runner == nil || runner?.ownedLivePID != nil
-            lock.withLock { actualLiveAtRequest = live }
-            notification.yield(Date()); notification.finish(); cancellation.cancel()
-            release.signal()
+            complete(live: {
+                // nil is the renderer: this exact worker is still inside its chunk callback.
+                runner == nil || runner?.ownedLivePID != nil
+            }, deliver: {
+                notification.yield(Date()); notification.finish(); cancellation.cancel()
+                release.signal()
+            })
         }
-        let signalled = release.wait(timeout: .now()+10) == .success
-        lock.withLock { releasedBeforeTimeout = signalled }
-        if !signalled { cancellation.cancel(); notification.finish() }
+        if release.wait(timeout: .now()+10) != .success {
+            expire { cancellation.cancel(); notification.finish() }
+        }
     }
-    var passed: Bool { lock.withLock { entered && actualLiveAtRequest && releasedBeforeTimeout } }
+    var passed: Bool { lock.withLock { resolution == .completed && actualLiveAtRequest } }
     var allClosesSucceeded: Bool { lock.withLock { !closes.isEmpty && closes.allSatisfy { $0 } } }
 }
 
 @Suite(.serialized)
 struct MasteringRecoveryTests {
+    @Test func liveGateCompletionAndExpiryHaveOneAuthoritativeWinner() {
+        for expiresFirst in [true, false] {
+            for live in [true, false] {
+                let gate = MasterLiveGate()
+                gate.select(true)
+                #expect(gate.begin())
+                #expect(!gate.begin())
+                var observations = 0, deliveries = 0, failures = 0
+                if expiresFirst { gate.expire { failures += 1 } }
+                for _ in 0..<2 {
+                    gate.complete(live: { observations += 1; return live }, deliver: { deliveries += 1 })
+                }
+                gate.expire { failures += 1 }
+                #expect(observations == (expiresFirst ? 0 : 1))
+                #expect(deliveries == (expiresFirst ? 0 : 1))
+                #expect(failures == (expiresFirst ? 1 : 0))
+                #expect(gate.passed == (!expiresFirst && live))
+            }
+        }
+    }
+
+    @Test func missingNotificationJoinsAndRetainsExactTaskResult() async {
+        final class Evidence: Error, @unchecked Sendable {}
+        final class Witnesses: @unchecked Sendable {
+            weak var evidence: Evidence?
+            weak var holder: MasterCancellation?
+            private let lock = NSLock()
+            private var returned = false
+            func markReturned() { lock.withLock { returned = true } }
+            var hasReturned: Bool { lock.withLock { returned } }
+        }
+        let witness = Witnesses()
+        let ready = AsyncStream<CheckedContinuation<Void, Never>>.makeStream()
+        let cancelled = AsyncStream<Void>.makeStream()
+        var holder: MasterCancellation? = MasterCancellation()
+        witness.holder = holder
+        var owned: Task<MasterCandidate, Error>?
+        do {
+            let evidence = Evidence()
+            witness.evidence = evidence
+            owned = Task {
+                try await withTaskCancellationHandler {
+                    await withCheckedContinuation { ready.continuation.yield($0) }
+                    throw evidence
+                } onCancel: { cancelled.continuation.yield(()) }
+            }
+        }
+        holder!.install(owned!)
+        var readyIterator = ready.stream.makeAsyncIterator()
+        let release = await readyIterator.next()!
+        var join: Task<Void, Never>? = Task { [holder = holder!, owned = owned!] in
+            await holder.joinAndRetainAfterMissingNotification(owned)
+            witness.markReturned()
+        }
+        var cancelledIterator = cancelled.stream.makeAsyncIterator()
+        _ = await cancelledIterator.next()
+        #expect(!witness.hasReturned)
+        release.resume()
+        await join!.value
+        #expect(witness.hasReturned)
+        if case .failure(let error) = await owned!.result {
+            #expect(error as? Evidence === witness.evidence)
+        } else { Issue.record("Expected exact task failure") }
+        join = nil; owned = nil; holder = nil
+        #expect(witness.holder != nil)
+        #expect(witness.evidence != nil)
+        ready.continuation.finish(); cancelled.continuation.finish()
+    }
+
     @Test func terminalDiagnosticsKeepOnlyFiniteCategoriesAndNumericCodes() {
         let privateText = "Generated private path/payload sentinel"
         let d = MasterPhaseDiagnosis()
@@ -383,6 +482,9 @@ struct MasteringRecoveryTests {
         var iterator = notified.stream.makeAsyncIterator()
         let next = await iterator.next()
         print(diagnosis.record(target: target,event: .phaseNext,received: next != nil))
+        if next == nil {
+            await cancellation.joinAndRetainAfterMissingNotification(task)
+        }
         let start = try #require(next)
         await #expect(throws: CancellationError.self) { try await task.value }
         #expect(Date().timeIntervalSince(start) < 5)

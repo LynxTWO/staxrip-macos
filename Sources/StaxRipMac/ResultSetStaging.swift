@@ -81,6 +81,15 @@ final class ResultSetStaging: @unchecked Sendable {
     @TaskLocal static var testBoundary = TestBoundary()
     var publishedPinsConsumedForTesting: Bool { lock.withLock { state == .published && parentFD < 0 && directoryFD < 0 } }
     var removedPinsConsumedForTesting: Bool { lock.withLock { state == .discarded && parentFD < 0 && directoryFD < 0 } }
+    /// Current descriptor identities on a settled owner, not descriptor-number absence.
+    func retainedPinIdentitiesForTesting() -> [(UInt64, UInt64)]? {
+        lock.withLock {
+            guard state != .publishing, parentFD >= 0, directoryFD >= 0 else { return nil }
+            var p = stat(), d = stat()
+            guard fstat(parentFD, &p) == 0, fstat(directoryFD, &d) == 0 else { return nil }
+            return [(UInt64(p.st_dev), UInt64(p.st_ino)), (UInt64(d.st_dev), UInt64(d.st_ino))]
+        }
+    }
     #endif
 
     /// Observes finite verifier/creation and actual published/removed terminal pin roles.
@@ -210,6 +219,12 @@ final class ResultSetStaging: @unchecked Sendable {
 
     // A review locator only, never authorization to delete an unverified path.
     var originalDirectoryURL: URL { parent.appendingPathComponent(name, isDirectory: true) }
+
+    /// Called after transaction phases return. Retention never restores availability
+    /// or changes an actual published/removed event; no release authority is added.
+    func retainForReview() {
+        lock.withLock { if state == .available { state = .review } }
+    }
 
     func fileURL(_ filename: String) throws -> URL {
         try lock.withLock {

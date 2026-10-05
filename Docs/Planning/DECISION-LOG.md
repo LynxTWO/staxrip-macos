@@ -147,6 +147,7 @@ Version: 0.1 Draft. Date: 2026-09-28.
 | D-138 | 2026-10-05 | Checked staging creation rollback and observed directory state | Confirmed | |
 | D-139 | 2026-10-05 | Checked published staging parent and directory pins | Confirmed | |
 | D-140 | 2026-10-05 | Checked removed staging terminal pins and actual removal propagation | Confirmed | |
+| D-141 | 2026-10-05 | Concrete stage owner retained through uncertain transaction/access review | Confirmed | |
 | D-125 | 2026-10-04 | Native association storage | Confirmed | |
 | D-124 | 2026-10-04 | Owned development decoder stream | Confirmed | |
 | D-091 | 2026-10-03 | Prioritize measured dynamic HDR conversion | Confirmed | |
@@ -4054,3 +4055,54 @@ without warnings, minima14.0/11.0; writer/decoder/sample absent. Static93-source
 compiles changed code and runs prior companion preservation/review, not decoder/sample
 loading. Privacy/protected source/journal/original runtime/planning recorded separately.
 No UI walkthrough/new sample/sanitizer/APFS/signing/owner full-source qualification.
+
+
+## D-141: Retain the concrete transaction stage owner through access review
+Status: Confirmed
+Date:2026-10-05, owner standing generated non-audio delegation,R059.
+
+Uncertain transaction errors previously preserved locators without holding their
+existing stage owner. Carry that concrete owner in SourceSettlementFailure,
+StagingSettlementFailure, UnsettledPhaseFailure and CleanupFailure; existing retained
+Access review holds the same owner after outer error drop/energy expiry. Mark an
+available stage review-only after phases return; never restore availability or alter
+actual Published/Removed events. No second owner/worker, generic lease/receipt/Python
+bridge or production recovery-release/cleanup API. Creation failure has no transferred
+stage owner. A held narrow transaction error retains it; lower direct caller dropping
+its own error without a concrete controller is not newly qualified.
+
+Two new tests qualify actual descriptor identities and ARC lifetime. Ten native cases
+across both modes cover controlled phase marker, source close report, postcommit
+transient close report, incomplete nonrecursive cleanup and stage substitution. Fourteen
+actual helper direct joins; full native semantic verification precedes transient/cleanup
+cases. After error drop/energy expiry actual parent/directory pins retain original IDs,
+stage reuse/conflicting operations refuse, source/prior/published/moved/sentinel bytes
+remain unchanged. An opaque controlled worker stays unjoined until its sole test caller
+explicitly joins; held transaction error retains concrete pins. Fake grants are not
+sandbox rights, reports after successful real close are not spontaneous OS faults.
+DEBUG isolation after controlled worker/child joins is not production recovery/cleanup
+or fallback close qualification. Generated uncertain roots remain retained privately.
+
+Initial compile log retained for misplaced try in new test optional expression; corrected.
+Corrected86tests/3suites19.911s passed; final review-only guard/worker-failure join coverage
+86tests/3suites19.859s passed without warnings. Full ordinary/build results recorded below.
+D137-D140 finite creation/transient/published/removed close checks remain narrower;
+remaining retained pin retirement/deinit, other helper/disk resource and distribution/
+sandbox/recovery/import/blocked-I/O/rendered/edited gates remain open. No historical
+observer/assertion/deadline/skip/global scheduling/concurrency change or new media work.
+
+PR115 automatic37265284884 failed541tests396.720s8issues: two120s bounds, three metadata
+absent-positive-child assertions, Fresh-analysis cancellation5.829253vs5 and two mastering
+phase EOF expectations. Staging10.977s/access182.536s/shared-fixture34.421s/static173.547s
+passed. Full failed log retained/PR115 updated without retry; individual residual causes
+remain unestablished, not all-starvation or exclusion of logic defects.
+
+
+Final ordinary543reported tests/101suites210.924s passed33unchanged explicit opt-in
+skips/no emitted warnings; access30.873s/staging0.523s/static30.525s. Explicit production
+build20.77s/current strict ad-hoc app/read-only helper signatures pass/no warnings,
+minima14.0/11.0; writer/decoder/sample absent. Static93-source host compiles changed code
+and runs prior companion preservation/review, not decoder/sample loading. Eight-file
+privacy zero/positive sentinel, protected source metadata/current journal/original sample/
+prefix/frozen/captured runtime unchanged, planning empty. No UI walkthrough/new sample/
+sanitizer/APFS/signing/owner full-source qualification.

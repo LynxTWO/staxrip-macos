@@ -1728,4 +1728,101 @@ struct CompanionArchiveOperationTests {
         Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
     }
 
+    @Test func concreteStageOwnerSurvivesDroppedErrorsExpiryAndConflicts() async throws {
+        func retainedFiles(_ directory: URL) throws -> [String: Data] {
+            var result: [String: Data] = [:]
+            for name in try FileManager.default.contentsOfDirectory(atPath: directory.path) {
+                let selected = directory.appendingPathComponent(name)
+                if name == "blocker" {
+                    var info = stat(); try #require(lstat(selected.path, &info) == 0 && info.st_mode & mode_t(S_IFMT) == mode_t(S_IFDIR))
+                    let children = try FileManager.default.contentsOfDirectory(atPath: selected.path)
+                    #expect(children.isEmpty); result[name] = Data()
+                } else { result[name] = try Data(contentsOf: selected) }
+            }
+            return result
+        }
+        struct ControlledUnsettled: CompanionUnsettledOwnership {}
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+          for fault in ["phase", "source", "transient", "cleanup", "substitution"] {
+            let f = try await fixture(), ledger = Ledger(), closes = StageCloses()
+            defer { print("GENERATED_RETAINED_STAGE_OWNER " + f.root.path) }
+            let source = try Data(contentsOf: f.source), prior = f.root.appendingPathComponent("prior-output"), priorBytes = Data("Generated prior".utf8)
+            try priorBytes.write(to: prior)
+            var reviewID: UUID?, published: URL?
+            weak var observed: ResultSetStaging?
+            do {
+                _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                    try await Operation.$testBoundary.withValue(.init(phase: { phase in
+                        if phase == "verifier" && ["phase", "source", "substitution"].contains(fault) {
+                            if fault == "phase" { throw ControlledUnsettled() }
+                            if fault == "substitution" {
+                                let names = try FileManager.default.contentsOfDirectory(atPath: f.root.path)
+                                guard let name = names.first(where: { $0.hasPrefix(".staxrip-result-") }) else { throw NativeExportError.invalid("Generated stage missing") }
+                                let selected = f.root.appendingPathComponent(name), moved = f.root.appendingPathComponent("moved-owned-stage")
+                                try FileManager.default.moveItem(at: selected, to: moved)
+                                try FileManager.default.createDirectory(at: selected, withIntermediateDirectories: false)
+                                try Data([42]).write(to: selected.appendingPathComponent("sentinel"))
+                            }
+                            throw NativeExportError.invalid("Generated verifier admission refusal")
+                        }
+                    }, pinned: { ledger.pinned($0) })) {
+                        try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                            try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                                try await OriginalCompanionTransaction.$sourceBoundary.withValue(.init(refuseClose: { fault == "source" })) {
+                                    try await ResultSetStaging.$testBoundary.withValue(.init(beforeCommit: {
+                                        if fault == "cleanup" {
+                                            let names = try FileManager.default.contentsOfDirectory(atPath: f.root.path)
+                                            guard let name = names.first(where: { $0.hasPrefix(".staxrip-result-") }) else { throw NativeExportError.invalid("Generated stage missing") }
+                                            try FileManager.default.createDirectory(at: f.root.appendingPathComponent(name).appendingPathComponent("blocker"), withIntermediateDirectories: false)
+                                            throw NativeExportError.invalid("Generated ordinary refusal after full verification")
+                                        }
+                                    }, closed: { closes.add($0) }, refuseClose: { fault == "transient" && $0 == .member("manifest.json") })) { try await execute(f, mode: mode) }
+                                }
+                            }
+                        }
+                    }
+                }
+                Issue.record("Generated stage ownership refusal returned success")
+            } catch let e as Operation.ReviewFailure {
+                reviewID = e.reviewID; published = e.published?.directory
+                #expect(e.removed == nil)
+                if fault == "phase" { #expect((e.operationError as? OriginalCompanionTransaction.UnsettledPhaseFailure)?.operationError is ControlledUnsettled) }
+                if fault == "source" { #expect(e.operationError is OriginalCompanionTransaction.SourceSettlementFailure) }
+                if fault == "transient" { #expect(e.operationError is OriginalCompanionTransaction.StagingSettlementFailure && e.published != nil) }
+                if ["cleanup", "substitution"].contains(fault) { #expect(e.operationError is OriginalCompanionTransaction.CleanupFailure && e.published == nil) }
+                observed = Operation.retainedStageForTesting(e.reviewID)
+                #expect(observed != nil)
+            }
+            // Error and transaction's local owner are gone; only existing Access review retains it.
+            let id = try #require(reviewID)
+            ledger.expectJoined(count: ["transient", "cleanup"].contains(fault) ? 2 : 1)
+            let before = try #require(observed?.retainedPinIdentitiesForTesting())
+            #expect(before.count == 2)
+            #expect(throws: NativeExportError.self) { try observed?.fileURL("manifest.json") }
+            #expect(throws: NativeExportError.self) { try observed?.discard() }
+            let selected = try published ?? #require(observed?.originalDirectoryURL)
+            let actual = fault == "substitution" ? f.root.appendingPathComponent("moved-owned-stage") : selected
+            let files = try retainedFiles(actual)
+            var directory = stat(), parent = stat()
+            try #require(lstat(actual.path, &directory) == 0 && lstat(f.root.path, &parent) == 0)
+            #expect(before[0].0 == UInt64(parent.st_dev) && before[0].1 == UInt64(parent.st_ino))
+            #expect(before[1].0 == UInt64(directory.st_dev) && before[1].1 == UInt64(directory.st_ino))
+            await #expect(throws: NativeExportError.self) { try await execute(f) }
+            await #expect(throws: NativeExportError.self) { try await review(f) }
+            try await Task.sleep(for: .milliseconds(100))
+            ledger.expectEnded(); ledger.expectRetained(); #expect(Operation.retainedForTesting(id) && observed != nil)
+            let after = try #require(observed?.retainedPinIdentitiesForTesting()), filesAfter = try retainedFiles(actual)
+            #expect(after.count == before.count && zip(after,before).allSatisfy { $0.0.0 == $0.1.0 && $0.0.1 == $0.1.1 } && filesAfter == files)
+            #expect(closes.count(.publishedDirectory) == 0 && closes.count(.publishedParent) == 0 && closes.count(.removedDirectory) == 0 && closes.count(.removedParent) == 0)
+            let sourceAfter = try Data(contentsOf: f.source), priorAfter = try Data(contentsOf: prior)
+            #expect(sourceAfter == source && priorAfter == priorBytes)
+            if fault == "substitution" { let sentinel = try Data(contentsOf: selected.appendingPathComponent("sentinel")); #expect(sentinel == Data([42])) }
+            // All generated phases/children above are joined; isolation has no production
+            // recovery/cleanup authority and does not qualify remaining fallback closes.
+            Operation.releaseGeneratedReviewForTesting(id); ledger.expectEnded(scoped: true)
+            #expect(observed == nil)
+          }
+        }
+    }
+
 }

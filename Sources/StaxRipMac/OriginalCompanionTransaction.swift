@@ -51,6 +51,7 @@ enum OriginalCompanionTransaction {
         let operationError: Error
         let cleanupError: Error
         let intendedStage: URL
+        let retainedStage: ResultSetStaging?
         var removed: ResultSetStaging.Removed? { (cleanupError as? ResultSetStaging.RemovalSettlementFailure)?.removed }
         var errorDescription: String? {
             removed == nil ? "Companion operation failed; its temporary stage needs cleanup review."
@@ -60,6 +61,7 @@ enum OriginalCompanionTransaction {
     struct UnsettledPhaseFailure: CompanionUnsettledOwnership, LocalizedError {
         let operationError: Error
         let intendedStage: URL
+        let retainedStage: ResultSetStaging?
         var errorDescription: String? { "Companion ownership is unsettled. Its temporary stage needs review." }
     }
     /// Internal source close uncertainty after all trusted phases have returned.
@@ -69,6 +71,7 @@ enum OriginalCompanionTransaction {
         let closeError: Error
         let intendedStage: URL
         let published: ResultSetStaging.Published?
+        let retainedStage: ResultSetStaging?
         var errorDescription: String? {
             published == nil ? "Companion source close is unsettled; its stage needs review."
                 : "Companion result was published; source close needs ownership review."
@@ -78,6 +81,7 @@ enum OriginalCompanionTransaction {
         let operationError: ResultSetStaging.SettlementFailure
         let intendedStage: URL
         let published: ResultSetStaging.Published?
+        let retainedStage: ResultSetStaging?
         var errorDescription: String? { operationError.errorDescription }
     }
     struct CreationSettlementFailure: CompanionUnsettledOwnership, LocalizedError {
@@ -177,25 +181,29 @@ enum OriginalCompanionTransaction {
             if let close = closeError ?? (operation as? SourceCloseFailure) {
                 // Never discard after source close uncertainty, including before
                 // commit. Keep a stronger phase failure as the operation cause.
+                ownedStage?.retainForReview()
                 throw SourceSettlementFailure(operationError: operation, closeError: close,
-                    intendedStage: directory, published: published)
+                    intendedStage: directory, published: published, retainedStage: ownedStage)
             }
             if let staging = operation as? ResultSetStaging.SettlementFailure {
+                ownedStage?.retainForReview()
                 throw StagingSettlementFailure(operationError: staging, intendedStage: staging.intendedStage,
-                                               published: staging.published)
+                                               published: staging.published, retainedStage: ownedStage)
             }
             if let creation = operation as? ResultSetStaging.CreationSettlementFailure {
                 throw CreationSettlementFailure(operationError: creation)
             }
             if operation is CompanionUnsettledOwnership {
                 // Do not delete files while an owned writer may still be active.
-                throw UnsettledPhaseFailure(operationError: operation, intendedStage: directory)
+                ownedStage?.retainForReview()
+                throw UnsettledPhaseFailure(operationError: operation, intendedStage: directory, retainedStage: ownedStage)
             }
             guard let stage = ownedStage else { throw operation }
             do { try stage.discard() }
             catch {
                 // Return a reviewable ownership error; never follow a substituted stage.
-                throw CleanupFailure(operationError: operation, cleanupError: error, intendedStage: directory)
+                ownedStage?.retainForReview()
+                throw CleanupFailure(operationError: operation, cleanupError: error, intendedStage: directory, retainedStage: ownedStage)
             }
             throw operation
         }

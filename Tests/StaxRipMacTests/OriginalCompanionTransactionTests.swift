@@ -399,4 +399,31 @@ struct OriginalCompanionTransactionTests {
         }
         #expect(try remains(root) == ["generated", "result-metadata", "result-full", "staxrip-dolby-companion-writer", "staxrip-dolby-metadata-audit"])
     }
+    @Test func transactionErrorRetainsConcretePinsWhileGeneratedWorkerIsUnsettled() async throws {
+        let root = try folder(), src = try source(root), gate = Gate()
+        defer { print("GENERATED_TRANSACTION_RETAINED_OWNER " + root.path) }
+        let worker = Task { await gate.pause() }
+        for await _ in gate.entered { break }
+        var failure: Transaction.UnsettledPhaseFailure?
+        weak var stage: ResultSetStaging?
+        do {
+            _ = try await Transaction.execute(source: src, in: root, destinationName: "result", retention: .metadataOnly,
+                produce: { directory in _ = try synthetic(src, directory, .metadataOnly); throw CompanionWriterProcess.OwnershipFailure() },
+                verify: { _, c in verified(c) })
+            Issue.record("Unsettled worker returned success")
+        } catch let e as Transaction.UnsettledPhaseFailure { failure = e; stage = e.retainedStage }
+        catch { gate.release(); await worker.value; throw error }
+        do {
+            let before = try #require(stage?.retainedPinIdentitiesForTesting())
+            #expect(before.count == 2 && failure?.operationError is CompanionWriterProcess.OwnershipFailure)
+            #expect(throws: NativeExportError.self) { try stage?.fileURL("manifest.json") }
+            #expect(throws: NativeExportError.self) { try stage?.discard() }
+            gate.release(); await worker.value // Sole test caller joins before lifetime isolation.
+            let after = try #require(stage?.retainedPinIdentitiesForTesting())
+            #expect(zip(before,after).allSatisfy { $0.0.0 == $0.1.0 && $0.0.1 == $0.1.1 })
+            failure = nil
+            #expect(stage == nil) // ARC lifetime observation, not OS close evidence.
+        } catch { gate.release(); await worker.value; throw error }
+    }
+
 }

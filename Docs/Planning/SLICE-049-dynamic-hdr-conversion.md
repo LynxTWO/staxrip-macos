@@ -2197,3 +2197,14 @@ Stable explicit directory URLs preserve the locator across unlink. See D-140 and
 REMOVED-STAGING-PIN-EVIDENCE.md. Partial removal/phase/transient unsettled fallback
 and other resource lifecycles remain unqualified. No action/default packaging/release/
 recovery API or rendered/edited/source/sample proof follows this finite correction.
+
+
+### D141 retained stage owner
+
+Uncertain transaction errors and existing retained Access review now hold the same
+concrete D099 owner, keeping its needed pins after outer error drop and energy expiry.
+Available stages become review-only; actual committed/removed events stay unchanged.
+No automatic close/removal/recovery release follows retention. See D-141 and
+RETAINED-STAGE-OWNER-EVIDENCE.md. Retirement/fallback closes and direct caller drop
+without a concrete controller remain unqualified; other resource/rendered/edited gates
+stay open. No new owner/worker/schema/action/default packaging/release capability.

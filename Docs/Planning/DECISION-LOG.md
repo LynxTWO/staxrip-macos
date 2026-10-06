@@ -5325,3 +5325,7 @@ Use the owner-approved fresh serial utility queue for each metadata write, at th
 ## D192 - observe independent completion at actual write return
 
 Keep the failed hosted independent-operation test and its gate escape. Correct its measurement point from awaiting-caller resumption to the second write's existing synchronous writeReturned callback. Freeze the witness before releasing the first gate, await both exact Tasks, and let every actual 10-second timeout invalidate success. A deterministic state test protects late-peer and fallback cases. Product queue policy and all existing bounds remain unchanged. See CHAPTER-WRITE-QUEUE-EVIDENCE.md; hosted acceptance is still required and all milestones stay open.
+
+## D197 - Join publication test owners before teardown
+
+Owner-approved test ownership repair replaces service inactivity as cleanup evidence with exact controller task joins and concrete fixture settlement. A DEBUG task accessor is the sole product-source change; production publication, existing assertions and 180s/30s bounds remain unchanged. Generated writer cancellation may delete only its own newly generated output; uncertain owners/files and original failures remain retained. See `../../PUBLICATION-TEST-OWNERSHIP-EVIDENCE.md`. This does not establish the cause of hosted timeouts or complete a milestone.

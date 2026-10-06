@@ -21,6 +21,45 @@ private final class NativePublicationGate: @unchecked Sendable {
     }
 }
 
+/// Concrete ownership for only the generated publication-test fixture.
+private final class PublicationFixtureOwnership: @unchecked Sendable {
+    private let lock = NSLock()
+    private var cancelled = false
+    private var session: AVAssetExportSession?
+    private var didSubmit = false
+    @MainActor var writer: AVAssetWriter?
+    @MainActor var input: AVAssetWriterInput?
+    @MainActor var adapter: AVAssetWriterInputPixelBufferAdaptor?
+    @MainActor var writerSettled = false
+    @MainActor var exportSettled = false
+    @MainActor var cancelWritingReturned = false
+    @MainActor private var retained: PublicationFixtureOwnership?
+    func requestCancellation() {
+        let current = lock.withLock { cancelled = true; return didSubmit ? session : nil }
+        current?.cancelExport() // Request only; original callback still owns completion.
+    }
+    func checkCancellation() throws {
+        if lock.withLock({ cancelled }) || Task.isCancelled { throw CancellationError() }
+    }
+    func install(_ value: AVAssetExportSession) { lock.withLock { session = value } }
+    func submitted() {
+        let current = lock.withLock { didSubmit = true; return cancelled ? session : nil }
+        current?.cancelExport() // Covers cancellation before/during submission.
+    }
+    @MainActor func settleAfterFailure() {
+        // Called only after the synchronous append body stopped. If finishWriting
+        // was registered, its original callback has already been awaited.
+        if let writer, !writerSettled, writer.status == .unknown { writerSettled = true }
+        if let writer, !writerSettled {
+            writer.cancelWriting() // Deletes only this writer's generated output.
+            cancelWritingReturned = true
+            writerSettled = [.cancelled, .failed, .completed].contains(writer.status)
+        }
+        let noExport = lock.withLock { session == nil }
+        if !writerSettled || (!noExport && !exportSettled) { retained = self }
+    }
+}
+
 @MainActor
 struct ExportTests {
     private func folder() throws -> URL {
@@ -249,12 +288,12 @@ struct ExportTests {
         }, publishOperation: { staged, destination in
             try gate.publish(staged, destination, fail: outcome == "failure")
         })
-        defer {
-            gate.release()
-            if !service.active { try? FileManager.default.removeItem(at: dir) }
-        }
+        // Failure never authorizes deleting this root, even before service entry.
+        var completed = false
+        defer { gate.release(); if completed { try? FileManager.default.removeItem(at: dir) } }
+        let fixture = PublicationFixtureOwnership()
         let source = dir.appendingPathComponent("source.mov")
-        try await makeFixture(at: source)
+        try await makeFixture(at: source, ownership: fixture)
         let original = try Data(contentsOf: source)
         let protected = dir.appendingPathComponent("prior.mp4"), protectedBytes = Data("prior output".utf8)
         try protectedBytes.write(to: protected)
@@ -262,6 +301,9 @@ struct ExportTests {
         let controller = ExportController(service: service)
         controller.preset = .h264Small
         controller.start(source: source, destination: destination)
+        let submitted = try #require(controller.submittedTaskForTesting)
+        var retryTask: Task<Void, Never>?
+        do {
         while controller.running && !gate.snapshot.entered { try await Task.sleep(for: .milliseconds(5)) }
         #expect(!gate.snapshot.mainThread)
         try #require(gate.snapshot.entered && controller.running)
@@ -281,6 +323,7 @@ struct ExportTests {
         if outcome == "collision" { try competitor.write(to: destination) }
         gate.release()
         while controller.running { try await Task.sleep(for: .milliseconds(5)) }
+        await submitted.value
         #expect(!service.active && !controller.finishing && cleanupCalls == 1)
         #expect(cleaned == staged.deletingLastPathComponent())
         #expect(try Data(contentsOf: source) == original)
@@ -301,7 +344,10 @@ struct ExportTests {
                 let retry = dir.appendingPathComponent("retry.mp4")
                 gate.release()
                 controller.start(source: source, destination: retry)
+                let retrySubmission: Task<Void, Never> = try #require(controller.submittedTaskForTesting)
+                retryTask = retrySubmission
                 while controller.running { try await Task.sleep(for: .milliseconds(5)) }
+                await retryTask?.value
                 #expect(controller.result == retry && controller.failure == nil && controller.status == "Export complete")
                 #expect(try Data(contentsOf: destination) == competitor)
                 #expect(cleanupCalls == 2)
@@ -310,17 +356,128 @@ struct ExportTests {
                 #expect(!FileManager.default.fileExists(atPath: destination.path))
             }
         }
+        completed = fixture.writerSettled && fixture.exportSettled
+        } catch {
+            throw await settlePublicationFailure(error, controller: controller, submitted: submitted, retry: retryTask, gate: gate)
+        }
     }
 
-    private func makeFixture(at url: URL) async throws {
+    private func settlePublicationFailure(_ original: Error, controller: ExportController,
+                                          submitted: Task<Void, Never>, retry: Task<Void, Never>? = nil,
+                                          gate: NativePublicationGate) async -> Error {
+        gate.release(); controller.cancel()
+        await submitted.value
+        await retry?.value
+        return original // No cleanup authority follows a failed observation.
+    }
+
+    @Test func publicationCancellationBeforeServiceEntryJoinsExactSubmission() async throws {
+        let dir = try folder(), fixture = PublicationFixtureOwnership()
+        let source = dir.appendingPathComponent("source.mov")
+        try await makeFixture(at: source, ownership: fixture)
+        let original = try Data(contentsOf: source)
+        let service = NativeExportService(), controller = ExportController(service: service)
+        controller.start(source: source, destination: dir.appendingPathComponent("output.mp4"))
+        let exact = try #require(controller.submittedTaskForTesting)
+        #expect(controller.running && !service.active) // Main actor has not yielded.
+        controller.cancel()
+        await exact.value
+        #expect(!controller.running && !service.active && controller.result == nil)
+        #expect(try Data(contentsOf: source) == original)
+        #expect(!FileManager.default.fileExists(atPath: dir.appendingPathComponent("output.mp4").path))
+        try FileManager.default.removeItem(at: dir)
+    }
+
+    @Test(arguments: [false, true]) func publicationFixtureReadinessCancellationSettlesWriterBeforeReturning(predated: Bool) async throws {
+        let dir = try folder(), fixture = PublicationFixtureOwnership()
+        let prior = dir.appendingPathComponent("prior.mov"), bytes = Data("protected prior".utf8)
+        try bytes.write(to: prior)
+        let source = dir.appendingPathComponent("source.mov")
+        let exact = Task {
+            if predated { withUnsafeCurrentTask { $0?.cancel() } }
+            try await makeFixture(at: source, ownership: fixture, beforeReadiness: {
+                #expect(fixture.writer?.status == .writing)
+                withUnsafeCurrentTask { $0?.cancel() }
+                try await Task.sleep(for: .milliseconds(1))
+            })
+        }
+        let result = await exact.result
+        do { try result.get(); Issue.record("Readiness cancellation must fail") }
+        catch { #expect(error is CancellationError) }
+        #expect(fixture.writerSettled)
+        #expect(predated ? (!fixture.cancelWritingReturned && fixture.writer?.status == .unknown) : (fixture.cancelWritingReturned && fixture.writer?.status == .cancelled))
+        #expect(!FileManager.default.fileExists(atPath: source.deletingPathExtension().appendingPathExtension("video.mov").path))
+        #expect(try Data(contentsOf: prior) == bytes)
+        if fixture.writerSettled { try FileManager.default.removeItem(at: dir) }
+    }
+
+    @Test func publicationFixturePredatedExportCancellationWaitsForOriginalCallback() async throws {
+        let dir = try folder(), fixture = PublicationFixtureOwnership()
+        let source = dir.appendingPathComponent("source.mov")
+        let exact = Task {
+            try await makeFixture(at: source, ownership: fixture, beforeExportSubmission: {
+                withUnsafeCurrentTask { $0?.cancel() }
+            })
+        }
+        let result = await exact.result
+        if case .success = result { Issue.record("Predated export cancellation must fail") }
+        #expect(fixture.writerSettled && fixture.exportSettled && !fixture.cancelWritingReturned)
+        // Actual original callback + terminal status, not cancelExport return.
+        if fixture.writerSettled && fixture.exportSettled { try FileManager.default.removeItem(at: dir) }
+    }
+
+    @Test(.timeLimit(.minutes(3))) func publicationObservationFailureJoinsHeldOperationAndKeepsRoot() async throws {
+        struct ObservationFailure: Error {}
+        let dir = try folder(), fixture = PublicationFixtureOwnership(), gate = NativePublicationGate()
+        let source = dir.appendingPathComponent("source.mov"), output = dir.appendingPathComponent("output.mp4")
+        try await makeFixture(at: source, ownership: fixture)
+        let original = try Data(contentsOf: source)
+        let service = NativeExportService(publishOperation: { staged, destination in
+            try gate.publish(staged, destination, fail: false)
+        })
+        let controller = ExportController(service: service)
+        controller.start(source: source, destination: output)
+        let exact = try #require(controller.submittedTaskForTesting)
+        do {
+            while controller.running && !gate.snapshot.entered { try await Task.sleep(for: .milliseconds(5)) }
+            try #require(gate.snapshot.entered)
+            throw ObservationFailure()
+        } catch {
+            let preserved = await settlePublicationFailure(error, controller: controller, submitted: exact, gate: gate)
+            #expect(preserved is ObservationFailure)
+        }
+        #expect(!controller.running && !service.active)
+        #expect(controller.result == output && FileManager.default.fileExists(atPath: output.path))
+        #expect(try Data(contentsOf: source) == original)
+        #expect(FileManager.default.fileExists(atPath: dir.path))
+        // Retained deliberately: the original failed observation never permits cleanup.
+    }
+
+    private func makeFixture(at url: URL, ownership: PublicationFixtureOwnership? = nil, beforeReadiness: (() async throws -> Void)? = nil, beforeExportSubmission: (() -> Void)? = nil) async throws {
+        guard let ownership else { try await makeFixtureBody(at: url, ownership: nil, beforeReadiness: nil, beforeExportSubmission: nil); return }
+        do {
+            try await withTaskCancellationHandler {
+                try await makeFixtureBody(at: url, ownership: ownership, beforeReadiness: beforeReadiness, beforeExportSubmission: beforeExportSubmission)
+            } onCancel: { ownership.requestCancellation() }
+        } catch {
+            ownership.settleAfterFailure()
+            throw error
+        }
+    }
+
+    private func makeFixtureBody(at url: URL, ownership: PublicationFixtureOwnership?, beforeReadiness: (() async throws -> Void)?, beforeExportSubmission: (() -> Void)?) async throws {
         let videoURL = url.deletingPathExtension().appendingPathExtension("video.mov")
         let writer = try AVAssetWriter(outputURL: videoURL, fileType: .mov)
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: 320, AVVideoHeightKey: 180])
         let adapter = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32ARGB, kCVPixelBufferWidthKey as String: 320, kCVPixelBufferHeightKey as String: 180])
+        ownership?.writer = writer; ownership?.input = input; ownership?.adapter = adapter
+        try ownership?.checkCancellation()
         writer.add(input)
         guard writer.startWriting() else { throw writer.error! }
         writer.startSession(atSourceTime: .zero)
+        try await beforeReadiness?()
         for frame in 0..<30 {
+            try ownership?.checkCancellation()
             while !input.isReadyForMoreMediaData { try await Task.sleep(for: .milliseconds(1)) }
             var buffer: CVPixelBuffer?
             CVPixelBufferCreate(kCFAllocatorDefault, 320, 180, kCVPixelFormatType_32ARGB, [kCVPixelBufferCGImageCompatibilityKey: true, kCVPixelBufferCGBitmapContextCompatibilityKey: true] as CFDictionary, &buffer)
@@ -334,7 +491,9 @@ struct ExportTests {
         }
         input.markAsFinished()
         await withCheckedContinuation { continuation in writer.finishWriting { continuation.resume() } }
+        ownership?.writerSettled = [.completed, .failed, .cancelled].contains(writer.status)
         guard writer.status == .completed else { throw writer.error! }
+        try ownership?.checkCancellation()
         let audioURL = url.deletingPathExtension().appendingPathExtension("caf")
         let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 48000, channels: 1))
         let audioBuffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 48000))
@@ -357,7 +516,19 @@ struct ExportTests {
         let fixtureExport = try #require(AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetHighestQuality))
         fixtureExport.outputURL = url
         fixtureExport.outputFileType = .mov
-        await withCheckedContinuation { continuation in fixtureExport.exportAsynchronously { continuation.resume() } }
-        guard fixtureExport.status == .completed else { throw fixtureExport.error! }
+        ownership?.install(fixtureExport)
+        beforeExportSubmission?()
+        await withCheckedContinuation { continuation in
+            fixtureExport.exportAsynchronously { continuation.resume() }
+            ownership?.submitted()
+        }
+        ownership?.exportSettled = [.completed, .failed, .cancelled].contains(fixtureExport.status)
+        guard fixtureExport.status == .completed else {
+            if ownership == nil { throw fixtureExport.error! } // Historical caller behavior.
+            if let error = fixtureExport.error { throw error }
+            if ownership != nil && fixtureExport.status == .cancelled { throw CancellationError() }
+            throw NativeExportError.invalid("Generated fixture export did not complete")
+        }
+        try ownership?.checkCancellation()
     }
 }

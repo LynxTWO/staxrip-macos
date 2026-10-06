@@ -13,7 +13,6 @@ struct BatchJournal: Codable {
             .appendingPathComponent("StaxRipMac", isDirectory: true).appendingPathComponent("last-batch.json")
     }
 
-    #if DEBUG
     enum DemoSelection: Equatable {
         case notRequested
         case isolated(URL)
@@ -42,7 +41,6 @@ struct BatchJournal: Codable {
         }
         return .isolated(journal)
     }
-    #endif
 
     func validated() throws -> Self {
         guard (1...11).contains(version) else { throw SessionError.invalid("Unsupported batch recovery version.") }

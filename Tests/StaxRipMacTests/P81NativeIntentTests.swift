@@ -3,7 +3,7 @@ import Testing
 @testable import StaxRipMac
 
 struct P81NativeIntentTests {
-    @Test func ordinaryPreflightRefusesWhileIsolatedIntentDefersVerification() async throws {
+    @Test func ordinaryPreflightDefersCompleteVerificationAndGenericPlanStillRefuses() async throws {
         let root=FileManager.default.temporaryDirectory.appendingPathComponent("p81-intent-"+UUID().uuidString)
         try FileManager.default.createDirectory(at:root,withIntermediateDirectories:false)
         let source=root.appendingPathComponent("generated.mkv")
@@ -12,8 +12,8 @@ struct P81NativeIntentTests {
         c.p81EnhancementLossAcknowledgement=try DolbyLossAcknowledgement(source:source,fingerprint:.init(sha256:String(repeating:"a",count:64),byteCount:1))
         let job=QueueJob(id:UUID(),source:source.path,isDemo:false,destination:root.appendingPathComponent("result.mkv").path,configuration:c,created:Date())
         let tools=try #require(FFmpegTools.discover())
-        await #expect(throws:(any Error).self) {try await QueuePreflight.inspect(job,tools:tools,encoders:[])}
-        let result=try await QueuePreflight.inspect(job,tools:tools,encoders:[],generatedP81:true)
+        #expect(throws:(any Error).self) {try DolbyConversionIntent.requireRunnable(c)}
+        let result=try await QueuePreflight.inspect(job,tools:tools,encoders:[])
         #expect(result.kind == .deferred)
         #expect(!FileManager.default.fileExists(atPath:job.destination))
         let copying=QueueJobPresentation(job:job,status:.init(phase:"Encoding"),publishing:false,check:nil)

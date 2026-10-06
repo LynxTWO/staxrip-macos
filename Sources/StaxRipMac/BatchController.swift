@@ -506,6 +506,7 @@ final class BatchController: ObservableObject {
                   report.mappings == ["7:MEL": report.records], report.cmv29Records == report.records, report.cmv40Records == 0,
                   report.header.declaredPixelWidth == 3840, report.header.declaredPixelHeight == 2160,
                   report.header.declaredCropLeftRightTopBottom == [0,0,0,0] else { throw DolbyCopyNative.failure() }
+            let p81Metadata = try await DolbyP81Metadata.read(source, report:report, helper:helper)
             let sourceTiming = try await DolbyCopyTiming.read(source, stream: stream.index, timeBase: clock, tools: tools)
             let sourceFrames = try await DolbyCopyFrames.read(source, stream: stream, source: true, tools: tools)
             try sourceFrames.bind(nativeSource)
@@ -547,7 +548,10 @@ final class BatchController: ObservableObject {
             let (publishedHash, _, publishedIdentity) = try await ExportSourceFingerprint.readCopyIdentity(output, role: .output, timeBase: outputClock)
             guard publishedHash == outputHash, verifiedIdentity.matches(publishedIdentity.value, published: true) else { throw DolbyCopyNative.failure() }
             let summary = "Verified HDR10 base-layer copy · \(frames.frames) frames · PQ / BT.2020 / top-left chroma and static HDR unchanged. Dolby Vision and enhancement data removed with your acknowledgement. No video re-encoding or tone mapping.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published.\nThe temporary verification copy is retained beside the output; this route does not automatically delete it."
-            statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: summary, destination: output)
+            let p81Detail = p81Metadata.supported
+                ? "Source metadata fits the reviewed P8.1 subset; P8.1 conversion remains unavailable pending output qualification."
+                : "Source metadata is outside the reviewed P8.1 subset; P8.1 conversion remains unavailable."
+            statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: summary + "\n" + p81Detail, destination: output)
             checkpointAfterOutcome()
             try requireCopyDirectory(copyParentFD, at: parent); try requireCopyDirectory(copyStageFD, at: directory)
             try closeCopyDirectories()

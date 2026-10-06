@@ -102,4 +102,50 @@ struct DolbyP81OutputTests {
         }
     }
 
+    @Test func nativeMuxPreservesSourceClockAndExactExtraction() throws {
+        let a = nal(32)+nal(1)+nal(62)+nal(63), b = nal(32)+nal(1)+nal(62)
+        let source = fixture(source:true,packets:[a],relative:1000)
+        let candidate = fixture(source:false,packets:[b],relative:0)
+        var raw=Data(),output=Data()
+        try DolbyCopyNative.extractP81Input(view(source),timeBase:HDRFraction("1/1000")) {raw.append($0)}
+        #expect(raw == [UInt8(32),1,62,63].reduce(Data()) {$0+Data([0,0,0,1])+nal($1).suffix(3)})
+        try DolbyCopyNative.muxP81(view(source),candidate:view(candidate),timeBase:HDRFraction("1/1000"),candidateTimeBase:HDRFraction("1/1000")) {output.append($0)}
+        let before=try read(source,.source),after=try read(output,.p81Output)
+        #expect(before.keptSequence==after.keptSequence)
+        #expect(before.presentationSequence==after.presentationSequence)
+        #expect(after.rpus==1 && after.enhancement==0)
+    }
+    @Test func nativeMuxRefusesMismatchShortReadAndPreservesSinkCause() throws {
+        let source=fixture(source:true,packets:[nal(1)+nal(62)+nal(63)])
+        let good=fixture(source:false,packets:[nal(1)+nal(62)])
+        for candidate in [fixture(source:false,packets:[nal(1,body:0x81)+nal(62)]),fixture(source:false,packets:[nal(1)]),fixture(source:false,packets:[nal(1)+nal(62),nal(1)+nal(62)])] {
+            #expect(throws:(any Error).self) {try DolbyCopyNative.muxP81(view(source),candidate:view(candidate),timeBase:HDRFraction("1/1000"),candidateTimeBase:HDRFraction("1/1000")) {_ in}}
+        }
+        final class Marker: CompanionUnsettledOwnership {}
+        let marker=Marker()
+        do {
+            try DolbyCopyNative.muxP81(view(source),candidate:view(good),timeBase:HDRFraction("1/1000"),candidateTimeBase:HDRFraction("1/1000")) {_ in throw marker}
+            Issue.record("Sink marker must propagate")
+        } catch {#expect((error as? Marker) === marker)}
+        #expect(throws:CancellationError.self) {try DolbyCopyNative.extractP81Input(view(source,checkpoint:{throw CancellationError()}),timeBase:HDRFraction("1/1000")) {_ in}}
+        let short=CompanionDiskCheck.ReadView(sourceBytes:Int64(source.count),source:{_,_ in Data()},component:{_ in throw marker},checkpoint:{})
+        #expect(throws:(any Error).self) {try DolbyCopyNative.extractP81Input(short,timeBase:HDRFraction("1/1000")) {_ in}}
+    }
+
+    @Test func nativeMuxRejectsMisnestedContainersAndLateIndexCancellation() throws {
+        let good=fixture(source:false,packets:[nal(1)+nal(62)])
+        let nested=fixture(source:true,packets:[nal(1)+nal(62)+nal(63)],extra:element(0xae,element(0xae,Data())))
+        #expect(throws:(any Error).self) {try DolbyCopyNative.muxP81(view(nested),candidate:view(good),timeBase:HDRFraction("1/1000"),candidateTimeBase:HDRFraction("1/1000")) {_ in}}
+        let source=fixture(source:true,packets:[nal(1)+nal(62)+nal(63)])
+        let header=Data([0x81,0xff,0xff,0x80])+nal(1)+nal(62)+nal(63)
+        let offset=try #require(source.range(of:header)?.lowerBound)
+        var headers=0,indexing=false,writes=0
+        let v=CompanionDiskCheck.ReadView(sourceBytes:Int64(source.count),source:{o,n in
+            if o==Int64(offset) && n==11 {headers+=1;if headers==2 {indexing=true}}
+            return source.subdata(in:Int(o)..<(Int(o)+n))
+        },component:{_ in throw DolbyCopyNative.failure()},checkpoint:{if indexing {throw CancellationError()}})
+        #expect(throws:CancellationError.self) {try DolbyCopyNative.extractP81Input(v,timeBase:HDRFraction("1/1000")) {_ in writes+=1}}
+        #expect(indexing && writes==0)
+    }
+
 }

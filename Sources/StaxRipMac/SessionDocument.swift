@@ -2,7 +2,7 @@ import Foundation
 
 struct SessionDocument: Codable, Equatable {
     var format = "staxrip-mac-session"
-    var version = 11
+    var version = 12
     var sourcePath: String?
     var configuration: EncodeConfiguration
     var outputFolder: String
@@ -10,7 +10,7 @@ struct SessionDocument: Codable, Equatable {
     var jobs: [QueueJob]
 
     func validated() throws -> SessionDocument {
-        guard format == "staxrip-mac-session", (1...11).contains(version) else {
+        guard format == "staxrip-mac-session", (1...12).contains(version) else {
             throw SessionError.invalid("This session version is not supported.")
         }
         guard jobs.count <= 1000 else { throw SessionError.invalid("This session contains too many queue items.") }
@@ -32,6 +32,7 @@ struct SessionDocument: Codable, Equatable {
         guard version >= 11 || ([configuration] + jobs.map(\.configuration)).allSatisfy({ $0.colorMode != DolbyConversionIntent.hdr10Copy && $0.dolbyLossAcknowledgement == nil }) else {
             throw SessionError.invalid("Dolby conversion intent requires session version 11.")
         }
+        guard version >= 12 || ([configuration] + jobs.map(\.configuration)).allSatisfy({ $0.colorMode != DolbyConversionIntent.p81Copy && $0.p81EnhancementLossAcknowledgement == nil }) else { throw SessionError.invalid("P8.1 intent requires session version 12.") }
         let chapterCount = (configuration.chapterEdits?.entries.count ?? 0) + jobs.reduce(0) { $0 + ($1.configuration.chapterEdits?.entries.count ?? 0) }
         guard chapterCount <= 10000 else { throw SessionError.invalid("A session can store at most 10000 authored chapter entries across its workspace and queue.") }
         try Self.validate(configuration)
@@ -62,7 +63,7 @@ struct SessionDocument: Codable, Equatable {
     }
 
     static func validateAcknowledgement(_ config: EncodeConfiguration, source: String?) throws {
-        if let acknowledgement = config.dolbyLossAcknowledgement {
+        for acknowledgement in [config.dolbyLossAcknowledgement,config.p81EnhancementLossAcknowledgement].compactMap({$0}) {
             guard let source, URL(fileURLWithPath: source).standardizedFileURL.path == acknowledgement.sourcePath else {
                 throw SessionError.invalid("Dolby Vision loss acknowledgement belongs to a different source. Review this source again.")
             }
@@ -88,7 +89,7 @@ struct SessionDocument: Codable, Equatable {
                 throw SessionError.invalid("Target bitrate exceeds the custom HEVC peak limit.")
             }
         }
-        guard ["SDR", "Preserve static HDR10", DolbyConversionIntent.hdr10Copy].contains(config.colorMode) else {
+        guard ["SDR", "Preserve static HDR10", DolbyConversionIntent.hdr10Copy, DolbyConversionIntent.p81Copy].contains(config.colorMode) else {
             throw SessionError.invalid("Unknown video color intent.")
         }
         guard ["Software", "Apple hardware"].contains(config.rate.backend),

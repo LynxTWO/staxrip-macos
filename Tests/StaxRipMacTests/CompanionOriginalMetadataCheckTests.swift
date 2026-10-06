@@ -12,6 +12,7 @@ struct CompanionOriginalMetadataCheckTests {
         let root, source, stage, executable, reader: URL
         var tool: Writer.Tool { get throws { try .development(executable, expectedSHA256: DolbyInspection.hex(SHA256.hash(data: Data(contentsOf: executable)))) } }
         var readerTool: CompanionMetadataProcess.Tool { get throws { try .development(reader, expectedSHA256: DolbyInspection.hex(SHA256.hash(data: Data(contentsOf:reader)))) } }
+        let reviewedSource: SourceFingerprint
         func cleanup() { try? FileManager.default.removeItem(at: root) }
     }
     private static var repo: URL { URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent() }
@@ -26,7 +27,10 @@ struct CompanionOriginalMetadataCheckTests {
             let reader = helpers.reader
             let stage = root.appendingPathComponent("stage")
             try FileManager.default.createDirectory(at: stage, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
-            return .init(root: root, source: generated.appendingPathComponent("generated-source.mkv"), stage: stage, executable: executable, reader: reader)
+            let source = generated.appendingPathComponent("generated-source.mkv")
+            let reviewedData = try Data(contentsOf: source)
+            let reviewed = SourceFingerprint(sha256: DolbyInspection.hex(SHA256.hash(data: reviewedData)), byteCount: Int64(reviewedData.count))
+            return .init(root: root, source: source, stage: stage, executable: executable, reader: reader, reviewedSource: reviewed)
         } catch { try? FileManager.default.removeItem(at: root); throw error }
     }
 

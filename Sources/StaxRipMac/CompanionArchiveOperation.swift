@@ -74,7 +74,7 @@ enum CompanionArchiveOperation {
     private static var retained: [UUID: Access] = [:]
     private static var executing = false
 
-    static func execute(source: URL, in parent: URL, destinationName: String,
+    static func execute(source: URL, reviewedSource: SourceFingerprint, in parent: URL, destinationName: String,
                         retention: OriginalCompanionTransaction.Retention,
                         writer: CompanionWriterProcess.Tool, reader: CompanionMetadataProcess.Tool) async throws -> ResultSetStaging.Published {
         try Task.checkCancellation()
@@ -110,6 +110,12 @@ enum CompanionArchiveOperation {
                     #endif
                     let disk = try await CompanionDiskCheck.verifyOriginalMetadata(source: source, stage: stage, contents: contents, tool: reader)
                     guard let metadata = disk.originalMetadata, disk.originalMetadataSemanticsVerified else { throw refused() }
+                    // Bind the independently verified current contents to the content
+                    // reviewed by this caller before the existing exclusive commit.
+                    guard disk.contents.sourceSHA256 == reviewedSource.sha256,
+                          disk.contents.sourceBytes == reviewedSource.byteCount else {
+                        throw NativeExportError.invalid("The original source no longer matches the reviewed content. Review it again before preservation.")
+                    }
                     return .init(contents: disk.contents, originalComponentsMatchSource: metadata.originalComponentsMatchSource,
                         sourceIdentityChecked: true, decodedFrameAssociation: metadata.decodedFrameAssociation,
                         immutableSnapshot: metadata.immutableSnapshot, stableImporter: metadata.stableImporter)

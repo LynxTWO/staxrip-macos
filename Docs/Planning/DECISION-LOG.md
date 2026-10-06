@@ -5317,3 +5317,7 @@ Preserve failed hosted assertions and qualify one missing fact before selecting 
 ## D187 - owned renderer test timer
 
 Following explicit owner approval, move only renderer-test cancellation delivery to one joinable timer thread, armed by actual written work at the same monotonic 20 ms delay. Keep the authoritative winner, 10-second escape, under-five-second measurement and every existing assertion. The test caller owns one checked join outside timer/gate locks; startup refusal still requires shutdown and join or retention. No cleanup follows uncertainty. PCM, production, ChapterPlan and recurring automation remain unchanged. See CANCELLATION-TIMER-ENTRY-EVIDENCE.md; this is a finite harness repair, not whole-suite or milestone completion.
+
+## D191 - per-operation chapter metadata queue
+
+Use the owner-approved fresh serial utility queue for each metadata write, at the default target. Keep exclusive writing, one continuation, original error precedence and cancellation checks. Once submitted, await the write before returning or releasing operation resources. Qualify held queued/worker/return boundaries and independent operations without claiming OS-write interruption or guaranteed scheduling. Existing timeouts and decoder contracts remain unchanged. See CHAPTER-WRITE-QUEUE-EVIDENCE.md; all five milestones remain open and recurring automation is unchanged.

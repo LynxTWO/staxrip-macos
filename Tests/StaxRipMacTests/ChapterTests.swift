@@ -25,6 +25,33 @@ final class VideoCopyStageDiagnosis: @unchecked Sendable {
     var chapterEvents: [ChapterPlan.WriteEvent] { lock.withLock { events } }
 }
 
+private final class ChapterWriteGate: @unchecked Sendable {
+    let entered = AsyncStream<Void>.makeStream()
+    let release = DispatchSemaphore(value: 0)
+    private let lock = NSLock()
+    private var done = false
+    private var expired = false
+    private var task: Task<Void, Error>?
+    private var cancelRequested = false
+    func install(_ owned: Task<Void, Error>) {
+        lock.lock(); task = owned; let cancel = cancelRequested; lock.unlock()
+        if cancel { owned.cancel() }
+    }
+    func cancel() {
+        lock.lock(); cancelRequested = true; let owned = task; lock.unlock(); owned?.cancel()
+    }
+    func hold() {
+        entered.continuation.yield(()); entered.continuation.finish()
+        if release.wait(timeout: .now()+10) != .success {
+            lock.withLock { expired = true }; Issue.record("Generated chapter gate expired")
+        }
+    }
+    func finished() { lock.withLock { done = true }; entered.continuation.finish() }
+    var completed: Bool { lock.withLock { done } }
+    var didExpire: Bool { lock.withLock { expired } }
+    func clearAfterJoin() { lock.withLock { task = nil } }
+}
+
 struct ChapterTests {
     @Test func metadataWriteEventsFollowActualExclusiveWriteAndRefusal() async throws {
         let directory = try root()
@@ -54,6 +81,115 @@ struct ChapterTests {
         #expect(absent.chapterEvents == [.bodyEntered,.noMetadata])
     }
 
+
+    @Test func operationQueueCancellationWaitsForSubmittedWriteAndPreservesFailure() async throws {
+        for point in ["before", "queued", "worker", "written", "collision"] {
+            let directory = try root(), gate = ChapterWriteGate()
+            let plan = try ChapterPlan.make(probe: probe(), configuration: configuration())
+            let file = directory.appendingPathComponent("chapters.ffmetadata")
+            let sentinel = Data("existing generated chapter file".utf8)
+            if point == "collision" { try sentinel.write(to: file) }
+            let events = VideoCopyStageDiagnosis(.qualification)
+            let owned = Task {
+                defer { gate.finished() }
+                try await ChapterPlan.$prepareMetadataQueue.withValue({ queue in
+                    if point == "queued" { queue.async { gate.hold() } }
+                }) {
+                    try await ChapterPlan.$observeMetadataWrite.withValue({ event in
+                        events.chapter(event)
+                        if event == .workerEntered { #expect(!Thread.isMainThread) }
+                        if point == "before" && event == .bodyEntered { gate.hold() }
+                        if (point == "worker" || point == "collision") && event == .workerEntered { gate.hold() }
+                        if point == "written" && event == .writeReturned { gate.hold() }
+                    }) { try await plan.writeMetadata(to: directory) }
+                }
+            }
+            gate.install(owned)
+            var observationError: (any Error)?
+            do {
+                for await _ in gate.entered.stream { break }
+                gate.cancel()
+                #expect(!gate.completed)
+                if point == "queued" || point == "worker" { #expect(!FileManager.default.fileExists(atPath: file.path)) }
+                if point == "written" { #expect(try Data(contentsOf: file) == plan.metadata) }
+            } catch { observationError = error }
+            gate.release.signal()
+            let result = await owned.result // Never remove the directory before actual return.
+            gate.clearAfterJoin()
+            if let observationError { throw observationError } // Retain root after release and exact join.
+            var expectedResult = false
+            switch result {
+            case .success: Issue.record("Cancelled generated write returned success")
+            case .failure(let error):
+                expectedResult = point == "collision" ? !(error is CancellationError) : error is CancellationError
+                #expect(expectedResult)
+            }
+            #expect(gate.completed)
+            let observed = events.chapterEvents
+            if point == "before" {
+                #expect(observed == [.bodyEntered])
+                #expect(!FileManager.default.fileExists(atPath: file.path))
+            } else if point == "collision" {
+                #expect(observed == [.bodyEntered,.submitting,.workerEntered,.writeRefused])
+                #expect(try Data(contentsOf: file) == sentinel)
+            } else {
+                #expect(observed == [.bodyEntered,.submitting,.workerEntered,.writeReturned,.bodyResumed])
+                #expect(try Data(contentsOf: file) == plan.metadata)
+            }
+            if expectedResult && !gate.didExpire {
+                try FileManager.default.removeItem(at: directory) // Operation joined; no queued write remains.
+            }
+        }
+    }
+
+    @Test func distinctWriteQueuesProgressWhileAnotherOperationIsHeld() async throws {
+        let first = try root(), second = try root(), gate = ChapterWriteGate()
+        let plan = try ChapterPlan.make(probe: probe(), configuration: configuration())
+        final class Queues: @unchecked Sendable {
+            let lock = NSLock(); var values: [DispatchQueue] = []
+            func add(_ queue: DispatchQueue) { lock.withLock { values.append(queue) } }
+        }
+        let queues = Queues()
+        let held = Task {
+            defer { gate.finished() }
+            try await ChapterPlan.$prepareMetadataQueue.withValue({ queue in
+                queues.add(queue); queue.async { gate.hold() }
+            }) { try await plan.writeMetadata(to: first) }
+        }
+        for await _ in gate.entered.stream { break }
+        let other = Task {
+            try await ChapterPlan.$prepareMetadataQueue.withValue({ queues.add($0) }) {
+                try await plan.writeMetadata(to: second)
+            }
+        }
+        let otherResult = await other.result
+        let independent = !gate.completed && !gate.didExpire
+        #expect(independent)
+        #expect(queues.lock.withLock { queues.values.count == 2 && queues.values[0] !== queues.values[1] })
+        gate.release.signal()
+        let heldResult = await held.result
+        try otherResult.get(); try heldResult.get()
+        #expect(try Data(contentsOf: first.appendingPathComponent("chapters.ffmetadata")) == plan.metadata)
+        #expect(try Data(contentsOf: second.appendingPathComponent("chapters.ffmetadata")) == plan.metadata)
+        if independent {
+            try FileManager.default.removeItem(at: first); try FileManager.default.removeItem(at: second)
+        }
+    }
+
+    @Test func operationQueueWriteFailureReturnsWithoutCreatingOutput() async throws {
+        let directory = try root()
+        let plan = try ChapterPlan.make(probe: probe(), configuration: configuration())
+        let events = VideoCopyStageDiagnosis(.qualification)
+        let missing = directory.appendingPathComponent("missing-parent")
+        await #expect(throws: (any Error).self) {
+            try await ChapterPlan.$observeMetadataWrite.withValue({ events.chapter($0) }) {
+                try await plan.writeMetadata(to: missing)
+            }
+        }
+        #expect(events.chapterEvents == [.bodyEntered,.submitting,.workerEntered,.writeRefused])
+        #expect(!FileManager.default.fileExists(atPath: missing.path))
+        try FileManager.default.removeItem(at: directory)
+    }
 
     private func entries() -> [ChapterEntry] {
         [.init(startMilliseconds: 0, endMilliseconds: 2000, title: "Opening = #1; \\ [CHAPTER]"),

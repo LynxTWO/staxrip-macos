@@ -55,8 +55,9 @@ enum DolbyInspection {
     }
 
     static func read(source: URL, probe: MediaProbe, helper: URL, tools: FFmpegTools,
-                     copyVerification: Bool = false, progress: @escaping @Sendable (String) -> Void = { _ in }) async throws -> DolbySourceReport {
-        guard source.isFileURL, !source.path.utf8.contains(0), eligible(probe), let video = probe.video,
+                     copyVerification: Bool = false, copyRole: DolbyCopyNative.Role = .source, progress: @escaping @Sendable (String) -> Void = { _ in }) async throws -> DolbySourceReport {
+        guard copyRole == .source || (copyVerification && copyRole == .p81Output),
+              source.isFileURL, !source.path.utf8.contains(0), eligible(probe), let video = probe.video,
               let base = video.time_base else { throw failure("Full inspection currently requires Matroska HEVC with reported timing.") }
         let parts = base.split(separator: "/")
         guard parts.count == 2, let numerator = Int64(parts[0]), let denominator = Int64(parts[1]),
@@ -115,7 +116,7 @@ enum DolbyInspection {
         }
         progress("Rechecking source content…")
         let final: SourceFingerprint
-        if checkedReaders { final = try await ExportSourceFingerprint.readCopy(source, role: .source, timeBase: HDRFraction(base)).0 }
+        if checkedReaders { final = try await ExportSourceFingerprint.readCopy(source, role: copyRole, timeBase: HDRFraction(base)).0 }
         else { final = try await ExportSourceFingerprint.read(source) }
         try Task.checkCancellation()
         guard final == observed.source else { throw failure("Source content changed during independent inspection.") }

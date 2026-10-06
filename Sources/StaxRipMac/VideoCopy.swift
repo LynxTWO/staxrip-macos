@@ -428,8 +428,11 @@ enum DolbyCopyTiming {
 /// Encoded-only proof for the first single-video, SimpleBlock Matroska route.
 /// ReadView access belongs to the caller. This is not decoded HDR or admission proof.
 enum DolbyCopyNative {
-    enum Role { case source, output }
+    enum Role { case source, output, p81Output }
     struct Receipt {
+        let role: Role
+        let fileBytes: Int64
+        let inspectionSequence: Data
         let configuration: Data
         let packets: Int
         let wholeSequence, keptSequence, presentationSequence: Data
@@ -442,7 +445,8 @@ enum DolbyCopyNative {
                   wholeSequence == timing.packetSequence else { throw failure() }
         }
         func requireCopy(_ output: Self) throws {
-            guard configuration == output.configuration, packets == output.packets,
+            guard role == .source, output.role == .output,
+                  configuration == output.configuration, packets == output.packets,
                   keptSequence == output.wholeSequence, timeBase == output.timeBase,
                   defaultDuration == output.defaultDuration,
                   rpus == packets, enhancement > 0, output.rpus == 0, output.enhancement == 0 else { throw failure() }
@@ -464,7 +468,7 @@ enum DolbyCopyNative {
         let view: CompanionDiskCheck.ReadView, walker: Track.Walker, role: Role, timeBase: HDRFraction
         let tickNS: Int64
         var selected: Track.Selected?, width = 0, packets = 0, rpus = 0, enhancement = 0
-        var defaultDuration: UInt64 = 0, whole = SHA256(), kept = SHA256(), presentation = SHA256()
+        var defaultDuration: UInt64 = 0, whole = SHA256(), kept = SHA256(), presentation = SHA256(), inspection = SHA256()
         var lastPTS: Int64?, increasing = true
         init(_ view: CompanionDiskCheck.ReadView, _ role: Role, _ timeBase: HDRFraction) throws {
             let (ns, overflow) = timeBase.numerator.multipliedReportingOverflow(by: 1_000_000_000)
@@ -534,9 +538,9 @@ enum DolbyCopyNative {
                 }
             }
             guard began, packets > 0, let selected,
-                  role == .output || (rpus == packets && enhancement > 0) else { throw failure() }
+                  role == .output || (rpus == packets && (role == .source ? enhancement > 0 : enhancement == 0)) else { throw failure() }
             try view.checkpoint()
-            return .init(configuration: selected.configuration, packets: packets,
+            return .init(role:role, fileBytes:view.sourceBytes, inspectionSequence:Data(inspection.finalize()), configuration: selected.configuration, packets: packets,
                          wholeSequence: Data(whole.finalize()), keptSequence: Data(kept.finalize()),
                          presentationSequence: Data(presentation.finalize()), strictlyIncreasingPTS: increasing,
                          timeBase: timeBase, defaultDuration: defaultDuration, rpus: rpus, enhancement: enhancement)
@@ -573,7 +577,7 @@ enum DolbyCopyNative {
                     defaultDuration = try walker.unsigned(e); guard defaultDuration > 0 else { throw failure() }
                 case 0x55ee: maxID = try walker.unsigned(e)
                 case 0x41e4:
-                    guard role == .source else { throw failure() }
+                    guard role != .output else { throw failure() }
                     var fields: [UInt64: Data] = [:]
                     try children(e) { f in
                         guard fields.updateValue(try walker.bytes(f, maximum: 64), forKey: f.id) == nil else { throw failure() }
@@ -582,12 +586,12 @@ enum DolbyCopyNative {
                     // require independent full source metadata admission.
                     guard Set(fields.keys) == Set([0x41f0,0x41e7,0x41ed]), fields[0x41f0] == Data([1]),
                           fields[0x41e7] == Data("dvcC".utf8),
-                          fields[0x41ed] == Data([1,0,14,55,96] + Array(repeating: 0, count: 19)) else { throw failure() }
+                          fields[0x41ed] == Data((role == .source ? [1,0,14,55,96] : [1,0,16,53,16]) + Array(repeating: 0, count: 19)) else { throw failure() }
                     mapping = true
                 default: break
                 }
             }
-            guard defaultDuration > 0, role == .source ? (mapping && maxID == 1) : (!mapping && maxID == 0) else { throw failure() }
+            guard defaultDuration > 0, role != .output ? (mapping && maxID == 1) : (!mapping && maxID == 0) else { throw failure() }
         }
         func cluster(_ e: Element, _ scale: UInt64) throws {
             var timestamp: UInt64?
@@ -629,7 +633,7 @@ enum DolbyCopyNative {
                 guard h[0] & 0x80 == 0, h[1] & 7 != 0 else { throw failure() }
                 let type = h[0] >> 1 & 63, removed = type == 62 || type == 63
                 if removed {
-                    guard role == .source else { throw failure() }
+                    guard role != .output, role == .source || type == 62 else { throw failure() }
                     if type == 62 {
                         guard h[0] & 1 == 0, h[1] >> 3 == 0, length > 2, length <= 65_538 else { throw failure() }
                         packetRPUs += 1; rpus += 1
@@ -649,7 +653,9 @@ enum DolbyCopyNative {
                 }
             }
             guard keptBytes > 0, vcl > 0, role == .output || packetRPUs == 1 else { throw failure() }
-            whole.update(data: DolbyCopyTiming.integers([Int64(packets),pts,size])); whole.update(data: Data(packetHash.finalize()))
+            let digest = Data(packetHash.finalize())
+            whole.update(data: DolbyCopyTiming.integers([Int64(packets),pts,size])); whole.update(data: digest)
+            inspection.update(data: DolbyInspection.proofRecord(pts:ns,bytes:size,digest:digest))
             kept.update(data: DolbyCopyTiming.integers([Int64(packets),pts,keptBytes])); kept.update(data: Data(projectionHash.finalize()))
             if let lastPTS, pts <= lastPTS { increasing = false }; lastPTS = pts
             presentation.update(data: DolbyCopyTiming.integers([Int64(packets),pts]))
@@ -856,8 +862,8 @@ enum DolbyP81Metadata {
     }
     /// Caller is the existing Batch copy owner, holding source/parent access and
     /// retaining concrete staging/FDs on every failure. This owns no cleanup.
-    static func read(_ source: URL, report: DolbySourceReport, helper: URL) async throws -> DolbyP81MetadataStream.Receipt {
-        let stream = try DolbyP81MetadataStream(source:report.source)
+    static func read(_ source: URL, report: DolbySourceReport, helper: URL, sourceRole: Bool = true) async throws -> DolbyP81MetadataStream.Receipt {
+        let stream = try DolbyP81MetadataStream(source:report.source,sourceRole:sourceRole)
         let runner = ToolRunner(checkedReaders:true)
         let result: ToolResult
         do {
@@ -895,6 +901,7 @@ enum DolbyP81Metadata {
 final class DolbyP81MetadataStream: @unchecked Sendable {
     typealias JSON = CompanionArchiveJSON
     struct Receipt: Sendable {
+        let sourceRole: Bool
         let source: SourceFingerprint
         let packets: Int64, records: Int64, enhancementNALs: Int64
         let packetSequenceSHA256: String
@@ -1013,9 +1020,42 @@ final class DolbyP81MetadataStream: @unchecked Sendable {
                   try n(o,"input_bytes") == UInt64(source.byteCount), try JSON.digest(o,"input_sha256") == source.sha256,
                   try n(o,"peak_record_bytes") == UInt64(peak), try JSON.digest(o,"packet_sequence_sha256") == DolbyInspection.hex(sequence.finalize()) else { throw Self.refused() }
             try JSON.bool(o,"source_recheck",true)
-            complete = .init(source:source,packets:packets,records:records,enhancementNALs:Int64(try n(o,"enhancement_nals",0...4_000_000_000_000)),
+            complete = .init(sourceRole:sourceRole,source:source,packets:packets,records:records,enhancementNALs:Int64(try n(o,"enhancement_nals",0...4_000_000_000_000)),
                              packetSequenceSHA256:try JSON.digest(o,"packet_sequence_sha256"),peakRecordBytes:peak,peakTrackedHeap:heap,expectedOutputMetadataSHA256:supported ? DolbyInspection.hex(metadata.finalize()) : nil)
         default: throw Self.refused()
+        }
+    }
+}
+
+/// Complete bounded P8.1 output proof. The existing conversion owner must supply
+/// fingerprints from its admitted files and retain access/staging on uncertainty.
+/// This verifier does not authorize conversion, publication or cleanup.
+enum DolbyP81Verification {
+    static func verify(source: DolbyCopyNative.Receipt, output: DolbyCopyNative.Receipt,
+                       sourceFingerprint: SourceFingerprint, outputFingerprint: SourceFingerprint,
+                       sourceTiming: DolbyCopyTiming.Receipt, outputTiming: DolbyCopyTiming.Receipt,
+                       sourceMetadata: DolbyP81MetadataStream.Receipt, outputMetadata: DolbyP81MetadataStream.Receipt,
+                       sourceFrames: DolbyCopyFrames.Receipt, outputFrames: DolbyCopyFrames.Receipt) throws {
+        try source.bind(sourceTiming); try output.bind(outputTiming)
+        try sourceTiming.requireSameTiming(as:outputTiming)
+        try sourceFrames.bind(source); try outputFrames.bind(output)
+        guard source.role == .source, output.role == .p81Output,
+              source.configuration == output.configuration, source.packets == output.packets,
+              source.keptSequence == output.keptSequence, source.defaultDuration == output.defaultDuration,
+              source.rpus == source.packets, source.enhancement > 0,
+              output.rpus == output.packets, output.enhancement == 0,
+              sourceFrames == outputFrames,
+              sourceMetadata.sourceRole, !outputMetadata.sourceRole,
+              sourceMetadata.source == sourceFingerprint, outputMetadata.source == outputFingerprint,
+              source.fileBytes == sourceFingerprint.byteCount, output.fileBytes == outputFingerprint.byteCount,
+              sourceMetadata.packets == source.packets, sourceMetadata.records == source.rpus,
+              outputMetadata.packets == output.packets, outputMetadata.records == output.rpus,
+              sourceMetadata.enhancementNALs == source.enhancement, outputMetadata.enhancementNALs == 0,
+              sourceMetadata.packetSequenceSHA256 == source.inspectionSequence.map({ String(format:"%02x",$0) }).joined(),
+              outputMetadata.packetSequenceSHA256 == output.inspectionSequence.map({ String(format:"%02x",$0) }).joined(),
+              let expected = sourceMetadata.expectedOutputMetadataSHA256,
+              expected == outputMetadata.expectedOutputMetadataSHA256 else {
+            throw NativeExportError.invalid("P8.1 output could not be bound to the qualified source.")
         }
     }
 }

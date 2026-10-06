@@ -43,7 +43,8 @@ enum QueuePreflight {
     static func inspect(_ job: QueueJob, tools: FFmpegTools, encoders: Set<String>, timeout: Double = 15) async throws -> QueueCheck {
         guard !job.isDemo else { throw NativeExportError.invalid("Demo source: open a real video and add its configuration.") }
         try SessionDocument.validate(job.configuration)
-        try DolbyConversionIntent.requireRunnable(job.configuration)
+        if job.configuration.colorMode == DolbyConversionIntent.hdr10Copy { try DolbyConversionIntent.validateCopySettings(job.configuration) }
+        else { try DolbyConversionIntent.requireRunnable(job.configuration) }
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         guard job.source.hasPrefix("/"), job.destination.hasPrefix("/"), ![job.source, job.destination].contains(where: { $0.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) }) else {
             throw NativeExportError.invalid("Source and destination must be valid absolute local paths.")
@@ -65,6 +66,9 @@ enum QueuePreflight {
         let parent = output.deletingLastPathComponent()
         guard stat(parent.path, &info) == 0, info.st_mode & S_IFMT == S_IFDIR, FileManager.default.isWritableFile(atPath: parent.path) else {
             throw NativeExportError.invalid("The output folder is missing or not writable. Choose an existing writable folder.")
+        }
+        if job.configuration.colorMode == DolbyConversionIntent.hdr10Copy {
+            return QueueCheck(id: job.id, kind: .deferred, detail: "HDR10 base-layer copy settings and paths checked. Execution must freshly verify the acknowledged video-only P7 MEL source, every encoded packet and decoded frame, then publish exclusively. Dolby Vision and enhancement data will be removed; no video re-encoding or tone mapping.")
         }
         let probe = try await boundedProbe(source, tools: tools, timeout: timeout)
         try Task.checkCancellation()

@@ -30,8 +30,8 @@ struct VideoRateOptionsView: View {
             if configuration.colorMode == DolbyConversionIntent.hdr10Copy {
                 Text("Prepare HDR10 base-layer copy · MKV · no video re-encoding or tone mapping. Dolby Vision metadata and the enhancement layer will be removed; static HDR10 remains. The original source is kept.")
                     .font(.caption).fixedSize(horizontal: false, vertical: true)
-                Text(DolbyConversionIntent.unavailable).font(.caption).foregroundStyle(Color.warning)
-                    .accessibilityIdentifier("dolby.hdr10.unavailable")
+                Text("Initial route: one 4K Main 10 P7 MEL video track at 24000/1001, CM 2.9, MKV. Choose Copy original, No audio and Remove all subtitles; original size and no edits. Every packet and decoded frame must pass before publication. Other profiles, additional tracks and reordered pictures remain unavailable.").font(.caption).foregroundStyle(Color.warning)
+                    .accessibilityIdentifier("dolby.hdr10.support")
                 Toggle("I acknowledge Dolby Vision loss for this inspected source", isOn: Binding(get: {
                     guard let source, let report = dolby.report(for: source) else { return false }
                     return configuration.dolbyLossAcknowledgement?.matches(source: source, fingerprint: report.source) == true

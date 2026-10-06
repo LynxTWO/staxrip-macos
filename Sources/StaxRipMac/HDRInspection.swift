@@ -92,13 +92,23 @@ struct DolbyLossAcknowledgement: Codable, Equatable, Sendable {
 
 enum DolbyConversionIntent {
     static let hdr10Copy = "HDR10 base-layer copy"
-    static let unavailable = "HDR10 base-layer copy is not available for execution yet. Complete source and output verification must be qualified before this route can run. No output was created."
+    static let unavailable = "These settings are unavailable for HDR10 base-layer copy. Use the dedicated video-only MKV copy route with original picture settings, No audio, Remove all subtitles and source-specific Dolby Vision loss acknowledgement. Full verification is required before a usable result."
     static func validate(_ configuration: EncodeConfiguration) throws {
         if let acknowledgement = configuration.dolbyLossAcknowledgement {
             try acknowledgement.validate()
             guard configuration.colorMode == hdr10Copy else {
                 throw SessionError.invalid("Dolby Vision loss acknowledgement belongs only to HDR10 base-layer copy.")
             }
+        }
+    }
+    static func validateCopySettings(_ c: EncodeConfiguration) throws {
+        try validate(c)
+        guard c.colorMode == hdr10Copy, c.copiesVideo, c.container == "MKV", c.resolution == "Original",
+              c.cropTop == 0, c.cropBottom == 0, c.picture.cropLeft == 0, c.picture.cropRight == 0,
+              c.picture.start == 0, c.picture.end == 0, c.picture.deinterlace == "Off",
+              c.audio == "No audio", c.subtitleMode == "Remove all subtitles",
+              c.externalSubtitle == nil, c.externalCaptions.isEmpty, c.chapterEdits == nil, c.dolbyLossAcknowledgement != nil else {
+            throw NativeExportError.invalid(unavailable)
         }
     }
     static func requireRunnable(_ configuration: EncodeConfiguration) throws {

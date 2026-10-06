@@ -432,7 +432,8 @@ enum DolbyCopyNative {
     struct Receipt {
         let configuration: Data
         let packets: Int
-        let wholeSequence, keptSequence: Data
+        let wholeSequence, keptSequence, presentationSequence: Data
+        let strictlyIncreasingPTS: Bool
         let timeBase: HDRFraction
         let defaultDuration: UInt64
         let rpus, enhancement: Int
@@ -447,7 +448,7 @@ enum DolbyCopyNative {
                   rpus == packets, enhancement > 0, output.rpus == 0, output.enhancement == 0 else { throw failure() }
         }
     }
-    static func failure() -> NativeExportError { .invalid("Dolby HDR10 copy: native encoded base-layer proof refused. Nothing published.") }
+    static func failure() -> NativeExportError { .invalid("Dolby HDR10 copy: native encoded base-layer proof refused.") }
     static func read(_ view: CompanionDiskCheck.ReadView, role: Role, timeBase: HDRFraction) throws -> Receipt {
         try Scan(view, role, timeBase).read()
     }
@@ -463,7 +464,8 @@ enum DolbyCopyNative {
         let view: CompanionDiskCheck.ReadView, walker: Track.Walker, role: Role, timeBase: HDRFraction
         let tickNS: Int64
         var selected: Track.Selected?, width = 0, packets = 0, rpus = 0, enhancement = 0
-        var defaultDuration: UInt64 = 0, whole = SHA256(), kept = SHA256()
+        var defaultDuration: UInt64 = 0, whole = SHA256(), kept = SHA256(), presentation = SHA256()
+        var lastPTS: Int64?, increasing = true
         init(_ view: CompanionDiskCheck.ReadView, _ role: Role, _ timeBase: HDRFraction) throws {
             let (ns, overflow) = timeBase.numerator.multipliedReportingOverflow(by: 1_000_000_000)
             guard !overflow, ns > 0, ns % timeBase.denominator == 0,
@@ -478,6 +480,7 @@ enum DolbyCopyNative {
             walker = Track.Walker(checked, elementLimit: 128_000_000)
             whole.update(data: Data("DOLBY-COPY-PACKETS-1\0".utf8))
             kept.update(data: Data("DOLBY-COPY-PACKETS-1\0".utf8))
+            presentation.update(data: Data("DOLBY-COPY-PRESENTATION-1\0".utf8))
         }
         func children(_ e: Element, _ body: (Element) throws -> Void) throws {
             var cursor = e.payload
@@ -526,7 +529,7 @@ enum DolbyCopyNative {
                 case 0x1f43b675:
                     guard selected != nil, let scale else { throw failure() }
                     began = true; try cluster(e, scale)
-                case 0x1a45dfa3, 0x18538067, 0xa0, 0xa1, 0xa3: throw failure()
+                case 0x1a45dfa3, 0x18538067, 0xa0, 0xa1, 0xa3, 0x1941a469, 0x1043a770: throw failure()
                 default: break
                 }
             }
@@ -535,6 +538,7 @@ enum DolbyCopyNative {
             try view.checkpoint()
             return .init(configuration: selected.configuration, packets: packets,
                          wholeSequence: Data(whole.finalize()), keptSequence: Data(kept.finalize()),
+                         presentationSequence: Data(presentation.finalize()), strictlyIncreasingPTS: increasing,
                          timeBase: timeBase, defaultDuration: defaultDuration, rpus: rpus, enhancement: enhancement)
         }
         func declarations(_ track: Track.Selected) throws {
@@ -647,7 +651,141 @@ enum DolbyCopyNative {
             guard keptBytes > 0, vcl > 0, role == .output || packetRPUs == 1 else { throw failure() }
             whole.update(data: DolbyCopyTiming.integers([Int64(packets),pts,size])); whole.update(data: Data(packetHash.finalize()))
             kept.update(data: DolbyCopyTiming.integers([Int64(packets),pts,keptBytes])); kept.update(data: Data(projectionHash.finalize()))
+            if let lastPTS, pts <= lastPTS { increasing = false }; lastPTS = pts
+            presentation.update(data: DolbyCopyTiming.integers([Int64(packets),pts]))
             packets += 1
         }
+    }
+}
+
+/// Full-frame evidence for the unchanged, no-reorder HDR10 base-layer copy route.
+/// Callers retain concrete access and staging on every shared ownership marker.
+enum DolbyCopyFrames {
+    struct Receipt: Equatable {
+        let frames: Int64
+        let presentation, pixels: Data
+        let mastering: HDRMasteringDisplay
+        let light: HDRContentLight?
+        let chroma: String
+        let timeBase: HDRFraction
+        func bind(_ native: DolbyCopyNative.Receipt) throws {
+            guard timeBase == native.timeBase, native.strictlyIncreasingPTS, frames == native.packets,
+                  presentation == native.presentationSequence else { throw failure() }
+        }
+    }
+    static func failure() -> NativeExportError { .invalid("Dolby HDR10 copy: full frame, static HDR or decoded base-layer equality refused.") }
+    final class Frames {
+        let stream: MediaProbe.Stream, source: Bool
+        let timeBase: HDRFraction
+        var declaredMastering: HDRMasteringDisplay?, declaredLight: HDRContentLight?
+        var count: Int64 = 0, last: Int64?, sequence = SHA256()
+        var mastering: HDRMasteringDisplay?, light: HDRContentLight?
+        init(_ stream: MediaProbe.Stream, source: Bool) throws {
+            self.stream = stream; self.source = source; timeBase = try HDRFraction(stream.time_base)
+            guard timeBase.numerator > 0 else { throw failure() }
+            guard stream.codec_name == "hevc", stream.profile == "Main 10", stream.pix_fmt == "yuv420p10le",
+                  stream.width == 3840, stream.height == 2160, stream.chroma_location == "topleft",
+                  stream.color_range == "tv", stream.color_space == "bt2020nc", stream.color_primaries == "bt2020",
+                  stream.color_transfer == "smpte2084", (stream.field_order == nil || stream.field_order == "progressive"),
+                  stream.sample_aspect_ratio == "1:1", try SourceOrientation.read(stream) == .identity,
+                  try HDRFraction(stream.avg_frame_rate) == HDRFraction("24000/1001"),
+                  try HDRFraction(stream.r_frame_rate) == HDRFraction("24000/1001") else { throw failure() }
+            let allowed = ["Mastering display metadata", "Content light level metadata"] + (source ? ["DOVI configuration record"] : [])
+            guard (stream.side_data_list ?? []).count <= 3 else { throw failure() }
+            var seen: Set<String> = []
+            for side in stream.side_data_list ?? [] {
+                guard let type = side.side_data_type, allowed.contains(type), seen.insert(type).inserted else { throw failure() }
+                if type == "Mastering display metadata" { declaredMastering = try HDRMasteringDisplay(side.fields()) }
+                if type == "Content light level metadata" { declaredLight = try HDRContentLight(side.fields()) }
+            }
+            sequence.update(data: Data("DOLBY-COPY-PRESENTATION-1\0".utf8))
+        }
+        func consume(_ frame: [String: Any]) throws {
+            guard count < 2_000_000,
+                  try HDR10Audit.integer(frame["width"], range: 1...16384) == 3840,
+                  try HDR10Audit.integer(frame["height"], range: 1...16384) == 2160,
+                  try HDR10Audit.integer(frame["interlaced_frame"], range: 0...1) == 0,
+                  frame["pix_fmt"] as? String == "yuv420p10le", frame["color_range"] as? String == "tv",
+                  frame["color_space"] as? String == "bt2020nc", frame["color_primaries"] as? String == "bt2020",
+                  frame["color_transfer"] as? String == "smpte2084", frame["chroma_location"] as? String == "topleft",
+                  frame["sample_aspect_ratio"] as? String == "1:1" else { throw failure() }
+            let pts = try HDR10Audit.integer(frame["pts"], range: Int64.min...Int64.max)
+            if let last { guard pts > last else { throw failure() } }; last = pts
+            guard let side = frame["side_data_list"] as? [[String: Any]], side.count <= 8 else { throw failure() }
+            var seen: Set<String> = [], md: HDRMasteringDisplay?, cll: HDRContentLight?
+            for record in side {
+                guard let type = record["side_data_type"] as? String, seen.insert(type).inserted else { throw failure() }
+                switch type {
+                case "Mastering display metadata": md = try HDRMasteringDisplay(record)
+                case "Content light level metadata": cll = try HDRContentLight(record)
+                case "H.26[45] User Data Unregistered SEI message": break // Encoded-byte proof preserves the original payload.
+                case "Dolby Vision RPU Data", "Dolby Vision Metadata": guard source else { throw failure() }
+                default: throw failure()
+                }
+            }
+            guard let md else { throw failure() }
+            if let declaredMastering { guard declaredMastering == md else { throw failure() } }
+            if let declaredLight { guard declaredLight == cll else { throw failure() } }
+            if count == 0 { mastering = md; light = cll }
+            else { guard mastering == md, light == cll else { throw failure() } }
+            sequence.update(data: DolbyCopyTiming.integers([count,pts])); count += 1
+        }
+    }
+    final class Pixels: @unchecked Sendable {
+        let frameBytes: Int
+        var count: Int64 = 0, offset = 0, frame = SHA256(), sequence = SHA256()
+        private(set) var error: Error?
+        init(frameBytes: Int = 3840 * 2160 * 3) {
+            self.frameBytes = frameBytes
+            sequence.update(data: Data("DOLBY-COPY-DECODED-1\0".utf8))
+        }
+        func accept(_ data: Data) {
+            guard error == nil else { return }
+            guard frameBytes > 0 else { error = failure(); return }
+            var cursor = 0
+            while cursor < data.count {
+                guard count < 2_000_000 else { error = failure(); return }
+                let length = min(data.count - cursor, frameBytes - offset)
+                frame.update(data: data.subdata(in: (data.startIndex + cursor)..<(data.startIndex + cursor + length))); cursor += length; offset += length
+                if offset == frameBytes {
+                    sequence.update(data: DolbyCopyTiming.integers([count,Int64(frameBytes)]))
+                    sequence.update(data: Data(frame.finalize())); count += 1; offset = 0; frame = SHA256()
+                }
+            }
+        }
+        func finish(expected: Int64) throws -> Data {
+            if let error { throw error }
+            guard offset == 0, count > 0, count == expected else { throw failure() }
+            return Data(sequence.finalize())
+        }
+    }
+    static func read(_ url: URL, stream: MediaProbe.Stream, source: Bool, tools: FFmpegTools) async throws -> Receipt {
+        let frames = try Frames(stream, source: source), parser = HDRFrameJSON { try frames.consume($0) }
+        let runner = ToolRunner(checkedReaders: true)
+        let result: ToolResult
+        do {
+            result = try await runner.run(executable: tools.ffprobe, arguments: [
+                "-v","error","-threads","2","-protocol_whitelist","file,pipe","-select_streams",String(stream.index),"-show_frames",
+                "-show_entries","frame=pts,width,height,pix_fmt,color_range,color_space,color_primaries,color_transfer,chroma_location,sample_aspect_ratio,interlaced_frame:frame_side_data","-of","json",url.path
+            ], stdoutLimit: 0) { data in
+                guard parser.error == nil else { return }; parser.accept(data); if parser.error != nil { runner.cancel() }
+            }
+        } catch var error as ToolRunner.ReaderCloseFailure { error.consumerCause = parser.error; throw error }
+        catch { if error is any CompanionUnsettledOwnership { throw error }; if let error = parser.error { throw error }; throw error }
+        guard result.status == 0, result.stderr.isEmpty else { throw failure() }; try parser.finish(); try Task.checkCancellation()
+        guard frames.count > 0, let mastering = frames.mastering else { throw failure() }
+        let pixels = Pixels(), decoder = ToolRunner(checkedReaders: true)
+        let decoded: ToolResult
+        do {
+            decoded = try await decoder.run(executable: tools.ffmpeg, arguments: [
+                "-v","error","-nostdin","-threads","2","-noautorotate","-copyts","-i",url.path,
+                "-map","0:\(stream.index)","-an","-sn","-dn","-c:v","rawvideo","-pix_fmt","+yuv420p10le",
+                "-noautoscale","-fps_mode","passthrough","-enc_time_base","demux","-f","rawvideo","pipe:1"
+            ], stdoutLimit: 0) { data in guard pixels.error == nil else { return }; pixels.accept(data); if pixels.error != nil { decoder.cancel() } }
+        } catch var error as ToolRunner.ReaderCloseFailure { error.consumerCause = pixels.error; throw error }
+        catch { if error is any CompanionUnsettledOwnership { throw error }; if let error = pixels.error { throw error }; throw error }
+        guard decoded.status == 0, decoded.stderr.isEmpty else { throw failure() }; try Task.checkCancellation()
+        return .init(frames: frames.count, presentation: Data(frames.sequence.finalize()), pixels: try pixels.finish(expected: frames.count),
+                     mastering: mastering, light: frames.light, chroma: "topleft", timeBase: frames.timeBase)
     }
 }

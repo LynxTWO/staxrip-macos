@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Darwin
 
 struct BatchStatus: Codable {
     var phase = "Pending"
@@ -182,7 +183,7 @@ final class BatchController: ObservableObject {
         #if DEBUG
         guard !demoJournalRefused else { return }
         #endif
-        guard !running, !reviewing, let tools else { return }
+        guard !running, !reviewing, !copyHeld, let tools else { return }
         let selected = pendingJobs(in: jobs)
         guard !selected.isEmpty else { return }
         invalidateReview()
@@ -216,6 +217,11 @@ final class BatchController: ObservableObject {
                     checkpointAfterOutcome()
                     // Keep the publication outcome, but do not accumulate more leftovers.
                     break
+                } catch let error as CopyReviewFailure {
+                    if statuses[job.id]?.destination == nil {
+                        statuses[job.id] = BatchStatus(phase: "Failed", detail: "HDR10 copy stopped without a verified published result. Source access and any staging resources are retained for ownership review. No automatic cleanup or retry.")
+                    }
+                    _ = error; checkpointAfterOutcome(); break
                 } catch is CancellationError {
                     statuses[job.id] = BatchStatus(phase: "Cancelled", detail: "No output published")
                     checkpointAfterOutcome()
@@ -267,7 +273,7 @@ final class BatchController: ObservableObject {
         try checkpoint()
         try await publishOutput(staged, output)
     }
-    func reset(_ id: UUID) { guard !running else { return }; statuses[id] = nil }
+    func reset(_ id: UUID) { guard !running, !copyHeld else { return }; statuses[id] = nil }
 
     private func encode(_ job: QueueJob, tools: FFmpegTools) async throws {
         guard !job.isDemo else { throw NativeExportError.invalid("Demo source: open a real video and add its configuration.") }
@@ -279,6 +285,9 @@ final class BatchController: ObservableObject {
         }
         let preservingHDR = job.configuration.colorMode == "Preserve static HDR10"
         try SessionDocument.validate(job.configuration)
+        if job.configuration.colorMode == DolbyConversionIntent.hdr10Copy {
+            try await encodeDolbyCopy(job, tools: tools); return
+        }
         try DolbyConversionIntent.requireRunnable(job.configuration)
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         if preservingHDR { try EncodePlan.validateHDRSettings(job.configuration) }
@@ -414,6 +423,155 @@ final class BatchController: ObservableObject {
         }
         if let operationError { throw operationError }
     }
+    // The existing controller is the concrete conversion owner. A review-held
+    // controller remains alive with its actual scopes, descriptors and stage.
+    private static var heldCopies: [BatchController] = []
+    @Published private(set) var copyHeld = false
+    private var copySource: URL?, copyParent: URL?, copyStage: URL?
+    private var copySourceScoped = false, copyParentScoped = false
+    private var copyParentFD: Int32 = -1, copyStageFD: Int32 = -1
+    private struct CopyReviewFailure: CompanionUnsettledOwnership { let cause: Error }
+    private struct CopyDirectoryCloseFailure: Error {
+        let outcomes: [(role: String, status: Int32, code: Int32, reported: Bool)]
+    }
+    #if DEBUG
+    private(set) var copyFailure: Error?
+    var copyRetainedDescriptors: (Int32, Int32) { (copyParentFD, copyStageFD) }
+    @TaskLocal static var copyHelper: URL?
+    @TaskLocal static var copyBeforePublication: (@Sendable (URL) throws -> Void)?
+    @TaskLocal static var reportCopyDirectoryClose: (@Sendable (String, Bool) -> Bool)?
+    #endif
+    private func releaseCopyScopes() {
+        if copyParentScoped { copyParent?.stopAccessingSecurityScopedResource() }
+        if copySourceScoped { copySource?.stopAccessingSecurityScopedResource() }
+        copyParentScoped = false; copySourceScoped = false
+        copyParent = nil; copySource = nil; copyStage = nil
+    }
+    private func closeCopyDirectories() throws {
+        var outcomes: [(role: String, status: Int32, code: Int32, reported: Bool)] = []
+        for role in ["stage", "parent"] {
+            let fd = role == "stage" ? copyStageFD : copyParentFD
+            guard fd >= 0 else { continue }
+            if role == "stage" { copyStageFD = -1 } else { copyParentFD = -1 }
+            let status = Darwin.close(fd), code = status == 0 ? 0 : errno
+            var reported = false
+            #if DEBUG
+            reported = Self.reportCopyDirectoryClose?(role, status == 0) == true
+            #endif
+            outcomes.append((role,status,code,reported))
+        }
+        if outcomes.contains(where: { $0.status != 0 || $0.reported }) {
+            throw CopyReviewFailure(cause: CopyDirectoryCloseFailure(outcomes: outcomes))
+        }
+    }
+    private func requireCopyDirectory(_ fd: Int32, at url: URL) throws {
+        var opened = stat(), selected = stat()
+        guard fd >= 0, fstat(fd, &opened) == 0, lstat(url.path, &selected) == 0,
+              opened.st_mode & S_IFMT == S_IFDIR, selected.st_mode & S_IFMT == S_IFDIR,
+              opened.st_dev == selected.st_dev, opened.st_ino == selected.st_ino else { throw DolbyCopyNative.failure() }
+    }
+    private func encodeDolbyCopy(_ job: QueueJob, tools: FFmpegTools) async throws {
+        try DolbyConversionIntent.validateCopySettings(job.configuration)
+        let source = URL(fileURLWithPath: job.source).standardizedFileURL
+        let output = URL(fileURLWithPath: job.destination).standardizedFileURL, parent = output.deletingLastPathComponent()
+        var selectedHelper = DolbyInspection.bundledHelper()
+        #if DEBUG
+        selectedHelper = Self.copyHelper ?? selectedHelper
+        #endif
+        guard source == source.resolvingSymlinksInPath(), parent == parent.resolvingSymlinksInPath(),
+              output.pathExtension.lowercased() == "mkv", let acknowledgement = job.configuration.dolbyLossAcknowledgement,
+              !Self.heldCopies.contains(where: { $0.copySource == source || $0.copyParent == parent }),
+              let helper = selectedHelper else { throw DolbyCopyNative.failure() }
+        copySource = source; copyParent = parent
+        copySourceScoped = source.startAccessingSecurityScopedResource(); copyParentScoped = parent.startAccessingSecurityScopedResource()
+        var published: URL?
+        do {
+            copyParentFD = Darwin.open(parent.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+            try requireCopyDirectory(copyParentFD, at: parent)
+            for executable in [tools.ffmpeg,tools.ffprobe] {
+                let result = try await ToolRunner(checkedReaders: true).run(executable: executable, arguments: ["-version"])
+                let words = String(decoding: result.stdout, as: UTF8.self).split(whereSeparator: \.isWhitespace)
+                guard result.status == 0, !result.truncated, words.count > 2,
+                      words[2] == "9.0" || words[2].hasPrefix("9.0.") else { throw DolbyCopyNative.failure() }
+            }
+            let probe = try await MediaProbe.read(source, tools: tools, checkedReaders: true)
+            guard probe.streams.count == 1, (probe.chapters ?? []).isEmpty, let stream = probe.video, stream.index == 0 else { throw DolbyCopyNative.failure() }
+            let clock = try HDRFraction(stream.time_base)
+            let (sourceHash, nativeSource) = try await ExportSourceFingerprint.readCopy(source, role: .source, timeBase: clock)
+            guard acknowledgement.matches(source: source, fingerprint: sourceHash) else { throw DolbyCopyNative.failure() }
+            statuses[job.id]?.detail = "Inspecting complete Dolby metadata and decoded base-layer frames"
+            let report = try await DolbyInspection.read(source: source, probe: probe, helper: helper, tools: tools, copyVerification: true)
+            guard report.source == sourceHash, report.packets == nativeSource.packets, report.records == report.packets,
+                  report.packetsWithoutRPU == 0, report.packetsWithMultipleRPUs == 0,
+                  report.mappings == ["7:MEL": report.records], report.cmv29Records == report.records, report.cmv40Records == 0,
+                  report.header.declaredPixelWidth == 3840, report.header.declaredPixelHeight == 2160,
+                  report.header.declaredCropLeftRightTopBottom == [0,0,0,0] else { throw DolbyCopyNative.failure() }
+            let sourceTiming = try await DolbyCopyTiming.read(source, stream: stream.index, timeBase: clock, tools: tools)
+            let sourceFrames = try await DolbyCopyFrames.read(source, stream: stream, source: true, tools: tools)
+            try sourceFrames.bind(nativeSource)
+            try requireCopyDirectory(copyParentFD, at: parent); try Task.checkCancellation()
+            let directory = parent.appendingPathComponent(".staxrip-batch-" + UUID().uuidString)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+            copyStage = directory
+            copyStageFD = Darwin.open(directory.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+            try requireCopyDirectory(copyStageFD, at: directory)
+            let staged = directory.appendingPathComponent("encoded.mkv")
+            statuses[job.id] = BatchStatus(phase: "Encoding", detail: "HDR10 base-layer copy · Dolby Vision loss acknowledged · no video re-encoding")
+            try checkpoint()
+            let result = try await ToolRunner(checkedReaders: true).run(executable: tools.ffmpeg, arguments: [
+                "-v","error","-nostdin","-n","-i",source.path,"-map","0:0","-c:v","copy",
+                "-bsf:v","dovi_split=mode=bl,dovi_rpu=strip=1","-an","-sn","-dn",staged.path])
+            guard result.status == 0, result.stderr.isEmpty else { throw DolbyCopyNative.failure() }
+            statuses[job.id] = BatchStatus(phase: "Verifying", detail: "Comparing every encoded packet, decoded frame and static HDR declaration")
+            try checkpoint()
+            let actual = try await MediaProbe.read(staged, tools: tools, checkedReaders: true)
+            guard actual.streams.count == 1, let video = actual.video, video.index == 0 else { throw DolbyCopyNative.failure() }
+            let outputClock = try HDRFraction(video.time_base)
+            let (outputHash, nativeOutput) = try await ExportSourceFingerprint.readCopy(staged, role: .output, timeBase: outputClock)
+            let timing = try await DolbyCopyTiming.read(staged, stream: video.index, timeBase: outputClock, tools: tools)
+            try DolbyCopyNative.verify(source: nativeSource, output: nativeOutput, sourceTiming: sourceTiming, outputTiming: timing)
+            let frames = try await DolbyCopyFrames.read(staged, stream: video, source: false, tools: tools)
+            try frames.bind(nativeOutput); guard frames == sourceFrames else { throw DolbyCopyFrames.failure() }
+            let (finalSource, _) = try await ExportSourceFingerprint.readCopy(source, role: .source, timeBase: clock)
+            let (finalOutput, _, verifiedIdentity) = try await ExportSourceFingerprint.readCopyIdentity(staged, role: .output, timeBase: outputClock)
+            guard finalSource == sourceHash, finalOutput == outputHash else { throw DolbyCopyNative.failure() }
+            try requireCopyDirectory(copyParentFD, at: parent); try requireCopyDirectory(copyStageFD, at: directory)
+            #if DEBUG
+            try Self.copyBeforePublication?(staged)
+            #endif
+            var before = stat(); guard lstat(staged.path, &before) == 0, before.st_mode & S_IFMT == S_IFREG, verifiedIdentity.matches(before) else { throw DolbyCopyNative.failure() }
+            try Task.checkCancellation(); try await publish(staged, to: output, jobID: job.id); published = output
+            // The existing exclusive hard-link publication must expose this same
+            // verified artifact. Later errors never turn Published into Unpublished.
+            var after = stat(); guard lstat(output.path, &after) == 0, verifiedIdentity.matches(after, published: true) else { throw DolbyCopyNative.failure() }
+            let (publishedHash, _, publishedIdentity) = try await ExportSourceFingerprint.readCopyIdentity(output, role: .output, timeBase: outputClock)
+            guard publishedHash == outputHash, verifiedIdentity.matches(publishedIdentity.value, published: true) else { throw DolbyCopyNative.failure() }
+            let summary = "Verified HDR10 base-layer copy · \(frames.frames) frames · PQ / BT.2020 / top-left chroma and static HDR unchanged. Dolby Vision and enhancement data removed with your acknowledgement. No video re-encoding or tone mapping.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published.\nThe temporary verification copy is retained beside the output; this route does not automatically delete it."
+            statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: summary, destination: output)
+            checkpointAfterOutcome()
+            try requireCopyDirectory(copyParentFD, at: parent); try requireCopyDirectory(copyStageFD, at: directory)
+            try closeCopyDirectories()
+            // Retain the verification files. Path-only recursive deletion cannot
+            // prove it still names this owned directory after publication.
+            releaseCopyScopes()
+        } catch {
+            // Conservative first route: preserve the concrete owner and all
+            // remaining access/FDs/files on ANY failed qualification. No retry,
+            // discard or review-release interface is implied by task completion.
+            #if DEBUG
+            copyFailure = error
+            #endif
+            copyHeld = true; Self.heldCopies.append(self)
+            if let published {
+                let completed = statuses[job.id]?.phase == "Completed"
+                statuses[job.id] = BatchStatus(phase: completed ? "Completed" : "Failed", progress: completed ? 1 : 0,
+                    detail: (completed ? statuses[job.id]!.detail : "An output was published, but final artifact verification did not complete. It is not a verified HDR10 result.") + "\nCleanup warning: output remains published; copy ownership or identity needs review. Retained resources were not discarded.", destination: published)
+                checkpointAfterOutcome()
+            }
+            throw CopyReviewFailure(cause: error)
+        }
+    }
+
 }
 
 final class ProgressParser: @unchecked Sendable {

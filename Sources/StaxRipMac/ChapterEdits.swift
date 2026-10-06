@@ -66,6 +66,7 @@ struct ChapterPlan: Sendable {
     #if DEBUG
     enum WriteEvent: String, Sendable { case bodyEntered, noMetadata, submitting, workerEntered, writeReturned, writeRefused, bodyResumed }
     @TaskLocal static var observeMetadataWrite: (@Sendable (WriteEvent) -> Void)?
+    @TaskLocal static var prepareMetadataQueue: (@Sendable (DispatchQueue) -> Void)?
     #endif
 
     enum MetadataTimeline { case source, output }
@@ -168,11 +169,17 @@ struct ChapterPlan: Sendable {
         }
         try Task.checkCancellation()
         let file = directory.appendingPathComponent("chapters.ffmetadata")
+        // Each operation has its own serial queue at the unchanged utility QoS
+        // and default target. Cancellation still awaits its submitted write.
+        let queue = DispatchQueue(label: "StaxRip.chapter-metadata-write", qos: .utility)
+        #if DEBUG
+        Self.prepareMetadataQueue?(queue)
+        #endif
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             #if DEBUG
             observe?(.submitting)
             #endif
-            DispatchQueue.global(qos: .utility).async {
+            queue.async {
                 #if DEBUG
                 observe?(.workerEntered)
                 #endif

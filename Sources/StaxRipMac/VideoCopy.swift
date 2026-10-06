@@ -424,3 +424,230 @@ enum DolbyCopyTiming {
         return try parser.finish()
     }
 }
+
+/// Encoded-only proof for the first single-video, SimpleBlock Matroska route.
+/// ReadView access belongs to the caller. This is not decoded HDR or admission proof.
+enum DolbyCopyNative {
+    enum Role { case source, output }
+    struct Receipt {
+        let configuration: Data
+        let packets: Int
+        let wholeSequence, keptSequence: Data
+        let timeBase: HDRFraction
+        let defaultDuration: UInt64
+        let rpus, enhancement: Int
+        func bind(_ timing: DolbyCopyTiming.Receipt) throws {
+            guard packets == timing.packets, timeBase == timing.timeBase,
+                  wholeSequence == timing.packetSequence else { throw failure() }
+        }
+        func requireCopy(_ output: Self) throws {
+            guard configuration == output.configuration, packets == output.packets,
+                  keptSequence == output.wholeSequence, timeBase == output.timeBase,
+                  defaultDuration == output.defaultDuration,
+                  rpus == packets, enhancement > 0, output.rpus == 0, output.enhancement == 0 else { throw failure() }
+        }
+    }
+    static func failure() -> NativeExportError { .invalid("Dolby HDR10 copy: native encoded base-layer proof refused. Nothing published.") }
+    static func read(_ view: CompanionDiskCheck.ReadView, role: Role, timeBase: HDRFraction) throws -> Receipt {
+        try Scan(view, role, timeBase).read()
+    }
+    static func verify(source: Receipt, output: Receipt, sourceTiming: DolbyCopyTiming.Receipt,
+                       outputTiming: DolbyCopyTiming.Receipt) throws {
+        try source.bind(sourceTiming); try output.bind(outputTiming)
+        try sourceTiming.requireSameTiming(as: outputTiming)
+        try source.requireCopy(output)
+    }
+    private final class Scan {
+        typealias Track = CompanionOriginalTrackCheck
+        typealias Element = Track.Element
+        let view: CompanionDiskCheck.ReadView, walker: Track.Walker, role: Role, timeBase: HDRFraction
+        let tickNS: Int64
+        var selected: Track.Selected?, width = 0, packets = 0, rpus = 0, enhancement = 0
+        var defaultDuration: UInt64 = 0, whole = SHA256(), kept = SHA256()
+        init(_ view: CompanionDiskCheck.ReadView, _ role: Role, _ timeBase: HDRFraction) throws {
+            let (ns, overflow) = timeBase.numerator.multipliedReportingOverflow(by: 1_000_000_000)
+            guard !overflow, ns > 0, ns % timeBase.denominator == 0,
+                  timeBase.value <= 0.001 else { throw failure() }
+            let checked = CompanionDiskCheck.ReadView(sourceBytes: view.sourceBytes, source: { offset, count in
+                guard offset >= 0, count >= 0, offset <= view.sourceBytes,
+                      Int64(count) <= view.sourceBytes - offset else { throw failure() }
+                let data = try view.source(offset, count)
+                guard data.count == count else { throw failure() }; return data
+            }, component: view.component, checkpoint: view.checkpoint)
+            self.view = checked; self.role = role; self.timeBase = timeBase; tickNS = ns / timeBase.denominator
+            walker = Track.Walker(checked, elementLimit: 128_000_000)
+            whole.update(data: Data("DOLBY-COPY-PACKETS-1\0".utf8))
+            kept.update(data: Data("DOLBY-COPY-PACKETS-1\0".utf8))
+        }
+        func children(_ e: Element, _ body: (Element) throws -> Void) throws {
+            var cursor = e.payload
+            while cursor < e.end {
+                let child = try walker.element(cursor, end: e.end)
+                guard !child.unknown else { throw failure() }
+                try body(child); cursor = child.end
+            }
+        }
+        func read() throws -> Receipt {
+            guard (1...(1 << 40)).contains(view.sourceBytes) else { throw failure() }
+            let header = try walker.element(0, end: view.sourceBytes)
+            guard header.id == 0x1a45dfa3, !header.unknown else { throw failure() }
+            var docType = false, headerFields: Set<UInt64> = []
+            try children(header) { e in
+                guard headerFields.insert(e.id).inserted else { throw failure() }
+                switch e.id {
+                case 0x4282: docType = try walker.bytes(e, maximum: 64) == Data("matroska".utf8)
+                case 0x4285: guard try (1...4).contains(walker.unsigned(e)) else { throw failure() }
+                case 0x42f7: guard try walker.unsigned(e) == 1 else { throw failure() }
+                case 0x42f2: guard try walker.unsigned(e) == 4 else { throw failure() }
+                case 0x42f3: guard try walker.unsigned(e) == 8 else { throw failure() }
+                default: break
+                }
+            }
+            guard docType else { throw failure() }
+            let segment = try walker.element(header.end, end: view.sourceBytes)
+            guard segment.id == 0x18538067, segment.end == view.sourceBytes else { throw failure() }
+            var scale: UInt64?, began = false
+            try children(segment) { e in
+                switch e.id {
+                case 0x1549a966:
+                    guard scale == nil, !began else { throw failure() }
+                    var value: UInt64 = 1_000_000, found = false
+                    try children(e) { f in
+                        if f.id == 0x2ad7b1 {
+                            guard !found else { throw failure() }; found = true; value = try walker.unsigned(f)
+                        }
+                    }
+                    guard value == UInt64(tickNS) else { throw failure() }; scale = value
+                case 0x1654ae6b:
+                    guard selected == nil, !began else { throw failure() }
+                    let track = try walker.tracks(e)
+                    guard walker.trackNumbers.count == 1 else { throw failure() }
+                    try declarations(track); selected = track
+                case 0x1f43b675:
+                    guard selected != nil, let scale else { throw failure() }
+                    began = true; try cluster(e, scale)
+                case 0x1a45dfa3, 0x18538067, 0xa0, 0xa1, 0xa3: throw failure()
+                default: break
+                }
+            }
+            guard began, packets > 0, let selected,
+                  role == .output || (rpus == packets && enhancement > 0) else { throw failure() }
+            try view.checkpoint()
+            return .init(configuration: selected.configuration, packets: packets,
+                         wholeSequence: Data(whole.finalize()), keptSequence: Data(kept.finalize()),
+                         timeBase: timeBase, defaultDuration: defaultDuration, rpus: rpus, enhancement: enhancement)
+        }
+        func declarations(_ track: Track.Selected) throws {
+            width = try Track.configuration(track.configuration, checkpoint: view.checkpoint)
+            let config = track.configuration
+            var cursor = 23, types: Set<UInt8> = []
+            for _ in 0..<Int(config[22]) {
+                let type = config[cursor] & 63, count = Int(config[cursor + 1]) << 8 | Int(config[cursor + 2])
+                guard [32,33,34].contains(type), count > 0, types.insert(type).inserted else { throw failure() }
+                cursor += 3
+                for _ in 0..<count {
+                    let length = Int(config[cursor]) << 8 | Int(config[cursor + 1]); cursor += 2
+                    guard config[cursor] & 1 == 0, config[cursor + 1] >> 3 == 0 else { throw failure() }
+                    cursor += length
+                }
+            }
+            guard types == Set([UInt8(32),33,34]) else { throw failure() }
+            let entry = Element(id: 0xae, payload: track.offset, end: track.offset + Int64(track.payload.count), unknown: false)
+            var seen: Set<UInt64> = [], mapping = false, maxID: UInt64 = 0
+            try children(entry) { e in
+                guard seen.insert(e.id).inserted else { throw failure() }
+                switch e.id {
+                case 0x6d80, 0xe2: throw failure()
+                case 0x56aa: guard try walker.unsigned(e) == 0 else { throw failure() }
+                case 0x537f:
+                    let data = try walker.bytes(e, maximum: 8)
+                    guard !data.isEmpty, data.allSatisfy({ $0 == 0 }) else { throw failure() }
+                case 0x23314f:
+                    let data = try walker.bytes(e, maximum: 8)
+                    guard data == Data([0x3f,0x80,0,0]) || data == Data([0x3f,0xf0,0,0,0,0,0,0]) else { throw failure() }
+                case 0x23e383:
+                    defaultDuration = try walker.unsigned(e); guard defaultDuration > 0 else { throw failure() }
+                case 0x55ee: maxID = try walker.unsigned(e)
+                case 0x41e4:
+                    guard role == .source else { throw failure() }
+                    var fields: [UInt64: Data] = [:]
+                    try children(e) { f in
+                        guard fields.updateValue(try walker.bytes(f, maximum: 64), forKey: f.id) == nil else { throw failure() }
+                    }
+                    // Narrow initial P7/L6/CCID6 v1 declaration; MEL/CM2.9 still
+                    // require independent full source metadata admission.
+                    guard Set(fields.keys) == Set([0x41f0,0x41e7,0x41ed]), fields[0x41f0] == Data([1]),
+                          fields[0x41e7] == Data("dvcC".utf8),
+                          fields[0x41ed] == Data([1,0,14,55,96] + Array(repeating: 0, count: 19)) else { throw failure() }
+                    mapping = true
+                default: break
+                }
+            }
+            guard defaultDuration > 0, role == .source ? (mapping && maxID == 1) : (!mapping && maxID == 0) else { throw failure() }
+        }
+        func cluster(_ e: Element, _ scale: UInt64) throws {
+            var timestamp: UInt64?
+            try children(e) { f in
+                switch f.id {
+                case 0xe7:
+                    guard timestamp == nil else { throw failure() }; timestamp = try walker.unsigned(f)
+                case 0xa3:
+                    guard let timestamp else { throw failure() }; try packet(f, timestamp, scale)
+                case 0xa0, 0xa1, 0x1549a966, 0x1654ae6b, 0x1f43b675: throw failure()
+                default: break
+                }
+            }
+            guard timestamp != nil else { throw failure() }
+        }
+        func packet(_ e: Element, _ timestamp: UInt64, _ scale: UInt64) throws {
+            guard packets < 2_000_000, e.end > e.payload, let selected else { throw failure() }
+            let header = try view.source(e.payload, Int(min(11, e.end - e.payload)))
+            guard let first = header.first, first != 0 else { throw failure() }
+            let trackWidth = first.leadingZeroBitCount + 1
+            guard trackWidth <= 8, header.count >= trackWidth + 3 else { throw failure() }
+            let mask = (UInt64(1) << (7 * trackWidth)) - 1
+            let number = header.prefix(trackWidth).reduce(UInt64(0)) { ($0 << 8) | UInt64($1) } & mask
+            guard number != mask, number == selected.number, header[trackWidth + 2] & 0x7f == 0 else { throw failure() }
+            let relative = Int16(bitPattern: UInt16(header[trackWidth]) << 8 | UInt16(header[trackWidth + 1]))
+            let ns = try CompanionOriginalPacketCheck.pts(cluster: timestamp, relative: relative, scale: scale)
+            guard ns % tickNS == 0 else { throw failure() }
+            let pts = ns / tickNS, start = e.payload + Int64(trackWidth + 3), size = e.end - start
+            guard (1...(16 << 20)).contains(size) else { throw failure() }
+            var cursor = start, packetHash = SHA256(), projectionHash = SHA256(), keptBytes: Int64 = 0, packetRPUs = 0, vcl = 0
+            while cursor < e.end {
+                try view.checkpoint()
+                guard Int64(width) <= e.end - cursor else { throw failure() }
+                let prefix = try view.source(cursor, width)
+                let length = prefix.reduce(UInt64(0)) { ($0 << 8) | UInt64($1) }
+                cursor += Int64(width)
+                guard length >= 2, length <= UInt64(e.end - cursor) else { throw failure() }
+                let h = try view.source(cursor, 2)
+                guard h[0] & 0x80 == 0, h[1] & 7 != 0 else { throw failure() }
+                let type = h[0] >> 1 & 63, removed = type == 62 || type == 63
+                if removed {
+                    guard role == .source else { throw failure() }
+                    if type == 62 {
+                        guard h[0] & 1 == 0, h[1] >> 3 == 0, length > 2, length <= 65_538 else { throw failure() }
+                        packetRPUs += 1; rpus += 1
+                    } else { enhancement += 1 }
+                } else {
+                    guard h[0] & 1 == 0, h[1] >> 3 == 0 else { throw failure() }
+                    if type <= 31 { vcl += 1 }
+                    projectionHash.update(data: prefix); keptBytes += Int64(width) + Int64(length)
+                }
+                packetHash.update(data: prefix)
+                let end = cursor + Int64(length)
+                while cursor < end {
+                    let count = Int(min(1 << 20, end - cursor)), data = try view.source(cursor, Int(min(1 << 20, end - cursor)))
+                    guard data.count == count else { throw failure() }
+                    packetHash.update(data: data); if !removed { projectionHash.update(data: data) }
+                    cursor += Int64(count); try view.checkpoint()
+                }
+            }
+            guard keptBytes > 0, vcl > 0, role == .output || packetRPUs == 1 else { throw failure() }
+            whole.update(data: DolbyCopyTiming.integers([Int64(packets),pts,size])); whole.update(data: Data(packetHash.finalize()))
+            kept.update(data: DolbyCopyTiming.integers([Int64(packets),pts,keptBytes])); kept.update(data: Data(projectionHash.finalize()))
+            packets += 1
+        }
+    }
+}

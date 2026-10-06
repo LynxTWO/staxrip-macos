@@ -266,6 +266,10 @@ final class ExportController: ObservableObject {
     @Published var sourceName = ""
     private let service: NativeExportService
     private var task: Task<Void, Never>?
+    #if DEBUG
+    /// Capture synchronously after start; the test must join this exact submission.
+    var submittedTaskForTesting: Task<Void, Never>? { task }
+    #endif
 
     init(service: NativeExportService? = nil) { self.service = service ?? NativeExportService() }
 

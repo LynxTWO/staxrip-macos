@@ -5333,3 +5333,7 @@ Owner-approved test ownership repair replaces service inactivity as cleanup evid
 ## D199 - Full source metadata in conversion verification
 
 Use a dedicated bounded full-metadata consumer in the existing acknowledged HDR10 Batch verification owner. Bind its complete source/packet/header evidence to the independent inspection report and expose narrow P8.1 source-subset status in the completed result. Preserve original archive defaults, unsupported-source classification, concrete uncertainty retention and all existing publication checks. P8.1 stays unavailable until its output contract and complete journey qualify. See `../../P81-METADATA-CONSUMER-EVIDENCE.md`; all five milestones remain open.
+
+## D200 - Bind complete P8.1 output evidence
+
+Use a dedicated combined verifier to bind the checked P8.1 native output role to exact packet timing, retained base-layer bytes, full normalized metadata and every decoded frame. Preserve source defaults and strict HDR10 output refusal. Keep P8.1 unavailable until packet-preserving muxing and the complete owned native journey qualify. The generated split/recompression trial still produced P7 metadata and cannot authorize conversion. See `../../P81-OUTPUT-PROOF-EVIDENCE.md`; all five milestones remain open.

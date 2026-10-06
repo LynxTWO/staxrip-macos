@@ -247,7 +247,97 @@ private final class MasterCancellation: @unchecked Sendable {
         _ = await owned.result
         lock.withLock { task = owned; retainedForReview = self }
     }
+    func retainJoined(_ owned: Task<MasterCandidate, Error>) {
+        lock.withLock { task = owned; retainedForReview = self }
+    }
     func clearAfterJoin() { lock.withLock { task = nil } }
+}
+
+// Renderer-test timer only. The test caller is the sole join owner. No detach,
+// forced cancellation, production worker or dispatch queue policy change.
+private final class MasterRendererTimer: @unchecked Sendable {
+    private let lock = NSLock()
+    private let ready = DispatchSemaphore(value: 0)
+    private let armed = DispatchSemaphore(value: 0)
+    private let stop = DispatchSemaphore(value: 0)
+    private var thread: pthread_t?
+    private var deadline: DispatchTime?
+    private var action: (@Sendable () -> Void)?
+    private var stopped = false
+    private var joinResult: Int32?
+    private var joining = false
+    private var retained: MasterRendererTimer?
+    private(set) var createStatus: Int32?
+    private(set) var actualJoinStatus: Int32?
+    private(set) var joinAttempts = 0
+    private let signalReady: Bool
+    private let reportJoined: Bool
+    init(signalReady: Bool = true, reportJoined: Bool = false) {
+        self.signalReady = signalReady; self.reportJoined = reportJoined
+    }
+    func start(allowCreate: Bool = true, readinessDeadline: DispatchTime = .now()+10) -> Bool {
+        precondition(createStatus == nil)
+        guard allowCreate else { createStatus = EAGAIN; return false }
+        let context = Unmanaged.passRetained(self).toOpaque()
+        var created: pthread_t?
+        let status = pthread_create(&created, nil, { context in
+            let owner = Unmanaged<MasterRendererTimer>.fromOpaque(context).takeRetainedValue()
+            owner.run(); return nil
+        }, context)
+        createStatus = status
+        guard status == 0 else {
+            Unmanaged<MasterRendererTimer>.fromOpaque(context).release(); return false
+        }
+        thread = created
+        if ready.wait(timeout: readinessDeadline) == .success { return true }
+        // A readiness timeout is not thread absence or a bounded join guarantee.
+        _ = finish(); return false
+    }
+    func arm(_ action: @escaping @Sendable () -> Void) -> Bool {
+        let accepted = lock.withLock {
+            guard !stopped, deadline == nil else { return false }
+            deadline = .now()+0.02; self.action = action; return true
+        }
+        if accepted { armed.signal() }
+        return accepted
+    }
+    private func run() {
+        if signalReady { ready.signal() }
+        armed.wait()
+        let selected = lock.withLock { stopped ? nil : deadline }
+        guard let selected else { return }
+        // Semaphore timed wait uses the monotonic DispatchTime deadline. Only
+        // shutdown signals this semaphore; an early signal never delivers work.
+        guard stop.wait(timeout: selected) == .timedOut else { return }
+        let callback = lock.withLock { stopped ? nil : action }
+        callback?() // The gate, not this wakeup, authorizes delivery versus expiry.
+    }
+    func shutdown() {
+        lock.withLock { stopped = true }
+        armed.signal(); stop.signal()
+    }
+    func finish() -> Int32 {
+        shutdown()
+        let selected: pthread_t? = lock.withLock {
+            guard joinResult == nil, !joining, let thread else { return nil }
+            joining = true; return thread
+        }
+        guard let selected else { return lock.withLock { joinResult ?? (joining ? EBUSY : 0) } }
+        // Never hold a timer/gate lock across join, and never join this thread itself.
+        guard pthread_equal(pthread_self(), selected) == 0 else {
+            return lock.withLock { joinResult = EDEADLK; retained = self; return EDEADLK }
+        }
+        joinAttempts += 1
+        let actual = pthread_join(selected, nil)
+        actualJoinStatus = actual
+        let result: Int32 = actual == 0 && reportJoined ? EIO : actual
+        return lock.withLock {
+            joinResult = result
+            if result == 0 { thread = nil; action = nil }
+            else { retained = self } // Consumed join attempt is never retried.
+            return result
+        }
+    }
 }
 
 // Test-only categorical diagnosis. Never retain raw status, errors, candidates or clocks.
@@ -346,10 +436,10 @@ private final class MasterLiveGate: @unchecked Sendable {
             failure()
         }
     }
-    func hold(runner: ToolRunner?, cancellation: MasterCancellation, notification: AsyncStream<Date>.Continuation) {
+    func hold(runner: ToolRunner?, cancellation: MasterCancellation, notification: AsyncStream<Date>.Continuation, rendererTimer: MasterRendererTimer? = nil) {
         guard begin() else { return }
         let release = DispatchSemaphore(value: 0)
-        DispatchQueue.global().asyncAfter(deadline: .now()+0.02) { [self] in
+        let deliver: @Sendable () -> Void = { [self] in
             markTimerEntry()
             complete(live: {
                 // nil is the renderer: this exact worker is still inside its chunk callback.
@@ -359,9 +449,13 @@ private final class MasterLiveGate: @unchecked Sendable {
                 release.signal()
             })
         }
+        if let rendererTimer {
+            if !rendererTimer.arm(deliver) { expire { cancellation.cancel(); notification.finish() } }
+        } else { DispatchQueue.global().asyncAfter(deadline: .now()+0.02, execute: deliver) }
         if release.wait(timeout: .now()+10) != .success {
             expire { cancellation.cancel(); notification.finish() }
         }
+        rendererTimer?.shutdown()
     }
     var passed: Bool { lock.withLock { resolution == .completed && actualLiveAtRequest } }
     var allClosesSucceeded: Bool { lock.withLock { !closes.isEmpty && closes.allSatisfy { $0 } } }
@@ -388,6 +482,88 @@ struct MasteringRecoveryTests {
                 #expect(gate.passed == (!expiresFirst && live))
             }
         }
+    }
+
+    @Test func rendererTimerJoinsUnarmedStartupRefusalAndReportedJoin() {
+        let refused = MasterRendererTimer()
+        #expect(!refused.start(allowCreate: false))
+        #expect(refused.createStatus == EAGAIN && refused.joinAttempts == 0)
+        let unarmed = MasterRendererTimer()
+        #expect(unarmed.start())
+        #expect(unarmed.finish() == 0)
+        #expect(unarmed.actualJoinStatus == 0 && unarmed.joinAttempts == 1)
+        #expect(unarmed.finish() == 0 && unarmed.joinAttempts == 1)
+        let notReady = MasterRendererTimer(signalReady: false)
+        #expect(!notReady.start(readinessDeadline: .now()))
+        #expect(notReady.createStatus == 0 && notReady.actualJoinStatus == 0 && notReady.joinAttempts == 1)
+        final class Witness { weak var timer: MasterRendererTimer? }
+        let witness = Witness()
+        var reported: MasterRendererTimer? = MasterRendererTimer(reportJoined: true)
+        witness.timer = reported
+        #expect(reported!.start())
+        #expect(reported!.finish() == EIO)
+        #expect(reported!.actualJoinStatus == 0 && reported!.joinAttempts == 1)
+        #expect(reported!.finish() == EIO && reported!.joinAttempts == 1)
+        reported = nil
+        #expect(witness.timer != nil) // Controlled report after actual join, not OS failure.
+    }
+
+    @Test func reportedTimerJoinRetainsCompletedOwnedTaskAfterCallerDrop() async {
+        final class Evidence: Error, @unchecked Sendable {}
+        final class Witness {
+            weak var evidence: Evidence?
+            weak var holder: MasterCancellation?
+        }
+        let witness = Witness()
+        var evidence: Evidence? = Evidence()
+        witness.evidence = evidence
+        var holder: MasterCancellation? = MasterCancellation()
+        witness.holder = holder
+        var owned: Task<MasterCandidate, Error>? = Task { [evidence = evidence!] in throw evidence }
+        holder!.install(owned!)
+        _ = await owned!.result // Same task is complete before attempting timer join.
+        evidence = nil
+        let timer = MasterRendererTimer(reportJoined: true)
+        #expect(timer.start())
+        let status = timer.finish()
+        #expect(status == EIO && timer.actualJoinStatus == 0 && timer.joinAttempts == 1)
+        if status != 0 { holder!.retainJoined(owned!) }
+        owned = nil; holder = nil
+        #expect(witness.holder != nil && witness.evidence != nil)
+        // Returned-candidate deinit and actual OS join failure remain separate.
+    }
+
+    @Test func rendererTimerDeliversAfterDelayAndExpiredGateSuppressesLateWork() {
+        for expireFirst in [false, true] {
+            let timer = MasterRendererTimer(), gate = MasterLiveGate()
+            let returned = DispatchSemaphore(value: 0)
+            final class Facts: @unchecked Sendable {
+                let lock = NSLock()
+                var live = 0, delivered = 0
+                func observe() -> Bool { lock.withLock { live += 1; return true } }
+                func deliver() { lock.withLock { delivered += 1 } }
+            }
+            let facts = Facts()
+            #expect(timer.start())
+            gate.select(true); #expect(gate.begin())
+            if expireFirst { gate.expire {} }
+            let start = DispatchTime.now().uptimeNanoseconds
+            #expect(timer.arm {
+                gate.markTimerEntry()
+                gate.complete(live: { facts.observe() }, deliver: { facts.deliver() })
+                returned.signal()
+            })
+            #expect(returned.wait(timeout: .now()+10) == .success)
+            #expect(DispatchTime.now().uptimeNanoseconds - start >= 20_000_000)
+            #expect(timer.finish() == 0 && timer.actualJoinStatus == 0 && timer.joinAttempts == 1)
+            #expect(gate.passed == !expireFirst)
+            #expect(facts.lock.withLock { facts.live == (expireFirst ? 0 : 1) && facts.delivered == (expireFirst ? 0 : 1) })
+        }
+        let stopped = MasterRendererTimer()
+        #expect(stopped.start())
+        stopped.shutdown()
+        #expect(!stopped.arm { Issue.record("Stopped timer delivered") })
+        #expect(stopped.finish() == 0 && stopped.joinAttempts == 1)
     }
 
     @Test func timerEntryEvidenceFreezesAtExpiryWithoutChangingWinner() {
@@ -502,6 +678,8 @@ struct MasteringRecoveryTests {
         let diagnosis = MasterPhaseDiagnosis()
         let gate = MasterLiveGate()
         let target: MasterPhaseDiagnosis.Phase = phase == "Fresh analysis" ? .freshAnalysis : phase == "Rendering candidate" ? .rendering : .measuringCandidate
+        let rendererTimer = phase == "Rendering candidate" ? MasterRendererTimer() : nil
+        if let rendererTimer { try #require(rendererTimer.start()) }
         defer { print(diagnosis.record(target: target,event: .finished,received: nil)) }
         let task = Task {
             defer { notified.continuation.finish() }
@@ -512,7 +690,7 @@ struct MasteringRecoveryTests {
                     if phase != "Rendering candidate" { gate.hold(runner: runner, cancellation: cancellation, notification: notified.continuation) }
                 }) {
                 try await LinkedRenderer.$wroteChunk.withValue({
-                    if phase == "Rendering candidate" { gate.hold(runner: nil, cancellation: cancellation, notification: notified.continuation) }
+                    if phase == "Rendering candidate" { gate.hold(runner: nil, cancellation: cancellation, notification: notified.continuation, rendererTimer: rendererTimer) }
                 }) {
                 try await MasteringEngine.prepare(source: source,track: 0,regions: [],layout: nil,settings: MasterSettings(),destination: destination,tools: tools) { status,_ in
                     let matched = status.hasPrefix(phase)
@@ -526,6 +704,11 @@ struct MasteringRecoveryTests {
             }
         }
         cancellation.install(task)
+        defer {
+            let status = rendererTimer?.finish() ?? 0
+            #expect(status == 0)
+            if status != 0 { mayRemoveFixture = false; cancellation.retainJoined(task) }
+        }
         var iterator = notified.stream.makeAsyncIterator()
         let next = await iterator.next()
         print(diagnosis.record(target: target,event: .phaseNext,received: next != nil))
@@ -610,6 +793,8 @@ struct MasteringSettlementTests {
         let cancellation = MasterCancellation(), gate = MasterLiveGate()
         let notified = AsyncStream<Date>.makeStream()
         let cancelling = role.hasSuffix("Cancel"), reader = role.hasPrefix("reader")
+        let rendererTimer = cancelling && !reader ? MasterRendererTimer() : nil
+        if let rendererTimer { try #require(rendererTimer.start()) }
         var witness: WeakToolWitness?
         var handles: [WeakRenderHandleWitness] = []
         var task: Task<MasterCandidate, Error>? = Task {
@@ -622,7 +807,7 @@ struct MasteringSettlementTests {
                     }) {
                     try await LinkedRenderer.$wroteChunk.withValue({
                         if cancelling && !reader {
-                            reports.enable(); gate.hold(runner: nil, cancellation: cancellation, notification: notified.continuation)
+                            reports.enable(); gate.hold(runner: nil, cancellation: cancellation, notification: notified.continuation, rendererTimer: rendererTimer)
                         }
                     }) {
                     try await MasteringEngine.prepare(source: source, track: 0, regions: [], layout: nil, settings: MasterSettings(), destination: destination, tools: tools) { text, _ in
@@ -634,6 +819,11 @@ struct MasteringSettlementTests {
             }
         }
         cancellation.install(task!)
+        defer {
+            let status = rendererTimer?.finish() ?? 0
+            #expect(status == 0)
+            if status != 0, let task { cancellation.retainJoined(task) }
+        }
         do { _ = try await task!.value; Issue.record("Expected reported preparation uncertainty") }
         catch let error as ToolRunner.ReaderCloseFailure {
             #expect(reader); witness = WeakToolWitness(error.owner)
@@ -650,7 +840,10 @@ struct MasteringSettlementTests {
         if cancelling {
             print(gate.record(context: .settlement, target: reader ? .freshAnalysis : .rendering, testCancelled: Task.isCancelled))
         }
-        task = nil; cancellation.clearAfterJoin()
+        let joined = rendererTimer?.finish() ?? 0
+        if joined != 0 { cancellation.retainJoined(task!) }
+        task = nil
+        if joined == 0 { cancellation.clearAfterJoin() }
         #expect(reports.records.count == 2)
         #expect(reports.records.allSatisfy { $0.1 })
         if cancelling { #expect(gate.passed) }

@@ -5313,3 +5313,7 @@ Complete the finite generated M2 app journey using the dedicated source-bound Do
 ## D184 - cancellation timer entry discriminator
 
 Preserve failed hosted assertions and qualify one missing fact before selecting a repair: whether the timer entry marker was recorded when authoritative gate expiry won. Freeze that fact under consistent lock order, suppress late completion as before, and print only fixed categorical values at existing boundaries. Keep every existing delay, bound, notification, join and retention rule. The added deterministic test qualifies state evidence, not hosted scheduling or a production fix. See CANCELLATION-TIMER-ENTRY-EVIDENCE.md; all M1-M5 remain open and ChapterPlan scheduling stays on hold.
+
+## D187 - owned renderer test timer
+
+Following explicit owner approval, move only renderer-test cancellation delivery to one joinable timer thread, armed by actual written work at the same monotonic 20 ms delay. Keep the authoritative winner, 10-second escape, under-five-second measurement and every existing assertion. The test caller owns one checked join outside timer/gate locks; startup refusal still requires shutdown and join or retention. No cleanup follows uncertainty. PCM, production, ChapterPlan and recurring automation remain unchanged. See CANCELLATION-TIMER-ENTRY-EVIDENCE.md; this is a finite harness repair, not whole-suite or milestone completion.

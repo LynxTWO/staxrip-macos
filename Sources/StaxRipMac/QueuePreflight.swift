@@ -10,7 +10,7 @@ struct QueueCheck: Identifiable, Sendable {
 
 enum QueuePreflight {
     static func review(_ jobs: [QueueJob], completed: Set<UUID>, tools: FFmpegTools, encoders: Set<String>,
-                       timeout: Double = 15, progress: @escaping @Sendable (QueueCheck) -> Void = { _ in }) async throws -> [QueueCheck] {
+                       timeout: Double = 15, generatedP81: Bool = false, progress: @escaping @Sendable (QueueCheck) -> Void = { _ in }) async throws -> [QueueCheck] {
         guard jobs.count <= 1000, Set(jobs.map(\.id)).count == jobs.count else {
             throw NativeExportError.invalid("Check at most 1000 queue items with unique identifiers.")
         }
@@ -27,7 +27,7 @@ enum QueuePreflight {
             } else {
                 do {
                     guard !duplicates.contains(job.id) else { throw NativeExportError.invalid("Queue destinations may collide, including names differing only by case. Choose distinct output names.") }
-                    item = try await inspect(job, tools: tools, encoders: encoders, timeout: timeout)
+                    item = try await inspect(job, tools: tools, encoders: encoders, timeout: timeout, generatedP81: generatedP81)
                 } catch is CancellationError { throw CancellationError() }
                 catch { item = QueueCheck(id: job.id, kind: .issue, detail: String(error.localizedDescription.prefix(2000))) }
             }
@@ -40,11 +40,18 @@ enum QueuePreflight {
         URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath().path
             .precomposedStringWithCanonicalMapping.lowercased(with: Locale(identifier: "en_US_POSIX"))
     }
-    static func inspect(_ job: QueueJob, tools: FFmpegTools, encoders: Set<String>, timeout: Double = 15) async throws -> QueueCheck {
+    static func inspect(_ job: QueueJob, tools: FFmpegTools, encoders: Set<String>, timeout: Double = 15, generatedP81: Bool = false) async throws -> QueueCheck {
         guard !job.isDemo else { throw NativeExportError.invalid("Demo source: open a real video and add its configuration.") }
         try SessionDocument.validate(job.configuration)
+        #if DEBUG
+        let p81 = generatedP81 && job.configuration.colorMode == DolbyConversionIntent.p81Copy
+        if p81 { try DolbyConversionIntent.validateCopySettings(job.configuration,p81:true) }
+        else if job.configuration.colorMode == DolbyConversionIntent.hdr10Copy { try DolbyConversionIntent.validateCopySettings(job.configuration) }
+        else { try DolbyConversionIntent.requireRunnable(job.configuration) }
+        #else
         if job.configuration.colorMode == DolbyConversionIntent.hdr10Copy { try DolbyConversionIntent.validateCopySettings(job.configuration) }
         else { try DolbyConversionIntent.requireRunnable(job.configuration) }
+        #endif
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         guard job.source.hasPrefix("/"), job.destination.hasPrefix("/"), ![job.source, job.destination].contains(where: { $0.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) }) else {
             throw NativeExportError.invalid("Source and destination must be valid absolute local paths.")
@@ -67,6 +74,9 @@ enum QueuePreflight {
         guard stat(parent.path, &info) == 0, info.st_mode & S_IFMT == S_IFDIR, FileManager.default.isWritableFile(atPath: parent.path) else {
             throw NativeExportError.invalid("The output folder is missing or not writable. Choose an existing writable folder.")
         }
+        #if DEBUG
+        if p81 { return QueueCheck(id:job.id,kind:.deferred,detail:"Isolated development P8.1 settings and paths checked. Execution must freshly verify source-bound enhancement loss acknowledgement, every packet, complete reviewed metadata and decoded frames before exclusive publication. This is not production admission.") }
+        #endif
         if job.configuration.colorMode == DolbyConversionIntent.hdr10Copy {
             return QueueCheck(id: job.id, kind: .deferred, detail: "HDR10 base-layer copy settings and paths checked. Execution must freshly verify the acknowledged video-only P7 MEL source, every encoded packet and decoded frame, then publish exclusively. Dolby Vision and enhancement data will be removed; no video re-encoding or tone mapping.")
         }

@@ -15,15 +15,16 @@ struct QueueJobPresentation {
     let symbol: String
 
     init(job: QueueJob, status: BatchStatus?, publishing: Bool, check: QueueCheck?) {
+        let dolbyCopy = [DolbyConversionIntent.hdr10Copy,DolbyConversionIntent.p81Copy].contains(job.configuration.colorMode)
         completed = status?.phase == "Completed"
         let cleanup = status?.hasCleanupWarning == true
         let phase = status?.phase ?? "Pending"
         needsAttention = cleanup || ["Failed", "Cancelled", "Interrupted"].contains(phase) || check?.kind == .issue
-        showStatusDetail = (completed && job.configuration.colorMode == DolbyConversionIntent.hdr10Copy) || needsAttention || publishing || ["Inspecting", "Encoding", "Verifying"].contains(phase)
+        showStatusDetail = (completed && dolbyCopy) || needsAttention || publishing || ["Inspecting", "Encoding", "Verifying"].contains(phase)
         if publishing { label = "Finishing"; symbol = "arrow.up.document" }
         else if completed && cleanup { label = "Saved · cleanup warning"; symbol = "exclamationmark.triangle" }
         else if completed { label = "Completed"; symbol = "checkmark.circle.fill" }
-        else if phase == "Encoding", job.configuration.colorMode == DolbyConversionIntent.hdr10Copy { label = "Copying"; symbol = "doc.on.doc" }
+        else if phase == "Encoding", dolbyCopy { label = "Copying"; symbol = "doc.on.doc" }
         else if phase == "Failed" { label = "Failed"; symbol = "exclamationmark.triangle" }
         else if phase == "Cancelled" { label = "Cancelled"; symbol = "pause.circle" }
         else if phase == "Interrupted" { label = "Interrupted"; symbol = "exclamationmark.arrow.triangle.2.circlepath" }

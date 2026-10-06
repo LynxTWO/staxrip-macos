@@ -11,6 +11,8 @@ struct VideoRateOptionsView: View {
     @EnvironmentObject private var dolby: DolbyInspectionController
     @State private var acknowledgementError: String?
     var source: URL? = nil
+    private var p81: Bool { configuration.colorMode == DolbyConversionIntent.p81Copy }
+    private var dolbyCopy: Bool { p81 || configuration.colorMode == DolbyConversionIntent.hdr10Copy }
     private var hdrIssue: String? {
         do { try EncodePlan.validateHDRSettings(configuration); return nil }
         catch { return error.localizedDescription }
@@ -21,29 +23,29 @@ struct VideoRateOptionsView: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            settingPicker("Color workflow", selection: $configuration.colorMode, values: ["SDR", "Preserve static HDR10", DolbyConversionIntent.hdr10Copy])
+            settingPicker("Color workflow", selection: $configuration.colorMode, values: ["SDR", "Preserve static HDR10", DolbyConversionIntent.hdr10Copy, DolbyConversionIntent.p81Copy])
                 .accessibilityHint("Choose standard dynamic range or verified static H D R ten preservation. This does not change your other settings.")
-            Text("Dolby Vision P8.1 — unavailable: metadata transformation and final output verification are not yet qualified.")
+            Text("Dolby Vision P8.1 execution remains unavailable outside the isolated development demonstration. Saved intent does not enable conversion.")
                 .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dolby.p81.unavailable")
             Text("Tone-mapped SDR — unavailable: a verified pixel tone and gamut transform is required. The SDR setting above does not tone-map HDR.")
                 .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dolby.sdr.unavailable")
-            if configuration.colorMode == DolbyConversionIntent.hdr10Copy {
-                Text("Prepare HDR10 base-layer copy · MKV · no video re-encoding or tone mapping. Dolby Vision metadata and the enhancement layer will be removed; static HDR10 remains. The original source is kept.")
+            if dolbyCopy {
+                Text(p81 ? "Prepare P8.1 base-layer copy · MKV · no video re-encoding or tone mapping. Reviewed Dolby metadata is converted to P8.1; enhancement-layer data is removed. This does not reconstruct enhancement pixels. The original source is kept." : "Prepare HDR10 base-layer copy · MKV · no video re-encoding or tone mapping. Dolby Vision metadata and the enhancement layer will be removed; static HDR10 remains. The original source is kept.")
                     .font(.caption).fixedSize(horizontal: false, vertical: true)
                 Text("Initial route: one 4K Main 10 P7 MEL video track at 24000/1001, CM 2.9, MKV. Choose Copy original, No audio and Remove all subtitles; original size and no edits. Every packet and decoded frame must pass before publication. Other profiles, additional tracks and reordered pictures remain unavailable.").font(.caption).foregroundStyle(Color.warning)
                     .accessibilityIdentifier("dolby.hdr10.support")
-                Toggle("I acknowledge Dolby Vision loss for this inspected source", isOn: Binding(get: {
+                Toggle(p81 ? "I acknowledge enhancement-layer loss for this inspected source" : "I acknowledge Dolby Vision loss for this inspected source", isOn: Binding(get: {
                     guard let source, let report = dolby.report(for: source) else { return false }
-                    return configuration.dolbyLossAcknowledgement?.matches(source: source, fingerprint: report.source) == true
+                    return (p81 ? configuration.p81EnhancementLossAcknowledgement : configuration.dolbyLossAcknowledgement)?.matches(source: source, fingerprint: report.source) == true
                 }, set: { acknowledged in
                     acknowledgementError = nil
-                    guard acknowledged else { configuration.dolbyLossAcknowledgement = nil; return }
+                    guard acknowledged else { if p81 { configuration.p81EnhancementLossAcknowledgement = nil } else { configuration.dolbyLossAcknowledgement = nil }; return }
                     guard let source, let report = dolby.report(for: source) else { return }
-                    do { configuration.dolbyLossAcknowledgement = try DolbyLossAcknowledgement(source: source, fingerprint: report.source) }
+                    do { let value = try DolbyLossAcknowledgement(source: source, fingerprint: report.source); if p81 { configuration.p81EnhancementLossAcknowledgement = value } else { configuration.dolbyLossAcknowledgement = value } }
                     catch { acknowledgementError = error.localizedDescription }
                 }))
                 .disabled(source.flatMap { dolby.report(for: $0) } == nil)
-                .accessibilityIdentifier("dolby.hdr10.acknowledge")
+                .accessibilityIdentifier(p81 ? "dolby.p81.acknowledge" : "dolby.hdr10.acknowledge")
                 Text("Inspect the complete Dolby metadata first. Acknowledgement is tied to the inspected source content; it does not qualify conversion. Changing sources clears it. Saved intent must be checked against fresh source content before execution.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if let acknowledgementError { Text(acknowledgementError).font(.caption).foregroundStyle(Color.warning) }
@@ -58,7 +60,7 @@ struct VideoRateOptionsView: View {
             if configuration.copiesVideo {
                 Text("Copy the original encoded picture without another video encoding pass. Audio and subtitle choices still apply; AAC and Opus still re-encode audio.")
                     .font(.caption).fixedSize(horizontal: false, vertical: true)
-                if configuration.colorMode != DolbyConversionIntent.hdr10Copy {
+                if !dolbyCopy {
                 if let copyIssue { Text(copyIssue).font(.caption).foregroundStyle(Color.warning).fixedSize(horizontal: false, vertical: true) }
                 Text("Supports 8-bit SDR H.264/HEVC, 10-bit HEVC Main 10 with declared BT.709 limited-range SDR, or 8/10-bit AV1 Main with declared BT.709 limited-range SDR. First video only: upright, progressive and square-pixel in MP4/QuickTime or Matroska. Requires original size and no picture filters or trim.")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)

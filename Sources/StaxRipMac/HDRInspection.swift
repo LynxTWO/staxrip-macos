@@ -94,6 +94,7 @@ enum DolbyConversionIntent {
     static let p81Copy = "Dolby Vision P8.1 base-layer copy"
     static let hdr10Copy = "HDR10 base-layer copy"
     static let unavailable = "These settings are unavailable for HDR10 base-layer copy. Use the dedicated video-only MKV copy route with original picture settings, No audio, Remove all subtitles and source-specific Dolby Vision loss acknowledgement. Full verification is required before a usable result."
+    static let p81Unavailable = "These settings are unavailable for P8.1 base-layer copy. Use the dedicated video-only MKV copy route with original picture settings, No audio, Remove all subtitles and source-specific enhancement-layer loss acknowledgement. Full verification is required before a usable result."
     static func validate(_ configuration: EncodeConfiguration) throws {
         if let acknowledgement = configuration.p81EnhancementLossAcknowledgement {
             try acknowledgement.validate()
@@ -113,7 +114,7 @@ enum DolbyConversionIntent {
               c.picture.start == 0, c.picture.end == 0, c.picture.deinterlace == "Off",
               c.audio == "No audio", c.subtitleMode == "Remove all subtitles",
               c.externalSubtitle == nil, c.externalCaptions.isEmpty, c.chapterEdits == nil, (p81 ? c.p81EnhancementLossAcknowledgement != nil : c.dolbyLossAcknowledgement != nil) else {
-            throw NativeExportError.invalid(unavailable)
+            throw NativeExportError.invalid(p81 ? p81Unavailable : unavailable)
         }
     }
     static func requireRunnable(_ configuration: EncodeConfiguration) throws {

@@ -57,13 +57,18 @@ final class BatchController: ObservableObject {
         reviewStatus = "Checking queue…"
         let completed = Set(statuses.filter { $0.value.phase == "Completed" }.map(\.key))
         let knownEncoders = encoders
+        #if DEBUG
+        let generatedP81 = isolatedDemoJournal
+        #else
+        let generatedP81 = false
+        #endif
         reviewTask = Task { [self] in
             defer {
                 reviewing = false; reviewTask = nil
                 if reviewGeneration != id { reviewStatus = "Queue changed. Check again." }
             }
             do {
-                let results = try await QueuePreflight.review(jobs, completed: completed, tools: tools, encoders: knownEncoders) { [weak self] item in
+                let results = try await QueuePreflight.review(jobs, completed: completed, tools: tools, encoders: knownEncoders, generatedP81: generatedP81) { [weak self] item in
                     Task { @MainActor in
                         guard let self, self.reviewGeneration == id, self.reviewing else { return }
                         self.queueChecks[item.id] = item
@@ -289,7 +294,7 @@ final class BatchController: ObservableObject {
             try await encodeDolbyCopy(job, tools: tools); return
         }
         #if DEBUG
-        if job.configuration.colorMode == DolbyConversionIntent.p81Copy && Self.generatedP81 {try await encodeDolbyCopy(job,tools:tools,p81:true);return}
+        if job.configuration.colorMode == DolbyConversionIntent.p81Copy && (Self.generatedP81 || isolatedDemoJournal) {try await encodeDolbyCopy(job,tools:tools,p81:true);return}
         #endif
         try DolbyConversionIntent.requireRunnable(job.configuration)
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
@@ -649,7 +654,7 @@ final class BatchController: ObservableObject {
             copyStageFD = Darwin.open(directory.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
             try requireCopyDirectory(copyStageFD, at: directory)
             let staged = directory.appendingPathComponent("encoded.mkv")
-            statuses[job.id] = BatchStatus(phase: "Encoding", detail: "HDR10 base-layer copy · Dolby Vision loss acknowledged · no video re-encoding")
+            statuses[job.id] = BatchStatus(phase: "Encoding", detail: p81 ? "P8.1 base-layer copy · enhancement loss acknowledged · no video re-encoding" : "HDR10 base-layer copy · Dolby Vision loss acknowledged · no video re-encoding")
             try checkpoint()
             if p81 {
                 #if DEBUG

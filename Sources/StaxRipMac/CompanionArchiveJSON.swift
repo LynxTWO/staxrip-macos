@@ -10,12 +10,22 @@ struct CompanionArchiveJSON {
     private let bytes: [UInt8]
     private var auditNullable = false
     private var fieldLimit = 20
+    private var depthLimit = 4, nodeLimit = 256, arrayLimit = 16
     private var position = 0, nodes = 0
     static func refused() -> NativeExportError { .invalid("Original index/manifest JSON refused. No complete semantic receipt.") }
     static func object(_ data: Data, maximum: Int, auditNullable: Bool = false, decoderSampleFields: Bool = false) throws -> Object {
         guard !data.isEmpty, data.count <= maximum, maximum <= 1 << 20 else { throw refused() }
         var reader = Self(bytes: Array(data), auditNullable: auditNullable, fieldLimit: decoderSampleFields ? 32 : 20); let value = try reader.value(depth: 0); reader.space()
         guard reader.position == reader.bytes.count, case .object(let object) = value else { throw refused() }; return object
+    }
+    /// Separate full metadata grammar; original archive/index defaults stay fixed.
+    static func metadataObject(_ data: Data) throws -> Object {
+        guard !data.isEmpty, data.count <= 65_535 else { throw refused() }
+        var reader = Self(bytes: Array(data), auditNullable: true, fieldLimit: 64,
+                          depthLimit: 12, nodeLimit: 2048, arrayLimit: 64)
+        let value = try reader.value(depth: 0); reader.space()
+        guard reader.position == reader.bytes.count, case .object(let o) = value else { throw refused() }
+        return o
     }
     static func string(_ object: Object, _ key: String) throws -> String {
         guard case .string(let s)? = object[key] else { throw refused() }; return s
@@ -48,7 +58,7 @@ struct CompanionArchiveJSON {
         let result = String(decoding: bytes[start..<position], as: UTF8.self); position += 1; return result
     }
     private mutating func value(depth: Int) throws -> Value {
-        space(); guard depth <= 4, nodes < 256, position < bytes.count else { throw Self.refused() }; nodes += 1
+        space(); guard depth <= depthLimit, nodes < nodeLimit, position < bytes.count else { throw Self.refused() }; nodes += 1
         if bytes[position] == 123 {
             position += 1; var object: Object = [:]
             if take(125) { return .object(object) }
@@ -63,7 +73,7 @@ struct CompanionArchiveJSON {
             position += 1; var array: [Value] = []
             if take(93) { return .array(array) }
             repeat {
-                guard array.count < 16 else { throw Self.refused() }; array.append(try value(depth: depth + 1))
+                guard array.count < arrayLimit else { throw Self.refused() }; array.append(try value(depth: depth + 1))
                 if take(93) { return .array(array) }; guard take(44) else { throw Self.refused() }
             } while true
         }

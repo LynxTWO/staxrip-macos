@@ -789,3 +789,233 @@ enum DolbyCopyFrames {
                      mastering: mastering, light: frames.light, chroma: "topleft", timeBase: frames.timeBase)
     }
 }
+
+// Full metadata source admission for the explicitly narrow P8.1 candidate.
+// This receipt never authorizes conversion, decoding, publication or cleanup.
+enum DolbyP81Metadata {
+    typealias JSON = CompanionArchiveJSON
+    typealias Object = JSON.Object
+    enum Unsupported: Error { case metadata }
+    static func require(_ condition: Bool) throws { if !condition { throw Unsupported.metadata } }
+    static func object(_ value: JSON.Value?) throws -> Object {
+        guard case .object(let o)? = value else { throw Unsupported.metadata }; return o
+    }
+    static func keys(_ o: Object, _ names: String) throws { try require(Set(o.keys) == Set(names.split(separator: " ").map(String.init))) }
+    static func n(_ o: Object, _ k: String, _ range: ClosedRange<UInt64>) throws -> UInt64 { try JSON.unsigned(o,k,range) }
+    static let header = #"{"bl_bit_depth_minus8":2,"bl_video_full_range_flag":false,"chroma_resampling_explicit_filter_flag":false,"coefficient_data_type":0,"coefficient_log2_denom":23,"coefficient_log2_denom_length":23,"disable_residual_flag":false,"el_bit_depth_minus8":2,"el_spatial_resampling_filter_flag":true,"ext_mapping_idc_0_4":0,"ext_mapping_idc_5_7":0,"prev_vdr_rpu_id":0,"reserved_zero_3bits":0,"rpu_format":18,"rpu_nal_prefix":25,"rpu_type":2,"spatial_resampling_filter_flag":false,"use_prev_vdr_rpu_flag":false,"vdr_bit_depth_minus8":4,"vdr_dm_metadata_present_flag":true,"vdr_rpu_level":0,"vdr_rpu_normalized_idc":1,"vdr_rpu_profile":1,"vdr_seq_info_present_flag":true}"#
+    static let mapping = #"{"curves":[{"linear_interp_flag":[false],"mapping_idc":"Polynomial","num_pivots_minus2":0,"pivots":[0,1023],"poly_coef":[[0,0]],"poly_coef_int":[[0,1]],"poly_order_minus1":[0]},{"linear_interp_flag":[false],"mapping_idc":"Polynomial","num_pivots_minus2":0,"pivots":[0,1023],"poly_coef":[[0,0]],"poly_coef_int":[[0,1]],"poly_order_minus1":[0]},{"linear_interp_flag":[false],"mapping_idc":"Polynomial","num_pivots_minus2":0,"pivots":[0,1023],"poly_coef":[[0,0]],"poly_coef_int":[[0,1]],"poly_order_minus1":[0]}],"mapping_chroma_format_idc":0,"mapping_color_space":0,"nlq":{"linear_deadzone_slope":[0,0,0],"linear_deadzone_slope_int":[0,0,0],"linear_deadzone_threshold":[0,0,0],"linear_deadzone_threshold_int":[0,0,0],"nlq_offset":[0,0,0],"vdr_in_max":[0,0,0],"vdr_in_max_int":[1,1,1]},"nlq_method_idc":"LinearDeadzone","nlq_num_pivots_minus2":0,"nlq_pred_pivot_value":[0,1023],"num_x_partitions_minus1":0,"num_y_partitions_minus1":0,"vdr_rpu_id":0}"#
+    static let fixedDM = #"{"compressed":false,"rgb_to_lms_coef0":7222,"rgb_to_lms_coef1":8771,"rgb_to_lms_coef2":390,"rgb_to_lms_coef3":2654,"rgb_to_lms_coef4":12430,"rgb_to_lms_coef5":1300,"rgb_to_lms_coef6":0,"rgb_to_lms_coef7":422,"rgb_to_lms_coef8":15962,"signal_bit_depth":12,"signal_chroma_format":0,"signal_color_space":0,"signal_eotf":65535,"signal_eotf_param0":0,"signal_eotf_param1":0,"signal_eotf_param2":0,"signal_full_range_flag":1,"ycc_to_rgb_coef0":9574,"ycc_to_rgb_coef1":0,"ycc_to_rgb_coef2":13802,"ycc_to_rgb_coef3":9574,"ycc_to_rgb_coef4":-1540,"ycc_to_rgb_coef5":-5348,"ycc_to_rgb_coef6":9574,"ycc_to_rgb_coef7":17610,"ycc_to_rgb_coef8":0,"ycc_to_rgb_offset0":16777216,"ycc_to_rgb_offset1":134217728,"ycc_to_rgb_offset2":134217728}"#
+    static func template(_ text: String) throws -> Object { try JSON.metadataObject(Data(text.utf8)) }
+    static func normalized(_ input: Object, source: Bool) throws -> JSON.Value {
+        var r = input
+        if !source {
+            try keys(r,"dovi_profile header rpu_data_mapping vdr_dm_data rpu_data_crc32")
+            try require(r["dovi_profile"] == .unsigned(8))
+            var h = try object(r["header"]), m = try object(r["rpu_data_mapping"])
+            try require(h["disable_residual_flag"] == .bool(true) && h["el_spatial_resampling_filter_flag"] == .bool(false))
+            h["disable_residual_flag"] = .bool(false); h["el_spatial_resampling_filter_flag"] = .bool(true)
+            let original = try template(mapping)
+            for k in ["nlq_method_idc","nlq_num_pivots_minus2","nlq_pred_pivot_value","nlq"] {
+                try require(m[k] == nil); m[k] = original[k]
+            }
+            r["dovi_profile"] = .unsigned(7); r["el_type"] = .string("MEL"); r["header"] = .object(h); r["rpu_data_mapping"] = .object(m)
+        }
+        try keys(r,"dovi_profile el_type header rpu_data_mapping vdr_dm_data rpu_data_crc32")
+        try require(r["dovi_profile"] == .unsigned(7) && r["el_type"] == .string("MEL"))
+        try require(r["header"] == .object(template(header)) && r["rpu_data_mapping"] == .object(template(mapping)))
+        _ = try n(r,"rpu_data_crc32",0...UInt64(UInt32.max)) // Actual encoded CRC is validated by the helper.
+        let d = try object(r["vdr_dm_data"]), fixed = try template(fixedDM)
+        try require(Set(d.keys) == Set(fixed.keys).union(["affected_dm_metadata_id","current_dm_metadata_id","scene_refresh_flag","source_min_pq","source_max_pq","source_diagonal","cmv29_metadata"]))
+        for (k,v) in fixed { try require(d[k] == v) }
+        for k in ["affected_dm_metadata_id","current_dm_metadata_id"] { _ = try n(d,k,0...0) }
+        _ = try n(d,"scene_refresh_flag",0...1); _ = try n(d,"source_diagonal",0...1023)
+        let low = try n(d,"source_min_pq",0...4095); _ = try n(d,"source_max_pq",low...4095)
+        let cm = try object(d["cmv29_metadata"]); try keys(cm,"num_ext_blocks ext_metadata_blocks")
+        _ = try n(cm,"num_ext_blocks",3...3)
+        guard case .array(let blocks)? = cm["ext_metadata_blocks"], blocks.count == 3 else { throw Unsupported.metadata }
+        var levels: [Object] = []
+        for (value,name) in zip(blocks,["Level1","Level5","Level6"]) {
+            let block = try object(value); try keys(block,name); levels.append(try object(block[name]))
+        }
+        let l1 = levels[0]; try keys(l1,"min_pq max_pq avg_pq")
+        let high = try n(l1,"max_pq",0...4095)
+        _ = try n(l1,"min_pq",0...high); _ = try n(l1,"avg_pq",0...high) // Narrow candidate policy.
+        let l5 = levels[1]; try keys(l5,"active_area_left_offset active_area_right_offset active_area_top_offset active_area_bottom_offset")
+        for k in l5.keys { _ = try n(l5,k,0...0) }
+        let l6 = levels[2]; try keys(l6,"max_display_mastering_luminance min_display_mastering_luminance max_content_light_level max_frame_average_light_level")
+        for k in l6.keys { _ = try n(l6,k,0...10000) }
+        let maxNits = try n(l6,"max_display_mastering_luminance",0...10000)
+        let scaled = maxNits.multipliedReportingOverflow(by: 10000)
+        try require(!scaled.overflow && n(l6,"min_display_mastering_luminance",0...10000) <= scaled.partialValue)
+        var h = try object(r["header"]), m = try object(r["rpu_data_mapping"])
+        h["disable_residual_flag"] = .bool(true); h["el_spatial_resampling_filter_flag"] = .bool(false)
+        for k in ["nlq_method_idc","nlq_num_pivots_minus2","nlq_pred_pivot_value","nlq"] { m.removeValue(forKey:k) }
+        r["dovi_profile"] = .unsigned(8); r.removeValue(forKey:"el_type"); r.removeValue(forKey:"rpu_data_crc32")
+        r["header"] = .object(h); r["rpu_data_mapping"] = .object(m)
+        return .object(r)
+    }
+    /// Caller is the existing Batch copy owner, holding source/parent access and
+    /// retaining concrete staging/FDs on every failure. This owns no cleanup.
+    static func read(_ source: URL, report: DolbySourceReport, helper: URL) async throws -> DolbyP81MetadataStream.Receipt {
+        let stream = try DolbyP81MetadataStream(source:report.source)
+        let runner = ToolRunner(checkedReaders:true)
+        let result: ToolResult
+        do {
+            result = try await runner.run(executable:helper, arguments:["mkv-json",source.path], stdoutLimit:0) { data in
+                stream.receive(data); if stream.error != nil { runner.cancel() }
+            }
+        } catch var error as ToolRunner.ReaderCloseFailure {
+            error.consumerCause = stream.error; throw error
+        } catch {
+            if error is any CompanionUnsettledOwnership { throw error }
+            if let error = stream.error { throw error }
+            throw error
+        }
+        let receipt = try stream.finish(status:result.status,packetSequence:report.packetSequenceSHA256,header:report.header)
+        guard receipt.packets == report.packets, receipt.records == report.records,
+              receipt.enhancementNALs == report.enhancementNALs else { throw DolbyCopyNative.failure() }
+        try Task.checkCancellation()
+        return receipt
+    }
+    static func append(_ value: JSON.Value, to hash: inout SHA256) {
+        func bytes(_ tag: UInt8, _ data: Data) { hash.update(data:Data([tag])); hash.update(data:DolbyCopyTiming.integers([Int64(data.count)])); hash.update(data:data) }
+        switch value {
+        case .object(let o):
+            bytes(1,DolbyCopyTiming.integers([Int64(o.count)]))
+            for k in o.keys.sorted() { bytes(2,Data(k.utf8)); append(o[k]!,to:&hash) }
+        case .array(let a): bytes(3,DolbyCopyTiming.integers([Int64(a.count)])); for v in a { append(v,to:&hash) }
+        case .string(let s): bytes(4,Data(s.utf8))
+        case .unsigned(let n): var v = n.littleEndian; bytes(5,withUnsafeBytes(of:&v) { Data($0) })
+        case .signed(let n): bytes(6,DolbyCopyTiming.integers([n]))
+        case .bool(let b): bytes(7,Data([b ? 1 : 0]))
+        case .null: bytes(8,Data())
+        }
+    }
+}
+final class DolbyP81MetadataStream: @unchecked Sendable {
+    typealias JSON = CompanionArchiveJSON
+    struct Receipt: Sendable {
+        let source: SourceFingerprint
+        let packets: Int64, records: Int64, enhancementNALs: Int64
+        let packetSequenceSHA256: String
+        let peakRecordBytes: Int, peakTrackedHeap: Int
+        let expectedOutputMetadataSHA256: String?
+        var supported: Bool { expectedOutputMetadataSHA256 != nil }
+    }
+    private let source: SourceFingerprint, sourceRole: Bool
+    private var metadata = SHA256(), supported = true
+    private var beginHeader: JSON.Object?
+    private(set) var error: Error?
+    private var line = Data(), rows = 0, began = false, resources = false, complete: Receipt?
+    private var packets: Int64 = 0, records: Int64 = 0, peak = 0, heap = 0
+    private var currentPTS: Int64 = 0, currentOffset: UInt64 = 0, currentBytes: UInt64 = 0
+    private var nal: UInt64?, sequence = SHA256()
+    init(source: SourceFingerprint, sourceRole: Bool = true) throws {
+        guard (1...(1 << 40)).contains(source.byteCount) else { throw Self.refused() }
+        _ = try DolbyInspection.hash(source.sha256)
+        self.source = source; self.sourceRole = sourceRole
+        metadata.update(data:Data("STAXRIP-P81-METADATA-1\0".utf8))
+    }
+    private static func refused() -> NativeExportError { .invalid("Native metadata stream refused. No successful settled result.") }
+    func receive(_ data: Data) {
+        guard error == nil else { return }
+        do { try accept(data) } catch { self.error = error }
+    }
+    func accept(_ data: Data) throws {
+        for byte in data {
+            guard complete == nil else { throw Self.refused() }
+            if byte == 10 {
+                guard !line.isEmpty, rows < 4_000_003 else { throw Self.refused() }; rows += 1
+                try consume(line); line.removeAll(keepingCapacity:true)
+            } else { guard line.count < 65_535 else { throw Self.refused() }; line.append(byte) }
+        }
+    }
+    func finish(status: Int32, packetSequence: String, header: DolbyInspectionHeader) throws -> Receipt {
+        guard error == nil, status == 0, line.isEmpty, let complete,
+              complete.packetSequenceSHA256 == packetSequence, let h = beginHeader,
+              try n(h,"track_number") == header.trackNumber,
+              try n(h,"timestamp_scale_ns") == header.timestampScaleNs,
+              try n(h,"declared_pixel_width") == header.declaredPixelWidth,
+              try n(h,"declared_pixel_height") == header.declaredPixelHeight,
+              try n(h,"declared_display_unit") == header.declaredDisplayUnit,
+              try n(h,"configuration_bytes") == header.configurationBytes,
+              try JSON.digest(h,"configuration_sha256") == header.configurationSha256,
+              try JSON.string(h,"parser") == header.parser,
+              h["declared_crop_left_right_top_bottom"] == .array(header.declaredCropLeftRightTopBottom.map { .unsigned(UInt64($0)) }),
+              h["declared_display_width_height"] == .array(header.declaredDisplayWidthHeight.map { $0.map { .unsigned(UInt64($0)) } ?? .null })
+        else { throw Self.refused() }
+        return complete
+    }
+    private func n(_ o: JSON.Object, _ key: String, _ range: ClosedRange<UInt64> = 0...UInt64.max) throws -> UInt64 { try JSON.unsigned(o,key,range) }
+    private func optionalNumber(_ o: JSON.Object, _ key: String) throws -> UInt64? {
+        switch o[key] { case .null?: return nil; case .unsigned(let n)? where n > 0: return n; default: throw Self.refused() }
+    }
+    private func optionalBool(_ o: JSON.Object, _ key: String) throws -> Bool? {
+        switch o[key] { case .null?: return nil; case .bool(let b)?: return b; default: throw Self.refused() }
+    }
+    private func consume(_ data: Data) throws {
+        let o = try JSON.metadataObject(data), kind = try JSON.string(o,"kind")
+        guard !resources || kind == "complete" else { throw Self.refused() }
+        switch kind {
+        case "begin":
+            guard !began, rows == 1, Set(o.keys) == ["kind","version","input_type","parser","track_number","timestamp_scale_ns","declared_pixel_width","declared_pixel_height","declared_crop_left_right_top_bottom","declared_display_width_height","declared_display_unit","default_duration_ns","nal_length_bytes","configuration_bytes","configuration_sha256","segment_unknown_size","packet_limit","file_limit","count_limit"],
+                  try n(o,"version") == 2, try JSON.string(o,"input_type") == "matroska-hevc-packets", try JSON.string(o,"parser") == "libdovi 3.3.2",
+                  try n(o,"track_number",1...(1 << 40)) > 0, try n(o,"timestamp_scale_ns",1...UInt64.max) > 0,
+                  try n(o,"nal_length_bytes",1...4) > 0, try n(o,"configuration_bytes",23...(1 << 20)) >= 23,
+                  try n(o,"packet_limit") == 16 << 20, try n(o,"file_limit") == 1 << 40, try n(o,"count_limit") == 2_000_000,
+                  case .bool? = o["segment_unknown_size"] else { throw Self.refused() }
+            _ = try JSON.digest(o,"configuration_sha256"); _ = try optionalNumber(o,"default_duration_ns")
+            let w = try n(o,"declared_pixel_width",2...16384), h = try n(o,"declared_pixel_height",2...16384)
+            _ = try n(o,"declared_display_unit",0...4)
+            guard case .array(let crop)? = o["declared_crop_left_right_top_bottom"], crop.count == 4,
+                  case .array(let display)? = o["declared_display_width_height"], display.count == 2 else { throw Self.refused() }
+            var offsets: [UInt64] = []
+            for v in crop { guard case .unsigned(let n) = v, n <= 16384 else { throw Self.refused() }; offsets.append(n) }
+            guard offsets[0]+offsets[1] < w, offsets[2]+offsets[3] < h else { throw Self.refused() }
+            for v in display {
+                switch v { case .null: break; case .unsigned(let n) where (1...65536).contains(n): break; default: throw Self.refused() }
+            }
+            beginHeader = o; began = true
+        case "packet":
+            guard began, records == packets, Set(o.keys) == ["kind","index","input_byte_offset","block_input_byte_offset","pts_ns","duration_ns","invisible","keyframe","discardable","encoded_bytes","sha256"],
+                  packets < 2_000_000, try n(o,"index") == UInt64(packets), case .bool? = o["invisible"] else { throw Self.refused() }
+            let size = try n(o,"encoded_bytes",1...(16 << 20)), offset = try n(o,"input_byte_offset",1...UInt64(source.byteCount))
+            guard size <= UInt64(source.byteCount)-offset, offset >= currentOffset+currentBytes,
+                  try n(o,"block_input_byte_offset",1...offset) < offset else { throw Self.refused() }
+            let k = try optionalBool(o,"keyframe"), d = try optionalBool(o,"discardable")
+            guard (k == nil) == (d == nil) else { throw Self.refused() }; _ = try optionalNumber(o,"duration_ns")
+            currentPTS = try JSON.signed(o,"pts_ns"); currentOffset = offset; currentBytes = size; nal = nil
+            let digest = try JSON.digest(o,"sha256")
+            sequence.update(data: DolbyInspection.proofRecord(pts:currentPTS,bytes:Int64(size),digest:try DolbyInspection.hash(digest))); packets += 1
+        case "rpu":
+            guard began, packets > 0, records < 2_000_000,
+                  Set(o.keys) == ["kind","index","packet_index","nal_index","pts_ns","input_byte_offset","encoded_bytes","sha256","metadata"],
+                  try n(o,"index") == UInt64(records), try n(o,"packet_index") == UInt64(packets-1), try JSON.signed(o,"pts_ns") == currentPTS else { throw Self.refused() }
+            let ordinal = try n(o,"nal_index",0...(16 << 20)), size = try n(o,"encoded_bytes",25...65536), offset = try n(o,"input_byte_offset")
+            guard nal.map({ ordinal > $0 }) ?? true, offset >= currentOffset+2, offset <= currentOffset+currentBytes,
+                  size <= currentOffset+currentBytes-offset else { throw Self.refused() }
+            _ = try JSON.digest(o,"sha256")
+            guard records == packets-1, nal == nil else { throw Self.refused() }
+            let raw = try DolbyP81Metadata.object(o["metadata"])
+            do {
+                let normalized = try DolbyP81Metadata.normalized(raw,source:sourceRole)
+                metadata.update(data:DolbyCopyTiming.integers([records,packets-1,currentPTS]))
+                DolbyP81Metadata.append(normalized,to:&metadata)
+            } catch { supported = false } // Unsupported metadata never authorizes P8.1; wire checks still finish.
+            nal = ordinal; records += 1; peak = max(peak,Int(size))
+        case "resources":
+            guard began, packets > 0, records == packets, !resources, Set(o.keys) == ["kind","heap_limit","peak_heap_bytes"],
+                  try n(o,"heap_limit") == 67_108_864 else { throw Self.refused() }
+            heap = Int(try n(o,"peak_heap_bytes",1...67_108_864)); resources = true
+        case "complete":
+            guard resources, Set(o.keys) == ["kind","version","packets","records","enhancement_nals","input_bytes","input_sha256","peak_record_bytes","source_recheck","packet_sequence_sha256"],
+                  try n(o,"version") == 2, try n(o,"packets") == UInt64(packets), try n(o,"records") == UInt64(records),
+                  try n(o,"input_bytes") == UInt64(source.byteCount), try JSON.digest(o,"input_sha256") == source.sha256,
+                  try n(o,"peak_record_bytes") == UInt64(peak), try JSON.digest(o,"packet_sequence_sha256") == DolbyInspection.hex(sequence.finalize()) else { throw Self.refused() }
+            try JSON.bool(o,"source_recheck",true)
+            complete = .init(source:source,packets:packets,records:records,enhancementNALs:Int64(try n(o,"enhancement_nals",0...4_000_000_000_000)),
+                             packetSequenceSHA256:try JSON.digest(o,"packet_sequence_sha256"),peakRecordBytes:peak,peakTrackedHeap:heap,expectedOutputMetadataSHA256:supported ? DolbyInspection.hex(metadata.finalize()) : nil)
+        default: throw Self.refused()
+        }
+    }
+}

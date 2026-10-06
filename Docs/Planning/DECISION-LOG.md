@@ -5329,3 +5329,7 @@ Keep the failed hosted independent-operation test and its gate escape. Correct i
 ## D197 - Join publication test owners before teardown
 
 Owner-approved test ownership repair replaces service inactivity as cleanup evidence with exact controller task joins and concrete fixture settlement. A DEBUG task accessor is the sole product-source change; production publication, existing assertions and 180s/30s bounds remain unchanged. Generated writer cancellation may delete only its own newly generated output; uncertain owners/files and original failures remain retained. See `../../PUBLICATION-TEST-OWNERSHIP-EVIDENCE.md`. This does not establish the cause of hosted timeouts or complete a milestone.
+
+## D199 - Full source metadata in conversion verification
+
+Use a dedicated bounded full-metadata consumer in the existing acknowledged HDR10 Batch verification owner. Bind its complete source/packet/header evidence to the independent inspection report and expose narrow P8.1 source-subset status in the completed result. Preserve original archive defaults, unsupported-source classification, concrete uncertainty retention and all existing publication checks. P8.1 stays unavailable until its output contract and complete journey qualify. See `../../P81-METADATA-CONSUMER-EVIDENCE.md`; all five milestones remain open.

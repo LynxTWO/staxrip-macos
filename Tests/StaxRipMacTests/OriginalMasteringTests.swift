@@ -300,7 +300,21 @@ private final class MasterPhaseDiagnosis: @unchecked Sendable {
 // One generated-test gate holds the actual selected worker, never a phase label.
 private final class MasterLiveGate: @unchecked Sendable {
     private let lock = NSLock()
-    private enum Resolution { case idle, waiting, completed, expired }
+    private enum Resolution: String { case idle, waiting, completed, expired }
+    enum Context: String { case recovery, settlement }
+    // The timer records entry before acquiring the authoritative gate lock.
+    // No path holds entryLock while trying to acquire lock.
+    private let entryLock = NSLock()
+    private var timerEntered = false
+    private var timerAtExpiry: Bool?
+    func markTimerEntry() { entryLock.withLock { timerEntered = true } }
+    func record(context: Context, target: MasterPhaseDiagnosis.Phase, testCancelled: Bool) -> String {
+        lock.withLock {
+            entryLock.withLock {
+                "MASTER_GATE context=\(context.rawValue) target=\(target.rawValue) resolution=\(resolution.rawValue) timerEntered=\(timerEntered) timerAtExpiry=\(timerAtExpiry.map(String.init) ?? "none") live=\(resolution == .completed ? String(actualLiveAtRequest) : "none") testCancelled=\(testCancelled)"
+            }
+        }
+    }
     private var selected = false
     private var resolution = Resolution.idle
     private var actualLiveAtRequest = false
@@ -326,7 +340,9 @@ private final class MasterLiveGate: @unchecked Sendable {
     func expire(failure: () -> Void) {
         lock.withLock {
             guard resolution == .waiting else { return }
-            resolution = .expired
+            // Freeze the entry fact with the expiry transition. A later timer
+            // entry cannot turn an earlier false observation into true.
+            entryLock.withLock { timerAtExpiry = timerEntered; resolution = .expired }
             failure()
         }
     }
@@ -334,6 +350,7 @@ private final class MasterLiveGate: @unchecked Sendable {
         guard begin() else { return }
         let release = DispatchSemaphore(value: 0)
         DispatchQueue.global().asyncAfter(deadline: .now()+0.02) { [self] in
+            markTimerEntry()
             complete(live: {
                 // nil is the renderer: this exact worker is still inside its chunk callback.
                 runner == nil || runner?.ownedLivePID != nil
@@ -371,6 +388,36 @@ struct MasteringRecoveryTests {
                 #expect(gate.passed == (!expiresFirst && live))
             }
         }
+    }
+
+    @Test func timerEntryEvidenceFreezesAtExpiryWithoutChangingWinner() {
+        for enteredBeforeExpiry in [false, true] {
+            let gate = MasterLiveGate()
+            gate.select(true)
+            #expect(gate.begin())
+            if enteredBeforeExpiry { gate.markTimerEntry() }
+            var expiries = 0, observations = 0, deliveries = 0
+            gate.expire { expiries += 1 }
+            let before = gate.record(context: .settlement, target: .rendering, testCancelled: false)
+            #expect(before.contains("resolution=expired"))
+            #expect(before.contains("live=none"))
+            #expect(before.contains("timerAtExpiry=\(enteredBeforeExpiry)"))
+            gate.markTimerEntry()
+            gate.complete(live: { observations += 1; return true }, deliver: { deliveries += 1 })
+            let after = gate.record(context: .settlement, target: .rendering, testCancelled: true)
+            #expect(after.contains("timerEntered=true timerAtExpiry=\(enteredBeforeExpiry)"))
+            #expect(after.contains("testCancelled=true"))
+            #expect(expiries == 1 && observations == 0 && deliveries == 0 && !gate.passed)
+        }
+        let completed = MasterLiveGate()
+        completed.select(true)
+        #expect(completed.begin())
+        completed.markTimerEntry()
+        completed.complete(live: { true }, deliver: {})
+        completed.expire { Issue.record("Completed gate must not expire") }
+        #expect(completed.passed)
+        #expect(completed.record(context: .recovery, target: .rendering, testCancelled: false)
+            .contains("resolution=completed timerEntered=true timerAtExpiry=none live=true"))
     }
 
     @Test func missingNotificationJoinsAndRetainsExactTaskResult() async {
@@ -482,6 +529,7 @@ struct MasteringRecoveryTests {
         var iterator = notified.stream.makeAsyncIterator()
         let next = await iterator.next()
         print(diagnosis.record(target: target,event: .phaseNext,received: next != nil))
+        print(gate.record(context: .recovery, target: target, testCancelled: Task.isCancelled))
         if next == nil {
             await cancellation.joinAndRetainAfterMissingNotification(task)
         }
@@ -598,6 +646,9 @@ struct MasteringSettlementTests {
             #expect(error.closeErrors.isEmpty)
             if cancelling { #expect(error.cause is CancellationError) }
             else { #expect(error.cause == nil) }
+        }
+        if cancelling {
+            print(gate.record(context: .settlement, target: reader ? .freshAnalysis : .rendering, testCancelled: Task.isCancelled))
         }
         task = nil; cancellation.clearAfterJoin()
         #expect(reports.records.count == 2)

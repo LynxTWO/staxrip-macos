@@ -31,6 +31,8 @@ private final class ChapterWriteGate: @unchecked Sendable {
     private let lock = NSLock()
     private var done = false
     private var expired = false
+    private var holding = false
+    private var peerWrote = false
     private var task: Task<Void, Error>?
     private var cancelRequested = false
     func install(_ owned: Task<Void, Error>) {
@@ -40,11 +42,23 @@ private final class ChapterWriteGate: @unchecked Sendable {
     func cancel() {
         lock.lock(); cancelRequested = true; let owned = task; lock.unlock(); owned?.cancel()
     }
+    func beginHold() { lock.withLock { holding = true } }
+    func endHold(timedOut: Bool) {
+        lock.withLock { holding = false; if timedOut { expired = true } }
+    }
+    func peerWriteReturned() {
+        lock.withLock { if holding && !expired && !done { peerWrote = true } }
+        release.signal()
+    }
+    var peerCompletedInTime: Bool { lock.withLock { peerWrote && !expired } }
     func hold() {
+        beginHold()
         entered.continuation.yield(()); entered.continuation.finish()
-        if release.wait(timeout: .now()+10) != .success {
-            lock.withLock { expired = true }; Issue.record("Generated chapter gate expired")
-        }
+        let timedOut = release.wait(timeout: .now()+10) != .success
+        // An actual timeout always wins final acceptance, even if a late peer
+        // recorded its write in the gap before this thread reacquired the lock.
+        endHold(timedOut: timedOut)
+        if timedOut { Issue.record("Generated chapter gate expired") }
     }
     func finished() { lock.withLock { done = true }; entered.continuation.finish() }
     var completed: Bool { lock.withLock { done } }
@@ -142,6 +156,21 @@ struct ChapterTests {
         }
     }
 
+    @Test func peerWriteWitnessPreservesTimeoutAndRejectsFallbackRelease() {
+        let completed = ChapterWriteGate()
+        completed.beginHold(); completed.peerWriteReturned(); completed.endHold(timedOut: false)
+        #expect(completed.peerCompletedInTime && !completed.didExpire)
+        let late = ChapterWriteGate()
+        late.beginHold(); late.endHold(timedOut: true); late.peerWriteReturned()
+        #expect(!late.peerCompletedInTime && late.didExpire)
+        let raced = ChapterWriteGate()
+        raced.beginHold(); raced.peerWriteReturned(); raced.endHold(timedOut: true)
+        #expect(!raced.peerCompletedInTime && raced.didExpire)
+        let fallback = ChapterWriteGate()
+        fallback.beginHold(); fallback.release.signal(); fallback.endHold(timedOut: false)
+        #expect(!fallback.peerCompletedInTime && !fallback.didExpire)
+    }
+
     @Test func distinctWriteQueuesProgressWhileAnotherOperationIsHeld() async throws {
         let first = try root(), second = try root(), gate = ChapterWriteGate()
         let plan = try ChapterPlan.make(probe: probe(), configuration: configuration())
@@ -159,15 +188,17 @@ struct ChapterTests {
         for await _ in gate.entered.stream { break }
         let other = Task {
             try await ChapterPlan.$prepareMetadataQueue.withValue({ queues.add($0) }) {
-                try await plan.writeMetadata(to: second)
+                try await ChapterPlan.$observeMetadataWrite.withValue({ event in
+                    if event == .writeReturned { gate.peerWriteReturned() }
+                }) { try await plan.writeMetadata(to: second) }
             }
         }
         let otherResult = await other.result
-        let independent = !gate.completed && !gate.didExpire
+        gate.release.signal() // Failure fallback never supplies a positive witness.
+        let heldResult = await held.result
+        let independent = gate.peerCompletedInTime
         #expect(independent)
         #expect(queues.lock.withLock { queues.values.count == 2 && queues.values[0] !== queues.values[1] })
-        gate.release.signal()
-        let heldResult = await held.result
         try otherResult.get(); try heldResult.get()
         #expect(try Data(contentsOf: first.appendingPathComponent("chapters.ffmetadata")) == plan.metadata)
         #expect(try Data(contentsOf: second.appendingPathComponent("chapters.ffmetadata")) == plan.metadata)

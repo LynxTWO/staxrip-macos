@@ -55,7 +55,7 @@ enum DolbyInspection {
     }
 
     static func read(source: URL, probe: MediaProbe, helper: URL, tools: FFmpegTools,
-                     progress: @escaping @Sendable (String) -> Void = { _ in }) async throws -> DolbySourceReport {
+                     copyVerification: Bool = false, progress: @escaping @Sendable (String) -> Void = { _ in }) async throws -> DolbySourceReport {
         guard source.isFileURL, !source.path.utf8.contains(0), eligible(probe), let video = probe.video,
               let base = video.time_base else { throw failure("Full inspection currently requires Matroska HEVC with reported timing.") }
         let parts = base.split(separator: "/")
@@ -64,15 +64,21 @@ enum DolbyInspection {
         let scaled = numerator.multipliedReportingOverflow(by: 1_000_000_000)
         guard !scaled.overflow, scaled.partialValue % denominator == 0 else { throw failure("The independent packet timestamps cannot be expressed exactly in nanoseconds.") }
         let tick = scaled.partialValue / denominator
-        let scoped = source.startAccessingSecurityScopedResource()
+        // Copy execution owns source access outside this helper through all
+        // uncertainty; this optional inner scope belongs only to legacy inspection.
+        let checkedReaders = copyVerification
+        let scoped = copyVerification ? false : source.startAccessingSecurityScopedResource()
         defer { if scoped { source.stopAccessingSecurityScopedResource() } }
         progress("Reading Dolby metadata and checking source integrity…")
-        let runner = ToolRunner()
+        let runner = ToolRunner(checkedReaders: checkedReaders)
         let stream = DolbyInspectionStream(failed: { runner.cancel() })
         let result: ToolResult
         do {
             result = try await runner.run(executable: helper, arguments: ["mkv-summary", source.path], stdoutLimit: 0) { stream.accept($0) }
+        } catch var error as ToolRunner.ReaderCloseFailure {
+            error.consumerCause = stream.error; throw error
         } catch {
+            if error is any CompanionUnsettledOwnership { throw error }
             try Task.checkCancellation()
             if let error = stream.error { throw error }
             throw error
@@ -84,7 +90,7 @@ enum DolbyInspection {
             throw failure("The selected stream configuration changed or disagrees with the source reader.")
         }
         progress("Checking video packets independently…")
-        let referenceRunner = ToolRunner()
+        let referenceRunner = ToolRunner(checkedReaders: checkedReaders)
         let reference = DolbyPacketProof(tick: tick)
         let referenceStream = VideoCopyPacketStream(failed: { referenceRunner.cancel() }) { try reference.accept($0) }
         let independent: ToolResult
@@ -93,7 +99,10 @@ enum DolbyInspection {
                 arguments: ["-v", "error", "-protocol_whitelist", "file,pipe", "-select_streams", String(video.index),
                     "-show_packets", "-show_entries", "packet=pts,duration,size,data_hash", "-show_data_hash", "sha256",
                     "-of", "compact=p=0:nk=0", source.path], stdoutLimit: 0) { referenceStream.accept($0) }
+        } catch var error as ToolRunner.ReaderCloseFailure {
+            error.consumerCause = referenceStream.error; throw error
         } catch {
+            if error is any CompanionUnsettledOwnership { throw error }
             try Task.checkCancellation()
             if let error = referenceStream.error { throw error }
             throw error
@@ -105,7 +114,9 @@ enum DolbyInspection {
             throw failure("Independent video packet payloads or timestamps disagree. The source is not qualified.")
         }
         progress("Rechecking source content…")
-        let final = try await ExportSourceFingerprint.read(source)
+        let final: SourceFingerprint
+        if checkedReaders { final = try await ExportSourceFingerprint.readCopy(source, role: .source, timeBase: HDRFraction(base)).0 }
+        else { final = try await ExportSourceFingerprint.read(source) }
         try Task.checkCancellation()
         guard final == observed.source else { throw failure("Source content changed during independent inspection.") }
         return observed

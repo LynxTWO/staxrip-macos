@@ -37,6 +37,10 @@ final class ToolRunner: @unchecked Sendable {
     private var process: Process?
     private var cancelled = false
 
+    struct AdmissionFailure: CompanionUnsettledOwnership {
+        let owner: ToolRunner
+        let cause: Error
+    }
     func cancel() {
         lock.lock()
         cancelled = true
@@ -73,6 +77,9 @@ final class ToolRunner: @unchecked Sendable {
                     #if DEBUG
                     observe?("worker entered")
                     #endif
+                    if checkedReaders, lock.withLock({ process != nil || retainedSelf != nil }) {
+                        continuation.resume(throwing: NativeExportError.invalid("This tool runner retains an earlier operation.")); return
+                    }
                     let task = Process()
                     task.executableURL = executable
                     task.arguments = arguments
@@ -87,9 +94,21 @@ final class ToolRunner: @unchecked Sendable {
                                 throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
                             }
                         }
-                    } catch { continuation.resume(throwing: error); return }
+                    } catch {
+                        if checkedReaders {
+                            lock.withLock { retainedPipes = [output, errors]; retainedSelf = self }
+                            continuation.resume(throwing: AdmissionFailure(owner: self, cause: error))
+                        } else { continuation.resume(throwing: error) }
+                        return
+                    }
                     lock.lock()
-                    if cancelled { lock.unlock(); continuation.resume(throwing: CancellationError()); return }
+                    if cancelled {
+                        if checkedReaders {
+                            retainedPipes = [output, errors]; retainedSelf = self; lock.unlock()
+                            continuation.resume(throwing: AdmissionFailure(owner: self, cause: CancellationError()))
+                        } else { lock.unlock(); continuation.resume(throwing: CancellationError()) }
+                        return
+                    }
                     guard process == nil, retainedSelf == nil else {
                         lock.unlock()
                         continuation.resume(throwing: NativeExportError.invalid("This tool runner already owns an active process.")); return
@@ -102,9 +121,13 @@ final class ToolRunner: @unchecked Sendable {
                     task.terminationHandler = { _ in group.leave() }
                     process = task
                     do { try task.run() } catch {
-                        process = nil; lock.unlock(); task.terminationHandler = nil
+                        if checkedReaders { retainedPipes = [output, errors]; retainedSelf = self }
+                        else { process = nil }
+                        lock.unlock(); task.terminationHandler = nil
                         for _ in 0..<3 { group.leave() }
-                        continuation.resume(throwing: error); return
+                        if checkedReaders { continuation.resume(throwing: AdmissionFailure(owner: self, cause: error)) }
+                        else { continuation.resume(throwing: error) }
+                        return
                     }
                     lock.unlock()
                     let stdout = BoundedBytes(limit: max(0, min(stdoutLimit, 4 * 1024 * 1024)))

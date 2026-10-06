@@ -85,10 +85,12 @@ struct GeneratedStaticNativeHost {
         let parent = root.appendingPathComponent("destination"), prior = try Data(contentsOf: parent.appendingPathComponent("prior"))
         try record(["version": 1, "pid": getpid(), "staticNativeEntry": true], at: root.appendingPathComponent("entered.json"))
         let children = Children()
+        let reviewedData = try Data(contentsOf: source)
+        let reviewedSource = SourceFingerprint(sha256: SHA256.hash(data: reviewedData).map { String(format: "%02x", $0) }.joined(), byteCount: Int64(reviewedData.count))
         for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
             let result = try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { children.launch($0) }, settled: { children.join($0) })) {
                 try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { children.launch($0) }, settled: { children.join($0) })) {
-                    try await CompanionArchiveOperation.execute(source: source, in: parent, destinationName: mode == .metadataOnly ? "metadata" : "entire", retention: mode, writer: writer, reader: reader)
+                    try await CompanionArchiveOperation.execute(source: source, reviewedSource: reviewedSource, in: parent, destinationName: mode == .metadataOnly ? "metadata" : "entire", retention: mode, writer: writer, reader: reader)
                 }
             }
             let review = try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { children.launch($0) }, settled: { children.join($0) })) {

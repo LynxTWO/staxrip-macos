@@ -1,0 +1,13 @@
+# Reviewed original content at the archive boundary
+
+The internal original-preservation pipeline verified the current source against independently checked writer and reader receipts. It did not require the content identity that a future native caller had reviewed. `CompanionArchiveOperation.execute` now requires that fingerprint. Its existing authoritative verification closure compares the independent source SHA-256 and byte count to the reviewed identity before returning a receipt to the exclusive transaction commit.
+
+This uses the same access, writer, verifier, stage and uncertainty-retention chain. It adds no owner, worker, protocol, deletion or release API. Existing retention validation still binds the selected mode through producer and verifier receipts. A fingerprint argument does not itself establish human review, source-path consent or an immutable snapshot; the native caller must bind the completed inspection, selected source and explicit retention choice together.
+
+A generated test executes the actual development writer and reader for four refusals: a different digest at the same byte count, and a different byte count with the same digest, each under metadata-only and entire-container retention. Both children join, source and destination scopes balance, the source remains unchanged, and the exact reviewed-content error prevents publication. The generated root is retained. Existing successful both-mode tests consume the new required argument; their assertions and time bounds are unchanged.
+
+Existing generated call sites and the static native host capture the fixture fingerprint explicitly. The static host still links the same 94 product sources. The opt-in copied SwiftPM hardened-loading test remains opt-in and was not enabled. No native archive UI, non-DEBUG writer capability, release packaging, stable importer, enhancement reconstruction or independent rendering is established by this change. All M1–M5 remain open.
+
+The first adapter computed a fingerprint on demand; source review identified that a permission-denial fixture would fail before reaching the archive operation. The initial full run observed that typed-error mismatch. The fixture now captures an immutable fingerprint when generated. Initial command-location failure, focused pass and failed full log are retained; the corrected full regression passed 716 tests in 114 suites in 214.689 seconds.
+
+The explicit optimized build passed in 22.62 seconds without warnings. Strict ad-hoc app and reader-helper checks passed, with deployment targets 14.0 and 11.0 respectively. The final ordinary run kept the exact same 40 opt-in skip identities and produced no warnings. These checks do not establish Developer ID distribution.

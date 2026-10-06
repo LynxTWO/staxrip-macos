@@ -71,7 +71,7 @@ struct CompanionArchiveOperationTests {
         }, retainedActivitySeconds: 0.05)
     }
     private func execute(_ f: Fixture, mode: OriginalCompanionTransaction.Retention = .metadataOnly) async throws -> ResultSetStaging.Published {
-        try await Operation.execute(source: f.source, in: f.root, destinationName: "published", retention: mode, writer: f.tool, reader: f.readerTool)
+        try await Operation.execute(source: f.source, reviewedSource: f.reviewedSource, in: f.root, destinationName: "published", retention: mode, writer: f.tool, reader: f.readerTool)
     }
     private func assertions() throws -> String {
         let p = Process(), pipe = Pipe(); p.executableURL = URL(fileURLWithPath: "/usr/bin/pmset")
@@ -107,6 +107,37 @@ struct CompanionArchiveOperationTests {
             await #expect(throws: (any Error).self) { try await execute(f, mode: mode) }
             #expect(try Data(contentsOf: result.directory.appendingPathComponent("manifest.json")) == prior)
         }
+    }
+    @Test func reviewedContentMismatchRefusesBothRetentionModesAfterIndependentVerification() async throws {
+        let f = try await fixture()
+        let original = try Data(contentsOf: f.source), reviewed = f.reviewedSource
+        for mode in [OriginalCompanionTransaction.Retention.metadataOnly, .entireContainer] {
+            for wrongBytes in [false, true] {
+                let ledger = Ledger()
+                let stale = SourceFingerprint(sha256: wrongBytes ? reviewed.sha256 : String(repeating: "0", count: 64),
+                                              byteCount: reviewed.byteCount + (wrongBytes ? 1 : 0))
+                do {
+                    _ = try await Operation.$testEnvironment.withValue(environment(ledger, fakeScopes: true)) {
+                        try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) }, archiveClosed: { ledger.closed($0) })) {
+                            try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                                try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
+                                    try await Operation.execute(source: f.source, reviewedSource: stale, in: f.root,
+                                        destinationName: "stale-review", retention: mode, writer: f.tool, reader: f.readerTool)
+                                }
+                            }
+                        }
+                    }
+                    Issue.record("Stale reviewed content published")
+                } catch NativeExportError.invalid(let message) {
+                    #expect(message == "The original source no longer matches the reviewed content. Review it again before preservation.")
+                }
+                ledger.expectJoined(count: 2); ledger.expectEnded(scoped: true); ledger.expectClosed()
+                #expect(!FileManager.default.fileExists(atPath: f.root.appendingPathComponent("stale-review").path))
+                #expect(try Data(contentsOf: f.source) == original)
+            }
+        }
+        // Retain the generated fixture; this does not qualify native UI consent.
+        print("GENERATED_REVIEWED_CONTENT_RETAINED " + f.root.path)
     }
     private final class WriterPipeCloses: @unchecked Sendable {
         private let lock = NSLock()
@@ -248,7 +279,7 @@ struct CompanionArchiveOperationTests {
         let writer = try f.tool, reader = try f.readerTool
         for (source, parent) in [(f.root.appendingPathComponent("missing"), f.root), (f.source, f.source)] {
             await Operation.$testEnvironment.withValue(env) {
-                await #expect(throws: NativeExportError.self) { try await Operation.execute(source: source, in: parent, destinationName: "refused", retention: .metadataOnly, writer: writer, reader: reader) }
+                await #expect(throws: NativeExportError.self) { try await Operation.execute(source: source, reviewedSource: f.reviewedSource, in: parent, destinationName: "refused", retention: .metadataOnly, writer: writer, reader: reader) }
             }
         }
         let task = Task {
@@ -286,7 +317,7 @@ struct CompanionArchiveOperationTests {
         try #require(chmod(f.source.path, 0) == 0)
         await Operation.$testEnvironment.withValue(env) {
             await #expect(throws: NativeExportError.self) {
-                try await Operation.execute(source: f.source, in: f.root, destinationName: "refused", retention: .metadataOnly, writer: writer, reader: reader)
+                try await Operation.execute(source: f.source, reviewedSource: f.reviewedSource, in: f.root, destinationName: "refused", retention: .metadataOnly, writer: writer, reader: reader)
             }
         }
         #expect(starts == 0 && ends == 0)
@@ -294,7 +325,7 @@ struct CompanionArchiveOperationTests {
         await Operation.$testEnvironment.withValue(env) {
             await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { _ in Issue.record("Permission denial launched writer") })) {
                 await #expect(throws: NativeExportError.self) {
-                    try await Operation.execute(source: f.source, in: denied, destinationName: "refused", retention: .metadataOnly, writer: writer, reader: reader)
+                    try await Operation.execute(source: f.source, reviewedSource: f.reviewedSource, in: denied, destinationName: "refused", retention: .metadataOnly, writer: writer, reader: reader)
                 }
             }
         }
@@ -567,7 +598,7 @@ struct CompanionArchiveOperationTests {
                 try await Operation.$testBoundary.withValue(.init(pinned: { ledger.pinned($0) })) {
                     try await CompanionWriterProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
                         try await CompanionMetadataProcess.$testBoundary.withValue(.init(launched: { ledger.launch($0) }, settled: { ledger.join($0) })) {
-                            try await Operation.execute(source: b.original.source, in: b.original.root,
+                            try await Operation.execute(source: b.original.source, reviewedSource: b.original.reviewedSource, in: b.original.root,
                                 destinationName: mode == .metadataOnly ? "metadata-result" : "container-result", retention: mode, writer: writer, reader: reader)
                         }
                     }

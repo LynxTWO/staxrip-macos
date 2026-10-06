@@ -5301,3 +5301,7 @@ Keep the D174 notification requirement and all cancellation, timing, source, pub
 ## D177 - Dedicated exact copy timing, without route admission
 
 The native packet walker has no DTS and the SDR comparator allows a different timing contract. Add a bounded FFprobe pass for explicit signed PTS/DTS/duration and domain-separated packet/timing sequence evidence, with checked reader uncertainty preserved before parser errors. This directly serves the planned HDR10 base-layer copy verifier; it does not enable queue admission or establish native-byte/picture binding. Generated timing-copy and refusal evidence is in [copy timing evidence](DOLBY-COPY-TIMING-EVIDENCE.md). Keep the native projection, decoded-picture, ownership and publication gates open. No general HDR guard, ChapterPlan queue or historical deadline/assertion change.
+
+## D178 - native Dolby copy packet binding
+
+Continue M2's HDR10 base-layer COPY consumer with a bounded native encoded comparison. Preserve original-preservation APIs and generic HDR admission. Bind both native whole-packet sequences to D177 timing, compare explicit DTS/duration, then compare projected source and complete output with identical hvcC. Single total track/SimpleBlock and exact declaration restrictions are visible refusal boundaries, not universal format support. No route enablement before decoded verification and concrete Batch ownership/publication qualification. See DOLBY-NATIVE-COPY-EVIDENCE.md; all M1-M5 remain open.

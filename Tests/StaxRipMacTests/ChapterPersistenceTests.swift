@@ -45,7 +45,7 @@ struct ChapterPersistenceTests {
         let root = try directory(); defer { try? FileManager.default.removeItem(at: root) }
         var config = EncodeConfiguration(); config.chapterEdits = edits
         let document = SessionDocument(sourcePath: "/generated/source.mp4", configuration: config, outputFolder: "/generated", outputStem: "output", jobs: [job(config)])
-        #expect(document.version == 11)
+        #expect(document.version == 12)
         try document.write(to: root.appendingPathComponent("session.json"))
         #expect(try SessionDocument.read(from: root.appendingPathComponent("session.json")) == document)
         for version in 1...6 {
@@ -56,10 +56,10 @@ struct ChapterPersistenceTests {
             old.jobs[0].configuration.chapterEdits = nil
             _ = try old.validated()
         }
-        var future = document; future.version = 12
+        var future = document; future.version = 13
         #expect(throws: (any Error).self) { try future.validated() }
         let journal = BatchJournal(jobs: document.jobs, statuses: [:])
-        #expect(journal.version == 10)
+        #expect(journal.version == 11)
         try journal.write(to: root.appendingPathComponent("journal.json"))
         #expect(try BatchJournal.read(from: root.appendingPathComponent("journal.json")).jobs == document.jobs)
         for version in 1...5 {
@@ -67,7 +67,7 @@ struct ChapterPersistenceTests {
             #expect(throws: (any Error).self) { try old.validated() }
             old.jobs[0].configuration.chapterEdits = nil; _ = try old.validated()
         }
-        var unknown = journal; unknown.version = 11
+        var unknown = journal; unknown.version = 12
         #expect(throws: (any Error).self) { try unknown.validated() }
         var raw = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(config)) as? [String: Any])
         raw["chapterEdits"] = ["mode": "execute", "entries": []]

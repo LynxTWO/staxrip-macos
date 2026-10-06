@@ -462,11 +462,175 @@ enum DolbyCopyNative {
         try sourceTiming.requireSameTiming(as: outputTiming)
         try source.requireCopy(output)
     }
+    /// Conversion input only: exact original NAL bytes, without configuration injection.
+    /// The caller owns the sink and all access; a partial stream is never a receipt.
+    static func extractP81Input(_ view: CompanionDiskCheck.ReadView, timeBase: HDRFraction,
+                                write: (Data) throws -> Void) throws {
+        let scan = try Scan(view, .source, timeBase)
+        _ = try scan.read()
+        var packets = try MuxCursor(scan.view)
+        while let e = try packets.next() {
+            let packet = try MuxPacket(scan.view, e, width:scan.width)
+            for range in packet.ranges {
+                try scan.view.checkpoint(); try write(Data([0,0,0,1]))
+                try muxCopy(scan.view, range.payload, range.end, write)
+            }
+        }
+        try scan.view.checkpoint()
+    }
+    /// Supplies a candidate to the existing complete verifier, never publication.
+    /// Both views and the checked sink remain owned by the Batch caller.
+    static func muxP81(_ source: CompanionDiskCheck.ReadView, candidate: CompanionDiskCheck.ReadView,
+                       timeBase: HDRFraction, candidateTimeBase: HDRFraction,
+                       write: @escaping (Data) throws -> Void) throws {
+        let a = try Scan(source,.source,timeBase), b = try Scan(candidate,.p81Output,candidateTimeBase)
+        b.intermediateP81 = true
+        let original = try a.read(), converted = try b.read()
+        guard original.configuration == converted.configuration, original.packets == converted.packets,
+              original.defaultDuration == converted.defaultDuration, original.strictlyIncreasingPTS else { throw failure() }
+        let mux = P81Mux(source:a.view,candidate:b.view,width:a.width)
+        try mux.run(write)
+    }
+    private static func muxCopy(_ view: CompanionDiskCheck.ReadView, _ begin: Int64, _ end: Int64,
+                                _ write: (Data) throws -> Void) throws {
+        var offset = begin
+        while offset < end {
+            try view.checkpoint()
+            let size = Int(min(1 << 20,end-offset)), data = try view.source(offset,Int(min(1 << 20,end-offset)))
+            guard data.count == size else { throw failure() }; try write(data); offset += Int64(size)
+        }
+    }
+    private struct MuxCursor {
+        typealias Element = CompanionOriginalTrackCheck.Element
+        let walker: CompanionOriginalTrackCheck.Walker
+        let end: Int64
+        var segment: Int64, cluster: Int64 = 0, clusterEnd: Int64 = 0
+        init(_ view: CompanionDiskCheck.ReadView) throws {
+            walker = .init(view,elementLimit:128_000_000)
+            let header = try walker.element(0,end:view.sourceBytes), body = try walker.element(header.end,end:view.sourceBytes)
+            guard header.id == 0x1a45dfa3, body.id == 0x18538067, body.end == view.sourceBytes else { throw failure() }
+            segment = body.payload; end = body.end
+        }
+        mutating func next() throws -> Element? {
+            while true {
+                while cluster < clusterEnd {
+                    let e = try walker.element(cluster,end:clusterEnd); cluster = e.end
+                    if e.id == 0xa3 { return e }
+                }
+                guard segment < end else { return nil }
+                let e = try walker.element(segment,end:end); segment = e.end
+                if e.id == 0x1f43b675 { cluster = e.payload; clusterEnd = e.end }
+            }
+        }
+    }
+    private struct MuxPacket {
+        struct Range { let begin, payload, end: Int64; let type: UInt8 }
+        let header: Data
+        let ranges: [Range]
+        init(_ view: CompanionDiskCheck.ReadView, _ e: CompanionOriginalTrackCheck.Element, width: Int) throws {
+            let prefix = try view.source(e.payload,Int(min(11,e.end-e.payload)))
+            guard let first = prefix.first, first != 0 else { throw failure() }
+            let n = first.leadingZeroBitCount + 1
+            guard n <= 8, prefix.count >= n+3 else { throw failure() }
+            header = Data(prefix.prefix(n+3))
+            var list:[Range] = [], cursor = e.payload+Int64(n+3)
+            // At most 16 MiB of packet data; cap NAL index memory independently.
+            while cursor < e.end {
+                try view.checkpoint()
+                guard list.count < 65536, e.end-cursor >= width else { throw failure() }
+                let bytes = try view.source(cursor,width), length = bytes.reduce(UInt64(0)) { $0<<8 | UInt64($1) }
+                guard bytes.count == width, length >= 2, length <= UInt64(e.end-cursor-Int64(width)) else { throw failure() }
+                let payload = cursor+Int64(width), h = try view.source(payload,2)
+                guard h.count == 2 else { throw failure() }
+                list.append(.init(begin:cursor,payload:payload,end:payload+Int64(length),type:h[0]>>1 & 63))
+                cursor = payload+Int64(length)
+            }
+            ranges = list
+        }
+        func kept(_ view: CompanionDiskCheck.ReadView) throws -> Data {
+            var hash = SHA256()
+            for r in ranges where r.type != 62 && r.type != 63 {
+                try muxCopy(view,r.begin,r.end) { hash.update(data:$0) }
+            }
+            return Data(hash.finalize())
+        }
+    }
+    private final class P81Mux {
+        typealias Element = CompanionOriginalTrackCheck.Element
+        let source, candidate: CompanionDiskCheck.ReadView
+        let walker: CompanionOriginalTrackCheck.Walker
+        let width: Int
+        init(source:CompanionDiskCheck.ReadView,candidate:CompanionDiskCheck.ReadView,width:Int) {
+            self.source=source;self.candidate=candidate;self.width=width
+            walker = .init(source,elementLimit:128_000_000)
+        }
+        func add(_ a:Int64,_ b:Int64) throws -> Int64 {
+            let (n,o)=a.addingReportingOverflow(b);guard !o,n>=0,n<=1<<40 else {throw failure()};return n
+        }
+        func header(_ id:UInt64,_ size:Int64) throws -> Data {
+            guard size>=0,size<1<<56 else {throw failure()}
+            let idWidth=(64-id.leadingZeroBitCount+7)/8
+            var n=1;while UInt64(size)>=(UInt64(1)<<(7*n))-1 {n+=1}
+            let value=UInt64(size)|(UInt64(1)<<(7*n))
+            return Data((0..<idWidth).reversed().map {UInt8(truncatingIfNeeded:id>>($0*8))}) +
+                Data((0..<n).reversed().map {UInt8(truncatingIfNeeded:value>>($0*8))})
+        }
+        func run(_ write:@escaping (Data)throws->Void) throws {
+            let h=try walker.element(0,end:source.sourceBytes), segment=try walker.element(h.end,end:source.sourceBytes)
+            var cursor=try MuxCursor(candidate)
+            _=try rewrite(h,parent:0,cursor:&cursor,write:write)
+            _=try rewrite(segment,parent:0,cursor:&cursor,write:write)
+            guard try cursor.next()==nil else {throw failure()}
+            try source.checkpoint();try candidate.checkpoint()
+        }
+        func rewrite(_ e:Element,parent:UInt64,cursor:inout MuxCursor,write:((Data)throws->Void)?) throws -> Int64 {
+            try source.checkpoint();try candidate.checkpoint()
+            if e.id == 0xbf || e.id == 0xec || (parent == 0x18538067 && [0x114d9b74,0x1c53bb6b].contains(e.id)) ||
+                (parent == 0x1f43b675 && [0xa7,0xab].contains(e.id)) { return 0 }
+            if e.id == 0xa3 {
+                guard parent == 0x1f43b675,let other=try cursor.next() else {throw failure()}
+                let a=try MuxPacket(source,e,width:width),b=try MuxPacket(candidate,other,width:width)
+                guard a.header.last == b.header.last,try a.kept(source)==b.kept(candidate) else {throw failure()}
+                let payload=other.payload+Int64(b.header.count), size=try add(Int64(a.header.count),other.end-payload)
+                let h=try header(e.id,size)
+                if let write {try write(h);try write(a.header);try muxCopy(candidate,payload,other.end,write)}
+                return try add(Int64(h.count),size)
+            }
+            if e.id == 0x41ed && parent == 0x41e4 {
+                let data=Data([1,0,16,53,16]+Array(repeating:0,count:19)),h=try header(e.id,24)
+                if let write {try write(h);try write(data)};return Int64(h.count+24)
+            }
+            let containers:[UInt64:UInt64]=[0x18538067:0,0x1654ae6b:0x18538067,0xae:0x1654ae6b,0x41e4:0xae,0x1f43b675:0x18538067]
+            if let requiredParent=containers[e.id] {
+                guard parent==requiredParent else {throw failure()}
+                func body(_ c:inout MuxCursor,_ sink:((Data)throws->Void)?) throws -> Int64 {
+                    var offset=e.payload,total:Int64=0
+                    while offset<e.end {
+                        let child=try walker.element(offset,end:e.end)
+                        if e.id == 0x18538067 {guard [0x1549a966,0x1654ae6b,0x1f43b675,0x1254c367,0x114d9b74,0x1c53bb6b,0xbf,0xec].contains(child.id) else {throw failure()}}
+                        if e.id == 0x1f43b675 {guard [0xe7,0xa3,0xa7,0xab,0xbf,0xec].contains(child.id) else {throw failure()}}
+                        total=try add(total,rewrite(child,parent:e.id,cursor:&c,write:sink));offset=child.end
+                    }
+                    return total
+                }
+                var sizing=cursor
+                let size=try body(&sizing,nil),h=try header(e.id,size)
+                if let write {try write(h);let written=try body(&cursor,write);guard written==size else {throw failure()}}
+                else {cursor=sizing}
+                return try add(Int64(h.count),size)
+            }
+            guard !e.unknown else {throw failure()}
+            let size=e.end-e.payload,h=try header(e.id,size)
+            if let write {try write(h);try muxCopy(source,e.payload,e.end,write)}
+            return try add(Int64(h.count),size)
+        }
+    }
     private final class Scan {
         typealias Track = CompanionOriginalTrackCheck
         typealias Element = Track.Element
         let view: CompanionDiskCheck.ReadView, walker: Track.Walker, role: Role, timeBase: HDRFraction
         let tickNS: Int64
+        var intermediateP81 = false
         var selected: Track.Selected?, width = 0, packets = 0, rpus = 0, enhancement = 0
         var defaultDuration: UInt64 = 0, whole = SHA256(), kept = SHA256(), presentation = SHA256(), inspection = SHA256()
         var lastPTS: Int64?, increasing = true
@@ -591,7 +755,7 @@ enum DolbyCopyNative {
                 default: break
                 }
             }
-            guard defaultDuration > 0, role != .output ? (mapping && maxID == 1) : (!mapping && maxID == 0) else { throw failure() }
+            guard defaultDuration > 0, (role != .output && !intermediateP81) ? (mapping && maxID == 1) : (!mapping && maxID == 0) else { throw failure() }
         }
         func cluster(_ e: Element, _ scale: UInt64) throws {
             var timestamp: UInt64?

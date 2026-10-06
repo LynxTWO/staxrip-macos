@@ -21,10 +21,10 @@ enum ExportSourceFingerprint {
         }
     }
     private final class CopyInspection: @unchecked Sendable {
-        let role: DolbyCopyNative.Role, timeBase: HDRFraction, reportClose: Bool
+        let role: DolbyCopyNative.Role?, timeBase: HDRFraction?, reportClose: Bool
         var receipt: DolbyCopyNative.Receipt?
         var identity: CopyIdentity?
-        init(role: DolbyCopyNative.Role, timeBase: HDRFraction, reportClose: Bool) {
+        init(role: DolbyCopyNative.Role?, timeBase: HDRFraction?, reportClose: Bool) {
             self.role = role; self.timeBase = timeBase; self.reportClose = reportClose
         }
     }
@@ -32,6 +32,16 @@ enum ExportSourceFingerprint {
     #if DEBUG
     @TaskLocal static var reportCopyClose = false
     #endif
+    // Intermediate conversion files/tool identity: checked close, no native container claim.
+    static func readCopyInput(_ url:URL) async throws -> SourceFingerprint {
+        #if DEBUG
+        let report=reportCopyClose
+        #else
+        let report=false
+        #endif
+        let inspection=CopyInspection(role:nil,timeBase:nil,reportClose:report)
+        return try await $copyInspection.withValue(inspection) {try await read(url)}
+    }
     static func readCopy(_ url: URL, role: DolbyCopyNative.Role, timeBase: HDRFraction) async throws -> (SourceFingerprint, DolbyCopyNative.Receipt) {
         let result = try await readCopyIdentity(url, role: role, timeBase: timeBase)
         return (result.0, result.1)
@@ -133,7 +143,7 @@ enum ExportSourceFingerprint {
             }
         }
         try cancellation.check()
-        if let copy {
+        if let copy,let role=copy.role,let timeBase=copy.timeBase {
             let view = CompanionDiskCheck.ReadView(sourceBytes: total, source: { offset, count in
                 guard offset >= 0, count >= 0, offset <= total, Int64(count) <= total - offset else { throw DolbyCopyNative.failure() }
                 var bytes = Data(count: count), done = 0
@@ -145,7 +155,7 @@ enum ExportSourceFingerprint {
                 }
                 return bytes
             }, component: { _ in throw DolbyCopyNative.failure() }, checkpoint: { try cancellation.check() })
-            copy.receipt = try DolbyCopyNative.read(view, role: copy.role, timeBase: copy.timeBase)
+            copy.receipt = try DolbyCopyNative.read(view, role: role, timeBase: timeBase)
         }
         var final = stat(), path = stat()
         guard fstat(fd, &final) == 0, fstatat(AT_FDCWD, url.path, &path, 0) == 0,

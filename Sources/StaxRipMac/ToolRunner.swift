@@ -56,12 +56,12 @@ final class ToolRunner: @unchecked Sendable {
         }
     }
 
-    func run(executable: URL, arguments: [String], stdoutLimit: Int = 4 * 1024 * 1024, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
-        try await runWithStreams(executable: executable, arguments: arguments, stdoutLimit: stdoutLimit, onOutput: onOutput)
+    func run(executable: URL, arguments: [String], borrowedInput: FileHandle? = nil, stdoutLimit: Int = 4 * 1024 * 1024, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
+        try await runWithStreams(executable: executable, arguments: arguments, borrowedInput: borrowedInput, stdoutLimit: stdoutLimit, onOutput: onOutput)
     }
 
     // A distinct entry point preserves existing trailing-closure stdout binding.
-    func runWithStreams(executable: URL, arguments: [String], stdoutLimit: Int = 4 * 1024 * 1024, onErrorOutput: (@Sendable (Data) -> Void)? = nil, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
+    func runWithStreams(executable: URL, arguments: [String], borrowedInput: FileHandle? = nil, stdoutLimit: Int = 4 * 1024 * 1024, onErrorOutput: (@Sendable (Data) -> Void)? = nil, onOutput: (@Sendable (Data) -> Void)? = nil) async throws -> ToolResult {
         #if DEBUG
         let observe = Self.observeBoundary
         let closeReport = Self.readerCloseReport
@@ -83,7 +83,8 @@ final class ToolRunner: @unchecked Sendable {
                     let task = Process()
                     task.executableURL = executable
                     task.arguments = arguments
-                    task.standardInput = FileHandle.nullDevice
+                    // Borrowed descriptor: caller owns its lifetime and checked retirement.
+                    task.standardInput = borrowedInput ?? FileHandle.nullDevice
                     let output = Pipe(), errors = Pipe()
                     task.standardOutput = output; task.standardError = errors
                     do {

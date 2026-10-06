@@ -219,7 +219,7 @@ final class BatchController: ObservableObject {
                     break
                 } catch let error as CopyReviewFailure {
                     if statuses[job.id]?.destination == nil {
-                        statuses[job.id] = BatchStatus(phase: "Failed", detail: "HDR10 copy stopped without a verified published result. Source access and any staging resources are retained for ownership review. No automatic cleanup or retry.")
+                        statuses[job.id] = BatchStatus(phase: "Failed", detail: "\(job.configuration.colorMode == DolbyConversionIntent.p81Copy ? "P8.1" : "HDR10") copy stopped without a verified published result. Source access and any staging resources are retained for ownership review. No automatic cleanup or retry.")
                     }
                     _ = error; checkpointAfterOutcome(); break
                 } catch is CancellationError {
@@ -288,6 +288,9 @@ final class BatchController: ObservableObject {
         if job.configuration.colorMode == DolbyConversionIntent.hdr10Copy {
             try await encodeDolbyCopy(job, tools: tools); return
         }
+        #if DEBUG
+        if job.configuration.colorMode == DolbyConversionIntent.p81Copy && Self.generatedP81 {try await encodeDolbyCopy(job,tools:tools,p81:true);return}
+        #endif
         try DolbyConversionIntent.requireRunnable(job.configuration)
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         if preservingHDR { try EncodePlan.validateHDRSettings(job.configuration) }
@@ -430,6 +433,8 @@ final class BatchController: ObservableObject {
     private var copySource: URL?, copyParent: URL?, copyStage: URL?
     private var copySourceScoped = false, copyParentScoped = false
     private var copyParentFD: Int32 = -1, copyStageFD: Int32 = -1
+    private var copyMuxSourceFD: Int32 = -1, copyMuxCandidateFD: Int32 = -1, copyMuxOutputFD: Int32 = -1
+    private var copyToolOutputFD: Int32 = -1
     private struct CopyReviewFailure: CompanionUnsettledOwnership { let cause: Error }
     private struct CopyDirectoryCloseFailure: Error {
         let outcomes: [(role: String, status: Int32, code: Int32, reported: Bool)]
@@ -438,6 +443,15 @@ final class BatchController: ObservableObject {
     private(set) var copyFailure: Error?
     var copyRetainedDescriptors: (Int32, Int32) { (copyParentFD, copyStageFD) }
     @TaskLocal static var copyHelper: URL?
+    @TaskLocal static var copyDoviTool: URL?
+    @TaskLocal static var copyMuxBoundary: (@Sendable (String) throws -> Void)?
+    @TaskLocal static var copyMuxWriteLimit: Int?
+    @TaskLocal static var reportCopyFileClose: (@Sendable (String, Bool) -> Bool)?
+    var copyMuxRetainedDescriptors: [Int32] { [copyMuxSourceFD,copyMuxCandidateFD,copyMuxOutputFD,copyToolOutputFD] }
+    @TaskLocal static var copyToolOutputBoundary: (@Sendable (URL) throws -> Void)?
+    @TaskLocal private static var generatedP81 = false
+    func startGeneratedP81(_ jobs:[QueueJob]) {Self.$generatedP81.withValue(true) {start(jobs)}}
+    var copyOwnedTask:Task<Void,Never>? {task}
     @TaskLocal static var copyBeforePublication: (@Sendable (URL) throws -> Void)?
     @TaskLocal static var reportCopyDirectoryClose: (@Sendable (String, Bool) -> Bool)?
     #endif
@@ -470,8 +484,125 @@ final class BatchController: ObservableObject {
               opened.st_mode & S_IFMT == S_IFDIR, selected.st_mode & S_IFMT == S_IFDIR,
               opened.st_dev == selected.st_dev, opened.st_ino == selected.st_ino else { throw DolbyCopyNative.failure() }
     }
-    private func encodeDolbyCopy(_ job: QueueJob, tools: FFmpegTools) async throws {
-        try DolbyConversionIntent.validateCopySettings(job.configuration)
+    // The SAME controller owns every positive open before validation can fail.
+    // The exact detached body is joined before successful close; failures retain
+    // concrete FDs, scopes and stage through the existing heldCopies registry.
+    private func copyMuxFiles(source:URL,candidate:URL?,output:URL,clock:HDRFraction,candidateClock:HDRFraction?) async throws {
+        guard copyMuxSourceFD < 0,copyMuxCandidateFD < 0,copyMuxOutputFD < 0,
+              output.deletingLastPathComponent().standardizedFileURL.path==copyStage?.standardizedFileURL.path else {throw DolbyCopyNative.failure()}
+        func identity(_ fd:Int32,_ url:URL) throws -> stat {
+            var value=stat(),path=stat()
+            guard fd>=0,fstat(fd,&value)==0,lstat(url.path,&path)==0,value.st_mode&S_IFMT==S_IFREG,
+                  value.st_size>0,value.st_size<=1<<40,ExportSourceFingerprint.CopyIdentity(value:value).matches(path) else {throw DolbyCopyNative.failure()}
+            return value
+        }
+        copyMuxSourceFD=Darwin.open(source.path,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_NOFOLLOW)
+        let sourceIdentity=try identity(copyMuxSourceFD,source)
+        var candidateIdentity:stat?
+        if let candidate {
+            copyMuxCandidateFD=Darwin.open(candidate.path,O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_NOFOLLOW)
+            candidateIdentity=try identity(copyMuxCandidateFD,candidate)
+        }
+        guard let stage=copyStage else {throw DolbyCopyNative.failure()}
+        try requireCopyDirectory(copyStageFD,at:stage)
+        copyMuxOutputFD=Darwin.openat(copyStageFD,output.lastPathComponent,O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW,0o600)
+        guard copyMuxOutputFD>=0 else {throw DolbyCopyNative.failure()}
+        var initialOutput=stat();guard fstat(copyMuxOutputFD,&initialOutput)==0,initialOutput.st_mode&S_IFMT==S_IFREG,initialOutput.st_size==0 else {throw DolbyCopyNative.failure()}
+        let sourceFD=copyMuxSourceFD,candidateFD=copyMuxCandidateFD,outputFD=copyMuxOutputFD
+        #if DEBUG
+        let boundary=Self.copyMuxBoundary,writeLimit=Self.copyMuxWriteLimit
+        #else
+        let boundary:(@Sendable(String)throws->Void)?=nil,writeLimit:Int?=nil
+        #endif
+        let admittedCandidate=candidateIdentity
+        let body=Task.detached(priority:Task.currentPriority) {
+            func view(_ fd:Int32,_ bytes:Int64) -> CompanionDiskCheck.ReadView {
+                .init(sourceBytes:bytes,source:{offset,count in
+                    guard offset>=0,count>=0,offset<=bytes,Int64(count)<=bytes-offset else {throw DolbyCopyNative.failure()}
+                    var data=Data(count:count),done=0
+                    while done<count {
+                        try Task.checkCancellation()
+                        let n=data.withUnsafeMutableBytes {Darwin.pread(fd,$0.baseAddress!.advanced(by:done),count-done,offset+Int64(done))}
+                        if n<0 && errno==EINTR {continue};guard n>0 else {throw DolbyCopyNative.failure()};done+=n
+                    }
+                    return data
+                },component:{_ in throw DolbyCopyNative.failure()},checkpoint:{try Task.checkCancellation()})
+            }
+            var first=true
+            let write:(Data)throws->Void={data in
+                var offset=0
+                while offset<data.count {
+                    try Task.checkCancellation()
+                    let length=min(data.count-offset,max(1,writeLimit ?? (1<<20)))
+                    let n=data.withUnsafeBytes {Darwin.write(outputFD,$0.baseAddress!.advanced(by:offset),length)}
+                    if n<0 && errno==EINTR {continue};guard n>0 else {throw DolbyCopyNative.failure()};offset+=n
+                    if first {first=false;try boundary?("first write")}
+                }
+            }
+            try boundary?("body entered");try Task.checkCancellation()
+            let original=view(sourceFD,Int64(sourceIdentity.st_size))
+            if let admittedCandidate,let candidateClock {
+                try DolbyCopyNative.muxP81(original,candidate:view(candidateFD,Int64(admittedCandidate.st_size)),timeBase:clock,candidateTimeBase:candidateClock,write:write)
+            } else {try DolbyCopyNative.extractP81Input(original,timeBase:clock,write:write)}
+            try boundary?("body finished");try Task.checkCancellation()
+        }
+        try await withTaskCancellationHandler {try await body.value} onCancel:{body.cancel()}
+        // No close is attempted while the actual body can still use the FDs.
+        guard ExportSourceFingerprint.CopyIdentity(value:sourceIdentity).matches(try identity(copyMuxSourceFD,source)) else {throw DolbyCopyNative.failure()}
+        if let candidate,let candidateIdentity {guard ExportSourceFingerprint.CopyIdentity(value:candidateIdentity).matches(try identity(copyMuxCandidateFD,candidate)) else {throw DolbyCopyNative.failure()}}
+        let written=try identity(copyMuxOutputFD,output)
+        guard written.st_dev==initialOutput.st_dev,written.st_ino==initialOutput.st_ino else {throw DolbyCopyNative.failure()}
+        try requireCopyDirectory(copyStageFD,at:stage);try Task.checkCancellation()
+        var outcomes:[(role:String,status:Int32,code:Int32,reported:Bool)]=[]
+        for role in ["mux source","mux candidate","mux output"] {
+            let fd:Int32
+            switch role {case "mux source":fd=copyMuxSourceFD;copyMuxSourceFD = -1
+            case "mux candidate":fd=copyMuxCandidateFD;copyMuxCandidateFD = -1
+            default:fd=copyMuxOutputFD;copyMuxOutputFD = -1}
+            guard fd>=0 else {continue}
+            let status=Darwin.close(fd),code=status==0 ? 0 : errno
+            #if DEBUG
+            let reported=Self.reportCopyFileClose?(role,status==0) ?? false
+            #else
+            let reported=false
+            #endif
+            outcomes.append((role,status,code,reported))
+        }
+        if outcomes.contains(where:{$0.status != 0 || $0.reported}) {throw CopyReviewFailure(cause:CopyDirectoryCloseFailure(outcomes:outcomes))}
+    }
+    // Tool output is an inherited, already-exclusive descriptor. The child never
+    // opens the stage pathname for writing. Any failure keeps the same FD here.
+    private func copyToolOutput(executable:URL,arguments:[String],output:URL) async throws -> ToolResult {
+        guard copyToolOutputFD < 0,let stage=copyStage,
+              output.deletingLastPathComponent().standardizedFileURL.path==stage.standardizedFileURL.path else {throw DolbyCopyNative.failure()}
+        try requireCopyDirectory(copyStageFD,at:stage);try Task.checkCancellation()
+        copyToolOutputFD=Darwin.openat(copyStageFD,output.lastPathComponent,O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC|O_NOFOLLOW,0o600)
+        guard copyToolOutputFD>=0 else {throw DolbyCopyNative.failure()}
+        var original=stat()
+        guard fstat(copyToolOutputFD,&original)==0,original.st_mode&S_IFMT==S_IFREG,original.st_size==0 else {throw DolbyCopyNative.failure()}
+        let borrowed=FileHandle(fileDescriptor:copyToolOutputFD,closeOnDealloc:false)
+        #if DEBUG
+        try Self.copyToolOutputBoundary?(output)
+        #endif
+        let result=try await ToolRunner(checkedReaders:true).run(executable:executable,arguments:arguments,borrowedInput:borrowed)
+        guard result.status==0,!result.truncated else {throw DolbyCopyNative.failure()}
+        var written=stat(),selected=stat()
+        guard fstat(copyToolOutputFD,&written)==0,written.st_dev==original.st_dev,written.st_ino==original.st_ino,
+              written.st_mode&S_IFMT==S_IFREG,written.st_size>0,written.st_size<=1<<40,
+              lstat(output.path,&selected)==0,ExportSourceFingerprint.CopyIdentity(value:written).matches(selected) else {throw DolbyCopyNative.failure()}
+        try requireCopyDirectory(copyStageFD,at:stage);try Task.checkCancellation()
+        let fd=copyToolOutputFD;copyToolOutputFD = -1
+        let status=Darwin.close(fd),code=status==0 ? 0 : errno
+        #if DEBUG
+        let reported=Self.reportCopyFileClose?("tool output",status==0) ?? false
+        #else
+        let reported=false
+        #endif
+        if status != 0 || reported {throw CopyReviewFailure(cause:CopyDirectoryCloseFailure(outcomes:[("tool output",status,code,reported)]))}
+        return result
+    }
+    private func encodeDolbyCopy(_ job: QueueJob, tools: FFmpegTools, p81: Bool = false) async throws {
+        try DolbyConversionIntent.validateCopySettings(job.configuration,p81:p81)
         let source = URL(fileURLWithPath: job.source).standardizedFileURL
         let output = URL(fileURLWithPath: job.destination).standardizedFileURL, parent = output.deletingLastPathComponent()
         var selectedHelper = DolbyInspection.bundledHelper()
@@ -479,7 +610,7 @@ final class BatchController: ObservableObject {
         selectedHelper = Self.copyHelper ?? selectedHelper
         #endif
         guard source == source.resolvingSymlinksInPath(), parent == parent.resolvingSymlinksInPath(),
-              output.pathExtension.lowercased() == "mkv", let acknowledgement = job.configuration.dolbyLossAcknowledgement,
+              output.pathExtension.lowercased() == "mkv", let acknowledgement = (p81 ? job.configuration.p81EnhancementLossAcknowledgement : job.configuration.dolbyLossAcknowledgement),
               !Self.heldCopies.contains(where: { $0.copySource == source || $0.copyParent == parent }),
               let helper = selectedHelper else { throw DolbyCopyNative.failure() }
         copySource = source; copyParent = parent
@@ -507,6 +638,7 @@ final class BatchController: ObservableObject {
                   report.header.declaredPixelWidth == 3840, report.header.declaredPixelHeight == 2160,
                   report.header.declaredCropLeftRightTopBottom == [0,0,0,0] else { throw DolbyCopyNative.failure() }
             let p81Metadata = try await DolbyP81Metadata.read(source, report:report, helper:helper)
+            if p81 {guard p81Metadata.supported else {throw DolbyCopyNative.failure()}}
             let sourceTiming = try await DolbyCopyTiming.read(source, stream: stream.index, timeBase: clock, tools: tools)
             let sourceFrames = try await DolbyCopyFrames.read(source, stream: stream, source: true, tools: tools)
             try sourceFrames.bind(nativeSource)
@@ -519,22 +651,55 @@ final class BatchController: ObservableObject {
             let staged = directory.appendingPathComponent("encoded.mkv")
             statuses[job.id] = BatchStatus(phase: "Encoding", detail: "HDR10 base-layer copy · Dolby Vision loss acknowledged · no video re-encoding")
             try checkpoint()
+            if p81 {
+                #if DEBUG
+                let tool=(Self.copyDoviTool ?? URL(fileURLWithPath:"/opt/homebrew/bin/dovi_tool")).resolvingSymlinksInPath()
+                #else
+                let tool=URL(fileURLWithPath:"/opt/homebrew/bin/dovi_tool").resolvingSymlinksInPath()
+                #endif
+                let toolHash=try await ExportSourceFingerprint.readCopyInput(tool)
+                let version=try await ToolRunner(checkedReaders:true).run(executable:tool,arguments:["--version"])
+                guard version.status==0,!version.truncated,String(decoding:version.stdout,as:UTF8.self).trimmingCharacters(in:.whitespacesAndNewlines)=="dovi_tool 2.3.4" else {throw DolbyCopyNative.failure()}
+                let raw=directory.appendingPathComponent("original.hevc"),converted=directory.appendingPathComponent("converted.hevc"),candidate=directory.appendingPathComponent("candidate.mkv")
+                statuses[job.id]?.detail="Converting the reviewed P7 metadata to P8.1; enhancement-layer loss acknowledged"
+                try await copyMuxFiles(source:source,candidate:nil,output:raw,clock:clock,candidateClock:nil)
+                let rawHash=try await ExportSourceFingerprint.readCopyInput(raw)
+                let conversion=try await copyToolOutput(executable:tool,arguments:["-m","2","convert","--discard",raw.path,"-o","/dev/fd/0"],output:converted)
+                guard conversion.status==0,!conversion.truncated else {throw DolbyCopyNative.failure()}
+                let convertedHash=try await ExportSourceFingerprint.readCopyInput(converted)
+                let remux=try await copyToolOutput(executable:tools.ffmpeg,arguments:["-v","error","-nostdin","-n","-r","24000/1001","-i",converted.path,"-map","0:v:0","-c:v","copy","-an","-sn","-dn","-f","matroska","pipe:0"],output:candidate)
+                guard remux.status==0,remux.stderr.isEmpty else {throw DolbyCopyNative.failure()}
+                let candidateProbe=try await MediaProbe.read(candidate,tools:tools,checkedReaders:true)
+                guard candidateProbe.streams.count==1,let candidateVideo=candidateProbe.video else {throw DolbyCopyNative.failure()}
+                let candidateHash=try await ExportSourceFingerprint.readCopyInput(candidate)
+                try await copyMuxFiles(source:source,candidate:candidate,output:staged,clock:clock,candidateClock:HDRFraction(candidateVideo.time_base))
+                for (input,expected) in [(raw,rawHash),(converted,convertedHash),(candidate,candidateHash),(tool,toolHash)] {
+                    guard try await ExportSourceFingerprint.readCopyInput(input)==expected else {throw DolbyCopyNative.failure()}
+                }
+            } else {
             let result = try await ToolRunner(checkedReaders: true).run(executable: tools.ffmpeg, arguments: [
                 "-v","error","-nostdin","-n","-i",source.path,"-map","0:0","-c:v","copy",
                 "-bsf:v","dovi_split=mode=bl,dovi_rpu=strip=1","-an","-sn","-dn",staged.path])
             guard result.status == 0, result.stderr.isEmpty else { throw DolbyCopyNative.failure() }
+            }
             statuses[job.id] = BatchStatus(phase: "Verifying", detail: "Comparing every encoded packet, decoded frame and static HDR declaration")
             try checkpoint()
             let actual = try await MediaProbe.read(staged, tools: tools, checkedReaders: true)
             guard actual.streams.count == 1, let video = actual.video, video.index == 0 else { throw DolbyCopyNative.failure() }
             let outputClock = try HDRFraction(video.time_base)
-            let (outputHash, nativeOutput) = try await ExportSourceFingerprint.readCopy(staged, role: .output, timeBase: outputClock)
+            let outputRole:DolbyCopyNative.Role = p81 ? .p81Output : .output
+            let (outputHash, nativeOutput) = try await ExportSourceFingerprint.readCopy(staged, role: outputRole, timeBase: outputClock)
             let timing = try await DolbyCopyTiming.read(staged, stream: video.index, timeBase: outputClock, tools: tools)
-            try DolbyCopyNative.verify(source: nativeSource, output: nativeOutput, sourceTiming: sourceTiming, outputTiming: timing)
-            let frames = try await DolbyCopyFrames.read(staged, stream: video, source: false, tools: tools)
+            if !p81 {try DolbyCopyNative.verify(source: nativeSource, output: nativeOutput, sourceTiming: sourceTiming, outputTiming: timing)}
+            let frames = try await DolbyCopyFrames.read(staged, stream: video, source: p81, tools: tools)
             try frames.bind(nativeOutput); guard frames == sourceFrames else { throw DolbyCopyFrames.failure() }
+            if p81 {
+                let outputReport=try await DolbyInspection.read(source:staged,probe:actual,helper:helper,tools:tools,copyVerification:true,copyRole:.p81Output)
+                let metadata=try await DolbyP81Metadata.read(staged,report:outputReport,helper:helper,sourceRole:false)
+                try DolbyP81Verification.verify(source:nativeSource,output:nativeOutput,sourceFingerprint:sourceHash,outputFingerprint:outputHash,sourceTiming:sourceTiming,outputTiming:timing,sourceMetadata:p81Metadata,outputMetadata:metadata,sourceFrames:sourceFrames,outputFrames:frames)
+            }
             let (finalSource, _) = try await ExportSourceFingerprint.readCopy(source, role: .source, timeBase: clock)
-            let (finalOutput, _, verifiedIdentity) = try await ExportSourceFingerprint.readCopyIdentity(staged, role: .output, timeBase: outputClock)
+            let (finalOutput, _, verifiedIdentity) = try await ExportSourceFingerprint.readCopyIdentity(staged, role: outputRole, timeBase: outputClock)
             guard finalSource == sourceHash, finalOutput == outputHash else { throw DolbyCopyNative.failure() }
             try requireCopyDirectory(copyParentFD, at: parent); try requireCopyDirectory(copyStageFD, at: directory)
             #if DEBUG
@@ -545,13 +710,13 @@ final class BatchController: ObservableObject {
             // The existing exclusive hard-link publication must expose this same
             // verified artifact. Later errors never turn Published into Unpublished.
             var after = stat(); guard lstat(output.path, &after) == 0, verifiedIdentity.matches(after, published: true) else { throw DolbyCopyNative.failure() }
-            let (publishedHash, _, publishedIdentity) = try await ExportSourceFingerprint.readCopyIdentity(output, role: .output, timeBase: outputClock)
+            let (publishedHash, _, publishedIdentity) = try await ExportSourceFingerprint.readCopyIdentity(output, role: outputRole, timeBase: outputClock)
             guard publishedHash == outputHash, verifiedIdentity.matches(publishedIdentity.value, published: true) else { throw DolbyCopyNative.failure() }
-            let summary = "Verified HDR10 base-layer copy · \(frames.frames) frames · PQ / BT.2020 / top-left chroma and static HDR unchanged. Dolby Vision and enhancement data removed with your acknowledgement. No video re-encoding or tone mapping.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published.\nThe temporary verification copy is retained beside the output; this route does not automatically delete it."
+            let summary = p81 ? "Verified P8.1 base-layer copy · \(frames.frames) frames · exact packet timing and complete reviewed Dolby metadata preserved. Enhancement data removed with source-specific acknowledgement. No video re-encoding.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published. Temporary verification files are retained beside the output." : "Verified HDR10 base-layer copy · \(frames.frames) frames · PQ / BT.2020 / top-left chroma and static HDR unchanged. Dolby Vision and enhancement data removed with your acknowledgement. No video re-encoding or tone mapping.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published.\nThe temporary verification copy is retained beside the output; this route does not automatically delete it."
             let p81Detail = p81Metadata.supported
                 ? "Source metadata fits the reviewed P8.1 subset; P8.1 conversion remains unavailable pending output qualification."
                 : "Source metadata is outside the reviewed P8.1 subset; P8.1 conversion remains unavailable."
-            statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: summary + "\n" + p81Detail, destination: output)
+            statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: summary + (p81 ? "" : "\n" + p81Detail), destination: output)
             checkpointAfterOutcome()
             try requireCopyDirectory(copyParentFD, at: parent); try requireCopyDirectory(copyStageFD, at: directory)
             try closeCopyDirectories()
@@ -569,7 +734,7 @@ final class BatchController: ObservableObject {
             if let published {
                 let completed = statuses[job.id]?.phase == "Completed"
                 statuses[job.id] = BatchStatus(phase: completed ? "Completed" : "Failed", progress: completed ? 1 : 0,
-                    detail: (completed ? statuses[job.id]!.detail : "An output was published, but final artifact verification did not complete. It is not a verified HDR10 result.") + "\nCleanup warning: output remains published; copy ownership or identity needs review. Retained resources were not discarded.", destination: published)
+                    detail: (completed ? statuses[job.id]!.detail : "An output was published, but final artifact verification did not complete. It is not a verified \(p81 ? "P8.1" : "HDR10") result.") + "\nCleanup warning: output remains published; copy ownership or identity needs review. Retained resources were not discarded.", destination: published)
                 checkpointAfterOutcome()
             }
             throw CopyReviewFailure(cause: error)

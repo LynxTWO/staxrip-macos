@@ -14,11 +14,12 @@ struct EncodeConfiguration: Codable, Equatable {
     var audioBitrate = "192 kb/s"
     var subtitleMode = "Keep embedded tracks"
     var dolbyLossAcknowledgement: DolbyLossAcknowledgement?
+    var p81EnhancementLossAcknowledgement: DolbyLossAcknowledgement?
     private var colorIntent: String?
     var colorMode: String {
         get { colorIntent ?? "SDR" }
         set {
-            if colorMode != newValue { dolbyLossAcknowledgement = nil }
+            if colorMode != newValue { dolbyLossAcknowledgement = nil; p81EnhancementLossAcknowledgement = nil }
             colorIntent = newValue
         }
     }
@@ -118,7 +119,7 @@ final class WorkspaceModel: ObservableObject {
     }
     @Published var sourceURL: URL? {
         didSet {
-            if oldValue != sourceURL { config.dolbyLossAcknowledgement = nil; clearSettingsHistory() }
+            if oldValue != sourceURL { config.dolbyLossAcknowledgement = nil; config.p81EnhancementLossAcknowledgement = nil; clearSettingsHistory() }
         }
     }
     @Published var player: AVPlayer?
@@ -502,7 +503,7 @@ final class WorkspaceModel: ObservableObject {
     private func resetSourceSelections() {
         var next = config
         next.audioTracks = nil; next.subtitleTracks = nil; next.externalCaptions = []; next.chapterEdits = nil
-        next.dolbyLossAcknowledgement = nil
+        next.dolbyLossAcknowledgement = nil; next.p81EnhancementLossAcknowledgement = nil
         config = next
         // Reselecting the same source also clears old source-specific intent;
         // settings undo must not resurrect its discarded caption reference.

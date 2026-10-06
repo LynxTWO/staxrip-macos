@@ -118,7 +118,7 @@ enum DolbyConversionIntent {
         }
     }
     static func requireRunnable(_ configuration: EncodeConfiguration) throws {
-        if configuration.colorMode == p81Copy { throw NativeExportError.invalid("P8.1 conversion is unavailable pending complete native workflow qualification.") }
+        if configuration.colorMode == p81Copy { throw NativeExportError.invalid("P8.1 copy requires the dedicated verified batch workflow.") }
         if configuration.colorMode == hdr10Copy { throw NativeExportError.invalid(unavailable) }
     }
 }

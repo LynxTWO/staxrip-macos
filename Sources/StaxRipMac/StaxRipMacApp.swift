@@ -15,7 +15,6 @@ struct StaxRipMacApp: App {
     @StateObject private var batch: BatchController
     @AppStorage("appearance") private var appearance = "System"
     init() {
-        #if DEBUG
         switch BatchJournal.demoSelection(root: ProcessInfo.processInfo.environment["STAXRIP_DEMO_JOURNAL_ROOT"]) {
         case .notRequested:
             _batch = StateObject(wrappedValue: BatchController(journalURL: BatchJournal.defaultURL))
@@ -28,9 +27,6 @@ struct StaxRipMacApp: App {
             controller.configureDemoJournal(refused: true)
             _batch = StateObject(wrappedValue: controller)
         }
-        #else
-        _batch = StateObject(wrappedValue: BatchController(journalURL: BatchJournal.defaultURL))
-        #endif
     }
     var body: some Scene {
         Window("StaxRip", id: "main") {

@@ -57,18 +57,13 @@ final class BatchController: ObservableObject {
         reviewStatus = "Checking queue…"
         let completed = Set(statuses.filter { $0.value.phase == "Completed" }.map(\.key))
         let knownEncoders = encoders
-        #if DEBUG
-        let generatedP81 = isolatedDemoJournal
-        #else
-        let generatedP81 = false
-        #endif
         reviewTask = Task { [self] in
             defer {
                 reviewing = false; reviewTask = nil
                 if reviewGeneration != id { reviewStatus = "Queue changed. Check again." }
             }
             do {
-                let results = try await QueuePreflight.review(jobs, completed: completed, tools: tools, encoders: knownEncoders, generatedP81: generatedP81) { [weak self] item in
+                let results = try await QueuePreflight.review(jobs, completed: completed, tools: tools, encoders: knownEncoders) { [weak self] item in
                     Task { @MainActor in
                         guard let self, self.reviewGeneration == id, self.reviewing else { return }
                         self.queueChecks[item.id] = item
@@ -99,7 +94,6 @@ final class BatchController: ObservableObject {
     private var task: Task<Void, Never>?
     private var sourceCheck: (id: UUID, jobID: UUID, acceptsProgress: Bool)?
 
-    #if DEBUG
     private var demoJournalRefused = false
     private(set) var isolatedDemoJournal = false
     func configureDemoJournal(refused: Bool) {
@@ -107,7 +101,6 @@ final class BatchController: ObservableObject {
         isolatedDemoJournal = !refused
         if refused { recoveryError = "Demonstration journal unavailable. Queue execution is disabled; the normal recovery journal was not selected." }
     }
-    #endif
 
     init(journalURL: URL? = nil,
          readInspection: @escaping (URL, FFmpegTools) async throws -> MediaProbe = { try await MediaProbe.read($0, tools: $1) },
@@ -185,9 +178,7 @@ final class BatchController: ObservableObject {
     }
 
     func start(_ jobs: [QueueJob]) {
-        #if DEBUG
         guard !demoJournalRefused else { return }
-        #endif
         guard !running, !reviewing, !copyHeld, let tools else { return }
         let selected = pendingJobs(in: jobs)
         guard !selected.isEmpty else { return }
@@ -293,9 +284,7 @@ final class BatchController: ObservableObject {
         if job.configuration.colorMode == DolbyConversionIntent.hdr10Copy {
             try await encodeDolbyCopy(job, tools: tools); return
         }
-        #if DEBUG
-        if job.configuration.colorMode == DolbyConversionIntent.p81Copy && (Self.generatedP81 || isolatedDemoJournal) {try await encodeDolbyCopy(job,tools:tools,p81:true);return}
-        #endif
+        if job.configuration.colorMode == DolbyConversionIntent.p81Copy {try await encodeDolbyCopy(job,tools:tools,p81:true);return}
         try DolbyConversionIntent.requireRunnable(job.configuration)
         if job.configuration.externalSubtitle != nil { try ExternalSubtitle.validateWorkflow(job.configuration) }
         if preservingHDR { try EncodePlan.validateHDRSettings(job.configuration) }
@@ -454,8 +443,8 @@ final class BatchController: ObservableObject {
     @TaskLocal static var reportCopyFileClose: (@Sendable (String, Bool) -> Bool)?
     var copyMuxRetainedDescriptors: [Int32] { [copyMuxSourceFD,copyMuxCandidateFD,copyMuxOutputFD,copyToolOutputFD] }
     @TaskLocal static var copyToolOutputBoundary: (@Sendable (URL) throws -> Void)?
-    @TaskLocal private static var generatedP81 = false
-    func startGeneratedP81(_ jobs:[QueueJob]) {Self.$generatedP81.withValue(true) {start(jobs)}}
+    // Historical generated fixtures use the same ordinary route, without a bypass.
+    func startGeneratedP81(_ jobs:[QueueJob]) {start(jobs)}
     var copyOwnedTask:Task<Void,Never>? {task}
     @TaskLocal static var copyBeforePublication: (@Sendable (URL) throws -> Void)?
     @TaskLocal static var reportCopyDirectoryClose: (@Sendable (String, Bool) -> Bool)?
@@ -717,9 +706,9 @@ final class BatchController: ObservableObject {
             var after = stat(); guard lstat(output.path, &after) == 0, verifiedIdentity.matches(after, published: true) else { throw DolbyCopyNative.failure() }
             let (publishedHash, _, publishedIdentity) = try await ExportSourceFingerprint.readCopyIdentity(output, role: outputRole, timeBase: outputClock)
             guard publishedHash == outputHash, verifiedIdentity.matches(publishedIdentity.value, published: true) else { throw DolbyCopyNative.failure() }
-            let summary = p81 ? "Verified P8.1 base-layer copy · \(frames.frames) frames · exact packet timing and complete reviewed Dolby metadata preserved. Enhancement data removed with source-specific acknowledgement. No video re-encoding.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published. Temporary verification files are retained beside the output." : "Verified HDR10 base-layer copy · \(frames.frames) frames · PQ / BT.2020 / top-left chroma and static HDR unchanged. Dolby Vision and enhancement data removed with your acknowledgement. No video re-encoding or tone mapping.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published.\nThe temporary verification copy is retained beside the output; this route does not automatically delete it."
+            let summary = p81 ? "Verified P8.1 base-layer copy · \(frames.frames) frames · exact packet timing and complete reviewed Dolby metadata preserved. Enhancement data removed with source-specific acknowledgement. No video re-encoding. Independent Dolby playback and visual fidelity are not verified.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published. Temporary verification files are retained beside the output." : "Verified HDR10 base-layer copy · \(frames.frames) frames · PQ / BT.2020 / top-left chroma and static HDR unchanged. Dolby Vision and enhancement data removed with your acknowledgement. No video re-encoding or tone mapping.\nVerified output SHA256: \(outputHash.sha256) · \(outputHash.byteCount) bytes · same artifact exclusively published.\nThe temporary verification copy is retained beside the output; this route does not automatically delete it."
             let p81Detail = p81Metadata.supported
-                ? "Source metadata fits the reviewed P8.1 subset; P8.1 conversion remains unavailable pending output qualification."
+                ? "Source metadata fits the reviewed P8.1 subset; a separate P8.1 copy request still requires its own acknowledgement and complete output verification."
                 : "Source metadata is outside the reviewed P8.1 subset; P8.1 conversion remains unavailable."
             statuses[job.id] = BatchStatus(phase: "Completed", progress: 1, detail: summary + (p81 ? "" : "\n" + p81Detail), destination: output)
             checkpointAfterOutcome()

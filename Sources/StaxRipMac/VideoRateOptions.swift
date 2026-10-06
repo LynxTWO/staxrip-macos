@@ -25,8 +25,8 @@ struct VideoRateOptionsView: View {
         VStack(alignment: .leading, spacing: 12) {
             settingPicker("Color workflow", selection: $configuration.colorMode, values: ["SDR", "Preserve static HDR10", DolbyConversionIntent.hdr10Copy, DolbyConversionIntent.p81Copy])
                 .accessibilityHint("Choose standard dynamic range or verified static H D R ten preservation. This does not change your other settings.")
-            Text("Dolby Vision P8.1 execution remains unavailable outside the isolated development demonstration. Saved intent does not enable conversion.")
-                .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dolby.p81.unavailable")
+            Text("P8.1 copy supports a narrow P7 MEL metadata subset with complete verification. Independent Dolby playback and visual fidelity are not verified. Saved intent never starts conversion.")
+                .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dolby.p81.scope")
             Text("Tone-mapped SDR — unavailable: a verified pixel tone and gamut transform is required. The SDR setting above does not tone-map HDR.")
                 .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("dolby.sdr.unavailable")
             if dolbyCopy {
@@ -34,6 +34,7 @@ struct VideoRateOptionsView: View {
                     .font(.caption).fixedSize(horizontal: false, vertical: true)
                 Text("Initial route: one 4K Main 10 P7 MEL video track at 24000/1001, CM 2.9, MKV. Choose Copy original, No audio and Remove all subtitles; original size and no edits. Every packet and decoded frame must pass before publication. Other profiles, additional tracks and reordered pictures remain unavailable.").font(.caption).foregroundStyle(Color.warning)
                     .accessibilityIdentifier("dolby.hdr10.support")
+                if p81 { Text("P8.1 additionally requires the supported identity mapping and Level 1/5/6 metadata subset, zero active-area offsets and top-left chroma. Other metadata is refused.").font(.caption).foregroundStyle(Color.warning) }
                 Toggle(p81 ? "I acknowledge enhancement-layer loss for this inspected source" : "I acknowledge Dolby Vision loss for this inspected source", isOn: Binding(get: {
                     guard let source, let report = dolby.report(for: source) else { return false }
                     return (p81 ? configuration.p81EnhancementLossAcknowledgement : configuration.dolbyLossAcknowledgement)?.matches(source: source, fingerprint: report.source) == true
